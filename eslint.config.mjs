@@ -62,7 +62,25 @@ const eslintConfig = defineConfig([
       '*.config.{js,mjs,ts}',
       'eslint.config.mjs',
       'next.config.ts',
+      'playwright.config.ts',
       'postcss.config.mjs',
+      'vitest.config.mts',
+    ],
+    rules: {
+      'import/no-extraneous-dependencies': [
+        'error',
+        {
+          devDependencies: true,
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      '**/*.test.{js,jsx,ts,tsx}',
+      '**/*.spec.{js,jsx,ts,tsx}',
+      'e2e/**/*.{js,jsx,ts,tsx}',
+      'test/**/*.{js,jsx,ts,tsx}',
     ],
     rules: {
       'import/no-extraneous-dependencies': [
@@ -79,6 +97,11 @@ const eslintConfig = defineConfig([
     '.next/**',
     'out/**',
     'build/**',
+    'coverage/**',
+    'playwright-report/**',
+    'test-results/**',
+    '.obsidian/**',
+    'docs/**',
     'next-env.d.ts',
     // docs/ is the Obsidian vault (notes + a vendored community plugin
     // bundle), not project source - never lint it.
