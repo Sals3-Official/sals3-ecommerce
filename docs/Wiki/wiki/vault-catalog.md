@@ -48,6 +48,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-master-blueprint]] — Executive Summary, 3 Core Pillars (Shopify pop-up, custom customer site, enterprise Seller Center), 10-step item lifecycle, curated catalog pipeline, Seller Center modules (order management, product management, finance/payout), development timeline, white-label branding protocol. Business-strategy narrative still current; technical specifics superseded by the build spec.
 - [[universal-category-variation-taxonomy-reference]] — candidate catalog/category taxonomy data, not yet adopted.
 - [[sals3-cj-dropshipping-integration-plan]] — proposed CJ auto-import/category-mapping design. Proposed, not yet AJ-reviewed.
+- [[sals3-marketing-banner-integration-proposal]] — proposed marketing banner placements (home, in-feed, PDP, cart). Proposed, not yet reviewed; flags objections.
 
 ## Customer Website
 
@@ -55,7 +56,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 ## Raw reference assets
 
-- `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), and the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`). Not linkable as Obsidian notes; referenced here for discovery.
+- `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`), and the marketing banner pitch PDF (`sals3_marketing_banner_pitch_2026-08-05.pdf`, see [[sals3-marketing-banner-integration-proposal]]). Not linkable as Obsidian notes; referenced here for discovery.
 
 ## Domains not started yet
 

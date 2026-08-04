@@ -18,6 +18,7 @@ related:
   - '[[index]]'
   - '[[sals3-skills]]'
   - '[[sals3-session-2026-08-05-part01-marketplace-landing-page]]'
+  - '[[sals3-marketing-banner-integration-proposal]]'
 ---
 
 # Sals3 — Current State Cache
@@ -39,6 +40,7 @@ related:
 - No test suite, no verified row counts, or runtime state exist yet beyond the Stage 1 scaffold — this section will keep being populated with real facts as implementation lands.
 - **Confirmed 2026-08-05:** first real UI code merged to `develop` (PR #10) — the marketplace landing/home page (header, category strip, promo banner, deals grid, "For you" grid). Static placeholder catalog data, not wired to any service. Full record: [[sals3-session-2026-08-05-part01-marketplace-landing-page]]. Same day, PR #9 (`src/services/products.ts`, a Zod-validated `fetchProducts()` wrapper around `https://dummyjson.com/products`) and PR #8 (`zod` dependency) also landed on `develop` — not wired to the landing page's UI yet.
 - **Confirmed 2026-08-05:** first entries added to [[sals3-skills]] — Vitest/Testing Library cleanup gap, a Windows-specific `typecheck:clean` EPERM failure mode and its fix, this repo's stricter-than-default Airbnb ESLint rules, and a `DesignSync` tool usage note for reading `claude.ai/design` projects directly by ID.
+- **Ingested 2026-08-05, proposed only:** [[sals3-marketing-banner-integration-proposal]] — a marketing pitch for 4 banner placements. Not approved, not built. Flags an unresolved discrepancy: the pitch names `#0891b2` as Sals3's primary action colour; the shipped code and the original prototype both use `#0a5c8a`. Resolve before any banner work starts.
 
 ## Project history — why this rebuild exists
 
