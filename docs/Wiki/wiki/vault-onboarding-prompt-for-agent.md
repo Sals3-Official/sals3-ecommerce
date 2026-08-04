@@ -17,8 +17,8 @@ related:
 > [!IMPORTANT] What this is
 > A copy-paste prompt to hand to an AI coding agent (Claude Code, etc.) running on a **new machine**, so it sets up that machine's local clone of the merged Sals3 repo with a correctly-scoped Obsidian vault. Written for AJ's Mac. The human-readable version is [[vault-sync-setup-guide]].
 
-> [!CAUTION] Rewritten 2026-08-04 — the repo moved AND auto-sync was proven unsafe
-> Two things changed from the original version of this prompt: (1) code and vault are now one merged repo, not two separate ones; (2) a live test found the Obsidian Git plugin's auto-backup can sweep up code changes even with `basePath` set, so **auto-commit/auto-push are now disabled** — backups are manual-only. Do not use an older copy of this prompt.
+> [!CAUTION] Rewritten again 2026-08-04 (v3) — now covers the full codebase setup, not just the vault
+> This version adds: installing the actual project dependencies (`npm install`, Playwright browsers), the branch/PR workflow rule (nobody pushes straight to `main`/`develop`, ever), and two real Windows-only bugs Bogs and Claude found and fixed while testing this same setup on Windows (not Mac-relevant to fix, but AJ should know they existed). Earlier changes still apply: code and vault are one merged repo now, and vault auto-commit/auto-push are disabled (proven unsafe by a live test). Do not use an older copy of this prompt.
 
 > [!WARNING] Prerequisite before sending this
 > AJ (`aj-garrigues`) is already a collaborator on `github.com/Sals3-Official/sals3-ecommerce` — confirmed 2026-08-04. Robin (`robindlcrz`) also has access. This step should already be satisfied.
@@ -96,7 +96,38 @@ overwriting anything. Confirm the clone is real: run `git branch --show-current`
 (expect `develop`), `git log --oneline -3`, and `git status -sb`, and show me
 the output.
 
-STEP 5 - Verify the vault config came with the clone
+STEP 5 - Install the project dependencies (the actual codebase, not just the vault)
+This repo is a real Next.js + TypeScript project with a test suite, not just
+notes. Get it fully working before moving to the Obsidian side:
+
+  1. Check Node.js is installed: `node --version` and `npm --version`. If
+     missing, tell me to install Node.js (via nodejs.org or
+     `brew install node`) before continuing.
+  2. From inside the cloned repo root (not docs/), run:
+       npm install
+     This installs everything package.json declares - including test tools
+     (vitest, Playwright, testing-library) that a recent PR added. Expect
+     this to take a minute or two and print something like "added N
+     packages". If it errors, show me the exact error - do not guess a fix.
+  3. Install the Playwright browser binaries (separate from npm install -
+     these are actual browser downloads, not packages):
+       npx playwright install chromium
+     This can take a few minutes on a slow connection (roughly 150-300MB).
+  4. Verify the codebase is healthy by running the full verify script that
+     also runs automatically before every commit:
+       npm run verify
+     This runs lint, format check, a clean typecheck, a production build,
+     unit tests, and end-to-end tests, in that order. Expect it to finish
+     with no errors. If anything fails, show me the exact output - don't
+     paraphrase or summarize it away, I need to see the real error text.
+
+If step 4 (npm run verify) fails, do NOT try to silently patch the failing
+code yourself. Show me the error, explain what you think it means, and wait
+for me to decide how to fix it - the codebase is actively being worked on by
+two people, and a "helpful" unreviewed fix can create confusion about who
+changed what.
+
+STEP 6 - Verify the vault config came with the clone
 Confirm these exist inside the clone, under the `docs/` subfolder specifically
 (NOT at the repo root):
     docs/.obsidian/plugins/obsidian-git/main.js
@@ -115,7 +146,7 @@ show:
 If autoSaveInterval or autoPushInterval is anything other than 0, STOP and tell
 me before I open Obsidian - do not silently "fix" it either way, just flag it.
 
-STEP 6 - Open the vault in Obsidian (do this yourself if you can; otherwise
+STEP 7 - Open the vault in Obsidian (do this yourself if you can; otherwise
 walk me through every click)
 If Obsidian is not installed, tell me to download it from obsidian.md and
 install it before continuing, then wait for my confirmation.
@@ -144,13 +175,13 @@ vault picker/chooser screen (a small window listing existing vaults, with
   5. Take a screenshot or describe what you see: the left sidebar should show
      only two top-level folders, "Raw" and "Wiki" - if you see folders named
      "src", "public", "AGENTS", or "CLAUDE" at the same level, the wrong
-     folder (the repo root) was opened - go back and redo step 6.2-6.3.
+     folder (the repo root) was opened - go back and redo step 7.2-7.3.
 
 If Obsidian was already open on some other vault, use the vault switcher
 (bottom-left corner, click the current vault's name) to get to the same
 "Open folder as vault" flow, or use Cmd+O.
 
-STEP 7 - Verify setup end-to-end with a real round-trip test
+STEP 8 - Verify setup end-to-end with a real round-trip test
 First, from the terminal, confirm the vault correctly sees the parent repo:
     cd <clone>/docs && git rev-parse --show-toplevel
     (expected: prints the repo root path, one level up from docs/)
@@ -185,26 +216,80 @@ work before considering this done:
   6. Ask me to remove the throwaway line I added in step 1, save, and repeat
      the commit/push so the test edit doesn't linger in hot.md permanently.
 
-STEP 8 - Confirm setup is complete
+STEP 9 - Understand the branch and PR workflow (applies to ALL changes, code
+or vault, mine or Bogs's)
+Explain this to me clearly, in your own words, before I write any code:
+
+- Nobody ever commits or pushes straight to `main` or `develop`. Not me, not
+  Bogs, not an agent, ever - no exceptions, including "small" or "vault-only"
+  changes.
+- Every change starts on its own branch, named:
+    feat/<feature-name>   - a new capability or content
+    chore/<small-change>  - maintenance, docs, config, cleanup
+    bug/<fixed-issue>     - a fix for something broken
+  Pick the prefix that matches, use a short hyphenated name after the slash.
+- Push the branch, then open a pull request into `develop`
+  (`gh pr create --base develop --head <branch-name> ...`) rather than
+  merging locally.
+- Assignee/reviewer convention: for a PR from MY (AJ's) work, I am both the
+  assignee AND the reviewer - I self-review my own PRs. This is NOT symmetric
+  with Bogs's PRs (his are assigned to him with me as reviewer) - don't
+  assume the same pattern applies in both directions.
+- Before starting new work, sync with Bogs's latest merged changes - this is
+  manual, not automatic, by design:
+    git fetch origin && git status -sb   (see if origin/develop moved ahead)
+    git pull origin develop              (bring merged changes down)
+  Do this at the start of every session, before branching off develop, so
+  new work doesn't start from a stale base.
+
+IMPORTANT CONTEXT - two PRs already exist as of 2026-08-04 that I should know
+about:
+- PR #1 and #2 are already merged into develop.
+- PR #3 (https://github.com/Sals3-Official/sals3-ecommerce/pull/3) is open
+  and assigned to Bogs, with me as reviewer. It fixes two Windows-only bugs
+  Bogs and Claude found while testing this exact onboarding flow on Windows,
+  in scripts/typecheck-clean-next.mjs (a script I originally wrote for the
+  testing PR):
+    1. It used os.tmpdir() to temporarily move .next during a clean
+       typecheck. On Windows that folder is usually a different drive than
+       the project, and fs.renameSync can't rename across drives (EXDEV) -
+       this blocked every commit on Windows. Fixed by using a same-drive
+       temp folder instead.
+    2. It spawned tsc.cmd directly without shell: true, which fails with
+       EINVAL on Windows. Fixed by enabling shell only when
+       process.platform === 'win32', so Mac/Linux behavior (mine) is
+       unchanged.
+  Tell me to go look at PR #3 and review/merge it - the fix is scoped to
+  win32 only so it should not change anything on my Mac, but I should verify
+  that myself rather than take it on faith, and I'm the reviewer either way.
+
+STEP 10 - Confirm setup is complete
 Setup is 100% done only when ALL of these are true - check each one for real,
 don't assume:
-  [ ] git and gh are installed and gh auth status shows me logged in.
-  [ ] The repo is cloned, on branch develop, matching origin/develop.
+  [ ] git, gh, and Node.js/npm are installed; gh auth status shows me logged in.
+  [ ] The repo is cloned, on branch develop, matching origin/develop (after
+      a git pull).
+  [ ] npm install completed with no errors.
+  [ ] npx playwright install chromium completed.
+  [ ] npm run verify passes in full (lint, format, typecheck, build, unit
+      tests, e2e tests).
   [ ] docs/.obsidian/plugins/obsidian-git/data.json shows basePath: "docs",
       autoSaveInterval: 0, autoPushInterval: 0.
   [ ] Obsidian is open with the vault at .../sals3-ecommerce/docs specifically
       (sidebar shows only Raw and Wiki, nothing from the code side).
   [ ] The Git plugin is enabled (Settings -> Community plugins -> Git shows a
       blue/on toggle).
-  [ ] The live round-trip test in step 7 completed: a real edit was made,
+  [ ] The live round-trip test in step 8 completed: a real edit was made,
       committed, pushed, confirmed on GitHub, and the throwaway line was
       cleaned up afterward.
   [ ] I understand backups are manual now, and why.
+  [ ] I understand the branch/PR workflow and my self-review convention.
+  [ ] I've been told to go review/merge PR #3.
 
 If any box isn't genuinely true, setup is not finished - say so plainly and
 tell me which part still needs work, rather than reporting success.
 
-STEP 9 - Orient yourself in the vault
+STEP 11 - Orient yourself in the vault
 Once setup is verified, read these files, in this order, and give me a short
 summary of the project's current state and what is still open:
     docs/Wiki/CLAUDE.md
@@ -224,6 +309,10 @@ THINGS NOT TO DO
 - Do not ever run `git add -A` or `git add .` from the repo root when the
   intent is a vault-only backup - always stage docs/ paths explicitly.
 - Do not commit anything - vault or code - during setup unless I ask.
+- Do not commit or push directly to `main` or `develop`, ever, for any
+  reason, even a "trivial" fix - always a branch, always a PR.
+- Do not silently patch a failing test, lint error, or build error yourself -
+  show me the real error and let me decide, same as Bogs's rule for himself.
 - Do not handle my passwords, tokens, or authentication codes at any point.
 ````
 
