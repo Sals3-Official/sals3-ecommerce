@@ -41,3 +41,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Obsidian per-person UI state (open tabs, pane layout) - not shared content
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json
+
+# safety net: scripts/typecheck-clean-next.mjs's temp swap dir, in case
+# it's ever left behind after an interrupted run
+.next-typecheck-tmp-*
