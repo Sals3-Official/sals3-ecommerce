@@ -108,6 +108,17 @@ npm run verify
 
 Before adding a package, prefer existing platform features or current dependencies. Avoid heavy, duplicate, unmaintained, or paid-service packages unless approved.
 
+## Home Page
+
+`src/app/page.tsx` renders the marketplace landing page: header (logo, search,
+delivery region, cart/orders/account links), category strip, a dismissible
+promo banner, a deals grid, and a "For you" grid with a client-side "Load
+more". Catalog content comes from `src/lib/home-placeholder-data.ts` — the
+home page is not wired to `src/services/products.ts` yet (build spec stage 3
+catalogue read path), so product data is static placeholder content and
+product photos are decorative gradient tiles, not real images. Money values
+follow the build spec's minor-unit convention (`src/lib/money.ts`).
+
 ## README Rule
 
 Update this README in the same task when any change adds or changes:
