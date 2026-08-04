@@ -38,6 +38,7 @@ related:
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
 - [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents, once any exist.
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
+- [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
 
 ## Business and product
 

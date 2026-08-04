@@ -2,7 +2,7 @@
 tags: [sals3, roadmap, implementation-plan, task-tracker, canonical]
 aliases: [Sals3 Implementation Phases, Sals3 Task Phases, Sals3 Build Register]
 created: 2026-07-31
-updated: 2026-08-03
+updated: 2026-08-05
 status: canonical
 authority: execution-plan
 owner_approved: false
@@ -80,13 +80,13 @@ Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build 
 | 9 | Build the token layer and 3 base components. | A component page |
 | 10 | Present the data model, the risks, and the estimate. | `ADR-001` and a backlog |
 
-None of these 10 days have started as of 2026-08-03 — no Sals3 code repository exists yet.
+As of 2026-08-05, the repository and local verification pipeline exist, and a verified landing-page prototype exists. The old-system discovery work in days 1-7, deployed skeleton, health endpoint, data model, and ADR-001 are still not complete.
 
 ## Track B — The 8 stages (build spec section 20.3)
 
-### Stage 1 — Foundation (not started)
+### Stage 1 — Foundation (in progress)
 
-- [ ] Create the repository. Add lint/type/test pipeline.
+- [x] Create the repository. Add lint/type/test pipeline. Verified locally with lint, format, typecheck, build, unit, E2E, and high-severity npm audit checks on 2026-08-05.
 - [ ] Add the deployment pipeline and a health endpoint.
 - [ ] Build design tokens: colour, text, space, radius, state.
 - [ ] Build 10 base components: button, input, chip, card, sheet, dialog, tabs, badge, skeleton, toast.
