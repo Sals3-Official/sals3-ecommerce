@@ -15,7 +15,8 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm run test:run && npm run test:e2e"
+    "typecheck:clean": "node scripts/typecheck-clean-next.mjs",
+    "verify": "npm run lint && npm run format:check && npm run typecheck:clean && npm run build && npm run test:run && npm run test:e2e"
   },
   "dependencies": {
     "next": "16.3.0",
