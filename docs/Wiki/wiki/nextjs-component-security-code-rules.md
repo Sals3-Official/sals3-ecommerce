@@ -15,6 +15,8 @@ related:
   - "[[sals3-ux-build-specification]]"
   - "[[sals3-management-bible]]"
   - "[[hot]]"
+  - "[[sals3-geo-aeo-seo-strategy-proposal]]"
+  - "[[parked-ideas-backlog]]"
 ---
 
 # Next.js Component Architecture and Security
@@ -31,6 +33,17 @@ related:
 - If a command fails, fix the failure or report the blocker. Do not hide, skip, or downgrade failures.
 - Update `README.md` in the same task when a feature, setup step, package command, runtime behavior, project structure, test workflow, or important limitation changes. See [[project-structure-installation-and-runbook#README Update Rule]].
 - Do not deploy, publish, push, or commit unless the owner explicitly asks.
+
+## SEO, GEO, and AEO Discoverability
+
+> [!IMPORTANT] Check this on every route, metadata, or structured-data change
+> [[sals3-geo-aeo-seo-strategy-proposal]] is the canonical reference for how Sals3 should be discoverable by search engines, generative AI (ChatGPT, Perplexity, Claude, Gemini), and answer engines. It is not fully approved or built — most of it is intentionally parked in [[parked-ideas-backlog]] pending routes that don't exist yet — but it must be actively checked, not forgotten, whenever code touches this surface.
+
+- Before adding, moving, or removing any page/route (especially a new PDP, category, cart, or checkout route), check [[parked-ideas-backlog]] for GEO/AEO/SEO entries whose **unblock condition** the new route now satisfies (e.g. a `/p/[id]` route unblocks per-route `generateMetadata` and `Product`/`Offer`/`AggregateRating`/`FAQPage` JSON-LD). Do not ship a new route without at least considering whether it should carry its corresponding entry from [[sals3-geo-aeo-seo-strategy-proposal]] — implement it if the data backing it is real, or explicitly note why it's still deferred.
+- Before adding or changing `generateMetadata`, any `<script type="application/ld+json">` / structured-data block, `robots.ts`, `sitemap.ts`, or `llms.txt`, read [[sals3-geo-aeo-seo-strategy-proposal]] first so the pattern stays consistent with what's already shipped (`src/app/robots.ts`, `src/app/llms.txt/route.ts`, `src/components/schema/OrganizationSchema.tsx`, `src/lib/site.ts`).
+- Never fill a structured-data field (URL, logo, rating, price, catalog listing, etc.) with a guessed or placeholder value. Gate it behind a real, confirmed data source or an explicit env var and omit the field when unset — see [[sals3-skills]] lesson 14. Google's structured-data guidelines can penalize fabricated schema with a manual action and loss of all rich results for the domain, not just an inaccurate sentence.
+- Do not present placeholder/external demo data (e.g. the current DummyJSON product feed) as Sals3's own catalog in any AI- or crawler-facing surface (`llms.txt`, JSON-LD, sitemap). Wait for a real, Sals3-owned catalog.
+- When a parked GEO/AEO/SEO item gets implemented, move it out of [[parked-ideas-backlog]] (or strike it through per that note's own protocol) and update [[sals3-geo-aeo-seo-strategy-proposal]]'s implementation-status section in the same task.
 
 ## Component Architecture
 
