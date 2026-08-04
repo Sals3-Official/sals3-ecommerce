@@ -59,7 +59,7 @@ related:
 ## Customer Website
 
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page|Marketplace Landing Page Session]] — first real screen: the home/landing page, merged to `develop` 2026-08-05. Static placeholder data, one-off components (not yet the Stage 1 base library) — see the note for exact scope and what's still missing.
-- [[sals3-session-2026-08-05-part02-footer-and-pagination|Site Footer and Pagination Session]] — site footer with a legal/compliance-claim audit, numbered pagination. Code merged to `develop`.
+- [[sals3-session-2026-08-05-part02-footer-and-pagination|Site Footer and Pagination Session]] — site footer with a legal/compliance-claim audit (several mockup claims dropped as unverifiable), numbered pagination. Code merged to `develop`.
 - [[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints|GEO/AEO/SEO Machine Endpoints Session]] — `robots.txt`, `llms.txt`, global `Organization` JSON-LD from [[sals3-geo-aeo-seo-strategy-proposal]]; PDP/cart-dependent pieces parked.
 
 ## Domains not started yet

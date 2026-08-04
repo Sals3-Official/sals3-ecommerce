@@ -17,7 +17,7 @@ related:
 # Session 2026-08-05 Part 02 — Site Footer and Numbered Pagination
 
 > [!NOTE] Branch status
-> Code committed and pushed on `feat/site-footer-and-pagination`, since merged to `develop`. This session note itself was written on `chore/vault-session-2026-08-05-footer-pagination` (PR #14, still open at time of writing) and is included here so wikilinks to it resolve from `feat/geo-aeo-seo-machine-endpoints` — expect a trivial duplicate-content conflict to resolve whenever PR #14 also merges.
+> Code merged to `develop` via PR #13 (`feat/site-footer-and-pagination`). This session note was merged via PR #14 (`chore/vault-session-2026-08-05-footer-pagination`).
 
 ## What happened
 
