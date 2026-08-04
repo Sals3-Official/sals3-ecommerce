@@ -86,6 +86,10 @@ AJ works remotely on a **Mac**; Bogs works on **Windows**. Git (this repo) is th
 > - `bug/<fixed-issue>` — a fix for something broken.
 >
 > Pick the prefix that matches the change; use short, hyphenated, descriptive names after the slash (e.g. `chore/add-branch-workflow-rule`, `feat/product-detail-page`, `bug/checkout-price-mismatch`). Push the branch and open a PR rather than merging into `develop` directly, unless AJ or Bogs explicitly says to merge it themselves.
+>
+> **PR assignee/reviewer convention, confirmed 2026-08-04:** for a PR opened from Bogs's work, **assignee = Bogs, reviewer = AJ**. Every code change needs AJ's review before merging — no self-merge. Set both fields explicitly when opening the PR (`gh pr create --assignee <bogs-username> --reviewer <aj-username>`), don't leave them blank. This confirms the general shape of the workflow: work happens on a branch → PR → review → merge, never a direct commit landing on `develop`.
+>
+> **Open question, not yet confirmed:** who is assignee/reviewer when AJ opens a PR himself? Don't assume symmetry (Bogs as AJ's reviewer) — ask AJ directly when it comes up, rather than guessing.
 
 ### Turnover prompt — ask after every commit
 
