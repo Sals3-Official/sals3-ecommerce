@@ -4,3 +4,6 @@ out
 build
 coverage
 package-lock.json
+
+# Obsidian vault (notes + vendored community plugin) - not project source
+docs
