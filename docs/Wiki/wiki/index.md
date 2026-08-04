@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-05
 status: canonical
 authority: navigation
 owner_approved: true
@@ -10,6 +10,8 @@ related:
   - "[[hot]]"
   - "[[sals3-master-blueprint]]"
   - "[[vault-catalog]]"
+  - "[[nextjs-component-security-code-rules]]"
+  - "[[project-structure-installation-and-runbook]]"
 ---
 
 # Sals3 — Vault Index
@@ -21,6 +23,8 @@ related:
 
 - [[../CLAUDE|Agent Entry Point]] — mandatory reading gate for every agent.
 - [[agent-operating-contract|Agent Operating Contract]] — anti-yesman reasoning, evidence, challenge, and verification rules.
+- [[nextjs-component-security-code-rules|Next.js Component Architecture and Security]] — mandatory code-change gate for every Sals3 code edit, refactor, test change, configuration change, and package change.
+- [[project-structure-installation-and-runbook|Project Structure, Installation, and Runbook]] — canonical project layout, npm package installation rules, local run commands, verification commands, and README update rule.
 - [[team-profile-and-collaboration-preferences|Team Profile and Collaboration Preferences]] — who's on the team (AJ and Bogs, shared vault) and how they want an agent to work with them.
 - [[autonomous-loop-sop|The Loop Method]] — default act-observe-adjust operating discipline for any problem.
 - [[vault-sync-setup-guide|Vault Sync Setup Guide]] — how to get this vault onto a new machine and keep it auto-synced via Obsidian Git.

@@ -2,7 +2,7 @@
 tags: [governance, agent-entry, second-brain]
 aliases: [Sals3 Agent Entry Point]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-05
 status: canonical
 authority: constitutional
 owner_approved: true
@@ -19,12 +19,14 @@ Use this order. Do not load the whole vault for every small task.
 
 1. `wiki/hot.md` — verified current state, active focus, blockers, and next actions.
 2. `wiki/agent-operating-contract.md` — anti-yesman reasoning and verification rules.
-2a. `wiki/team-profile-and-collaboration-preferences.md` — who's on the team and how they want an agent to work with them. Both AJ and Bogs use this vault; do not assume either is the sole "owner."
-2b. `wiki/autonomous-loop-sop.md` — the default act-observe-adjust operating discipline for any problem.
-3. `wiki/sals3-management-bible.md` — canonical product behavior, boundaries, and contracts (draft, pending Leadership approval).
-4. `wiki/sals3-implementation-phases.md` — the complete task and phase register; use this, not the blueprint, to check build status.
-5. `wiki/sals3-master-blueprint.md` — whole-system architecture, commercial strategy, and transition plan (v4.0, sample/demonstration status pending Sals3 Leadership alignment). Read for full source detail behind the bible.
-6. `wiki/index.md` — domain map. Open only the notes that apply to the task.
+3. `wiki/nextjs-component-security-code-rules.md` — mandatory for every codebase edit, refactor, test change, configuration change, and package change.
+4. `wiki/project-structure-installation-and-runbook.md` — mandatory for project structure, package installation, run commands, and README update rules.
+5. `wiki/team-profile-and-collaboration-preferences.md` — who's on the team and how they want an agent to work with them. Both AJ and Bogs use this vault; do not assume either is the sole "owner."
+6. `wiki/autonomous-loop-sop.md` — the default act-observe-adjust operating discipline for any problem.
+7. `wiki/sals3-management-bible.md` — canonical product behavior, boundaries, and contracts (draft, pending Leadership approval).
+8. `wiki/sals3-implementation-phases.md` — the complete task and phase register; use this, not the blueprint, to check build status.
+9. `wiki/sals3-master-blueprint.md` — whole-system architecture, commercial strategy, and transition plan (v4.0, sample/demonstration status pending Sals3 Leadership alignment). Read for full source detail behind the bible.
+10. `wiki/index.md` — domain map. Open only the notes that apply to the task.
 
 For financial, payments, seller-payout, or other high-risk work, read the current canonical domain specification and linked recent implementation note before acting, once one exists.
 

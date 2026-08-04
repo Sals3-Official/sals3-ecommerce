@@ -2,12 +2,14 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-05
 status: current-state
 authority: implementation-state
 owner_approved: true
 related:
   - '[[agent-operating-contract]]'
+  - '[[nextjs-component-security-code-rules]]'
+  - '[[project-structure-installation-and-runbook]]'
   - '[[team-profile-and-collaboration-preferences]]'
   - '[[sals3-ux-build-specification]]'
   - '[[sals3-management-bible]]'
@@ -19,7 +21,7 @@ related:
 # Sals3 — Current State Cache
 
 > [!IMPORTANT] Mandatory reading gate
-> Read this note first. For material work, read [[agent-operating-contract]] and [[sals3-ux-build-specification]] (the current technical authority — Final status), then [[sals3-management-bible]] for the distilled boundaries, then use [[index]] to open the relevant domain note. Historical session notes do not override current decisions.
+> Read this note first. For any codebase edit or package/config/test change, read [[nextjs-component-security-code-rules]] before editing. For project structure, package installation, or local run instructions, read [[project-structure-installation-and-runbook]]. For material work, read [[agent-operating-contract]] and [[sals3-ux-build-specification]] (the current technical authority — Final status), then [[sals3-management-bible]] for the distilled boundaries, then use [[index]] to open the relevant domain note. Historical session notes do not override current decisions.
 
 ## Current repository state
 
@@ -71,6 +73,8 @@ Use [[sals3-implementation-phases]] for the full stage-by-stage task register, [
 ### Coding practice
 
 - **Confirmed 2026-08-03:** AI-written code must be built and delivered **component-by-component**, never as one monolithic pass — smallest complete, independently reviewable/testable unit first, verified, then composed further. See [[sals3-management-bible#4. Non-negotiable boundaries]] for the full rule and its link to the project-history lesson above.
+- **Confirmed 2026-08-05:** every codebase edit, new feature, refactor, test change, configuration change, and package change must follow [[nextjs-component-security-code-rules]]. Completion requires architecture review, server-side security review where relevant, repository validation commands, and explicit reporting of any failed or skipped check.
+- **Confirmed 2026-08-05:** project structure, package installation, and local run instructions are canonical in [[project-structure-installation-and-runbook]]. Update `README.md` in the same task when a feature, command, setup step, runtime behavior, package workflow, or important limitation changes.
 
 ### Git workflow
 
