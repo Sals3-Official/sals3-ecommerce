@@ -17,6 +17,7 @@ related:
   - "[[sals3-session-2026-08-05-part01-marketplace-landing-page]]"
   - "[[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]]"
   - "[[sals3-session-2026-08-05-part02-footer-and-pagination]]"
+  - "[[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -107,3 +108,33 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** When list items lack natural unique identity (like ellipsis markers in a truncated pagination range, where there are at most two per render), give them identity in the data itself instead of leaning on the array index — e.g. `{ ellipsisAfter: <neighboring page number> }` from the function that builds the list, then key off that. Cheaper and more robust than an eslint-disable comment that can silently detach from its target line.
 
 **Where applied:** `src/lib/pagination.ts`'s `PageItem` type and `ProductPagination`'s render.
+
+### 13. A dotted filename works as a Next.js App Router folder segment
+
+**Confirmed:** 2026-08-05, implementing `/llms.txt`.
+
+**Incident:** Needed a literal `/llms.txt` route. It was not obvious whether Next.js App Router would treat a folder literally named `llms.txt` (containing `route.ts`) as a valid route segment, versus requiring a rewrite or a `public/` static file.
+
+**Lesson:** `src/app/llms.txt/route.ts` works exactly as written — Next.js treats the folder name as the literal path segment, dot included. Confirmed in the production build output, which listed `/llms.txt` as a static route alongside `/robots.txt` (from `src/app/robots.ts`, the built-in `MetadataRoute.Robots` convention). No rewrite or `public/` file needed for either.
+
+**Where applied:** `src/app/llms.txt/route.ts`, `src/app/robots.ts`.
+
+### 14. Gate optional JSON-LD fields behind a real env var — never guess a value to fill structured data
+
+**Confirmed:** 2026-08-05, adding the global `Organization` JSON-LD block.
+
+**Incident:** `Organization` schema conventionally carries `url` and `logo`, but no production domain for Sals3 is confirmed anywhere in this repo or vault. Filling them with a plausible-looking guess (e.g. `https://www.sals3.com`) would have presented a guess as a verified fact inside machine-readable structured data — the same failure mode as lesson 10's mockup claims, but with sharper consequences: [[sals3-geo-aeo-seo-strategy-proposal]] §3 documents that Google's structured-data guidelines can penalize fabricated schema with a manual action and loss of all rich results for the domain, not just an inaccurate sentence.
+
+**Lesson:** When a schema field's real value isn't confirmed yet, don't approximate it — read it from an explicit env var (`NEXT_PUBLIC_SITE_URL` here) and omit the field entirely from the emitted JSON-LD when unset, rather than shipping a placeholder that reads as real data to a crawler.
+
+**Where applied:** `src/lib/site.ts`'s `getSiteUrl()`, consumed by `src/components/schema/OrganizationSchema.tsx`.
+
+### 15. Check `git log develop..HEAD` and `gh pr view` before committing — uncommitted changes ride whatever branch is checked out
+
+**Confirmed:** 2026-08-05, before committing the GEO/AEO machine-endpoints work.
+
+**Incident:** The session's uncommitted vault and code changes were sitting on `chore/vault-session-2026-08-05-footer-pagination`, a branch already carrying its own unmerged commit and an open, differently-scoped PR (#14, "record footer + pagination session"). Committing directly would have silently mixed an unrelated SEO/GEO feature into that PR.
+
+**Lesson:** Before staging a commit, don't assume the checked-out branch is a blank slate — run `git log develop..HEAD --oneline` to see what it already carries, and `gh pr view --json number,state,title,url` to check for an existing open PR. If either shows unrelated work, stash, branch fresh off `develop`, and commit there instead.
+
+**Where applied:** Stashed the working tree, branched `feat/geo-aeo-seo-machine-endpoints` off `develop`, and committed there — `chore/vault-session-2026-08-05-footer-pagination` and PR #14 were left untouched.

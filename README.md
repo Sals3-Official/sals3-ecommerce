@@ -115,6 +115,24 @@ npm run verify
 
 Before adding a package, prefer existing platform features or current dependencies. Avoid heavy, duplicate, unmaintained, or paid-service packages unless approved.
 
+## Machine and AI Discovery
+
+`src/app/robots.ts` allows all crawlers plus explicitly lists `GPTBot`,
+`PerplexityBot`, `ClaudeBot`, and `OAI-SearchBot`. `src/app/llms.txt/route.ts`
+serves a daily-revalidated, plain-text `/llms.txt` identifying the site by
+name and description — it does not list a product catalog, because the
+current product data (`src/services/products.ts`) is an external DummyJSON
+placeholder, not Sals3's own catalog. `OrganizationSchema`
+(`src/components/schema/OrganizationSchema.tsx`) renders a global
+`Organization` JSON-LD block in `src/app/layout.tsx` with only verifiable
+fields (`name`); `url` and `logo` are added automatically once
+`NEXT_PUBLIC_SITE_URL` is set as an environment variable — no domain is
+hardcoded or guessed. See
+[`sals3-geo-aeo-seo-strategy-proposal`](docs/Wiki/wiki/sals3-geo-aeo-seo-strategy-proposal.md)
+for the source strategy and what's still parked (Product/Offer/FAQPage JSON-LD,
+`generateMetadata` per PDP, `useOptimistic` cart) pending the routes those
+depend on.
+
 ## Home Page
 
 `src/app/page.tsx` renders the marketplace landing page: header (logo, search,

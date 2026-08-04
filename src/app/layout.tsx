@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Plus_Jakarta_Sans as PlusJakartaSans, Outfit } from 'next/font/google';
+import OrganizationSchema from '@/components/schema/OrganizationSchema';
+import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import './globals.css';
 
 const jakarta = PlusJakartaSans({
@@ -16,9 +18,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'Sals3 — Shop smarter, pay less',
-  description:
-    'Sals3 is a Philippine online marketplace. See the final price with no surprises at checkout.',
+  title: `${SITE_NAME} — Shop smarter, pay less`,
+  description: SITE_DESCRIPTION,
 };
 
 type RootLayoutProps = Readonly<{
@@ -31,7 +32,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
       lang="en"
       className={`${jakarta.variable} ${outfit.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        <OrganizationSchema />
+        {children}
+      </body>
     </html>
   );
 }

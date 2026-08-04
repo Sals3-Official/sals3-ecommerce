@@ -16,8 +16,8 @@ related:
 
 # Session 2026-08-05 Part 02 — Site Footer and Numbered Pagination
 
-> [!NOTE] Branch status at time of writing
-> Code committed and pushed on `feat/site-footer-and-pagination`, not yet merged to `develop`. Not committed/pushed by this session unless the owner explicitly asked (asked, in this case).
+> [!NOTE] Branch status
+> Code merged to `develop` via PR #13 (`feat/site-footer-and-pagination`). This session note was merged via PR #14 (`chore/vault-session-2026-08-05-footer-pagination`).
 
 ## What happened
 
