@@ -7,13 +7,14 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-05
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
 related:
   - "[[agent-operating-contract]]"
   - "[[hot]]"
+  - "[[sals3-session-2026-08-05-part01-marketplace-landing-page]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -25,4 +26,12 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 
 ## Skills
 
-None yet. This vault was created 2026-07-31 as a fresh skeleton; no Sals3 build work has happened yet to generate lessons.
+1. **Vitest + Testing Library needs explicit `afterEach(cleanup)`.** This repo's `vitest.config.mts` does not set `test.globals: true`, so `@testing-library/react`'s auto-cleanup (which registers itself against a global `afterEach`) silently never runs. A test file with exactly one `it()` never shows the bug; a second `it()` in the same file does, as `getByRole`/`getByPlaceholderText` etc. start matching leftover nodes from the previous test's render and throw "multiple elements found." Fixed once, in `test/setup.ts`, by importing `cleanup` from `@testing-library/react` and `afterEach` from `vitest` and calling `afterEach(() => cleanup())`. Covers every test file in the repo going forward. Source: [[sals3-session-2026-08-05-part01-marketplace-landing-page]].
+
+2. **`npm run typecheck:clean` can EPERM on Windows if anything is holding `.next` open.** The script (`scripts/typecheck-clean-next.mjs`) renames `.next` aside, runs `tsc --noEmit`, renames it back — and `fs.renameSync` throws `EPERM: operation not permitted` on Windows if a running `next dev` server (or, once, an unexplained transient lock — likely antivirus real-time scanning) has an open handle inside that directory. A plain `rm -rf .next` succeeds even when the rename doesn't, which is the tell: it's a rename-specific block, not a full lock. Fix: stop any running `npm run dev` for this repo before running `typecheck:clean`, `npm run verify`, or a `git commit`/`git push` that triggers the Husky hooks (both hooks run `npm run verify`), and delete `.next` by hand once if the error recurs immediately after a fresh `next build`. `npx tsc --noEmit` directly (no rename dance) is a safe way to typecheck without touching `.next` at all if this keeps recurring. Source: [[sals3-session-2026-08-05-part01-marketplace-landing-page]].
+
+3. **This repo's ESLint config (Airbnb, via `eslint.config.mjs`) is stricter than typical Next.js community style.** Two rules that will fire on ordinary-looking component code: `import/prefer-default-export` (every single-export component file needs `export default function X`, not `export function X`) and `react/jsx-props-no-spreading` (no `{...props}` or `{...someObject}` on a JSX element, including a shared "base attrs" object pattern for icon components — every attribute must be written out explicitly). Write components this way from the start rather than fixing a batch of lint errors afterward. Source: [[sals3-session-2026-08-05-part01-marketplace-landing-page]].
+
+4. **GitHub PRs on `Sals3-Official/sals3-ecommerce` can get merged to `develop` outside the session that opened them** (observed: PR #10 was merged within minutes of pushing the branch, with no explicit merge action taken in this session — auto-merge or a fast human reviewer, not confirmed which). After pushing a feature branch, re-run `git fetch` before assuming `develop` is still behind — it may already contain the just-pushed work by the time you check. Source: [[sals3-session-2026-08-05-part01-marketplace-landing-page]].
+
+5. **The `DesignSync` tool can read an existing `claude.ai/design` project directly by ID** (`get_project`, `list_files`, `get_file` — the project ID is the UUID in the `claude.ai/design/p/<uuid>` URL) without needing the Adobe Express import flow. Useful for pulling a prototype's exact HTML/CSS/JS and binary assets (base64 via `get_file`) as an implementation reference, not just for pushing a design-system library. `get_file` caps at 256 KiB per call and large payloads land in a persisted tool-result file — for a binary asset, decode that file's `content` field from base64 on disk (PowerShell/Python) rather than reading the base64 text into context. Source: [[sals3-session-2026-08-05-part01-marketplace-landing-page]].

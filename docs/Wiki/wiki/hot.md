@@ -16,6 +16,8 @@ related:
   - '[[sals3-implementation-phases]]'
   - '[[sals3-master-blueprint]]'
   - '[[index]]'
+  - '[[sals3-skills]]'
+  - '[[sals3-session-2026-08-05-part01-marketplace-landing-page]]'
 ---
 
 # Sals3 — Current State Cache
@@ -35,6 +37,8 @@ related:
 - **Confirmed 2026-07-31 (not a sample):** the Sals3 codebase is built in **Next.js + TypeScript** — now real, not just a decision (see the scaffold above).
 - `Raw/` holds: UI mockup images and the presentation deck (blueprint-era), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), and the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`, deliberately stripped of a BOGS-Dashboard-specific sheet before ingestion).
 - No test suite, no verified row counts, or runtime state exist yet beyond the Stage 1 scaffold — this section will keep being populated with real facts as implementation lands.
+- **Confirmed 2026-08-05:** first real UI code merged to `develop` (PR #10) — the marketplace landing/home page (header, category strip, promo banner, deals grid, "For you" grid). Static placeholder catalog data, not wired to any service. Full record: [[sals3-session-2026-08-05-part01-marketplace-landing-page]]. Same day, PR #9 (`src/services/products.ts`, a Zod-validated `fetchProducts()` wrapper around `https://dummyjson.com/products`) and PR #8 (`zod` dependency) also landed on `develop` — not wired to the landing page's UI yet.
+- **Confirmed 2026-08-05:** first entries added to [[sals3-skills]] — Vitest/Testing Library cleanup gap, a Windows-specific `typecheck:clean` EPERM failure mode and its fix, this repo's stricter-than-default Airbnb ESLint rules, and a `DesignSync` tool usage note for reading `claude.ai/design` projects directly by ID.
 
 ## Project history — why this rebuild exists
 
@@ -46,7 +50,7 @@ related:
 Not yet started (no code exists). Per [[sals3-implementation-phases]], the confirmed plan is:
 
 1. **Track A — Shopify pop-up store:** interim cash flow. Blueprint-only, not covered by the build spec.
-2. **Track B — the new system:** [[sals3-ux-build-specification]]'s 8-stage build order (Foundation → Data model → Catalogue read path → Price/promotions → Cart/checkout → Orders/post-purchase → Seller tools → Migration/launch). Not started — no repository exists, none of the "first 10 working days" (build spec section 20.6) have happened yet.
+2. **Track B — the new system:** [[sals3-ux-build-specification]]'s 8-stage build order (Foundation → Data model → Catalogue read path → Price/promotions → Cart/checkout → Orders/post-purchase → Seller tools → Migration/launch). None of the "first 10 working days" (build spec section 20.6) have happened yet, and no stage has passed its exit test — but the repository now exists and carries real, if partial and out-of-order, code: see the 2026-08-05 entries above and [[sals3-implementation-phases]] for the honest per-item status.
 
 **Realistic timeline, per the build spec itself:** confirmed team is AJ + Bogs (2 full-stack developers) → **9 to 14 months to first launch, only with a reduced first release** (build spec section 21.2, 21.3). Treat this as the honest baseline, not pessimism.
 
@@ -84,8 +88,9 @@ Use [[sals3-implementation-phases]] for the full stage-by-stage task register, [
 
 ### Implemented foundations
 
-- None in code. In documentation: a complete, Final-status UI/UX and build specification, a distilled management bible, an 8-stage implementation register, and a capability map with a real decision record — all exist and are internally consistent as of 2026-08-03.
+- In documentation: a complete, Final-status UI/UX and build specification, a distilled management bible, an 8-stage implementation register, and a capability map with a real decision record — all exist and are internally consistent as of 2026-08-03.
+- In code, as of 2026-08-05: the Stage 1 Next.js scaffold; partial design tokens (font + semantic colour custom properties in `globals.css`, not the full colour/text/space/radius/state set section 11.1 calls for); the marketplace landing page (one-off components, not a Stage 1 base component library); `src/services/products.ts` (a Zod-validated fetch wrapper, not wired to any screen); `src/lib/money.ts` (the `Money` type from build spec section 16.3). See [[sals3-implementation-phases]] for exact per-item status.
 
 ### Incomplete or placeholder behavior
 
-- No Sals3 code repository exists. No design tokens, components, data model, API, or tests have been built. The "first 10 working days" (build spec section 20.6) have not started. Populate this section as real decisions and code land — do not let documentation completeness read as implementation progress.
+- No base component library (Stage 1's "10 base components" item), no deployment pipeline/health endpoint, no data model/entities (Stage 2), no catalogue read path wired to real data (Stage 3 — `/c/[category]` and `/p/[id]` routes referenced by the landing page's links don't exist yet), no pricing/promotion engine (Stage 4), no cart/checkout (Stage 5), no orders/post-purchase (Stage 6), no seller tools (Stage 7), no migration/launch work (Stage 8). The "first 10 working days" (build spec section 20.6) have not started. Populate this section as real decisions and code land — do not let documentation completeness read as implementation progress.

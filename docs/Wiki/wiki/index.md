@@ -52,6 +52,10 @@ related:
 - [[sals3-cj-dropshipping-integration-plan|CJ Dropshipping Integration Plan]] — proposed design for auto-populating the Seller Center Add Product flow from CJ, incl. the category/attribute mapping approach. Proposed, not yet AJ-reviewed.
 - `Raw/` — UI mockups, presentation deck, the build spec PDF, and the category taxonomy workbook.
 
+## Customer Website
+
+- [[sals3-session-2026-08-05-part01-marketplace-landing-page|Marketplace Landing Page Session]] — first real screen: the home/landing page, merged to `develop` 2026-08-05. Static placeholder data, one-off components (not yet the Stage 1 base library) — see the note for exact scope and what's still missing.
+
 ## Domains not started yet
 
-Add sections here as real work begins — e.g. Customer Website, Seller Center, Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.
+Add sections here as real work begins — e.g. Seller Center, Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.

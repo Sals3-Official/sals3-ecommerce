@@ -35,7 +35,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons, once any exist.
+- [[sals3-skills]] — consolidated engineering lessons (5 entries as of 2026-08-05).
 
 ## Business and product
 
@@ -48,6 +48,10 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-master-blueprint]] — Executive Summary, 3 Core Pillars (Shopify pop-up, custom customer site, enterprise Seller Center), 10-step item lifecycle, curated catalog pipeline, Seller Center modules (order management, product management, finance/payout), development timeline, white-label branding protocol. Business-strategy narrative still current; technical specifics superseded by the build spec.
 - [[universal-category-variation-taxonomy-reference]] — candidate catalog/category taxonomy data, not yet adopted.
 - [[sals3-cj-dropshipping-integration-plan]] — proposed CJ auto-import/category-mapping design. Proposed, not yet AJ-reviewed.
+
+## Customer Website
+
+- [[sals3-session-2026-08-05-part01-marketplace-landing-page]] — session record for the marketplace landing page, the first real screen (merged to `develop` 2026-08-05).
 
 ## Raw reference assets
 
