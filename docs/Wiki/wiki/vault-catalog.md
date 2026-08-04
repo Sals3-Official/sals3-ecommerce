@@ -53,6 +53,10 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 - `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), and the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`). Not linkable as Obsidian notes; referenced here for discovery.
 
+## Session notes
+
+- [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — verified 2026-08-05 landing-page API, pagination, carousel, test, and lesson session note.
+
 ## Domains not started yet
 
 Add a new section here in the same task that a domain's first real note is created (e.g. Customer Website, Seller Center, Payments/Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System). Do not pre-list domains with no notes.
