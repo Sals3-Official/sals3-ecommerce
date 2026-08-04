@@ -87,9 +87,22 @@ AJ works remotely on a **Mac**; Bogs works on **Windows**. Git (this repo) is th
 >
 > Pick the prefix that matches the change; use short, hyphenated, descriptive names after the slash (e.g. `chore/add-branch-workflow-rule`, `feat/product-detail-page`, `bug/checkout-price-mismatch`). Push the branch and open a PR rather than merging into `develop` directly, unless AJ or Bogs explicitly says to merge it themselves.
 >
-> **PR assignee/reviewer convention, confirmed 2026-08-04:** for a PR opened from Bogs's work, **assignee = Bogs, reviewer = AJ**. Every code change needs AJ's review before merging — no self-merge. Set both fields explicitly when opening the PR (`gh pr create --assignee <bogs-username> --reviewer <aj-username>`), don't leave them blank. This confirms the general shape of the workflow: work happens on a branch → PR → review → merge, never a direct commit landing on `develop`.
+> **PR assignee/reviewer convention, confirmed 2026-08-04:**
 >
-> **Open question, not yet confirmed:** who is assignee/reviewer when AJ opens a PR himself? Don't assume symmetry (Bogs as AJ's reviewer) — ask AJ directly when it comes up, rather than guessing.
+> - For a PR from **Bogs's** work: assignee = Bogs, reviewer = AJ.
+> - For a PR from **AJ's** work: assignee = AJ, reviewer = **AJ himself** (self-review — confirmed by Bogs, not assumed). Not symmetric with Bogs's PRs.
+> - Either way, the branch → PR → review → merge shape is the same for both of them — nobody merges straight to `develop`, including AJ on his own PRs. Set both fields explicitly when opening a PR (`gh pr create --assignee <username> --reviewer <username>`), don't leave them blank.
+
+### Code sync — manual `git pull`, by design, not a workaround
+
+Unlike the vault's manual-backup rule (which exists *because* automatic sync proved unsafe), manual code sync was always the intended workflow — this isn't a downgrade, it's normal git collaboration. When AJ merges a PR into `develop` on GitHub, it does **not** appear on Bogs's machine automatically, and vice versa. To get the other person's merged work:
+
+```bash
+git fetch origin && git status -sb   # see if origin/develop moved ahead
+git pull origin develop              # bring the merged changes down
+```
+
+Do this at the start of a work session, before branching off `develop` for new work — branching from a stale `develop` is a common source of avoidable merge conflicts later. This is the same "verify commit state" discipline already required elsewhere in this note, applied specifically to staying in sync with the other developer.
 
 ### Turnover prompt — ask after every commit
 
