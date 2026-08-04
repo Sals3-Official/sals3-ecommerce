@@ -27,6 +27,13 @@
   --color-surface: #f6f7f8;
   --color-surface-dark: #1e293b;
   --color-deal: var(--color-red-600);
+
+  /* On-dark (footer) */
+  --color-footer-ink: #e6edf3;
+  --color-footer-ink-muted: #a8bccb;
+  --color-footer-label: #7f97a8;
+  --color-footer-link: #cddbe5;
+  --color-footer-accent: #7fd4d4;
 }
 
 body {

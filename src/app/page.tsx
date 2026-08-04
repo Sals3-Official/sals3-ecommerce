@@ -1,4 +1,5 @@
 import SiteHeader from '@/components/layout/SiteHeader';
+import SiteFooter from '@/components/layout/SiteFooter';
 import CategoryStrip from '@/components/home/CategoryStrip';
 import PromoCarousel from '@/components/home/PromoCarousel';
 import DealsSection from '@/components/home/DealsSection';
@@ -129,6 +130,7 @@ export default async function Home({ searchParams }: HomeProps = {}) {
           pagination={homeProducts.pagination}
         />
       </main>
+      <SiteFooter />
     </div>
   );
 }
