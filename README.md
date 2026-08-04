@@ -24,6 +24,7 @@ sals3-ecommerce/
 ├── public/                  # Static public assets
 ├── scripts/                 # Local automation scripts
 ├── src/app/                 # Next.js App Router source
+├── src/services/            # API service wrappers and tests
 ├── test/                    # Shared test setup/helpers
 ├── AGENTS.md                # Mandatory agent rules
 ├── package.json             # npm scripts and dependencies
@@ -31,6 +32,10 @@ sals3-ecommerce/
 ```
 
 Do not put application code in `docs/`. Do not put vault notes in `src/`.
+
+## API Services
+
+Product API calls live in `src/services/products.ts`. The current service prepares `fetchProducts()` for `https://dummyjson.com/products`, validates the external JSON with Zod, and keeps tests beside the service.
 
 ## Install
 
