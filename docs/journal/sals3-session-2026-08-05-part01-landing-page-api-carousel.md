@@ -66,4 +66,4 @@ Reusable lessons from this session were added to [[../Wiki/wiki/sals3-skills]]:
 
 ## Current Risk
 
-This is verified landing-page prototype work and support infrastructure. It is not the full Sals3 catalogue, checkout, seller tools, payment, payout, tax, legal, or launch-ready marketplace path.
+This is verified landing-page prototype work and support infrastructure. The code was later committed on branch `feat/api-call-home-page` in `18f65bc` and the vault update was committed in `6b96142`. It is not the full Sals3 catalogue, checkout, seller tools, payment, payout, tax, legal, or launch-ready marketplace path.

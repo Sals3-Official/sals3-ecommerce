@@ -35,7 +35,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons, once any exist.
+- [[sals3-skills]] — consolidated engineering lessons (5 entries as of 2026-08-05).
 
 ## Business and product
 
@@ -48,14 +48,20 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-master-blueprint]] — Executive Summary, 3 Core Pillars (Shopify pop-up, custom customer site, enterprise Seller Center), 10-step item lifecycle, curated catalog pipeline, Seller Center modules (order management, product management, finance/payout), development timeline, white-label branding protocol. Business-strategy narrative still current; technical specifics superseded by the build spec.
 - [[universal-category-variation-taxonomy-reference]] — candidate catalog/category taxonomy data, not yet adopted.
 - [[sals3-cj-dropshipping-integration-plan]] — proposed CJ auto-import/category-mapping design. Proposed, not yet AJ-reviewed.
+- [[sals3-marketing-banner-integration-proposal]] — proposed marketing banner placements (home, in-feed, PDP, cart). Proposed, not yet reviewed; flags objections.
+
+## Customer Website
+
+- [[sals3-session-2026-08-05-part01-marketplace-landing-page]] — session record for the marketplace landing page, the first real screen (merged to `develop` 2026-08-05).
 
 ## Raw reference assets
 
-- `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), and the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`). Not linkable as Obsidian notes; referenced here for discovery.
+- `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`), and the marketing banner pitch PDF (`sals3_marketing_banner_pitch_2026-08-05.pdf`, see [[sals3-marketing-banner-integration-proposal]]). Not linkable as Obsidian notes; referenced here for discovery.
 
 ## Session notes
 
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — verified 2026-08-05 landing-page API, pagination, carousel, test, and lesson session note.
+- [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel]] — copy-paste turnover prompt for the next agent after the landing-page API and carousel work.
 
 ## Domains not started yet
 

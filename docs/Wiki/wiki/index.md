@@ -39,6 +39,7 @@ related:
 - [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents, once any exist.
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
+- [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel|2026-08-05 Landing Page API Carousel Turnover Prompt]] — copy-paste handoff prompt for the next agent after that session.
 
 ## Business and product
 
@@ -51,8 +52,13 @@ related:
 - [[sals3-master-blueprint|Sals3 Master Blueprint]] — earlier business-strategy document (v4.0, sample status) — 3-pillar/dual-track concept, not superseded, but its technical specifics are now superseded by the build spec.
 - [[universal-category-variation-taxonomy-reference|Universal Category and Variation Taxonomy]] — candidate catalog/category reference data, not yet adopted.
 - [[sals3-cj-dropshipping-integration-plan|CJ Dropshipping Integration Plan]] — proposed design for auto-populating the Seller Center Add Product flow from CJ, incl. the category/attribute mapping approach. Proposed, not yet AJ-reviewed.
+- [[sals3-marketing-banner-integration-proposal|Marketing Banner Integration Proposal]] — 4 proposed banner placements (home, in-feed ads, PDP, cart). Proposed, not approved; flags a colour-token mismatch against the shipped code and a target-artifact mismatch against the real Next.js app.
 - `Raw/` — UI mockups, presentation deck, the build spec PDF, and the category taxonomy workbook.
+
+## Customer Website
+
+- [[sals3-session-2026-08-05-part01-marketplace-landing-page|Marketplace Landing Page Session]] — first real screen: the home/landing page, merged to `develop` 2026-08-05. Static placeholder data, one-off components (not yet the Stage 1 base library) — see the note for exact scope and what's still missing.
 
 ## Domains not started yet
 
-Add sections here as real work begins — e.g. Customer Website, Seller Center, Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.
+Add sections here as real work begins — e.g. Seller Center, Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.

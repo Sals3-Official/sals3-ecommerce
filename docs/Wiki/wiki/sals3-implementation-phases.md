@@ -86,13 +86,13 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 ### Stage 1 — Foundation (in progress)
 
-- [x] Create the repository. Add lint/type/test pipeline. Verified locally with lint, format, typecheck, build, unit, E2E, and high-severity npm audit checks on 2026-08-05.
+- [x] Create the repository. Add lint/type/test pipeline. (Next.js scaffold, ESLint/Airbnb, Prettier, Husky, Vitest, Playwright — verified with lint, format, typecheck, build, unit, E2E, and high-severity npm audit checks on 2026-08-05.)
 - [ ] Add the deployment pipeline and a health endpoint.
-- [ ] Build design tokens: colour, text, space, radius, state.
-- [ ] Build 10 base components: button, input, chip, card, sheet, dialog, tabs, badge, skeleton, toast.
+- [~] Build design tokens: colour, text, space, radius, state. (Font + semantic colour tokens exist in `globals.css`'s `@theme` block as of 2026-08-05 — [[sals3-session-2026-08-05-part01-marketplace-landing-page]]. No space/radius/state token layer yet; still Tailwind defaults.)
+- [ ] Build 10 base components: button, input, chip, card, sheet, dialog, tabs, badge, skeleton, toast. (The 2026-08-05 landing page used one-off components instead — flagged as a gap in [[sals3-session-2026-08-05-part01-marketplace-landing-page]], not a substitute for this item.)
 - [ ] Add logging, metrics, error reports.
 
-**Exit test:** a page with the base components deploys, and the pipeline blocks a bad change.
+**Exit test:** a page with the base components deploys, and the pipeline blocks a bad change. **Not yet passed** — the pipeline blocks bad changes (verified), but no base component library exists for a page to be built from.
 
 ### Stage 2 — Data model and contracts (not started)
 
@@ -108,7 +108,7 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 ### Stage 3 — Catalogue read path (not started)
 
-- [ ] Build the catalogue service: product, variant, category, media.
+- [~] Build the catalogue service: product, variant, category, media. (`src/services/products.ts` exists as of 2026-08-05 — a Zod-validated wrapper around `https://dummyjson.com/products` with pagination and category support, a placeholder external source, not Sals3's own product/variant/category/media model. Now wired to the landing page's deals and "For you" grids, PR #11 — but still not a real Sals3 catalogue.)
 - [ ] Build the list route and product route, server-rendered.
 - [ ] Build filters with counts and the sort control.
 - [ ] Build state preservation — test all 6 conditions (build spec section 6.4).
