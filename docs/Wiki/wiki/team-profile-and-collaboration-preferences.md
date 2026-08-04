@@ -55,29 +55,26 @@ Every rule in this note, [[agent-operating-contract]], and [[autonomous-loop-sop
 
 The Sals3 codebase (Pillar 2 customer website and Pillar 3 Seller Center) will be built in **Next.js + TypeScript**. This is a confirmed decision, not a sample from [[sals3-master-blueprint]] — record it as verified state in [[hot]] and treat it as the default for any future scaffolding, not something to re-derive per feature.
 
-### Session ritual — mirror the BOGS Dashboard pairing exactly
+### Session ritual — one merged repo (revised 2026-08-04)
 
-Bogs's other project pairs a code repo with a second-brain vault: the code repo's root `CLAUDE.md` (see `E:\Documents\BOGS_Dashboard - Antigravity\CLAUDE.md`) names quick-boot commands, then points to `.agents/skills/obsidian-vault/SKILL.md`, which mandates reading the vault's `hot.md` before any material work. Once a Sals3 code repository exists, set up the identical pairing:
+**Superseded by AJ's actual setup.** The original plan (pair a separate vault repo with a separate code repo via `.agents/skills/obsidian-vault/SKILL.md`) never got built and is no longer the plan. AJ merged everything into one repo: **`github.com/Sals3-Official/sals3-ecommerce`**, code at the root, vault at `docs/Wiki/`. The Obsidian vault root is `docs/`, not the repo root. Read `docs/Wiki/wiki/hot.md` first for any material Sals3 work, same purpose as before, just one repo instead of two. The old standalone vault (`github.com/louieboi09/sals3-2nd-brain`) is deprecated — do not build anything that assumes it's still current.
 
-1. Add a root `CLAUDE.md` in the Sals3 code repo with quick-boot commands (dev server, tests) once they exist.
-2. Add `.agents/skills/obsidian-vault/SKILL.md` (or equivalent) in that repo instructing the agent to read `E:/SALS3 2nd brain/Wiki/wiki/hot.md` first, exactly like the BOGS Dashboard repo does for `E:/Bogs 2nd brain`.
-3. Do not build this link speculatively before the Sals3 repo exists — [[../CLAUDE|this vault's own entry point]] already says the same.
+### Cross-machine git backup discipline — proven unsafe when automatic, manual-only now (revised 2026-08-04)
 
-### Cross-machine git backup discipline — vault only, user-paced
+AJ works remotely on a **Mac**; Bogs works on **Windows**. Git (this repo) is the cross-machine sync mechanism between them.
 
-AJ works remotely on a **Mac**; Bogs works on **Windows**. Git (this vault's GitHub repo) is the cross-machine sync mechanism between them for **this Obsidian vault specifically** — there is no other shared filesystem for notes.
+> [!CAUTION] Auto-commit is disabled — confirmed unsafe by a live test (2026-08-04)
+> Because code and vault now share one repo, the earlier "auto-commit the vault every N minutes" plan was tested live and **failed**: the Obsidian Git plugin's "Commit-and-sync" swept up a change in `src/` (real code) despite the vault's `basePath` being set to `docs/`. That directly violates the never-auto-commit-code rule. Auto-save/auto-push intervals are now set to `0` in `docs/.obsidian/plugins/obsidian-git/data.json` — do not re-enable them without a proven-safe scoping mechanism (tested the same way: create a dummy file outside `docs/`, trigger a backup, confirm it's NOT swept in).
+>
+> **Current behavior:** auto-pull stays on (safe — never commits or touches local code). All commits/pushes — vault or code — are **manual and deliberate** now, triggered by a human or by the agent only when explicitly asked. Before trusting any vault-only commit, run `git status` and confirm only `docs/` paths are staged.
 
-**These pacing rules govern the agent, not AJ/Bogs directly.** Either of them can commit and push straight through git or Obsidian itself at any time, bypassing the agent entirely — that's normal, expected, and requires no permission. The Obsidian Git plugin's auto-pull/push cycle picks up a human-made commit exactly the same as an agent-made one. The rule below only constrains what the *agent* does on its own initiative.
+**These pacing rules govern the agent, not AJ/Bogs directly.** Either of them can commit and push straight through git or Obsidian itself at any time, bypassing the agent entirely — that's normal, expected, and requires no permission.
 
 > [!IMPORTANT] Never trust a "commit" claim — verify it, every time, not just at turnover
 > Whenever commit/push state actually matters — someone says "na-commit ko na," the agent is about to reason about current state, or [[sals3-turnover-prompt-template]]'s procedure calls for it — run the real commands (`git log -1 --oneline`, `git status -sb`, `git fetch origin && git status -sb` when remote state matters) and report what they actually show. Don't take a verbal claim, a memory of an earlier commit, or an assumption at face value. This is a general standing rule, not something scoped only to the turnover-prompt procedure — apply it any time commit state is relevant to a decision.
 
-> [!WARNING] Scope and timing correction (2026-07-31) — two different phases
-> This rule is about **backing up the Obsidian vault's notes**, not about code, and its automaticity depends on which phase Sals3 is in:
->
-> - **Vault setup/scaffolding phase (now, and any time the vault's own structure/governance is being worked on):** the agent commits and pushes the vault automatically as it goes, same as this initial setup. No need to ask each time.
-> - **Once the real Sals3 project itself is underway** (actual product/business work being logged in the vault, not vault scaffolding): vault backup becomes user-paced — the agent commits/pushes when the user asks or clearly signals it, not on its own judgment. Re-confirm this transition with AJ/Bogs when it happens; don't assume the date on this note means it already switched.
-> - **The future Sals3 codebase, in every phase:** never auto-commit. Every commit needs the user's explicit go-ahead, every single time, with no standing blanket approval. A vault-backup approval never implies a code-commit approval.
+> [!WARNING] Code, in every phase: never auto-commit
+> Every code commit needs the user's explicit go-ahead, every single time, with no standing blanket approval. A vault-backup approval never implies a code-commit approval. This is now even more load-bearing than before, since a careless `git add -A` in this merged repo risks staging code alongside vault notes — always stage paths explicitly (`git add docs/Wiki docs/Raw`), never `-A`, when the intent is vault-only.
 
 ### Turnover prompt — ask after every commit
 
