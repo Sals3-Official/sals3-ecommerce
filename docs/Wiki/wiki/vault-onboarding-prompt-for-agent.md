@@ -2,121 +2,232 @@
 tags: [setup, sync, onboarding, prompt, sals3]
 aliases: [Onboarding Prompt, Mac Setup Prompt, AJ Setup Prompt]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-04
 status: canonical
 authority: operating-sop
 owner_approved: false
 related:
   - "[[vault-sync-setup-guide]]"
   - "[[team-profile-and-collaboration-preferences]]"
+  - "[[hot]]"
 ---
 
 # Vault Onboarding Prompt for an AI Agent
 
 > [!IMPORTANT] What this is
-> A copy-paste prompt to hand to an AI coding agent (Claude Code, etc.) running on a **new machine**, so it sets up that machine's local clone of this vault with working auto-sync. Written first for AJ's Mac; reusable for any later machine. The human-readable version of the same steps is [[vault-sync-setup-guide]] — this note is the agent-facing version.
+> A copy-paste prompt to hand to an AI coding agent (Claude Code, etc.) running on a **new machine**, so it sets up that machine's local clone of the merged Sals3 repo with a correctly-scoped Obsidian vault. Written for AJ's Mac. The human-readable version is [[vault-sync-setup-guide]].
+
+> [!CAUTION] Rewritten 2026-08-04 — the repo moved AND auto-sync was proven unsafe
+> Two things changed from the original version of this prompt: (1) code and vault are now one merged repo, not two separate ones; (2) a live test found the Obsidian Git plugin's auto-backup can sweep up code changes even with `basePath` set, so **auto-commit/auto-push are now disabled** — backups are manual-only. Do not use an older copy of this prompt.
 
 > [!WARNING] Prerequisite before sending this
-> The new person must already be a **collaborator** on `github.com/louieboi09/sals3-2nd-brain` (private repo) and must have accepted the invite. Without it, step 4 fails with a permissions error, not a clear "not invited" message.
+> AJ (`aj-garrigues`) is already a collaborator on `github.com/Sals3-Official/sals3-ecommerce` — confirmed 2026-08-04. Robin (`robindlcrz`) also has access. This step should already be satisfied.
 
 ## The prompt
 
 ````text
-You are setting up an Obsidian vault on this Mac so it stays automatically in sync
-with my teammate's machine through a private GitHub repo. Do the steps below, in
-order, and report what actually happened at each one - do not claim a step
-succeeded without checking its real output.
+You are setting up this Mac with a clone of the Sals3 team's merged code+docs
+repository, and configuring Obsidian to open the docs folder as a vault.
+Assume I (AJ) have zero prior knowledge of this specific setup - I have not
+done this before on this machine. Do not assume I know what a step means;
+explain briefly as you go. Do the steps below, in order, and report what
+actually happened at each one - do not claim a step succeeded without
+checking its real output. If a step's real output does not match what is
+expected, stop and tell me plainly rather than guessing or continuing.
+
+If you (the agent) have screen-control / computer-use tools available in
+this session, prefer using them to drive the Obsidian GUI steps (6 and the
+"trust author" dialog) directly yourself, the same way this was done on
+Bogs's Windows machine, rather than just describing clicks for me to do -
+GUI folder-picker navigation is the single most common point of confusion
+in this setup (it tripped up Bogs, an experienced user, on his own machine).
+If you do not have those tools, describe each click with exact detail:
+which menu, which button label, what the screen should look like before and
+after.
 
 CONTEXT
 - I am AJ, Lead Architect/Programmer on the Sals3 project.
-- My teammate Bogs works on Windows and already has this vault set up there.
-- The vault is a private GitHub repo: https://github.com/louieboi09/sals3-2nd-brain
-- I should already have been added as a collaborator on that repo. If any step
-  fails with a permissions or 404 error, stop and tell me - it most likely means
-  the invite is missing or unaccepted, and I need to sort that with Bogs first.
-- The vault syncs through the Obsidian Git plugin. Its settings are already
-  committed inside the repo, so a clone inherits them. Do NOT re-enter or change
-  the sync settings.
+- My teammate Bogs works on Windows. We share one repo now (code and vault
+  merged) - not two separate repos. There used to be a plan for two separate
+  repos (one for code, one for an Obsidian vault); that plan was abandoned
+  and replaced by this merged setup, so ignore any older instructions that
+  mention a separate vault repo.
+- The repo is: https://github.com/Sals3-Official/sals3-ecommerce (branch: develop)
+- I should already have access as a collaborator (confirmed 2026-08-04:
+  GitHub username aj-garrigues). If any step fails with a permissions or 404
+  error, stop and tell me - it likely means my invite is unaccepted, and I
+  need to check that on github.com first, in my browser, before continuing.
+- IMPORTANT SAFETY FACT, explained in full so you don't second-guess it:
+  on 2026-08-04, Bogs and Claude ran a live test on the Windows side - they
+  created a dummy file inside the code folder (src/), then triggered the
+  Obsidian Git plugin's automatic "vault backup" feature. That backup was
+  supposed to only touch the docs/ folder (the vault), but it incorrectly
+  committed the dummy code file too. This proved the plugin's folder-scoping
+  setting (called "basePath") does not fully protect code from being swept
+  into an automatic vault commit. Because of that finding, automatic
+  commit/push is now turned OFF in this repo's vault settings, and backups
+  are done manually and deliberately instead - see step 7. Do NOT turn
+  automatic commit/push back on, even if it seems inconvenient - it was
+  disabled on purpose after a real, reproduced problem, not by accident.
 
 STEP 1 - Check git
-Run `git --version`. If git is missing, install the Xcode Command Line Tools
+Run `git --version`. If missing, install Xcode Command Line Tools
 (`xcode-select --install`) or Homebrew git, then verify again.
 
 STEP 2 - Check GitHub CLI
-Run `gh --version`. If missing, install it: `brew install gh`
+Run `gh --version`. If missing: `brew install gh`.
 (If Homebrew itself is missing, tell me before installing anything else.)
 
 STEP 3 - Authenticate (I do this part, not you)
 Check `gh auth status` first. If I am already logged in, skip to step 4.
 
 If not authenticated, do NOT attempt to log in yourself and do NOT ask me for a
-token, password, or code. Instead, tell me to run `gh auth login` myself in my own
-terminal window, choosing: GitHub.com -> HTTPS -> Login with a web browser, and to
-accept when it offers to configure git credentials. Wait for me to confirm it is
-done, then verify with `gh auth status` before continuing.
+token, password, or code. Tell me to run `gh auth login` myself in my own
+terminal, choosing GitHub.com -> HTTPS -> Login with a web browser. Wait for me
+to confirm, then verify with `gh auth status` before continuing.
 
-STEP 4 - Clone the vault
-Clone it somewhere sensible in my home directory, for example:
+STEP 4 - Clone the repo
+Clone the WHOLE repo (code and docs together) somewhere sensible, e.g.:
 
-    git clone https://github.com/louieboi09/sals3-2nd-brain.git "$HOME/SALS3 2nd brain"
+    git clone https://github.com/Sals3-Official/sals3-ecommerce.git "$HOME/sals3-ecommerce"
 
-The path does not need to match Bogs's Windows path. If the folder already exists
-and is not empty, stop and ask me rather than overwriting anything.
+If the folder already exists and is not empty, stop and ask me rather than
+overwriting anything. Confirm the clone is real: run `git branch --show-current`
+(expect `develop`), `git log --oneline -3`, and `git status -sb`, and show me
+the output.
 
-Then confirm the clone is real: run `git log --oneline -3` and
-`git status -sb` inside it, and show me the output.
+STEP 5 - Verify the vault config came with the clone
+Confirm these exist inside the clone, under the `docs/` subfolder specifically
+(NOT at the repo root):
+    docs/.obsidian/plugins/obsidian-git/main.js
+    docs/.obsidian/plugins/obsidian-git/manifest.json
+    docs/.obsidian/plugins/obsidian-git/data.json
+    docs/.obsidian/community-plugins.json
 
-STEP 5 - Verify the plugin came with the clone
-Confirm these exist in the clone:
-    .obsidian/plugins/obsidian-git/main.js
-    .obsidian/plugins/obsidian-git/manifest.json
-    .obsidian/plugins/obsidian-git/data.json
-    .obsidian/community-plugins.json
+Show me the contents of docs/.obsidian/plugins/obsidian-git/data.json. It must
+show:
+    "basePath": "docs"
+    "autoSaveInterval": 0
+    "autoPushInterval": 0
+    "autoPullOnBoot": true
+    "autoPullInterval": 10 (or similar - pulling is safe)
 
-Show me the contents of data.json. It should contain autoPullOnBoot true and
-autoSaveInterval, autoPushInterval, autoPullInterval all set to 10. If any of
-that is missing or different, tell me - do not "fix" it by writing your own
-values.
+If autoSaveInterval or autoPushInterval is anything other than 0, STOP and tell
+me before I open Obsidian - do not silently "fix" it either way, just flag it.
 
-STEP 6 - Tell me how to open it
-Do not try to drive the Obsidian GUI. Instead, tell me to:
-  1. Open Obsidian -> "Open folder as vault" -> select the cloned folder.
-  2. When it asks "Do you trust the author of this vault?", choose
-     "Trust author and enable plugins". (The only plugin is Obsidian Git, from
-     the official release at github.com/Vinzent03/obsidian-git.)
+STEP 6 - Open the vault in Obsidian (do this yourself if you can; otherwise
+walk me through every click)
+If Obsidian is not installed, tell me to download it from obsidian.md and
+install it before continuing, then wait for my confirmation.
 
-STEP 7 - Verify sync actually works
-After I confirm the vault is open in Obsidian, verify from the terminal that the
-repo is healthy and connected:
-    git remote -v
-    git fetch origin && git status -sb
-Report whether local and origin/main agree.
+If Obsidian is already installed but not running, open it. If it shows a
+vault picker/chooser screen (a small window listing existing vaults, with
+"Open folder as vault" as one of the options):
+  1. Click "Open" next to "Open folder as vault" (if it's not immediately
+     visible, look for a button literally labeled "Open folder as vault").
+  2. A native macOS file picker opens. Navigate INTO the cloned repo folder
+     first (e.g. double-click "sals3-ecommerce"), THEN navigate INTO the
+     `docs` subfolder inside it (double-click "docs"). Confirm the path bar
+     or breadcrumb at the top of the picker shows ".../sals3-ecommerce/docs"
+     - not just ".../sals3-ecommerce" - before selecting.
+  3. Click the "Open" or "Select" button to confirm the folder, while you are
+     positioned INSIDE docs/, not just hovering over it from outside.
+     Choosing the repo root instead of docs/ is the single most common
+     mistake here - it will make Obsidian index all the source code files as
+     if they were notes, which is wrong and was already caught and fixed once
+     on Bogs's machine the same way.
+  4. A dialog titled "Do you trust the author of this vault?" appears. Click
+     "Trust author and enable plugins" (not "Browse vault in Restricted
+     Mode" - Restricted Mode would leave the Git plugin disabled). The only
+     plugin in this vault is Obsidian Git, from the official release at
+     github.com/Vinzent03/obsidian-git - it is safe to trust.
+  5. Take a screenshot or describe what you see: the left sidebar should show
+     only two top-level folders, "Raw" and "Wiki" - if you see folders named
+     "src", "public", "AGENTS", or "CLAUDE" at the same level, the wrong
+     folder (the repo root) was opened - go back and redo step 6.2-6.3.
 
-Then explain to me how to confirm it end-to-end myself: make a small edit in any
-note, wait about 10 minutes, and check that a new "vault backup: <timestamp>"
-commit appears on GitHub.
+If Obsidian was already open on some other vault, use the vault switcher
+(bottom-left corner, click the current vault's name) to get to the same
+"Open folder as vault" flow, or use Cmd+O.
 
-STEP 8 - Orient yourself in the vault
-Once setup is verified, read these files in the clone, in this order, and give me
-a short summary of the project's current state and what is still open:
-    Wiki/CLAUDE.md
-    Wiki/wiki/hot.md
-    Wiki/wiki/agent-operating-contract.md
-    Wiki/wiki/team-profile-and-collaboration-preferences.md
+STEP 7 - Verify setup end-to-end with a real round-trip test
+First, from the terminal, confirm the vault correctly sees the parent repo:
+    cd <clone>/docs && git rev-parse --show-toplevel
+    (expected: prints the repo root path, one level up from docs/)
+    git status -sb
+    (expected: clean, or only docs/-scoped changes)
 
-That last file explains how this team wants an agent to work - notably: do not act
-as a yes-man, give evidence and the strongest objection rather than agreement, and
-never claim something is verified when it was not actually checked.
+Then explain to me clearly, in your own words: backups are NOT automatic
+anymore. To back up vault changes, I run the "Git: Commit-and-sync" command
+inside Obsidian (Cmd+P, then type "Git" and pick "Git: Commit-and-sync" from
+the list), or you can prepare a manual git command for me. EITHER way,
+before trusting the result, run `git status` from the repo root and confirm
+ONLY docs/ paths are staged or committed. If anything outside docs/ shows as
+staged, STOP and tell me immediately - do not let it get committed, and do
+not try to fix it yourself without asking me first.
+
+Now do one real, live test together with me, so we both see the whole loop
+work before considering this done:
+  1. Ask me to open any note inside the vault in Obsidian (e.g. hot.md) and
+     add one throwaway line of text at the bottom, then save (Cmd+S).
+  2. Confirm from the terminal that git sees the change:
+       git status -sb   (expect: docs/Wiki/wiki/hot.md shown as modified)
+  3. Tell me to run "Git: Commit-and-sync" in Obsidian, or run the equivalent
+     scoped commands yourself if I ask you to:
+       git add docs/Wiki/wiki/hot.md
+       git commit -m "sync test - AJ Mac onboarding"
+       git push
+  4. Confirm with `git log --oneline -3` that the commit exists locally, and
+     with `git fetch origin && git status -sb` that it reached
+     origin/develop.
+  5. Tell me to check github.com/Sals3-Official/sals3-ecommerce/commits/develop
+     in a browser and confirm the test commit appears there.
+  6. Ask me to remove the throwaway line I added in step 1, save, and repeat
+     the commit/push so the test edit doesn't linger in hot.md permanently.
+
+STEP 8 - Confirm setup is complete
+Setup is 100% done only when ALL of these are true - check each one for real,
+don't assume:
+  [ ] git and gh are installed and gh auth status shows me logged in.
+  [ ] The repo is cloned, on branch develop, matching origin/develop.
+  [ ] docs/.obsidian/plugins/obsidian-git/data.json shows basePath: "docs",
+      autoSaveInterval: 0, autoPushInterval: 0.
+  [ ] Obsidian is open with the vault at .../sals3-ecommerce/docs specifically
+      (sidebar shows only Raw and Wiki, nothing from the code side).
+  [ ] The Git plugin is enabled (Settings -> Community plugins -> Git shows a
+      blue/on toggle).
+  [ ] The live round-trip test in step 7 completed: a real edit was made,
+      committed, pushed, confirmed on GitHub, and the throwaway line was
+      cleaned up afterward.
+  [ ] I understand backups are manual now, and why.
+
+If any box isn't genuinely true, setup is not finished - say so plainly and
+tell me which part still needs work, rather than reporting success.
+
+STEP 9 - Orient yourself in the vault
+Once setup is verified, read these files, in this order, and give me a short
+summary of the project's current state and what is still open:
+    docs/Wiki/CLAUDE.md
+    docs/Wiki/wiki/hot.md
+    docs/Wiki/wiki/agent-operating-contract.md
+    docs/Wiki/wiki/team-profile-and-collaboration-preferences.md
+
+That last file explains how this team wants an agent to work - notably: do not
+act as a yes-man, give evidence and the strongest objection rather than
+agreement, and never claim something is verified when it was not actually
+checked.
 
 THINGS NOT TO DO
 - Do not run `git reset --hard`, `git clean`, or force-push anything.
-- Do not modify the Obsidian Git settings - they are shared through the repo, so
-  changing them here changes them for Bogs too.
-- Do not commit anything to this vault during setup unless I ask.
+- Do not re-enable autoSaveInterval or autoPushInterval in the Git plugin
+  settings - they are disabled for a proven safety reason (see CONTEXT above).
+- Do not ever run `git add -A` or `git add .` from the repo root when the
+  intent is a vault-only backup - always stage docs/ paths explicitly.
+- Do not commit anything - vault or code - during setup unless I ask.
 - Do not handle my passwords, tokens, or authentication codes at any point.
 ````
 
 ## Notes
 
-- Keep this prompt in sync with [[vault-sync-setup-guide]] — if the sync settings or repo URL change, both notes need updating in the same task.
-- The prompt deliberately makes the agent hand `gh auth login` back to the human. An agent should never be handling someone's credentials, and the browser device-flow cannot be completed from a non-interactive session anyway.
+- Keep this prompt in sync with [[vault-sync-setup-guide]] and [[hot]] — if the repo location, vault root, or sync settings change again, all three need updating in the same task.
+- The prompt deliberately makes the agent hand `gh auth login` back to the human, and deliberately forbids re-enabling auto-commit — both are safety decisions made after a real incident, not defaults.
