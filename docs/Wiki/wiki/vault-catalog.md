@@ -53,6 +53,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 ## Customer Website
 
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]] — session record for the marketplace landing page, the first real screen (merged to `develop` 2026-08-05).
+- [[sals3-session-2026-08-05-part02-footer-and-pagination]] — site footer (compliance-claim audit) and numbered pagination, PR pending.
 
 ## Raw reference assets
 
