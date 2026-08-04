@@ -35,7 +35,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (15 entries as of 2026-08-05).
+- [[sals3-skills]] — consolidated engineering lessons (16 entries as of 2026-08-05).
 
 ## Business and product
 

@@ -138,3 +138,13 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** Before staging a commit, don't assume the checked-out branch is a blank slate — run `git log develop..HEAD --oneline` to see what it already carries, and `gh pr view --json number,state,title,url` to check for an existing open PR. If either shows unrelated work, stash, branch fresh off `develop`, and commit there instead.
 
 **Where applied:** Stashed the working tree, branched `feat/geo-aeo-seo-machine-endpoints` off `develop`, and committed there — `chore/vault-session-2026-08-05-footer-pagination` and PR #14 were left untouched.
+
+### 16. Check whether a branch's PR already merged before pushing another commit to it
+
+**Confirmed:** 2026-08-05, immediately after lesson 15 — the same session repeated the exact failure `team-profile-and-collaboration-preferences.md` already documented from 2026-08-04.
+
+**Incident:** After PR #15 (`feat/geo-aeo-seo-machine-endpoints`) auto-merged, a follow-up commit (the SEO/GEO/AEO discoverability rule) was pushed to that same branch without checking merge status first. `git push` succeeded with no warning — a PR merge is a one-time event, not an ongoing sync, so the commit sat unmerged/orphaned on the remote branch. The mistake was caught only because Bogs asked why the change wasn't visible in the PR (which was already closed). Had to open a second PR (#16) to actually land it.
+
+**Lesson:** Before pushing another commit to a branch that already had a PR, run `gh pr view --json state,mergedAt` (or check the branch's PR list) first. If the PR is `MERGED`, create a fresh branch off `develop` instead of pushing more commits to the old one — pushing succeeds silently either way, so a green `git push` is not evidence the commit reached `develop`.
+
+**Where applied:** Opened PR #16 from a corrected state, and added a PR-template checklist item (`.github/pull_request_template.md`) so this is checked at PR-open time going forward, not just remembered.
