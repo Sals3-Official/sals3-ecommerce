@@ -7,9 +7,9 @@ status: canonical
 authority: constitutional
 owner_approved: false
 related:
-  - "[[agent-operating-contract]]"
-  - "[[autonomous-loop-sop]]"
-  - "[[hot]]"
+  - '[[agent-operating-contract]]'
+  - '[[autonomous-loop-sop]]'
+  - '[[hot]]'
 ---
 
 # Team Profile and Collaboration Preferences
@@ -32,7 +32,7 @@ AJ and Bogs are **async by default** — working hours vary and sometimes overla
 
 ### Still unconfirmed — relationship to "Sals3 Owner / Board / Leadership"
 
-[[sals3-master-blueprint]] repeatedly references a "Sals3 Owner," "Board of Directors," and "Sals3 Leadership" as a separate audience/authority that must align on business rules (commission rates, payment partners, category structure) before final execution, and names AJ & Bogs as "The Sals3 Engineering & Operations Team" presenting *to* that audience. It is not yet confirmed whether AJ/Bogs/Robin **are** that Leadership (i.e., they're the owners and "Leadership" just means a more formal decision-making hat they wear) or are building **for** a separate Owner/Board who isn't AJ, Bogs, or Robin. Do not assume either way — ask before treating a "Leadership alignment" gate in [[sals3-implementation-phases]] or [[sals3-management-bible]] as satisfied by AJ/Bogs/Robin agreeing among themselves.
+[[sals3-master-blueprint]] repeatedly references a "Sals3 Owner," "Board of Directors," and "Sals3 Leadership" as a separate audience/authority that must align on business rules (commission rates, payment partners, category structure) before final execution, and names AJ & Bogs as "The Sals3 Engineering & Operations Team" presenting _to_ that audience. It is not yet confirmed whether AJ/Bogs/Robin **are** that Leadership (i.e., they're the owners and "Leadership" just means a more formal decision-making hat they wear) or are building **for** a separate Owner/Board who isn't AJ, Bogs, or Robin. Do not assume either way — ask before treating a "Leadership alignment" gate in [[sals3-implementation-phases]] or [[sals3-management-bible]] as satisfied by AJ/Bogs/Robin agreeing among themselves.
 
 ## How this team wants an agent to collaborate
 
@@ -75,6 +75,17 @@ AJ works remotely on a **Mac**; Bogs works on **Windows**. Git (this repo) is th
 
 > [!WARNING] Code, in every phase: never auto-commit
 > Every code commit needs the user's explicit go-ahead, every single time, with no standing blanket approval. A vault-backup approval never implies a code-commit approval. This is now even more load-bearing than before, since a careless `git add -A` in this merged repo risks staging code alongside vault notes — always stage paths explicitly (`git add docs/Wiki docs/Raw`), never `-A`, when the intent is vault-only.
+
+> [!CAUTION] Never push or commit directly to `main` or `develop` (AJ's rule, confirmed 2026-08-04)
+> Always work on a branch, never commit or push straight to `main` or `develop` — this applies to **every** change in this repo, vault-only edits included, not just code. Create a branch first, push the branch, and let it go through review/merge rather than landing on `develop` directly.
+>
+> **Branch naming format (exact, AJ's convention):**
+>
+> - `feat/<feature-name>` — new capability or content.
+> - `chore/<small-change>` — small maintenance, docs, config, cleanup.
+> - `bug/<fixed-issue>` — a fix for something broken.
+>
+> Pick the prefix that matches the change; use short, hyphenated, descriptive names after the slash (e.g. `chore/add-branch-workflow-rule`, `feat/product-detail-page`, `bug/checkout-price-mismatch`). Push the branch and open a PR rather than merging into `develop` directly, unless AJ or Bogs explicitly says to merge it themselves.
 
 ### Turnover prompt — ask after every commit
 

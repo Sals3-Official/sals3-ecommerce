@@ -7,13 +7,13 @@ status: current-state
 authority: implementation-state
 owner_approved: true
 related:
-  - "[[agent-operating-contract]]"
-  - "[[team-profile-and-collaboration-preferences]]"
-  - "[[sals3-ux-build-specification]]"
-  - "[[sals3-management-bible]]"
-  - "[[sals3-implementation-phases]]"
-  - "[[sals3-master-blueprint]]"
-  - "[[index]]"
+  - '[[agent-operating-contract]]'
+  - '[[team-profile-and-collaboration-preferences]]'
+  - '[[sals3-ux-build-specification]]'
+  - '[[sals3-management-bible]]'
+  - '[[sals3-implementation-phases]]'
+  - '[[sals3-master-blueprint]]'
+  - '[[index]]'
 ---
 
 # Sals3 — Current State Cache
@@ -60,17 +60,21 @@ Use [[sals3-implementation-phases]] for the full stage-by-stage task register, [
 
 ### Financial integrity
 
-- No payment, payout, or commission logic is implemented yet. The build spec's Money/PriceLine model, quote-versioning, and idempotency-key mechanisms are real and specified — but the *values* flowing through them (commission rate, confirmed payment partners) remain pending Leadership confirmation. See [[sals3-management-bible#4. Non-negotiable boundaries]].
+- No payment, payout, or commission logic is implemented yet. The build spec's Money/PriceLine model, quote-versioning, and idempotency-key mechanisms are real and specified — but the _values_ flowing through them (commission rate, confirmed payment partners) remain pending Leadership confirmation. See [[sals3-management-bible#4. Non-negotiable boundaries]].
 - RA 11967 (Internet Transactions Act) compliance is mandatory per the build spec (sections 9, 14, 17.3, 22) — the spec itself states a Philippine lawyer must still review before launch.
 
 ### Design and language
 
-- The design token system, base components, and screen layouts are now specified (build spec sections 11, 15) — not locked-in *code* yet, since no repository exists.
+- The design token system, base components, and screen layouts are now specified (build spec sections 11, 15) — not locked-in _code_ yet, since no repository exists.
 - **Confirmed 2026-08-03 ("pinakamahalaga" — Bogs's words):** every user-facing statement that ships in code — UI text, button labels, error messages, instructions — must follow ASD-STE100 Simplified Technical English **and** be understandable by an elementary school student. See [[sals3-management-bible#4. Non-negotiable boundaries]] for the full rule.
 
 ### Coding practice
 
 - **Confirmed 2026-08-03:** AI-written code must be built and delivered **component-by-component**, never as one monolithic pass — smallest complete, independently reviewable/testable unit first, verified, then composed further. See [[sals3-management-bible#4. Non-negotiable boundaries]] for the full rule and its link to the project-history lesson above.
+
+### Git workflow
+
+- **Confirmed 2026-08-04 (AJ's rule):** never push or commit directly to `main` or `develop` — every change, including vault-only edits, goes on its own branch first: `feat/<feature-name>`, `chore/<small-change>`, or `bug/<fixed-issue>`. Push the branch and open a PR rather than merging into `develop` directly. See [[team-profile-and-collaboration-preferences#Cross-machine git backup discipline]] for the full rule.
 
 ## Implemented versus incomplete
 
