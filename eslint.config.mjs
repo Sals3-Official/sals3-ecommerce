@@ -80,6 +80,9 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // docs/ is the Obsidian vault (notes + a vendored community plugin
+    // bundle), not project source - never lint it.
+    'docs/**',
   ]),
   prettierConfig,
 ]);
