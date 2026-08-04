@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sals3 Ecommerce
 
-## Getting Started
+Next.js + TypeScript ecommerce rebuild for Sals3.
 
-First, run the development server:
+## Required Reading
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Before code changes, read:
+
+- `AGENTS.md`
+- `docs/Wiki/wiki/hot.md`
+- `docs/Wiki/wiki/agent-operating-contract.md`
+- `docs/Wiki/wiki/nextjs-component-security-code-rules.md`
+- `docs/Wiki/wiki/project-structure-installation-and-runbook.md`
+
+## Project Structure
+
+```text
+sals3-ecommerce/
+├── .github/workflows/verify.yml
+├── docs/                    # Obsidian vault and project documentation
+│   ├── Raw/                 # Source/reference assets
+│   └── Wiki/wiki/           # Canonical operating notes
+├── e2e/                     # Playwright tests
+├── public/                  # Static public assets
+├── scripts/                 # Local automation scripts
+├── src/app/                 # Next.js App Router source
+├── test/                    # Shared test setup/helpers
+├── AGENTS.md                # Mandatory agent rules
+├── package.json             # npm scripts and dependencies
+└── package-lock.json        # npm lockfile
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Do not put application code in `docs/`. Do not put vault notes in `src/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use npm. Do not switch package managers unless the owner approves.
 
-## Learn More
+```bash
+cd /Users/MacBook/Documents/Sals3/sals3-ecommerce
+npm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Run Locally
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cd /Users/MacBook/Documents/Sals3/sals3-ecommerce
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open:
 
-## Deploy on Vercel
+```text
+http://localhost:3000
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Build and Start
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+npm run start
+```
+
+## Tests and Verification
+
+```bash
+npm run lint
+npm run format:check
+npm run typecheck:clean
+npm run build
+npm run test:run
+npm run test:e2e
+npm audit --audit-level=high
+```
+
+Full shortcut:
+
+```bash
+npm run verify
+npm audit --audit-level=high
+```
+
+## Package Installation
+
+Runtime dependency:
+
+```bash
+npm install <package-name>
+```
+
+Dev-only dependency:
+
+```bash
+npm install -D <package-name>
+```
+
+After package changes:
+
+```bash
+npm audit --audit-level=high
+npm run verify
+```
+
+Before adding a package, prefer existing platform features or current dependencies. Avoid heavy, duplicate, unmaintained, or paid-service packages unless approved.
+
+## README Rule
+
+Update this README in the same task when any change adds or changes:
+
+- user-facing features;
+- setup or installation steps;
+- package commands;
+- environment variables;
+- runtime behavior;
+- scripts;
+- testing workflow;
+- project structure;
+- important limitations or known issues.
+
+## Deployment
+
+Do not deploy, publish, push, or commit unless the owner explicitly asks.

@@ -2,7 +2,7 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-05
 status: canonical
 authority: navigation
 owner_approved: true
@@ -21,6 +21,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 ## Constitutional and navigation notes
 
 - [[agent-operating-contract]] — anti-yesman and verification rules.
+- [[nextjs-component-security-code-rules]] — mandatory Next.js component architecture, security, and verification gate for all Sals3 codebase edits.
+- [[project-structure-installation-and-runbook]] — canonical repository structure, package installation rules, run commands, verification commands, and README update rule.
 - [[team-profile-and-collaboration-preferences]] — who's on the team (AJ and Bogs, shared vault) and how they want an agent to work with them.
 - [[autonomous-loop-sop]] — default act-observe-adjust operating discipline for any problem.
 - [[vault-sync-setup-guide]] — Obsidian Git setup, sync mechanics, and troubleshooting for new machines.
