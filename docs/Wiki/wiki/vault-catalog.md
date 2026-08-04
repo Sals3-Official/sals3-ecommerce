@@ -35,7 +35,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (5 entries as of 2026-08-05).
+- [[sals3-skills]] — consolidated engineering lessons (15 entries as of 2026-08-05).
 
 ## Business and product
 
@@ -49,14 +49,17 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[universal-category-variation-taxonomy-reference]] — candidate catalog/category taxonomy data, not yet adopted.
 - [[sals3-cj-dropshipping-integration-plan]] — proposed CJ auto-import/category-mapping design. Proposed, not yet AJ-reviewed.
 - [[sals3-marketing-banner-integration-proposal]] — proposed marketing banner placements (home, in-feed, PDP, cart). Proposed, not yet reviewed; flags objections.
+- [[sals3-geo-aeo-seo-strategy-proposal]] — proposed GEO/AEO/SEO + neuromarketing architecture (Next.js RSC, JSON-LD entity graph, citation-first content, `llms.txt`). Route-independent pieces (`robots.txt`, `llms.txt`, global `Organization` JSON-LD) implemented and verified 2026-08-05; PDP/cart-dependent pieces parked in [[parked-ideas-backlog]].
 
 ## Customer Website
 
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]] — session record for the marketplace landing page, the first real screen (merged to `develop` 2026-08-05).
+- [[sals3-session-2026-08-05-part02-footer-and-pagination]] — site footer (compliance-claim audit) and numbered pagination, code merged to `develop`.
+- [[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints]] — `robots.txt`, `llms.txt`, global `Organization` JSON-LD shipped; PDP/cart-dependent GEO/AEO items parked.
 
 ## Raw reference assets
 
-- `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`), and the marketing banner pitch PDF (`sals3_marketing_banner_pitch_2026-08-05.pdf`, see [[sals3-marketing-banner-integration-proposal]]). Not linkable as Obsidian notes; referenced here for discovery.
+- `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`), the marketing banner pitch PDF (`sals3_marketing_banner_pitch_2026-08-05.pdf`, see [[sals3-marketing-banner-integration-proposal]]), and the GEO/AEO/SEO strategy PDF (`sals3_geo_aeo_seo_strategy_2026-08-05.pdf`, see [[sals3-geo-aeo-seo-strategy-proposal]]). Not linkable as Obsidian notes; referenced here for discovery.
 
 ## Session notes
 
