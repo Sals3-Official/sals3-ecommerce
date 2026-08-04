@@ -16,6 +16,7 @@ related:
   - "[[hot]]"
   - "[[sals3-session-2026-08-05-part01-marketplace-landing-page]]"
   - "[[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]]"
+  - "[[sals3-session-2026-08-05-part02-footer-and-pagination]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -76,3 +77,33 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** For ecommerce promo banners, default to no autoplay, 44px-plus controls, dot navigation, meaningful alt text, stable aspect ratio, and E2E checks for both desktop and mobile. Verify `naturalWidth > 0` and no horizontal page overflow.
 
 **Where applied:** `PromoCarousel` uses Embla manual controls, `next/image`, desktop/mobile Playwright checks, and no autoplay.
+
+### 10. Audit a design mockup's legal/compliance copy before implementing it
+
+**Confirmed:** 2026-08-05, implementing the site footer from the "Sals3 Footer" Claude Design prototype.
+
+**Incident:** The mockup's footer bottom bar asserted a business registration ("Sals3 Pty. Ltd, ACN 685 740 514" — an Australian company-number format, wrong jurisdiction outright), a DTI Trustmark holder claim, "Compliant with Republic Act 11967," a bank of fake security-certification badges (PCI DSS Level 1, Visa Secure, Mastercard SecureCode, etc.), an "accepted payment methods" grid naming 10 specific brands, and Google Play / App Store download buttons — none of which are true against this vault's verified state ([[hot]], build spec section 22).
+
+**Lesson:** A design tool's output is a visual/interaction reference, not a source of truth for legal, compliance, certification, or operational facts. Before implementing any footer/trust/legal copy from a mockup, check every specific factual claim (registration numbers, certifications, "compliant with," payment methods accepted, app availability) against the vault's verified current state. Omit what isn't confirmed rather than shipping it or silently deleting it without explanation — report the specific drop and why, in the same turn.
+
+**Where applied:** `SiteFooter` and its sub-components ship only the brand tagline (matches an actual build-spec design rule), internal nav stubs, and real category links. See [[sals3-session-2026-08-05-part02-footer-and-pagination]] for the full list of what was dropped and why.
+
+### 11. Find the real PID holding a port, don't trust a remembered one
+
+**Confirmed:** 2026-08-05, chasing the recurring `typecheck:clean` EPERM on `.next`.
+
+**Incident:** A `taskkill /PID <remembered-pid> /F` returned "process not found," but `.next` was still locked. The dev server process had a different PID than the one last seen — a new one had been started (or the browser preview's own connection had spawned/kept one alive) since the last check.
+
+**Lesson:** On Windows, when a remembered PID doesn't resolve but a file lock clearly persists, check what is actually listening on the port right now — `Get-NetTCPConnection -LocalPort 3000 | Select OwningProcess` — and kill that PID, not the one from memory. Don't assume a stopped background task means no server is running; a live browser preview tab can keep a `next dev` process alive independently.
+
+**Where applied:** Unblocked the `feat/site-footer-and-pagination` commit/push after two failed retries.
+
+### 12. Don't use array index in a React key, even indirectly, in this repo
+
+**Confirmed:** 2026-08-05, building the numbered-pagination ellipsis markers.
+
+**Incident:** `react/no-array-index-key` fired on `key={`ellipsis-${index}`}` inside a `.map((item, index) => ...)`, even with an `eslint-disable-next-line` comment — Prettier's reformatting moved the JSX relative to the disable comment, breaking the association, and the underlying pattern was fragile regardless.
+
+**Lesson:** When list items lack natural unique identity (like ellipsis markers in a truncated pagination range, where there are at most two per render), give them identity in the data itself instead of leaning on the array index — e.g. `{ ellipsisAfter: <neighboring page number> }` from the function that builds the list, then key off that. Cheaper and more robust than an eslint-disable comment that can silently detach from its target line.
+
+**Where applied:** `src/lib/pagination.ts`'s `PageItem` type and `ProductPagination`'s render.

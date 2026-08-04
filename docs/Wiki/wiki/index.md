@@ -58,6 +58,7 @@ related:
 ## Customer Website
 
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page|Marketplace Landing Page Session]] — first real screen: the home/landing page, merged to `develop` 2026-08-05. Static placeholder data, one-off components (not yet the Stage 1 base library) — see the note for exact scope and what's still missing.
+- [[sals3-session-2026-08-05-part02-footer-and-pagination|Site Footer and Pagination Session]] — site footer with a legal/compliance-claim audit (several mockup claims dropped as unverifiable), numbered pagination. PR pending, not yet merged.
 
 ## Domains not started yet
 

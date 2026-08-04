@@ -19,6 +19,7 @@ related:
   - '[[sals3-skills]]'
   - '[[sals3-session-2026-08-05-part01-marketplace-landing-page]]'
   - '[[sals3-marketing-banner-integration-proposal]]'
+  - '[[sals3-session-2026-08-05-part02-footer-and-pagination]]'
 ---
 
 # Sals3 — Current State Cache
@@ -45,6 +46,7 @@ related:
 - **Confirmed 2026-08-05, PR #11 merged shortly after:** AJ wired the home page to live data. `src/services/products.ts` (Zod-validated DummyJSON wrapper, extended with pagination and category support) now feeds real categories, random deals, and a paginated "For you" grid. The PR #10 `LoadMoreGrid`/`PromoBanner` components were replaced with `ProductPagination` (`?page=` URL-based — closer to build spec section 6.4's state-preservation rule than the load-more button it replaced) and `PromoCarousel` (`embla-carousel-react@8.6.0`, manual controls, no autoplay, 7 static promo images in `public/home-promos/`). Full record: [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]]. Landing-page product data is still DummyJSON, an external placeholder source — not Sals3's own catalogue yet.
 - **Confirmed 2026-08-05:** [[sals3-skills]] now has 9 entries — 5 from the landing-page session, 4 from the API/carousel session. See that note for the full list.
 - **Ingested 2026-08-05, proposed only:** [[sals3-marketing-banner-integration-proposal]] — a marketing pitch for 4 banner placements. Not approved, not built. Flags an unresolved discrepancy: the pitch names `#0891b2` as Sals3's primary action colour; the shipped code still uses `#0a5c8a` as of this merge (verified by grep, 2026-08-05). Resolve before any banner work starts.
+- **Confirmed 2026-08-05 — site footer and numbered pagination, PR pending (`feat/site-footer-and-pagination`, not yet merged):** `SiteFooter` built from the "Sals3 Footer" design prototype, deliberately dropping several claims the mockup made that this vault cannot verify — a wrong-jurisdiction business registration, an unconfirmed DTI Trustmark claim, an unconfirmed RA 11967 compliance claim, fake security-certification badges, an unconfirmed payment-methods grid, and dead app-store buttons. `ProductPagination` rebuilt with numbered pages + ellipsis truncation (`src/lib/pagination.ts`) instead of a "Page X of Y" readout. Full record and the complete list of what was dropped and why: [[sals3-session-2026-08-05-part02-footer-and-pagination]].
 
 ## Project history — why this rebuild exists
 
@@ -106,17 +108,19 @@ Use [[sals3-implementation-phases]] for the full stage-by-stage task register, [
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]] — the landing page itself: header, category strip, promo banner (later replaced), deals grid, "For you" grid, design tokens, PR #10.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — DummyJSON landing-page services, random deals, live categories, paginated "For you" grid, Embla carousel, verification, and lessons learned, PR #11.
 - [[sals3-marketing-banner-integration-proposal]] — ingested marketing banner pitch, proposed only, not built.
+- [[sals3-session-2026-08-05-part02-footer-and-pagination]] — site footer (with a compliance-claim audit), numbered pagination, PR pending.
 
 ## Latest reusable lessons
 
-See [[sals3-skills]] for all 9 entries.
+See [[sals3-skills]] for all 12 entries.
 
 - Vitest + Testing Library needs explicit `afterEach(cleanup)` — this repo's config doesn't set `test.globals: true`.
-- `npm run typecheck:clean` can EPERM on Windows if `npm run dev` (or antivirus) is holding `.next` open.
-- This repo's Airbnb ESLint config is stricter than typical Next.js style (`import/prefer-default-export`, `react/jsx-props-no-spreading`).
+- `npm run typecheck:clean` can EPERM on Windows if `npm run dev` (or antivirus, or a browser preview keeping a dev server alive) is holding `.next` open — find the real PID via `Get-NetTCPConnection`, don't trust a remembered one.
+- This repo's Airbnb ESLint config is stricter than typical Next.js style (`import/prefer-default-export`, `react/jsx-props-no-spreading`, and `react/no-array-index-key` even via an indirect template-string key).
 - GitHub PRs on this repo can get merged to `develop` faster than expected — re-`fetch` before assuming a branch is still unmerged.
 - `DesignSync` can read a `claude.ai/design` project directly by ID, not just push to one.
 - Next.js 16 `next/image` quality values are allow-listed — don't set a custom `quality` without checking `next.config.ts`.
 - `.next-typecheck-tmp-*` generated folders can poison ESLint after an interrupted `typecheck:clean`.
 - Prompt-attached images must become verified local assets before site integration.
 - Ecommerce promo carousels need manual, testable controls (no autoplay) by default.
+- Audit a design mockup's legal/compliance/certification claims against verified vault state before implementing them — a mockup is a visual reference, not a source of truth for facts.
