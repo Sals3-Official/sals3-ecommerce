@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/home-placeholder-data';
 import { formatMoney, percentOff } from '@/lib/money';
@@ -18,7 +19,19 @@ export default function ProductCard({ product }: ProductCardProps) {
       href={`/p/${product.id}`}
       className="flex flex-col overflow-hidden rounded-xl border border-border bg-white transition hover:-translate-y-1 hover:border-brand-600 hover:no-underline hover:shadow-[0_16px_34px_rgba(11,44,77,0.15)]"
     >
-      <ProductImagePlaceholder tone={product.tone} />
+      {product.imageUrl ? (
+        <div className="relative aspect-square bg-white">
+          <Image
+            src={product.imageUrl}
+            alt={product.imageAlt ?? product.title}
+            fill
+            sizes="(min-width: 1024px) 224px, (min-width: 640px) 33vw, 50vw"
+            className="object-contain p-3"
+          />
+        </div>
+      ) : (
+        <ProductImagePlaceholder tone={product.tone} />
+      )}
       <div className="flex flex-col gap-1 p-2.5 pb-3">
         <div className="font-display text-[22px] font-semibold tracking-tight text-ink">
           {formatMoney(product.price)}

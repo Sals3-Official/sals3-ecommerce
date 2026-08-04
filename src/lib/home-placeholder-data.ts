@@ -16,6 +16,8 @@ export type Product = {
   ratingLine: string;
   shipLine: string;
   tone: PlaceholderTone;
+  imageUrl?: string;
+  imageAlt?: string;
 };
 
 export type AdSlot = {

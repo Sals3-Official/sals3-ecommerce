@@ -1,26 +1,35 @@
 import type { AdSlot, Product } from '@/lib/home-placeholder-data';
-import LoadMoreGrid from '@/components/home/LoadMoreGrid';
+import ProductGrid from '@/components/home/ProductGrid';
+import ProductPagination from '@/components/home/ProductPagination';
 
 type ForYouSectionProps = {
   products: Product[];
   ad: AdSlot;
   regionNote: string;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+  };
 };
 
 export default function ForYouSection({
   products,
   ad,
   regionNote,
+  pagination,
 }: ForYouSectionProps) {
-  const items = [
-    ...products
-      .slice(0, 3)
-      .map((product) => ({ kind: 'product' as const, product })),
-    { kind: 'ad' as const, ad },
-    ...products
-      .slice(3)
-      .map((product) => ({ kind: 'product' as const, product })),
-  ];
+  const productItems = products.map((product) => ({
+    kind: 'product' as const,
+    product,
+  }));
+  const items =
+    products.length > 3
+      ? [
+          ...productItems.slice(0, 3),
+          { kind: 'ad' as const, ad },
+          ...productItems.slice(3),
+        ]
+      : productItems;
 
   return (
     <section className="mt-8" aria-labelledby="for-you-heading">
@@ -30,7 +39,13 @@ export default function ForYouSection({
         </h2>
         <span className="text-xs text-ink-subtle">{regionNote}</span>
       </div>
-      <LoadMoreGrid items={items} initialCount={5} />
+      <ProductGrid items={items} />
+      {pagination && pagination.totalPages > 1 ? (
+        <ProductPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+        />
+      ) : null}
     </section>
   );
 }
