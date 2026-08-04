@@ -86,6 +86,26 @@ AJ works remotely on a **Mac**; Bogs works on **Windows**. Git (this repo) is th
 > - `bug/<fixed-issue>` — a fix for something broken.
 >
 > Pick the prefix that matches the change; use short, hyphenated, descriptive names after the slash (e.g. `chore/add-branch-workflow-rule`, `feat/product-detail-page`, `bug/checkout-price-mismatch`). Push the branch and open a PR rather than merging into `develop` directly, unless AJ or Bogs explicitly says to merge it themselves.
+>
+> **After a branch's PR is merged, never keep committing onto that same branch.** Create a fresh branch for the next change instead. Commits pushed to an already-merged branch do not enter `develop` on their own — a PR merge is a one-time event, not an ongoing sync. (This actually happened once, 2026-08-04: two follow-up commits were pushed to `chore/add-branch-workflow-rule` after its PR #1 had already merged, and sat unmerged/orphaned until caught during a later review. Content lost that way must be re-added via a new branch, as this note now does.)
+>
+> **PR assignee/reviewer convention — symmetric, confirmed 2026-08-05 (AJ's rule, correcting an earlier wrong guess):**
+>
+> - For a PR from **Bogs's** work: assignee = Bogs, reviewer = AJ.
+> - For a PR from **AJ's** work: assignee = AJ, reviewer = Bogs.
+> - Every code or vault change needs the *other* teammate's review before merging — no self-review, no self-merge, in either direction. (An earlier version of this note guessed AJ self-reviews his own PRs; that guess never actually reached `develop` due to the orphaned-branch issue above, and AJ has since confirmed the real rule is symmetric — this note reflects the correction, not the original guess.)
+> - Set both fields explicitly when opening a PR: `gh pr create --assignee <own-username> --reviewer <other-teammate-username> ...`, don't leave them blank.
+
+### Code sync — manual `git pull`, by design, not a workaround
+
+Unlike the vault's manual-backup rule (which exists *because* automatic sync proved unsafe), manual code sync was always the intended workflow — this isn't a downgrade, it's normal git collaboration. When AJ merges a PR into `develop` on GitHub, it does **not** appear on Bogs's machine automatically, and vice versa. To get the other person's merged work:
+
+```bash
+git fetch origin && git status -sb   # see if origin/develop moved ahead
+git pull origin develop              # bring the merged changes down
+```
+
+Do this at the start of a work session, before branching off `develop` for new work — branching from a stale `develop` is a common source of avoidable merge conflicts later. This is the same "verify commit state" discipline already required elsewhere in this note, applied specifically to staying in sync with the other developer.
 
 ### Turnover prompt — ask after every commit
 
