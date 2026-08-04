@@ -61,6 +61,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 ## Session notes
 
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — verified 2026-08-05 landing-page API, pagination, carousel, test, and lesson session note.
+- [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel]] — copy-paste turnover prompt for the next agent after the landing-page API and carousel work.
 
 ## Domains not started yet
 
