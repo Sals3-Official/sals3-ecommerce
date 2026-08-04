@@ -1,0 +1,210 @@
+{
+  "main": {
+    "id": "2e52f6408b7e2cd9",
+    "type": "split",
+    "children": [
+      {
+        "id": "82bf0b6c4ff995a5",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "37e6981e09c1f3f0",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "025f23a671e9fcfa",
+    "type": "split",
+    "children": [
+      {
+        "id": "367a962d7ba58ebb",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "eff2438dfef07b53",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "9edced73f862f64c",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "ea6504900c7de8b9",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "cc4867f8f28bba21",
+    "type": "split",
+    "children": [
+      {
+        "id": "3780c31e416483a1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2c4f7f08db4bf361",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Wiki/wiki/hot.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "a9eb3e1f741d52dc",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Wiki/wiki/hot.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "c2e1eef51be91b3c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "51b7f4ad5d2739a0",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "d6407a9b5fbbb41b",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Wiki/wiki/hot.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "obsidian-git:Open Git source control": false
+    }
+  },
+  "active": "37e6981e09c1f3f0",
+  "lastOpenFiles": [
+    "Wiki/wiki/team-profile-and-collaboration-preferences.md.tmp.41808.cced47a07841",
+    "Wiki/CLAUDE.md",
+    "Wiki/wiki/hot.md",
+    "Wiki/wiki/hot.md.tmp.28980.a9d91a36a294",
+    "Wiki/wiki/sals3-cj-dropshipping-integration-plan.md.tmp.28980.b9ab168abae1",
+    "Wiki/wiki/sals3-management-bible.md.tmp.28980.5ec71e93ea97",
+    "Wiki/wiki/sals3-implementation-phases.md.tmp.28980.478afe7d75e9",
+    "Wiki/wiki/sals3-implementation-phases.md.tmp.28980.30ea773318bb",
+    "Wiki/wiki/vault-catalog.md.tmp.28980.09cecbc68dc8",
+    "Wiki/wiki/index.md.tmp.28980.d6bc92ee6c8f",
+    "Wiki/wiki/sals3-cj-dropshipping-integration-plan.md",
+    "Wiki/wiki/sals3-cj-dropshipping-integration-plan.md.tmp.28980.2f9e491db56a",
+    "Wiki/wiki/hot.md.tmp.28980.87ae097662e8",
+    "Wiki/wiki/hot.md.tmp.43388.bdb7d93d1fb2",
+    "Wiki/wiki/universal-category-variation-taxonomy-reference.md",
+    "Wiki/wiki/sals3-ux-build-specification.md",
+    "Wiki/wiki/sals3-management-bible.md",
+    "Wiki/wiki/team-profile-and-collaboration-preferences.md",
+    "Wiki/wiki/vault-catalog.md"
+  ]
+}
