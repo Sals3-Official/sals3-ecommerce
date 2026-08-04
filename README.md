@@ -35,7 +35,14 @@ Do not put application code in `docs/`. Do not put vault notes in `src/`.
 
 ## API Services
 
-Product API calls live in `src/services/products.ts`. The current service prepares `fetchProducts()` for `https://dummyjson.com/products`, validates the external JSON with Zod, and keeps tests beside the service.
+Product API calls live in `src/services/products.ts`. `fetchProducts()` reads from
+`https://dummyjson.com/products`, sends validated `limit` and `skip` pagination
+parameters, validates external JSON with Zod, and maps API products into home
+page cards. `fetchProductsByOffset()` supports bounded offset reads for
+homepage deal slots. `fetchProductCategories()` reads
+`https://dummyjson.com/products/categories`, validates category `slug` and
+`name`, and maps categories into internal `/c/<slug>` navigation links. Invalid
+`page`, `limit`, and `skip` input falls back to safe defaults.
 
 ## Install
 
@@ -111,13 +118,23 @@ Before adding a package, prefer existing platform features or current dependenci
 ## Home Page
 
 `src/app/page.tsx` renders the marketplace landing page: header (logo, search,
-delivery region, cart/orders/account links), category strip, a dismissible
-promo banner, a deals grid, and a "For you" grid with a client-side "Load
-more". Catalog content comes from `src/lib/home-placeholder-data.ts` — the
-home page is not wired to `src/services/products.ts` yet (build spec stage 3
-catalogue read path), so product data is static placeholder content and
-product photos are decorative gradient tiles, not real images. Money values
-follow the build spec's minor-unit convention (`src/lib/money.ts`).
+delivery region, cart/orders/account links), live category strip, an Embla promo
+carousel, a random deals grid, and a paginated "For you" grid. Promo carousel
+images live in `public/home-promos/` and slide metadata lives in
+`src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
+assets, `next/image`, manual controls, dot buttons, and no autoplay. The category
+strip, deals grid, and "For you" grid read live data through
+`src/services/products.ts`. The category strip ignores remote category URLs and
+builds internal `/c/<slug>` links from validated slugs. The deals grid chooses a
+safe random `skip` value server-side and fetches 5 products. The "For you" grid
+uses the `?page=` query string for pagination and fetches 14 products per page,
+so the 14 products plus 1 sponsored card fill 15 desktop grid cells. If the
+external product API is unavailable or returns invalid data, the page shows the
+local placeholder products and categories from `src/lib/home-placeholder-data.ts`
+with a fallback status note.
+Product images are rendered with `next/image` and limited to the allow-listed
+`cdn.dummyjson.com/product-images/**` host path. Money values follow the build
+spec's minor-unit convention (`src/lib/money.ts`).
 
 ## README Rule
 

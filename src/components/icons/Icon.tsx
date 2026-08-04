@@ -47,6 +47,52 @@ export function ChevronDownIcon({
   );
 }
 
+export function ChevronLeftIcon({
+  width = 18,
+  height = 18,
+  className,
+}: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({
+  width = 18,
+  height = 18,
+  className,
+}: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
 export function CloseIcon({ width = 18, height = 18, className }: IconProps) {
   return (
     <svg

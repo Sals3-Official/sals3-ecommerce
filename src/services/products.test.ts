@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { fetchProducts, PRODUCTS_API_URL, ProductsApiError } from './products';
+import {
+  DEFAULT_PRODUCTS_PAGE_SIZE,
+  fetchProductCategories,
+  fetchProducts,
+  fetchProductsByOffset,
+  getRandomProductsSkip,
+  parseProductsPagination,
+  PRODUCT_CATEGORIES_API_URL,
+  PRODUCTS_API_URL,
+  ProductsApiError,
+  toHomeCategory,
+  toHomeProduct,
+} from './products';
 
 const validProductsResponse = {
   products: [
@@ -52,6 +64,19 @@ const validProductsResponse = {
   limit: 30,
 };
 
+const validCategoriesResponse = [
+  {
+    slug: 'mobile-accessories',
+    name: 'Mobile Accessories',
+    url: 'https://dummyjson.com/products/category/mobile-accessories',
+  },
+  {
+    slug: 'skin-care',
+    name: 'Skin Care',
+    url: 'https://dummyjson.com/products/category/skin-care',
+  },
+];
+
 function jsonResponse(payload: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(payload), {
     headers: {
@@ -73,9 +98,9 @@ describe('fetchProducts', () => {
       return jsonResponse(validProductsResponse);
     };
 
-    const response = await fetchProducts({ fetcher });
+    const response = await fetchProducts({ page: 2, limit: 10, fetcher });
 
-    expect(requestedUrl).toBe(PRODUCTS_API_URL);
+    expect(requestedUrl).toBe(`${PRODUCTS_API_URL}?limit=10&skip=10`);
     expect(requestedInit).toMatchObject({
       cache: 'no-store',
       headers: {
@@ -84,6 +109,87 @@ describe('fetchProducts', () => {
     });
     expect(response.products).toHaveLength(1);
     expect(response.products[0]?.title).toBe('Essence Mascara Lash Princess');
+  });
+
+  it('sanitizes invalid pagination input to safe defaults', () => {
+    expect(
+      parseProductsPagination({
+        page: '-5',
+        limit: '1000',
+      }),
+    ).toEqual({
+      page: 1,
+      limit: DEFAULT_PRODUCTS_PAGE_SIZE,
+    });
+  });
+
+  it('fetches products by a validated offset', async () => {
+    let requestedUrl: Parameters<typeof fetch>[0] | undefined;
+
+    const fetcher: typeof fetch = async (url) => {
+      requestedUrl = url;
+
+      return jsonResponse(validProductsResponse);
+    };
+
+    await fetchProductsByOffset({
+      skip: '-1',
+      limit: '1000',
+      fetcher,
+    });
+
+    expect(requestedUrl).toBe(
+      `${PRODUCTS_API_URL}?limit=${DEFAULT_PRODUCTS_PAGE_SIZE}&skip=0`,
+    );
+  });
+
+  it('calculates a bounded random skip for deal products', () => {
+    expect(getRandomProductsSkip(21, 5, () => 0)).toBe(0);
+    expect(getRandomProductsSkip(21, 5, () => 0.5)).toBe(8);
+    expect(getRandomProductsSkip(21, 5, () => 1)).toBe(16);
+    expect(getRandomProductsSkip(3, 5, () => 0.5)).toBe(0);
+  });
+
+  it('fetches product categories and maps them to landing navigation', async () => {
+    let requestedUrl: Parameters<typeof fetch>[0] | undefined;
+    let requestedInit: Parameters<typeof fetch>[1] | undefined;
+
+    const fetcher: typeof fetch = async (url, init) => {
+      requestedUrl = url;
+      requestedInit = init;
+
+      return jsonResponse(validCategoriesResponse);
+    };
+
+    const response = await fetchProductCategories({ fetcher });
+
+    expect(requestedUrl).toBe(PRODUCT_CATEGORIES_API_URL);
+    expect(requestedInit).toMatchObject({
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    expect(toHomeCategory(response[0]!)).toEqual({
+      id: 'mobile-accessories',
+      code: 'MA',
+      name: 'Mobile Accessories',
+    });
+  });
+
+  it('rejects invalid product category slugs', async () => {
+    const fetcher: typeof fetch = async () =>
+      jsonResponse([
+        {
+          slug: '../admin',
+          name: 'Bad Category',
+          url: 'https://dummyjson.com/products/category/bad-category',
+        },
+      ]);
+
+    await expect(fetchProductCategories({ fetcher })).rejects.toThrow(
+      'Product categories API returned invalid data.',
+    );
   });
 
   it('throws a typed error when the API response is not successful', async () => {
@@ -118,5 +224,27 @@ describe('fetchProducts', () => {
     await expect(fetchProducts({ fetcher })).rejects.toThrow(
       'Products API returned invalid data.',
     );
+  });
+
+  it('maps API products into landing cards with allow-listed image URLs', () => {
+    const product = validProductsResponse.products[0]!;
+
+    expect(toHomeProduct(product, 0)).toMatchObject({
+      id: '1',
+      title: 'Essence Mascara Lash Princess',
+      imageUrl:
+        'https://cdn.dummyjson.com/product-images/beauty/1/thumbnail.webp',
+      imageAlt: 'Essence Mascara Lash Princess product image',
+    });
+
+    expect(
+      toHomeProduct(
+        {
+          ...product,
+          thumbnail: 'https://example.com/product.webp',
+        },
+        0,
+      ).imageUrl,
+    ).toBeUndefined();
   });
 });
