@@ -37,14 +37,28 @@ const ProductsPaginationSchema = z.object({
 
 const StorefrontSectionSchema = z.enum(['for-you', 'deals']);
 
+/**
+ * Real CJ product names routinely run past 120-160 characters (long
+ * marketing-style titles) — confirmed live: a single overlong title/imageAlt
+ * anywhere in a 14-item page failed validation for the whole page, not just
+ * that row. Truncate instead of rejecting, so display length is still
+ * bounded without one long real title taking the rest of the page down.
+ */
+function truncatedText(maxLength: number) {
+  return z
+    .string()
+    .min(1)
+    .transform((value) => value.slice(0, maxLength));
+}
+
 const StorefrontProductSchema = z.object({
   id: z.string().min(1).max(120),
   slug: z.string().regex(CATEGORY_SLUG_PATTERN),
-  title: z.string().min(1).max(120),
+  title: truncatedText(120),
   priceMinor: z.number().int().positive(),
   oldPriceMinor: z.number().int().positive(),
   imageUrl: z.string().url().nullable(),
-  imageAlt: z.string().min(1).max(160),
+  imageAlt: truncatedText(160),
   ratingLine: z.string().min(1).max(80),
   shipLine: z.string().min(1).max(120),
   category: z.string().regex(CATEGORY_SLUG_PATTERN),

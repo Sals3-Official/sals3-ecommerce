@@ -42,7 +42,11 @@ products into home page cards. The portal feed is backed by the same
 CJdropshipping supplier tab at `/products?source=cj`. `fetchProductCategories()`
 reads CJ categories through the protected portal category feed and maps
 categories into internal `/c/<slug>` navigation links. Invalid `page` and
-`limit` input falls back to safe defaults.
+`limit` input falls back to safe defaults. Real CJ product `title`s and
+`imageAlt`s routinely exceed 120/160 characters — confirmed live, this failed
+validation for an entire 14-item page over one overlong row. Both fields are
+truncated to their display length instead of rejected, so one long real title
+can't take a whole page down.
 
 The storefront API has no dedicated single-product or category-filter route
 yet — only the paginated `section` list. `fetchProductBySlug()` and
