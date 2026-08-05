@@ -324,3 +324,43 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** A flex item's `min-width` defaults to `auto`, which means "don't shrink below your content's intrinsic width" — not `0`. `flex-1`/`flex-grow` alone does not override this; a flex child with wide enough content can still force itself (and push its siblings) past the container's actual width. Fix with an explicit `min-w-0` on the column that should be allowed to shrink, and `flex-wrap` on any row of fixed-size children (buttons, badges) that would otherwise be the thing forcing that intrinsic width up. Verify with real pixel measurements at the actual reported viewport width, not just by reading the Tailwind classes (same discipline as skill 24).
 
 **Where applied:** `min-w-0` added to `CartLineItemRow`'s title/stepper column, `flex-wrap` added to its quantity-stepper row. Re-verified clean at both 375px and 320px.
+
+### 34. A live feed's independently-fetched sections can return the same entity twice — merging sections needs an explicit id-based dedupe, not just concatenation
+
+**Confirmed:** 2026-08-06, fixing a React duplicate-key crash on the PDP's related-products grid.
+
+**Incident:** `fetchProductsByCategory()`'s `collectAllProducts()` fetches the `for-you` and `deals` sections independently and concatenates the results. The same real CJ product can legitimately appear in both sections at once (recommended *and* on-deal simultaneously), so the merged list contained a real duplicate — which then hit `ProductGrid`'s `key={product.id}` as a React key collision, not a cosmetic issue.
+
+**Lesson:** Whenever two independent queries against the same live data source are merged into one list, assume overlap is possible unless the source guarantees mutual exclusivity — it usually doesn't for anything resembling "recommended" vs. "on deal" style sectioning. Dedupe by the entity's real identifier (`Map` keyed on `id`, first occurrence kept) right after the merge, before any downstream filtering, rather than trusting each section to already be disjoint.
+
+**Where applied:** `collectAllProducts()` in `src/services/products.ts`. Regression test mocks both sections returning the identical product and asserts exactly one survives.
+
+### 35. Verify a request's spec citations against the actual document before building to them — even when the request sounds authoritative
+
+**Confirmed:** 2026-08-06, a request for a product-title compiler cited build-spec §11.2, §11.4, §8.1, and §16.3 as the source of specific rules (title never bold, 2-line clamp, a `[Base Name] + [Variant Spec]` checkout format).
+
+**Incident:** Checked each citation against the real document. §11.4 is the Colour rule (brand colour for actions only, 4.5:1 contrast) — no line-clamp rule lives there. §8.1 is cart fulfillment-leg grouping; §16.3 is the `Money` minor-units type. Neither defines a checkout-truncation format. The underlying UX patterns were still sound and were still built, but two of four citations didn't match the source they were attributed to.
+
+**Lesson:** A confident, section-numbered citation in a request is not evidence the citation is correct — grep the actual document before treating "the spec says X in §Y" as true, the same way any other factual claim gets verified in this project. This applies with *more* force, not less, when the request is well-written and technically plausible, since that's precisely when a wrong citation is most likely to be accepted uncritically. Contrast with skill (see the same session's part12 note): a separately-supplied owner design handoff citing six spec sections checked out completely accurate on every one — verification isn't about assuming bad faith, it's about not skipping the check either way.
+
+**Where applied:** Reported both mismatches to the user before implementing, alongside the (still built) patterns themselves.
+
+### 36. This repo's RSC page-test technique cannot execute a nested async Server Component at all — proven, not assumed
+
+**Confirmed:** 2026-08-06, wiring a `<Suspense>` skeleton fallback around the homepage category row per a design handoff.
+
+**Incident:** Restructured `page.tsx` to fire the categories fetch early, pass the unresolved promise into a small async child component, and let `<Suspense>` catch it — valid, idiomatic Next.js streaming that works in the real dev server. `page.test.tsx` renders via `renderWithCart(await Home())`: a plain client `render()` of an already-resolved element tree. The category-navigation test failed — not intermittently, permanently. Tried `screen.findByRole()` (an async, polling query) to see if it was a timing issue; it timed out too, proving the harness cannot execute a nested async Server Component under any amount of waiting, not just that it hadn't resolved yet.
+
+**Lesson:** Before concluding a test failure is "just needs an async/polling query," check whether the underlying render technique can execute the code path at all. `await Home()` + plain client `render()` — the pattern this repo uses to unit-test RSC pages — only works because every async data-fetch happens inside `Home()`'s own function body before it returns JSX; the moment an async Server Component is used as a *nested* JSX element (the idiomatic streaming pattern), this technique cannot resolve it, with or without `findBy*`. Confirming this needs one empirical test (an actual `findByRole` call, not reasoning about React internals), and the fix is architectural (don't introduce nested-async-as-JSX under this test technique), not a query-syntax fix.
+
+**Where applied:** Reverted `src/app/page.tsx` to resolve `homeCategories` in the same `Promise.all` as the rest of the page's data (matching every other section), keeping the `<Suspense>`/`CategoryRowSkeleton` wiring in place but documented in-code as structural rather than a functioning defer.
+
+### 37. Two concurrent dev sessions in one Next.js working directory contend for port 3000, in addition to the already-documented `.next`-directory lock
+
+**Confirmed:** 2026-08-06, throughout a session that needed live browser verification twice.
+
+**Incident:** `preview_start` for the `sals3-dev` launch config failed both times with "Port 3000 is in use by another chat's dev server" — a different concurrent session already had `npm run dev` running against the same working directory. Asking the user to stop the other session did not resolve it within the session (the port stayed held), so no live browser verification happened at all for a category-row visual refactor that specifically needed one.
+
+**Lesson:** Skill 22's `.next`-directory-lock lesson (EPERM on `typecheck:clean`/`build`) and this port conflict are two symptoms of the same root condition — more than one Next.js dev process pointed at this one repo directory at the same time — not two unrelated issues. When blocked this way, don't force a workaround that risks the documented HMR-corruption failure mode (skill 22): ask once, state the blocker plainly if it doesn't clear, and fall back to static/automated verification (reasoning about CSS overflow behaviour, unit tests against the real placeholder data) rather than silently claiming a live check that didn't happen.
+
+**Where applied:** Reported the blocked `getBoundingClientRect()` checks as an explicit open item rather than a completed verification step.
