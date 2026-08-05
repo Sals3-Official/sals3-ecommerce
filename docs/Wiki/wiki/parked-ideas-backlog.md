@@ -47,6 +47,12 @@ Log each parked idea in the same turn it is parked, under `## Active parked item
 - **Unblock condition:** PDP/category routes exist, and the colour-token question from [[sals3-marketing-banner-integration-proposal]] is resolved.
 - **Related:** [[sals3-geo-aeo-seo-strategy-proposal]], [[sals3-marketing-banner-integration-proposal]]
 
+### 2026-08-05 — Next.js `next/link` prefetch tuning for PDP/category nav
+- **What:** Tune `next/link` prefetch behavior (e.g. `prefetch` prop per link, App Router prefetch/segment-cache config in `next.config.ts`) for navigation into product detail and category pages, so those routes feel instant once linked from the home page grids/carousel.
+- **Why parked:** There is nothing to prefetch into yet — `/p/[id]` and `/c/[category]` routes don't exist (only the home page is built, per [[sals3-implementation-phases]] Stage 3/5). Same route blocker already logged for the GEO/AEO PDP/cart entry below.
+- **Unblock condition:** PDP and category routes exist per [[sals3-ux-build-specification]]'s Stage 3 (catalogue read path).
+- **Related:** [[sals3-implementation-phases]], [[sals3-ux-build-specification]]
+
 ### 2026-08-05 — GEO/AEO off-site brand graph
 - **What:** From [[sals3-geo-aeo-seo-strategy-proposal]] §6: Wikidata/Google Knowledge Graph entries, cross-platform consistency (Trustpilot, marketplaces, forums), trade-press entity co-occurrence.
 - **Why parked:** Business/ops work, not code — not blocked by any route, but not started and not this vault's call to schedule.
