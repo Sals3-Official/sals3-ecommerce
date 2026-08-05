@@ -8,7 +8,7 @@ aliases:
   - Sals3 Agent Operating Contract
   - Anti-Yesman Rule
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-06
 status: canonical
 authority: constitutional
 owner_approved: true
@@ -130,3 +130,10 @@ Recommendation:
 Verification needed:
 Decision status:
 ```
+
+## 9. `sals3-portal` is the strict reference whenever work touches it (confirmed 2026-08-06, Bogs)
+
+> [!IMPORTANT] Strict adherence rule
+> When the topic is `github.com/Sals3-Official/sals3-portal` (the storefront/backend API repo, local clone `E:\sals3-portal`) — its own build, or any `sals3-ecommerce` code that calls it (see [[hot]]'s `src/services/products.ts` entries) — treat that repository's **actual, current code, schemas, and API contracts** as the bible reference for how to build against it. Read the real repo before assuming its shape; do not infer or invent a `sals3-portal` contract from memory, an older session note, or how a similar platform typically works.
+>
+> This is **on top of, not instead of**, every other rule already in force — this contract, [[nextjs-component-security-code-rules]], [[project-structure-installation-and-runbook]], and [[team-profile-and-collaboration-preferences]] all still apply in full. Strict adherence to `sals3-portal` narrows *which facts count as ground truth* about that backend; it does not relax the security, verification, branch, or review rules that already govern every change.
