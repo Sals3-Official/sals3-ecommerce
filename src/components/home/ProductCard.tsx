@@ -9,10 +9,10 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const off = percentOff(
-    product.oldPrice.amountMinor,
-    product.price.amountMinor,
-  );
+  const hasDiscount = product.oldPrice.amountMinor > product.price.amountMinor;
+  const off = hasDiscount
+    ? percentOff(product.oldPrice.amountMinor, product.price.amountMinor)
+    : null;
 
   return (
     <Link
@@ -36,11 +36,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="font-display text-[22px] font-semibold tracking-tight text-ink">
           {formatMoney(product.price)}
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-ink-faint line-through">
-            {formatMoney(product.oldPrice)}
-          </span>
-          <span className="text-xs font-bold text-deal">{off}</span>
+        <div className="flex min-h-[16px] items-center gap-1.5">
+          {off === null ? null : (
+            <>
+              <span className="text-xs text-ink-faint line-through">
+                {formatMoney(product.oldPrice)}
+              </span>
+              <span className="text-xs font-bold text-deal">{off}</span>
+            </>
+          )}
         </div>
         <p className="line-clamp-2 min-h-[33px] text-xs text-ink-muted text-pretty">
           {product.title}
