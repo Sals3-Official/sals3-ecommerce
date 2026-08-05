@@ -256,68 +256,75 @@ describe('fetchProducts', () => {
 });
 
 describe('fetchProductBySlug', () => {
-  it('pages through both sections and returns the matching product', async () => {
+  it('fetches the real single-product endpoint and returns the product', async () => {
     vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
-    const requestedUrls: string[] = [];
+    let requestedUrl: Parameters<typeof fetch>[0] | undefined;
+    let requestedInit: Parameters<typeof fetch>[1] | undefined;
 
-    const fetcher: typeof fetch = async (url) => {
-      const requestUrl = new URL(String(url));
-      requestedUrls.push(requestUrl.search);
-      const section = requestUrl.searchParams.get('section');
+    const fetcher: typeof fetch = async (url, init) => {
+      requestedUrl = url;
+      requestedInit = init;
 
-      if (section === 'deals') {
-        return jsonResponse(validProductsResponse);
-      }
-
-      return jsonResponse(emptyProductsPage());
+      return jsonResponse({ product: validProductsResponse.products[0] });
     };
 
     const product = await fetchProductBySlug('air-cooler', { fetcher });
 
+    expect(requestedUrl).toBe(
+      `${DEFAULT_STOREFRONT_API_URL}${STOREFRONT_PRODUCTS_PATH}/air-cooler`,
+    );
+    expect(requestedInit).toMatchObject({
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer secret',
+      },
+    });
     expect(product?.title).toBe('Quiet tower air cooler');
-    expect(
-      requestedUrls.some((search) => search.includes('section=for-you')),
-    ).toBe(true);
-    expect(
-      requestedUrls.some((search) => search.includes('section=deals')),
-    ).toBe(true);
   });
 
   it('returns undefined for an invalid slug without making a request', async () => {
     let called = false;
     const fetcher: typeof fetch = async () => {
       called = true;
-      return jsonResponse(emptyProductsPage());
+      return jsonResponse({});
     };
 
     expect(await fetchProductBySlug('Not A Slug', { fetcher })).toBeUndefined();
     expect(called).toBe(false);
   });
 
-  it('never requests past page 2 per section, even when the backend reports hundreds of pages', async () => {
+  it('returns undefined when the API responds 404', async () => {
     vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
-    const requestedPages: number[] = [];
-
-    const fetcher: typeof fetch = async (url) => {
-      const requestUrl = new URL(String(url));
-      requestedPages.push(Number(requestUrl.searchParams.get('page')));
-
-      return jsonResponse(emptyProductsPage({ totalPages: 500 }));
-    };
-
-    await fetchProductBySlug('missing-slug', { fetcher });
-
-    expect(Math.max(...requestedPages)).toBeLessThanOrEqual(2);
-    expect(requestedPages).toHaveLength(4);
-  });
-
-  it('returns undefined when no product matches', async () => {
-    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
-    const fetcher: typeof fetch = async () => jsonResponse(emptyProductsPage());
+    const fetcher: typeof fetch = async () =>
+      new Response('Not found', { status: 404 });
 
     expect(
       await fetchProductBySlug('missing-slug', { fetcher }),
     ).toBeUndefined();
+  });
+
+  it('throws a typed error on a non-404 failure', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const fetcher: typeof fetch = async () =>
+      new Response('Server error', { status: 500 });
+
+    await expect(
+      fetchProductBySlug('air-cooler', { fetcher }),
+    ).rejects.toMatchObject({
+      name: 'ProductsApiError',
+      status: 500,
+    });
+  });
+
+  it('throws a typed error when the API returns invalid product data', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const fetcher: typeof fetch = async () =>
+      jsonResponse({ product: { id: 'bad' } });
+
+    await expect(
+      fetchProductBySlug('air-cooler', { fetcher }),
+    ).rejects.toMatchObject({ name: 'ProductsApiError' });
   });
 });
 
