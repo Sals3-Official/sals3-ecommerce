@@ -36,7 +36,7 @@ related:
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
-- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (30 entries as of 2026-08-06).
+- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (33 entries as of 2026-08-06).
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel|2026-08-05 Landing Page API Carousel Turnover Prompt]] — copy-paste handoff prompt for the next agent after that session.
@@ -68,6 +68,7 @@ related:
 - [[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit|Cart Toast and UX Audit Session]] — add-to-cart toast notification; first `ui-ux-pro-max` audit pass (checklist applied, generic palette suggestion rejected). PR #21 open, not yet merged.
 - [[sals3-session-2026-08-05-part09-ui-ux-pro-audit|UI-UX-Pro and Frontend-Design Audit Session]] — `ui-ux-pro`/`frontend-design` audit; found and fixed a real tablet-breakpoint bug, added missing press states, fixed a flaky e2e test. PR #21 open, not yet merged.
 - [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes|PR #21/#22 Reconciliation and CJ Bugfixes Session]] — reconciled the PDP/cart PR against AJ's real `sals3-portal` backend PR; found and fixed three real production bugs (CJ rate-limit hammering, a for-you failure discarding the deals section, and the actual root cause — Zod rejecting a whole page over one overlong title) after two reasonable-but-wrong hypotheses. PR #21, #24, #25 merged; PR #26 and two `sals3-portal` PRs open.
+- [[sals3-session-2026-08-06-part11-pwa-icons-and-cart-mobile-overflow|PWA Icons and Cart Mobile Overflow Session]] — real Sals3 logo for the iOS/Android "Add to Home Screen" icon (`apple-icon.png`, `manifest.ts`, Android PWA icon sizes), and a real mobile cart bug (price column overflowing off-screen, root-caused to flexbox's `min-width: auto` default). PR #30 and #31 open.
 
 ## Domains not started yet
 
