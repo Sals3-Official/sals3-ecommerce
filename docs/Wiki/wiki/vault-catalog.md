@@ -2,7 +2,7 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-05
+updated: 2026-08-06
 status: canonical
 authority: navigation
 owner_approved: true
@@ -35,7 +35,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (25 entries as of 2026-08-05).
+- [[sals3-skills]] — consolidated engineering lessons (30 entries as of 2026-08-06).
 
 ## Business and product
 
@@ -62,6 +62,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-session-2026-08-05-part07-cart]] — client-only shopping cart, live Add to Cart/Buy Now, `/cart` route. PR #21 open, not yet merged.
 - [[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit]] — add-to-cart toast, first `ui-ux-pro-max` audit pass. PR #21 open, not yet merged.
 - [[sals3-session-2026-08-05-part09-ui-ux-pro-audit]] — `ui-ux-pro`/`frontend-design` audit, tablet-breakpoint bug fix. PR #21 open, not yet merged.
+- [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]] — PR #21 reconciled against PR #22's real backend; three real production bugs found and fixed (CJ rate-limit hammering, deals-section discard, and the actual root cause — a Zod schema rejecting a whole page over one overlong title). PR #21/#24/#25 merged; PR #26 and two `sals3-portal` PRs open.
 
 ## Raw reference assets
 
