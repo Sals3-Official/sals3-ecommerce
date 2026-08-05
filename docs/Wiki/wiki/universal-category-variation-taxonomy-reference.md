@@ -3,9 +3,9 @@ tags: [sals3, catalog, taxonomy, reference, data]
 aliases: [Category Taxonomy Reference, Universal Taxonomy, SKU Variation Engine]
 created: 2026-08-03
 updated: 2026-08-03
-status: reference
+status: canonical
 authority: catalog-data
-owner_approved: false
+owner_approved: true
 related:
   - "[[sals3-ux-build-specification]]"
   - "[[sals3-management-bible]]"
@@ -59,3 +59,21 @@ Reusable attribute value presets grouped by `Attribute Group`: `Color Code`, `Di
 - Not yet mapped to any real Sals3 seller/product data — this is a taxonomy skeleton, not populated catalog content.
 
 Do not treat this as an approved category tree until AJ/Bogs explicitly adopt it — log that decision here (or in an ADR) when it happens.
+
+## ADOPTED — 2026-08-06, approved by Bogs
+
+> [!IMPORTANT] This is now Sals3's category tree
+> Approved by Bogs on 2026-08-06 via [[ADR-001-seller-center-cj-sourcing-to-my-products]] D4. `status` is now `canonical` and `owner_approved` is `true`. The three review objections in the section above are resolved: the licensing concern by removing `Platform Category ID`, the "1,346 rows is a lot" concern by the variation-architecture payoff described below, and the "not mapped to real data" concern by ADR-001 D4's single `product/getCategory` mapping pass. **AJ has not reviewed ADR-001 yet** — brief him before the first code lands, since this taxonomy is shared.
+>
+> **Two things this note must now also serve:** it is the specification for the Seller Center Add Product form (below), and — new in ADR-001 D10.5 — **the L1 department is where margin is defined.** Each L1 carries a starting markup range; see D10.5 for the table.
+
+## Adoption detail
+
+> [!NOTE] What was adopted, and the recommendation that was overridden
+> [[ADR-001-seller-center-cj-sourcing-to-my-products]] D4 adopts this taxonomy **in full** — all 1,346 rows, L1 through L5, plus the 57-row `Attribute_Dictionary_&_Presets` — with the **`Platform Category ID` column removed**. That column is the only genuinely Shopee-derived artifact and the only real licensing concern; without it, what remains is a generic taxonomy, which answers the first review objection in the section above.
+>
+> Bogs directed this on 2026-08-06, overriding an earlier ADR draft that recommended starting with L1+L2 only (~52 categories) and growing depth lazily. **The narrower recommendation was wrong:** it would have discarded the `Variation Architecture`, `Tier 1/Tier 2 Attribute`, `SKU Format Standard`, and `Required Item Attributes` columns — which ADR-001 D4 makes the **binding specification for the Seller Center Add Product form**. Those columns make the form category-driven (pick a category, and its variation tiers, required fields, and SKU pattern follow) rather than one-size, which satisfies build spec §6.3's "filter groups come from the category" rule without designing a second form. They also give the CJ variant mapping in [[sals3-cj-dropshipping-integration-plan]] §2.2 a concrete target for the first time.
+>
+> This also answers the third review objection above ("not yet mapped to any real Sals3 seller/product data") — ADR-001 D4 maps CJ's category paths onto these codes via a single `product/getCategory` call, so real supplier data lands on this tree directly.
+>
+> Approved by Bogs 2026-08-06; `owner_approved` flipped to `true` and `status` to `canonical` the same day.

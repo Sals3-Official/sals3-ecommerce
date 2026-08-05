@@ -33,6 +33,7 @@ related:
 - [[sals3-master-blueprint|Sals3 Master Blueprint]] — v4.0 whole-system architecture, commercial strategy, and transition plan (sample/demonstration status pending Leadership alignment).
 - [[vault-governance-and-note-lifecycle|Vault Governance and Note Lifecycle]] — authority order, status vocabulary, and change protocol.
 - [[architecture-decision-template|ADR Template]] — required structure for material design decisions.
+- [[ADR-001-seller-center-cj-sourcing-to-my-products|ADR-001 — CJ Sourcing to "My Products"]] — where a sourced-and-customized CJ product lives, the junk/counterfeit guardrail funnel, category-mapping automation, the SEO required-field gate, and worldwide per-viewer deliverability. Records what CJ's API does and does not expose. Proposed, not yet approved.
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
