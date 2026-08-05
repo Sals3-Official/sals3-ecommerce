@@ -338,6 +338,16 @@ pushing `Add to Cart` below the fold. Fixed by moving the breakpoint to `md`
 (768px) on both the PDP and the cart page's line-items/summary grid, for the
 same reason.
 
+Another real layout bug, this time on narrow mobile widths: `CartLineItemRow`
+(`src/components/cart/CartLineItemRow.tsx`) laid out the title/stepper column
+as a plain `flex-1` flex child. Flexbox defaults a flex item's `min-width` to
+`auto`, so the column refused to shrink below its content's intrinsic width
+(the quantity stepper + Remove button row) and pushed the price column off
+the right edge of the viewport on small phones. Fixed with `min-w-0` on that
+column and `flex-wrap` on the stepper row so the buttons wrap instead of
+forcing width. Verified via live `getBoundingClientRect()` measurement at both
+375px and 320px viewport widths — no horizontal overflow at either.
+
 `frontend-design`'s guidance to take "one real aesthetic risk" and build a
 distinctive visual identity was **not** applied wholesale — that mandate is
 for a page that doesn't have an established identity yet. Sals3's PDP
