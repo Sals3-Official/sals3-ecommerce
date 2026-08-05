@@ -48,20 +48,20 @@ validation for an entire 14-item page over one overlong row. Both fields are
 truncated to their display length instead of rejected, so one long real title
 can't take a whole page down.
 
-The storefront API has no dedicated single-product or category-filter route
-yet — only the paginated `section` list. `fetchProductBySlug()` and
-`fetchProductsByCategory()` (used by the PDP) page through `for-you` and
-`deals` results and match by `slug`/`category` client-side as a stopgap.
-**Hard-capped at 2 pages per section** (`MAX_CLIENT_SIDE_SEARCH_PAGES` in
-`src/services/products.ts`): `sals3-portal` proxies CJdropshipping, which
-allows only one request per second and caps its own pagination at 500
-pages, so scanning a whole section on every PDP view would hammer that rate
-limit for no guaranteed match. This means most real products currently
-404 on their own detail page — a known, accepted regression until
-`sals3-portal` exposes a real single-product or category-filter lookup
-(it already resolves individual CJ products via a `cjSearch` parameter
-internally, per `getStorefrontCjProducts`; that parameter just isn't
-exposed on the public `/api/storefront/products` route yet).
+`fetchProductBySlug()` calls `sals3-portal`'s real single-product endpoint,
+`GET /api/storefront/products/<slug>` — one upstream call, `undefined` on a
+404 or an invalid slug, so the PDP route can render `notFound()` without a
+separate error path.
+
+The storefront API still has no category-filter route. `fetchProductsByCategory()`
+(used by the PDP's related-products section) pages through `for-you` and
+`deals` results and matches by `category` client-side as a stopgap, **hard-capped
+at 2 pages per section** (`MAX_CLIENT_SIDE_SEARCH_PAGES` in `src/services/products.ts`):
+`sals3-portal` proxies CJdropshipping, which allows only one request per
+second and caps its own pagination at 500 pages, so scanning a whole
+section for every PDP view would hammer that rate limit for a related-products
+section that degrades gracefully to empty anyway. Replace with a direct
+category-filter endpoint once `sals3-portal` adds one.
 
 Required `.env.local` values:
 

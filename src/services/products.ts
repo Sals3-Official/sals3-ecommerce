@@ -80,6 +80,10 @@ const ProductCategorySchema = z.object({
 
 export const ProductCategoriesResponseSchema = z.array(ProductCategorySchema);
 
+const StorefrontProductResponseSchema = z.object({
+  product: StorefrontProductSchema,
+});
+
 export type Product = z.infer<typeof StorefrontProductSchema>;
 export type ProductsResponse = z.infer<typeof ProductsResponseSchema>;
 export type ProductsPagination = z.infer<typeof ProductsPaginationSchema>;
@@ -248,12 +252,12 @@ export async function fetchProductCategories({
 }
 
 /**
- * sals3-portal proxies CJdropshipping, which allows only one request per
- * second and caps its own pagination at 500 pages per query. Paging through
- * a whole section to find one slug would hammer that rate limit on every
- * PDP view for no guaranteed result. Capped hard at 2 pages per section
- * (≤60 products/section) until sals3-portal exposes a real single-product
- * or category-filter lookup — see README.md's Product Page (PDP) section.
+ * sals3-portal has a real single-product endpoint now (see
+ * fetchProductBySlug below), but no category-filter one yet — related
+ * products still page through a section and filter client-side. sals3-portal
+ * proxies CJdropshipping, which allows only one request per second and caps
+ * its own pagination at 500 pages per query, so this stays capped at 2
+ * pages per section (≤60 products/section) rather than scanning further.
  */
 const MAX_CLIENT_SIDE_SEARCH_PAGES = 2;
 
@@ -300,6 +304,12 @@ async function collectAllProducts({
   }, Promise.resolve<Product[]>([]));
 }
 
+function getProductByIdApiUrl(id: string): string {
+  return getStorefrontApiUrl(
+    `${STOREFRONT_PRODUCTS_PATH}/${encodeURIComponent(id)}`,
+  ).toString();
+}
+
 export async function fetchProductBySlug(
   slug: unknown,
   { fetcher = fetch, signal }: FetchProductBySlugOptions = {},
@@ -310,9 +320,38 @@ export async function fetchProductBySlug(
     return undefined;
   }
 
-  const products = await collectAllProducts({ fetcher, signal });
+  const response = await fetcher(getProductByIdApiUrl(parsedSlug.data), {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      Authorization: getAuthorizationHeader(),
+    },
+    signal,
+  });
 
-  return products.find((product) => product.slug === parsedSlug.data);
+  if (response.status === 404) {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    throw new ProductsApiError('Storefront product API request failed.', {
+      status: response.status,
+    });
+  }
+
+  const payload: unknown = await response.json();
+  const parsedPayload = StorefrontProductResponseSchema.safeParse(payload);
+
+  if (!parsedPayload.success) {
+    throw new ProductsApiError(
+      'Storefront product API returned invalid data.',
+      {
+        cause: parsedPayload.error,
+      },
+    );
+  }
+
+  return parsedPayload.data.product;
 }
 
 export async function fetchProductsByCategory(

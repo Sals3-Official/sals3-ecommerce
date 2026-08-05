@@ -47,19 +47,21 @@ function mockFetch({
   found?: boolean;
   productOverrides?: Partial<Record<string, unknown>>;
 } = {}) {
+  const product = productFixture(productOverrides);
   const fetchMock = vi.fn<typeof fetch>(async (url) => {
     const requestUrl = new URL(String(url));
 
-    if (requestUrl.pathname === STOREFRONT_PRODUCTS_PATH) {
-      const section = requestUrl.searchParams.get('section');
-
-      if (found && section === 'for-you') {
-        return new Response(
-          JSON.stringify(productsPage([productFixture(productOverrides)])),
-          { headers: { 'Content-Type': 'application/json' } },
-        );
+    if (requestUrl.pathname.startsWith(`${STOREFRONT_PRODUCTS_PATH}/`)) {
+      if (found) {
+        return new Response(JSON.stringify({ product }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
 
+      return new Response('Not found', { status: 404 });
+    }
+
+    if (requestUrl.pathname === STOREFRONT_PRODUCTS_PATH) {
       return new Response(JSON.stringify(productsPage()), {
         headers: { 'Content-Type': 'application/json' },
       });
