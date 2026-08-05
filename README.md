@@ -182,6 +182,19 @@ See
 for the source strategy and what's still parked (Product/Offer/FAQPage JSON-LD,
 `useOptimistic` cart) pending a real, Sals3-owned catalog and a cart route.
 
+## PWA Icons and "Add to Home Screen"
+
+`src/app/apple-icon.png` (180×180) is Next.js's App Router file convention for
+the iOS `apple-touch-icon` — no manual `<link>` tag needed, Next.js emits it
+automatically. `src/app/manifest.ts` (the equivalent `MetadataRoute.Manifest`
+convention) does the same for Android/Chrome's installable-PWA icon and emits
+the `<link rel="manifest">` tag; its `icons` array points at
+`public/icon-192.png` and `public/icon-512.png` (Chrome's minimum sizes for an
+installable icon). All three PNGs are generated from the same source Sals3
+logo mark, resized, not separately designed — keep them in sync if the logo
+changes. `theme_color`/`background_color` in the manifest reuse the approved
+brand tokens (`--color-brand-600` `#0a5c8a`, `--color-surface` `#f6f7f8`).
+
 ## Home Page
 
 `src/app/page.tsx` renders the marketplace landing page: header (logo, search,
