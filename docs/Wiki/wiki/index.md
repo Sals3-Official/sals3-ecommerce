@@ -71,6 +71,10 @@ related:
 - [[sals3-session-2026-08-06-part11-pwa-icons-and-cart-mobile-overflow|PWA Icons and Cart Mobile Overflow Session]] — real Sals3 logo for the iOS/Android "Add to Home Screen" icon (`apple-icon.png`, `manifest.ts`, Android PWA icon sizes), and a real mobile cart bug (price column overflowing off-screen, root-caused to flexbox's `min-width: auto` default). PR #30 and #31 open.
 - [[sals3-session-2026-08-06-part12-category-row-tile-band-and-related-products-dedup|Category Row Tile Band and Related Products Dedup Session]] — related-products cross-section duplicate-key fix, Stage-2 title-compiler/catalogue-`ProductCard` groundwork (deliberately unwired), and a two-pass homepage category row refactor ending in a tile-band restyle per an owner design handoff. Uncommitted; live visual verification blocked by a port/`.next` conflict with another chat's dev server.
 
+## Seller Center
+
+- [[sals3-global-seller-center-ux-blueprint-proposal|Global Seller Center UX Blueprint (v2) Proposal]] — Pillar 3 product-strategy/UX pitch: three funded v1 bets (financial truth, batch fulfillment, rapid listing), a binding v1 cut list, a Tier 1/Tier 2 architecture split with a documented-debt register, and a formal Stage 1 field-research go/no-go gate. Proposed only, not reviewed by AJ or Bogs; no Seller Center code exists yet (Stage 7 of the build order).
+
 ## Domains not started yet
 
-Add sections here as real work begins — e.g. Seller Center, Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.
+Add sections here as real work begins — e.g. Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.
