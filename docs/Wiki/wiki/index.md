@@ -62,11 +62,11 @@ related:
 - [[sals3-session-2026-08-05-part02-footer-and-pagination|Site Footer and Pagination Session]] — site footer with a legal/compliance-claim audit (several mockup claims dropped as unverifiable), numbered pagination. Code merged to `develop`.
 - [[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints|GEO/AEO/SEO Machine Endpoints Session]] — `robots.txt`, `llms.txt`, global `Organization` JSON-LD from [[sals3-geo-aeo-seo-strategy-proposal]]; PDP/cart-dependent pieces parked.
 - [[sals3-session-2026-08-05-part04-home-page-seo-geo-aeo|Home Page SEO/GEO/AEO Session]] — `generateMetadata`, `WebSiteSchema` JSON-LD, sr-only `<h1>`, `sitemap` in `robots.ts`, enriched `llms.txt`. Merged to `develop`.
-- [[sals3-session-2026-08-05-part05-product-detail-page|Product Detail Page Session]] — first `/p/[id]` route, built after a component-by-component build-order decision (cart/orders/account explicitly deferred); PDP `Product`/`Offer` JSON-LD stays parked pending a real, Sals3-owned catalog. Not yet committed.
-- [[sals3-session-2026-08-05-part06-guest-header-strip|Guest Header Strip Session]] — signed-out header strip adapted from a Lazada reference screenshot, `/login`/`/signup` placeholders. Not yet committed.
-- [[sals3-session-2026-08-05-part07-cart|Cart Session]] — client-only (`localStorage`) shopping cart, live Add to Cart/Buy Now on the PDP, `/cart` route. Not yet committed.
-- [[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit|Cart Toast and UX Audit Session]] — add-to-cart toast notification; first `ui-ux-pro-max` audit pass (checklist applied, generic palette suggestion rejected). Not yet committed.
-- [[sals3-session-2026-08-05-part09-ui-ux-pro-audit|UI-UX-Pro and Frontend-Design Audit Session]] — `ui-ux-pro`/`frontend-design` audit; found and fixed a real tablet-breakpoint bug, added missing press states, fixed a flaky e2e test. Not yet committed.
+- [[sals3-session-2026-08-05-part05-product-detail-page|Product Detail Page Session]] — first `/p/[id]` route, built after a component-by-component build-order decision (cart/orders/account explicitly deferred); PDP `Product`/`Offer` JSON-LD stays parked pending a real, Sals3-owned catalog. PR #21 open, not yet merged.
+- [[sals3-session-2026-08-05-part06-guest-header-strip|Guest Header Strip Session]] — signed-out header strip adapted from a Lazada reference screenshot, `/login`/`/signup` placeholders. PR #21 open, not yet merged.
+- [[sals3-session-2026-08-05-part07-cart|Cart Session]] — client-only (`localStorage`) shopping cart, live Add to Cart/Buy Now on the PDP, `/cart` route. PR #21 open, not yet merged.
+- [[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit|Cart Toast and UX Audit Session]] — add-to-cart toast notification; first `ui-ux-pro-max` audit pass (checklist applied, generic palette suggestion rejected). PR #21 open, not yet merged.
+- [[sals3-session-2026-08-05-part09-ui-ux-pro-audit|UI-UX-Pro and Frontend-Design Audit Session]] — `ui-ux-pro`/`frontend-design` audit; found and fixed a real tablet-breakpoint bug, added missing press states, fixed a flaky e2e test. PR #21 open, not yet merged.
 
 ## Domains not started yet
 
