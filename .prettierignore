@@ -7,5 +7,8 @@ playwright-report
 test-results
 package-lock.json
 
+# Claude Code local tool config, not project source
+.claude
+
 # Obsidian vault (notes + vendored community plugin) - not project source
 docs
