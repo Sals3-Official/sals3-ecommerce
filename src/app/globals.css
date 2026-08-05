@@ -25,6 +25,8 @@
   --color-border: #e3e7ea;
   --color-border-strong: #cfd6db;
   --color-surface: #f6f7f8;
+  --color-surface-sunken: #f1f3f5;
+  --color-surface-sunken-strong: #e9edf0;
   --color-surface-dark: #1e293b;
   --color-deal: var(--color-red-600);
 
@@ -34,6 +36,22 @@
   --color-footer-label: #7f97a8;
   --color-footer-link: #cddbe5;
   --color-footer-accent: #7fd4d4;
+}
+
+/*
+ * Hides the native scrollbar on a horizontal swipe row (build spec section
+ * 15.1's category row) while keeping the element fully scrollable by touch,
+ * trackpad, and keyboard. -webkit-overflow-scrolling is retained for legacy
+ * iOS only; momentum scrolling is the default on current versions.
+ */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 body {
