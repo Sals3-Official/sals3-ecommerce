@@ -272,6 +272,23 @@ describe('fetchProductBySlug', () => {
     expect(called).toBe(false);
   });
 
+  it('never requests past page 2 per section, even when the backend reports hundreds of pages', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const requestedPages: number[] = [];
+
+    const fetcher: typeof fetch = async (url) => {
+      const requestUrl = new URL(String(url));
+      requestedPages.push(Number(requestUrl.searchParams.get('page')));
+
+      return jsonResponse(emptyProductsPage({ totalPages: 500 }));
+    };
+
+    await fetchProductBySlug('missing-slug', { fetcher });
+
+    expect(Math.max(...requestedPages)).toBeLessThanOrEqual(2);
+    expect(requestedPages).toHaveLength(4);
+  });
+
   it('returns undefined when no product matches', async () => {
     vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     const fetcher: typeof fetch = async () => jsonResponse(emptyProductsPage());

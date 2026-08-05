@@ -233,6 +233,16 @@ export async function fetchProductCategories({
   return parsedPayload.data;
 }
 
+/**
+ * sals3-portal proxies CJdropshipping, which allows only one request per
+ * second and caps its own pagination at 500 pages per query. Paging through
+ * a whole section to find one slug would hammer that rate limit on every
+ * PDP view for no guaranteed result. Capped hard at 2 pages per section
+ * (≤60 products/section) until sals3-portal exposes a real single-product
+ * or category-filter lookup — see README.md's Product Page (PDP) section.
+ */
+const MAX_CLIENT_SIDE_SEARCH_PAGES = 2;
+
 async function collectSectionProducts(
   section: z.infer<typeof StorefrontSectionSchema>,
   page: number,
@@ -247,7 +257,9 @@ async function collectSectionProducts(
     signal,
   });
 
-  if (page >= response.totalPages) {
+  const lastPage = Math.min(response.totalPages, MAX_CLIENT_SIDE_SEARCH_PAGES);
+
+  if (page >= lastPage) {
     return response.products;
   }
 
@@ -256,12 +268,6 @@ async function collectSectionProducts(
   return [...response.products, ...rest];
 }
 
-/**
- * The storefront API has no dedicated single-product or category-filter
- * route yet — only the paginated `section` list. Until one exists, PDP
- * lookups page through both sections and match by slug/category
- * client-side. Replace with a direct endpoint once the backend adds one.
- */
 async function collectAllProducts({
   fetcher,
   signal,
@@ -269,13 +275,15 @@ async function collectAllProducts({
   fetcher: typeof fetch;
   signal?: AbortSignal;
 }): Promise<Product[]> {
-  const sections = await Promise.all(
-    StorefrontSectionSchema.options.map((section) =>
-      collectSectionProducts(section, 1, fetcher, signal),
-    ),
-  );
+  // Chained via reduce rather than Promise.all: two sections firing at once
+  // would double up against CJ's one-request-per-second ceiling on the very
+  // first page, so each section's search waits for the previous one.
+  return StorefrontSectionSchema.options.reduce(async (accPromise, section) => {
+    const acc = await accPromise;
+    const products = await collectSectionProducts(section, 1, fetcher, signal);
 
-  return sections.flat();
+    return [...acc, ...products];
+  }, Promise.resolve<Product[]>([]));
 }
 
 export async function fetchProductBySlug(

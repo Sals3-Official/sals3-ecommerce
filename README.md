@@ -46,10 +46,18 @@ categories into internal `/c/<slug>` navigation links. Invalid `page` and
 
 The storefront API has no dedicated single-product or category-filter route
 yet — only the paginated `section` list. `fetchProductBySlug()` and
-`fetchProductsByCategory()` (used by the PDP) page through every `for-you`
-and `deals` result and match by `slug`/`category` client-side as a stopgap.
-Replace both with a direct backend call once `sals3-portal` adds one; this
-approach re-fetches the whole catalog per PDP view and won't scale.
+`fetchProductsByCategory()` (used by the PDP) page through `for-you` and
+`deals` results and match by `slug`/`category` client-side as a stopgap.
+**Hard-capped at 2 pages per section** (`MAX_CLIENT_SIDE_SEARCH_PAGES` in
+`src/services/products.ts`): `sals3-portal` proxies CJdropshipping, which
+allows only one request per second and caps its own pagination at 500
+pages, so scanning a whole section on every PDP view would hammer that rate
+limit for no guaranteed match. This means most real products currently
+404 on their own detail page — a known, accepted regression until
+`sals3-portal` exposes a real single-product or category-filter lookup
+(it already resolves individual CJ products via a `cjSearch` parameter
+internally, per `getStorefrontCjProducts`; that parameter just isn't
+exposed on the public `/api/storefront/products` route yet).
 
 Required `.env.local` values:
 
