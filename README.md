@@ -270,6 +270,20 @@ not re-add with invented values in the meantime.
 - **No image zoom lightbox.** The gallery swaps the main image on thumbnail
   click; a full zoom modal was left out to keep the change small.
 
+## Stage-2 catalogue groundwork (not wired to the live app)
+
+`src/lib/compileProductTitle.ts` and `src/components/catalog/ProductCard.tsx`
+(+ `ProductCardImage.tsx`) are a deliberately decoupled, independently tested
+unit for a future structured product entity — Brand/Material/Fit/spec
+attributes — per the build spec's Stage 2 (data model/entities). The live
+storefront schema (`StorefrontProductSchema` in `src/services/products.ts`)
+has none of those fields yet, only one pre-formatted CJ `title` string, so
+this code has no real data to consume today. Do not route real traffic to
+`src/components/catalog/ProductCard.tsx` or import it from a live route
+before that structured entity actually exists — it lives in its own
+`catalog/` directory, separate from the live `src/components/home/ProductCard.tsx`,
+specifically so it isn't mistaken for the shipped card.
+
 ## Guest Header Strip and Auth Placeholders
 
 `src/components/layout/GuestUtilityBar.tsx` renders a thin strip above the
