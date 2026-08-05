@@ -90,42 +90,58 @@ async function getHomeCategories(): Promise<Category[]> {
   }
 }
 
+type ForYouResult = Pick<
+  HomeProducts,
+  'products' | 'regionNote' | 'pagination'
+>;
+
+async function getForYouProducts(
+  requestedPagination: ReturnType<typeof parseProductsPagination>,
+): Promise<ForYouResult> {
+  try {
+    const response = await fetchProducts(requestedPagination);
+
+    return {
+      products: response.products.map(toHomeProduct),
+      regionNote: '',
+      pagination: {
+        currentPage: Math.min(response.page, response.totalPages),
+        totalPages: response.totalPages,
+      },
+    };
+  } catch {
+    return {
+      products: forYouProducts,
+      regionNote: 'Live products unavailable',
+    };
+  }
+}
+
 async function getHomeProducts(
   searchParamsPromise?: HomeProps['searchParams'],
-) {
+): Promise<HomeProducts> {
   const searchParams = await searchParamsPromise;
   const requestedPagination = parseProductsPagination({
     page: searchParams?.page,
     limit: FOR_YOU_PRODUCT_COUNT,
   });
 
+  // Independent try/catches, on purpose: a failure fetching one section
+  // (e.g. a "for you" page past the real catalogue's depth) must not also
+  // discard the other section's already-successful, unrelated result.
+  const forYou = await getForYouProducts(requestedPagination);
+  let dealProducts = deals;
+
   try {
-    const response = await fetchProducts(requestedPagination);
-    const currentPage = response.page;
-    let dealProducts = deals;
-
-    try {
-      dealProducts = await getDealProducts();
-    } catch {
-      dealProducts = deals;
-    }
-
-    return {
-      deals: dealProducts,
-      products: response.products.map(toHomeProduct),
-      regionNote: '',
-      pagination: {
-        currentPage,
-        totalPages: response.totalPages,
-      },
-    } satisfies HomeProducts;
+    dealProducts = await getDealProducts();
   } catch {
-    return {
-      deals,
-      products: forYouProducts,
-      regionNote: 'Live products unavailable',
-    } satisfies HomeProducts;
+    dealProducts = deals;
   }
+
+  return {
+    deals: dealProducts,
+    ...forYou,
+  } satisfies HomeProducts;
 }
 
 export default async function Home({ searchParams }: HomeProps = {}) {

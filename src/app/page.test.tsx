@@ -233,6 +233,45 @@ describe('Home page', () => {
     ).toHaveAttribute('href', '/?page=3#for-you');
   });
 
+  it('keeps live deals when only the for-you page fails', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+
+    const fetchMock = vi.fn<typeof fetch>(async (url) => {
+      const requestUrl = new URL(String(url));
+
+      if (requestUrl.pathname === '/api/storefront/categories') {
+        return new Response(JSON.stringify([]), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const section = requestUrl.searchParams.get('section');
+
+      if (section === 'for-you') {
+        return new Response('Server error', { status: 500 });
+      }
+
+      return new Response(
+        JSON.stringify({
+          products: [productFixture(1)],
+          total: 1,
+          page: 1,
+          limit: 5,
+          totalPages: 1,
+        }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithCart(await Home());
+
+    expect(screen.getByText('Live product 1')).toBeInTheDocument();
+    expect(screen.getByText(/live products unavailable/i)).toBeInTheDocument();
+  });
+
   it('renders an h1 heading with the site tagline', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();

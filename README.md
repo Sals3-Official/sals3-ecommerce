@@ -186,7 +186,10 @@ query string for pagination and fetches 14 products per page, so the 14 products
 plus 1 sponsored card fill 15 desktop grid cells. If the portal or CJ product
 API is unavailable or returns invalid data, the page shows the local placeholder
 products and categories from `src/lib/home-placeholder-data.ts` with a fallback
-status note.
+status note. The deals fetch and the "for you" fetch are independent: a
+failure fetching one (e.g. a "for you" page past the real catalogue's depth)
+falls back to placeholder data for that section only, and does not discard
+the other section's already-successful, unrelated result.
 A visually-hidden `<h1>` (`sr-only`) provides a correct heading hierarchy for
 crawlers and screen readers without altering the visual design.
 Product images are rendered with `next/image` and limited to the allow-listed
