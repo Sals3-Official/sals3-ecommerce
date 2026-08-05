@@ -118,16 +118,30 @@ Before adding a package, prefer existing platform features or current dependenci
 ## Machine and AI Discovery
 
 `src/app/robots.ts` allows all crawlers plus explicitly lists `GPTBot`,
-`PerplexityBot`, `ClaudeBot`, and `OAI-SearchBot`. `src/app/llms.txt/route.ts`
-serves a daily-revalidated, plain-text `/llms.txt` identifying the site by
-name and description — it does not list a product catalog, because the
-current product data (`src/services/products.ts`) is an external DummyJSON
-placeholder, not Sals3's own catalog. `OrganizationSchema`
-(`src/components/schema/OrganizationSchema.tsx`) renders a global
-`Organization` JSON-LD block in `src/app/layout.tsx` with only verifiable
-fields (`name`); `url` and `logo` are added automatically once
-`NEXT_PUBLIC_SITE_URL` is set as an environment variable — no domain is
-hardcoded or guessed. See
+`PerplexityBot`, `ClaudeBot`, and `OAI-SearchBot`. When `NEXT_PUBLIC_SITE_URL`
+is set, it also emits a `sitemap` field pointing to `/sitemap.xml` — omitted
+when the env var is unset so no domain is guessed.
+
+`src/app/llms.txt/route.ts` serves a daily-revalidated, plain-text `/llms.txt`
+identifying the site by name, description, and a one-sentence mission statement.
+It does not list a product catalog — the current product data
+(`src/services/products.ts`) is an external DummyJSON placeholder, not Sals3's
+own catalog.
+
+`OrganizationSchema` (`src/components/schema/OrganizationSchema.tsx`) renders a
+global `Organization` JSON-LD block in `src/app/layout.tsx`. `WebSiteSchema`
+(`src/components/schema/WebSiteSchema.tsx`) renders a `WebSite` JSON-LD block
+on the home page, including a forward-looking `SearchAction` pointing to
+`/search?q={search_term_string}` — replace with the real search URL once that
+route ships. Both schemas emit `name` always; `url`, `logo`, and `potentialAction`
+activate automatically once `NEXT_PUBLIC_SITE_URL` is set — no domain is
+hardcoded or guessed (see `src/lib/site.ts`).
+
+`src/app/page.tsx` exports `generateMetadata()` with a per-route `<title>`,
+`<meta name="description">`, Open Graph tags, Twitter Card tags, and canonical
+link — all URL fields gated on `NEXT_PUBLIC_SITE_URL`.
+
+See
 [`sals3-geo-aeo-seo-strategy-proposal`](docs/Wiki/wiki/sals3-geo-aeo-seo-strategy-proposal.md)
 for the source strategy and what's still parked (Product/Offer/FAQPage JSON-LD,
 `generateMetadata` per PDP, `useOptimistic` cart) pending the routes those
@@ -150,6 +164,8 @@ so the 14 products plus 1 sponsored card fill 15 desktop grid cells. If the
 external product API is unavailable or returns invalid data, the page shows the
 local placeholder products and categories from `src/lib/home-placeholder-data.ts`
 with a fallback status note.
+A visually-hidden `<h1>` (`sr-only`) provides a correct heading hierarchy for
+crawlers and screen readers without altering the visual design.
 Product images are rendered with `next/image` and limited to the allow-listed
 `cdn.dummyjson.com/product-images/**` host path. Money values follow the build
 spec's minor-unit convention (`src/lib/money.ts`).

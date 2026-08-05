@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { homePromoSlides } from '@/lib/home-promo-slides';
+import { SITE_TAGLINE } from '@/lib/site';
 import Home from './page';
 
 vi.mock('embla-carousel-react', () => {
@@ -237,5 +238,16 @@ describe('Home page', () => {
     expect(
       screen.getByRole('link', { name: /go to next product page/i }),
     ).toHaveAttribute('href', '/?page=3#for-you');
+  });
+
+  it('renders an h1 heading with the site tagline', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch();
+
+    render(await Home());
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: SITE_TAGLINE }),
+    ).toBeInTheDocument();
   });
 });
