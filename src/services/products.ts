@@ -296,12 +296,27 @@ async function collectAllProducts({
   // Chained via reduce rather than Promise.all: two sections firing at once
   // would double up against CJ's one-request-per-second ceiling on the very
   // first page, so each section's search waits for the previous one.
-  return StorefrontSectionSchema.options.reduce(async (accPromise, section) => {
-    const acc = await accPromise;
-    const products = await collectSectionProducts(section, 1, fetcher, signal);
+  const products = await StorefrontSectionSchema.options.reduce(
+    async (accPromise, section) => {
+      const acc = await accPromise;
+      const sectionProducts = await collectSectionProducts(
+        section,
+        1,
+        fetcher,
+        signal,
+      );
 
-    return [...acc, ...products];
-  }, Promise.resolve<Product[]>([]));
+      return [...acc, ...sectionProducts];
+    },
+    Promise.resolve<Product[]>([]),
+  );
+
+  // The same real CJ product can legitimately appear in both the "for-you"
+  // and "deals" sections at once — dedupe by id so callers never see it
+  // twice (React key collisions, doubled related-product cards, etc.).
+  return Array.from(
+    new Map(products.map((product) => [product.id, product])).values(),
+  );
 }
 
 function getProductByIdApiUrl(id: string): string {
