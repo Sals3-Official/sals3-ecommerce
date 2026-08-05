@@ -231,6 +231,28 @@ describe('fetchProducts', () => {
       ).imageUrl,
     ).toBeUndefined();
   });
+
+  it('truncates an overlong title/imageAlt instead of rejecting the whole page', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const overlongTitle = 'A'.repeat(200);
+    const overlongImageAlt = 'B'.repeat(200);
+    const fetcher: typeof fetch = async () =>
+      jsonResponse({
+        ...validProductsResponse,
+        products: [
+          {
+            ...validProductsResponse.products[0],
+            title: overlongTitle,
+            imageAlt: overlongImageAlt,
+          },
+        ],
+      });
+
+    const response = await fetchProducts({ fetcher });
+
+    expect(response.products[0]?.title).toHaveLength(120);
+    expect(response.products[0]?.imageAlt).toHaveLength(160);
+  });
 });
 
 describe('fetchProductBySlug', () => {
