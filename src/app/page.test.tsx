@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { homePromoSlides } from '@/lib/home-promo-slides';
 import { SITE_TAGLINE } from '@/lib/site';
+import renderWithCart from '../../test/render-with-cart';
 import Home from './page';
 
 vi.mock('embla-carousel-react', () => {
@@ -130,7 +131,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    render(await Home());
+    renderWithCart(await Home());
 
     expect(
       screen.getByRole('heading', { level: 2, name: /deals/i }),
@@ -144,18 +145,35 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    render(await Home());
+    renderWithCart(await Home());
 
     expect(
       screen.getByPlaceholderText(/search 240,000 products/i),
     ).toBeInTheDocument();
   });
 
+  it('renders the guest utility bar with Log In and Sign Up links', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch();
+
+    renderWithCart(await Home());
+
+    expect(screen.getByRole('link', { name: /^log in$/i })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+    expect(screen.getByRole('link', { name: /^sign up$/i })).toHaveAttribute(
+      'href',
+      '/signup',
+    );
+    expect(screen.queryByRole('link', { name: /track my order/i })).toBeNull();
+  });
+
   it('renders the category navigation', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    render(await Home());
+    renderWithCart(await Home());
 
     expect(
       screen.getByRole('navigation', { name: /categories/i }),
@@ -169,7 +187,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    render(await Home());
+    renderWithCart(await Home());
 
     expect(screen.queryByText(/free shipping this weekend/i)).toBeNull();
     expect(
@@ -190,7 +208,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const fetchMock = mockProductsFetch(30);
 
-    render(await Home());
+    renderWithCart(await Home());
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://dummyjson.com/products?limit=14&skip=0',
@@ -205,7 +223,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const fetchMock = mockProductsFetch(45);
 
-    render(
+    renderWithCart(
       await Home({
         searchParams: Promise.resolve({ page: '2' }),
       }),
@@ -244,7 +262,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    render(await Home());
+    renderWithCart(await Home());
 
     expect(
       screen.getByRole('heading', { level: 1, name: SITE_TAGLINE }),

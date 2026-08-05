@@ -23,3 +23,11 @@ export function percentOff(
   const off = Math.round((1 - newAmountMinor / oldAmountMinor) * 100);
   return `-${off}%`;
 }
+
+export function multiplyMoney(money: Money, factor: number): Money {
+  return peso(Math.round(money.amountMinor * factor));
+}
+
+export function sumMoney(moneys: Money[]): Money {
+  return peso(moneys.reduce((total, money) => total + money.amountMinor, 0));
+}

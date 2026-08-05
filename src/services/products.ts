@@ -5,6 +5,12 @@ import type {
   PlaceholderTone,
   Product as HomeProduct,
 } from '@/lib/home-placeholder-data';
+import {
+  formatReviewDate,
+  starsLine,
+  type ProductDetail,
+  type ProductReview,
+} from '@/lib/product-detail';
 
 export const PRODUCTS_API_URL = 'https://dummyjson.com/products';
 export const PRODUCT_CATEGORIES_API_URL = `${PRODUCTS_API_URL}/categories`;
@@ -133,6 +139,17 @@ type FetchProductCategoriesOptions = {
   signal?: AbortSignal;
 };
 
+type FetchProductByIdOptions = {
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+};
+
+type FetchProductsByCategoryOptions = {
+  limit?: unknown;
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+};
+
 export function parseProductsPagination(
   input: Partial<Record<'page' | 'limit', unknown>> = {},
 ): ProductsPagination {
@@ -245,6 +262,113 @@ export async function fetchProductCategories({
   return parsedPayload.data;
 }
 
+export function parseProductId(input: unknown): number | undefined {
+  const parsedId = z.coerce.number().int().positive().safeParse(input);
+
+  return parsedId.success ? parsedId.data : undefined;
+}
+
+function getProductByIdApiUrl(id: number): string {
+  return `${PRODUCTS_API_URL}/${id}`;
+}
+
+/**
+ * Returns undefined for both an invalid id and a real 404 — callers (the
+ * PDP route) treat "no such product" as a single case and render notFound().
+ */
+export async function fetchProductById(
+  id: unknown,
+  { fetcher = fetch, signal }: FetchProductByIdOptions = {},
+): Promise<Product | undefined> {
+  const productId = parseProductId(id);
+
+  if (productId === undefined) {
+    return undefined;
+  }
+
+  const response = await fetcher(getProductByIdApiUrl(productId), {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+    },
+    signal,
+  });
+
+  if (response.status === 404) {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    throw new ProductsApiError('Product API request failed.', {
+      status: response.status,
+    });
+  }
+
+  const payload: unknown = await response.json();
+  const parsedProduct = ProductSchema.safeParse(payload);
+
+  if (!parsedProduct.success) {
+    throw new ProductsApiError('Product API returned invalid data.', {
+      cause: parsedProduct.error,
+    });
+  }
+
+  return parsedProduct.data;
+}
+
+function getProductsByCategoryApiUrl(category: string, limit: number): string {
+  const url = new URL(`${PRODUCTS_API_URL}/category/${category}`);
+
+  url.searchParams.set('limit', String(limit));
+
+  return url.toString();
+}
+
+export async function fetchProductsByCategory(
+  category: unknown,
+  { limit, fetcher = fetch, signal }: FetchProductsByCategoryOptions = {},
+): Promise<ProductsResponse> {
+  const parsedCategory = ProductCategorySchema.shape.slug.safeParse(category);
+  const parsedLimit = queryIntegerSchema(
+    MAX_PRODUCTS_PAGE_SIZE,
+    DEFAULT_PRODUCTS_PAGE_SIZE,
+  ).parse(limit);
+
+  if (!parsedCategory.success) {
+    throw new ProductsApiError('Invalid product category.', {
+      cause: parsedCategory.error,
+    });
+  }
+
+  const response = await fetcher(
+    getProductsByCategoryApiUrl(parsedCategory.data, parsedLimit),
+    {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+      },
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    throw new ProductsApiError('Product category API request failed.', {
+      status: response.status,
+    });
+  }
+
+  const payload: unknown = await response.json();
+  const parsedPayload = ProductsResponseSchema.safeParse(payload);
+
+  if (!parsedPayload.success) {
+    throw new ProductsApiError('Product category API returned invalid data.', {
+      cause: parsedPayload.error,
+    });
+  }
+
+  return parsedPayload.data;
+}
+
 function getAllowedProductImageUrl(url: string): string | undefined {
   try {
     const parsedUrl = new URL(url);
@@ -310,5 +434,53 @@ export function toHomeCategory(category: ProductCategory): HomeCategory {
     id: category.slug,
     code: getCategoryCode(category.name),
     name: category.name,
+  };
+}
+
+function toProductReview(
+  review: Product['reviews'][number],
+  productId: number,
+  index: number,
+): ProductReview {
+  return {
+    id: `${productId}-review-${index}`,
+    starsLine: starsLine(review.rating),
+    comment: review.comment,
+    reviewerName: review.reviewerName,
+    dateLine: formatReviewDate(review.date),
+  };
+}
+
+export function toProductDetail(product: Product, index = 0): ProductDetail {
+  const images = product.images
+    .map((url) => getAllowedProductImageUrl(url))
+    .filter((url): url is string => url !== undefined);
+
+  return {
+    id: String(product.id),
+    title: product.title,
+    description: product.description,
+    brand: product.brand,
+    category: product.category,
+    price: peso(toMinorUnits(product.price)),
+    oldPrice: peso(
+      getOldPriceAmount(product.price, product.discountPercentage),
+    ),
+    ratingLine: `${starsLine(product.rating)} ${product.rating.toFixed(1)}`,
+    reviewCountLine:
+      product.reviews.length === 1
+        ? '1 review'
+        : `${product.reviews.length} reviews`,
+    images,
+    imageAlt: `${product.title} product image`,
+    tone: PRODUCT_TONES[index % PRODUCT_TONES.length]!,
+    shipLine: product.shippingInformation,
+    returnPolicy: product.returnPolicy,
+    warranty: product.warrantyInformation,
+    inStock: product.stock > 0,
+    stockLine: product.stock > 0 ? `${product.stock} in stock` : 'Out of stock',
+    reviews: product.reviews.map((review, reviewIndex) =>
+      toProductReview(review, product.id, reviewIndex),
+    ),
   };
 }
