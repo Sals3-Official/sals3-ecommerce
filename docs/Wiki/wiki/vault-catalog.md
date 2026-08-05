@@ -64,6 +64,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-session-2026-08-05-part09-ui-ux-pro-audit]] — `ui-ux-pro`/`frontend-design` audit, tablet-breakpoint bug fix. PR #21 open, not yet merged.
 - [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]] — PR #21 reconciled against PR #22's real backend; three real production bugs found and fixed (CJ rate-limit hammering, deals-section discard, and the actual root cause — a Zod schema rejecting a whole page over one overlong title). PR #21/#24/#25 merged; PR #26 and two `sals3-portal` PRs open.
 - [[sals3-session-2026-08-06-part11-pwa-icons-and-cart-mobile-overflow]] — real Sals3 logo for the iOS/Android "Add to Home Screen" icon; a real mobile cart bug (price column overflow, root-caused to flexbox's `min-width: auto` default). PR #30/#31 open.
+- [[sals3-session-2026-08-06-part12-category-row-tile-band-and-related-products-dedup]] — related-products duplicate-key fix, Stage-2 title-compiler/catalogue-`ProductCard` groundwork (unwired), and a two-pass category row refactor ending in a tile-band restyle per an owner design handoff. Uncommitted.
 
 ## Raw reference assets
 
