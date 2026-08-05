@@ -351,6 +351,20 @@ describe('fetchProductsByCategory', () => {
     expect(products[0]?.slug).toBe('air-cooler');
   });
 
+  it('de-duplicates a product returned by more than one section', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const fetcher: typeof fetch = async () =>
+      jsonResponse(validProductsResponse);
+
+    const products = await fetchProductsByCategory('home-living', {
+      limit: 6,
+      fetcher,
+    });
+
+    expect(products).toHaveLength(1);
+    expect(products[0]?.id).toBe('air-cooler');
+  });
+
   it('rejects an invalid category slug without making a request', async () => {
     let called = false;
     const fetcher: typeof fetch = async () => {

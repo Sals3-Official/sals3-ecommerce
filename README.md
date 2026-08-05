@@ -63,6 +63,12 @@ section for every PDP view would hammer that rate limit for a related-products
 section that degrades gracefully to empty anyway. Replace with a direct
 category-filter endpoint once `sals3-portal` adds one.
 
+The same real product can appear in both the `for-you` and `deals` sections at
+once (e.g. a recommended item that's also on deal). `fetchProductsByCategory()`
+de-duplicates by product `id` before filtering, so a duplicate can't reach the
+related-products grid and collide with React's `key` (confirmed live: a
+duplicate `id` there throws "Encountered two children with the same key").
+
 Required `.env.local` values:
 
 ```text
