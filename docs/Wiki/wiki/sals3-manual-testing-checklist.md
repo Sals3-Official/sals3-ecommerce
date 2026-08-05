@@ -16,8 +16,8 @@ related: ["[[sals3-management-bible]]", "[[sals3-implementation-phases]]", "[[ho
 
 ## Current automated baseline
 
-- Workspace: `E:\sals3-ecommerce` (merged code + vault repo, confirmed 2026-08-04). `develop` as of 2026-08-06 has all seven PRs from this session merged: PR #21 (PDP/cart/guest header), #24 (CJ rate-limit cap), #25 (deals/for-you decoupling), #26 (title/imageAlt truncation), #28 (switch to the real single-product endpoint); `sals3-portal`'s #2 (single-product lookup) and #3 (`totalPages` self-correction).
-- `npm run verify` (lint, format:check, typecheck:clean, build, test:run, test:e2e) plus `npm audit --audit-level=high`: all passing as of 2026-08-06 across every PR above. See [[hot]] and [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]] for per-PR verification detail.
+- Workspace: `E:\sals3-ecommerce` (merged code + vault repo, confirmed 2026-08-04). `develop` as of 2026-08-06 has all seven PRs from the reconciliation session merged: PR #21 (PDP/cart/guest header), #24 (CJ rate-limit cap), #25 (deals/for-you decoupling), #26 (title/imageAlt truncation), #28 (switch to the real single-product endpoint); `sals3-portal`'s #2 (single-product lookup) and #3 (`totalPages` self-correction). PR #30 (iOS/Android PWA icons + manifest) and PR #31 (cart mobile price-overflow fix) are open, not yet merged, as of 2026-08-06.
+- `npm run verify` (lint, format:check, typecheck:clean, build, test:run, test:e2e) plus `npm audit --audit-level=high`: all passing as of 2026-08-06 across every PR above, including #30 and #31. See [[hot]], [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]], and [[sals3-session-2026-08-06-part11-pwa-icons-and-cart-mobile-overflow]] for per-PR verification detail.
 - Landing page and PDP now read the real `sals3-portal`/CJdropshipping backend (per PR #22), not DummyJSON. Local dev shows real CJ photos/data only when `sals3-portal` (`E:\sals3-portal`) is also running with real CJ credentials — otherwise the existing placeholder fallback renders, which is correct, expected behavior, not a bug.
 - Update this section with the real branch/commit/test result again each time a material change lands.
 
@@ -46,6 +46,9 @@ related: ["[[sals3-management-bible]]", "[[sals3-implementation-phases]]", "[[ho
 - [ ] `/cart` quantity +/-, remove, and the running subtotal all update correctly; removing the last item shows the empty-cart state. Agent-verified 2026-08-05, not yet owner-observed.
 - [ ] Cart survives a real browser restart / new tab (it's `localStorage`-backed, should persist — not yet tested by anyone across a full browser restart, only within a session).
 - [ ] Guest header strip and `/login`/`/signup` placeholders render correctly and don't claim functionality that doesn't exist. Agent-verified 2026-08-05, not yet owner-observed.
+- [ ] Adding the site to an iOS home screen shows the real Sals3 logo, not a generic gray placeholder. Agent-verified 2026-08-06 via the `apple-touch-icon` link tag resolving to `/apple-icon.png` at 180×180 in the browser dev server — not yet owner-observed on a real iOS device (PR #30).
+- [ ] Adding the site to an Android/Chrome home screen (or "Install app") shows the real Sals3 logo. Agent-verified 2026-08-06 via the `manifest` link tag resolving to `/manifest.webmanifest` with correct icon entries (192×192, 512×512) in the browser dev server — not yet owner-observed on a real Android device (PR #30).
+- [ ] `/cart` line items don't overflow off-screen on a narrow mobile viewport — the price stays visible next to the title/quantity stepper. Agent-verified 2026-08-06 via `getBoundingClientRect()` at 375px and 320px widths (PR #31), not yet owner-observed on a real device.
 
 ## Pillar 3 — Seller Center (not started)
 

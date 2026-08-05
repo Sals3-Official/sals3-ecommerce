@@ -294,3 +294,33 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** When a repo's local dev environment has real credentials configured for manual testing, but its automated suite assumes no backend is configured (matching CI), a local `npm run test:e2e` or Husky-hook-triggered `npm run verify` will fail on tests whose premise your own local setup just invalidated. Temporarily move `.env.local` aside (`mv .env.local .env.local.bak`, verify, `mv` back) to get a true CI-equivalent local check rather than mistaking an environment-caused failure for a real regression.
 
 **Where applied:** PR #26's e2e run and Husky pre-commit/pre-push hooks both required this to pass cleanly while `E:\sals3-portal` was running locally with real credentials.
+
+### 31. Hiding `.env.local` for an earlier manual `verify` isn't enough — Husky re-runs `verify` fresh at the actual `git commit`/`git push` moment
+
+**Confirmed:** 2026-08-06, shipping the cart mobile-overflow fix (PR #31).
+
+**Incident:** `npm run verify` had already been run cleanly once with `.env.local` hidden, matching CI's no-backend-configured condition (skill 30). `.env.local` was then restored for normal local dev use, and `git commit` was run with it back in place. This repo's Husky pre-commit hook runs the full `verify` suite again on every commit — not once per session — so it hit skill 30's exact failure a second time: with a real `sals3-portal` backend configured in `.env.local`, `e2e/product.spec.ts`'s "falls back to not-found without a configured backend" test failed on its now-false premise. The commit was rejected, and the subsequent `git push` (issued in the same batch regardless of the commit's exit code) failed its own pre-push `verify` re-run for the identical reason.
+
+**Lesson:** Skill 30's hide-`.env.local` step must bracket the actual `git commit` and `git push` invocations directly, not just an earlier manual `verify` pass in the same task. Husky fires its own fresh `verify` at each of those two exact moments, using whatever `.env.local` state exists right then — an earlier clean check doesn't carry forward once the file is restored.
+
+**Where applied:** Re-ran `mv .env.local .env.local.bak` immediately before `git commit`, left it moved through `git push`, then restored it — both hook-triggered `verify` runs passed cleanly.
+
+### 32. Next.js App Router's `apple-icon.png`/`manifest.ts` file conventions auto-wire their `<link>` tags — no manual metadata code needed
+
+**Confirmed:** 2026-08-06, replacing the generic gray "Add to Home Screen" icon with the real Sals3 logo (PR #30).
+
+**Incident:** iOS and Android were both showing a generic placeholder icon when the site was added to a home screen, because no icon files existed at any convention path and no manifest was served at all.
+
+**Lesson:** In this Next.js version, dropping a correctly-sized PNG at `src/app/apple-icon.png` auto-generates the `<link rel="apple-touch-icon">` tag for iOS, and exporting a `MetadataRoute.Manifest` from `src/app/manifest.ts` auto-serves it at `/manifest.webmanifest` with its `<link rel="manifest">` tag wired in — neither needs a manual `metadata` export or hand-written `<head>` tag. Android/Chrome's PWA manifest wants icons at 192×192 and 512×512 (`public/icon-192.png`, `public/icon-512.png`, referenced from the manifest's `icons` array) — a different size set than iOS's single 180×180 `apple-icon.png`, so covering both platforms means two separate icon exports from the same source image, not one shared file.
+
+**Where applied:** `src/app/apple-icon.png` (180×180), `public/icon-192.png`/`public/icon-512.png`, `src/app/manifest.ts` (name/description pulled from `src/lib/site.ts`'s existing constants, not hardcoded). Verified live: both link tags resolve correctly, manifest JSON content correct.
+
+### 33. Flexbox's `min-width: auto` default silently blocks a column from shrinking — a sibling can overflow off-screen even though the parent is `flex`
+
+**Confirmed:** 2026-08-06, fixing a real mobile cart bug reported via screenshot (PR #31).
+
+**Incident:** `CartLineItemRow`'s title/quantity-stepper column was a plain `<div className="flex-1">` next to a price column, inside a `flex` row. At 375px width, the stepper row's buttons plus the Remove link had a combined intrinsic width wider than the space actually available — but the column refused to shrink below that width, silently pushing the price column 34.5px past the right edge of the viewport (confirmed via `getBoundingClientRect()`, not just a visual glance).
+
+**Lesson:** A flex item's `min-width` defaults to `auto`, which means "don't shrink below your content's intrinsic width" — not `0`. `flex-1`/`flex-grow` alone does not override this; a flex child with wide enough content can still force itself (and push its siblings) past the container's actual width. Fix with an explicit `min-w-0` on the column that should be allowed to shrink, and `flex-wrap` on any row of fixed-size children (buttons, badges) that would otherwise be the thing forcing that intrinsic width up. Verify with real pixel measurements at the actual reported viewport width, not just by reading the Tailwind classes (same discipline as skill 24).
+
+**Where applied:** `min-w-0` added to `CartLineItemRow`'s title/stepper column, `flex-wrap` added to its quantity-stepper row. Re-verified clean at both 375px and 320px.
