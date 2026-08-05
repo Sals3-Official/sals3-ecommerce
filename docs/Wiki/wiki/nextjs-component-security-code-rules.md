@@ -32,6 +32,7 @@ related:
 - If a command is not applicable to the change, state why in the final summary.
 - If a command fails, fix the failure or report the blocker. Do not hide, skip, or downgrade failures.
 - Update `README.md` in the same task when a feature, setup step, package command, runtime behavior, project structure, test workflow, or important limitation changes. See [[project-structure-installation-and-runbook#README Update Rule]].
+- Treat internet and AI visibility as a first-class product priority when changing routes, public content, metadata, structured data, crawling rules, or machine-readable endpoints. SEO, GEO, and AEO work must be considered early in the implementation plan, not only as a late checklist item.
 - Do not deploy, publish, push, or commit unless the owner explicitly asks.
 
 ## SEO, GEO, and AEO Discoverability
@@ -39,6 +40,7 @@ related:
 > [!IMPORTANT] Check this on every route, metadata, or structured-data change
 > [[sals3-geo-aeo-seo-strategy-proposal]] is the canonical reference for how Sals3 should be discoverable by search engines, generative AI (ChatGPT, Perplexity, Claude, Gemini), and answer engines. It is not fully approved or built — most of it is intentionally parked in [[parked-ideas-backlog]] pending routes that don't exist yet — but it must be actively checked, not forgotten, whenever code touches this surface.
 
+- Prioritize discoverability for both regular internet search and AI answer surfaces. For public ecommerce surfaces, plan SEO (search engine visibility), GEO (generative engine visibility), and AEO (answer engine visibility) alongside component architecture, security, accessibility, performance, and cost-efficiency.
 - Before adding, moving, or removing any page/route (especially a new PDP, category, cart, or checkout route), check [[parked-ideas-backlog]] for GEO/AEO/SEO entries whose **unblock condition** the new route now satisfies (e.g. a `/p/[id]` route unblocks per-route `generateMetadata` and `Product`/`Offer`/`AggregateRating`/`FAQPage` JSON-LD). Do not ship a new route without at least considering whether it should carry its corresponding entry from [[sals3-geo-aeo-seo-strategy-proposal]] — implement it if the data backing it is real, or explicitly note why it's still deferred.
 - Before adding or changing `generateMetadata`, any `<script type="application/ld+json">` / structured-data block, `robots.ts`, `sitemap.ts`, or `llms.txt`, read [[sals3-geo-aeo-seo-strategy-proposal]] first so the pattern stays consistent with what's already shipped (`src/app/robots.ts`, `src/app/llms.txt/route.ts`, `src/components/schema/OrganizationSchema.tsx`, `src/lib/site.ts`).
 - Never fill a structured-data field (URL, logo, rating, price, catalog listing, etc.) with a guessed or placeholder value. Gate it behind a real, confirmed data source or an explicit env var and omit the field when unset — see [[sals3-skills]] lesson 14. Google's structured-data guidelines can penalize fabricated schema with a manual action and loss of all rich results for the domain, not just an inaccurate sentence.
@@ -155,8 +157,9 @@ Before completing any code task:
 4. Confirm that no secrets or sensitive information are exposed to the client or logs.
 5. Confirm that the implementation avoids unnecessary paid services, dependencies, compute, database reads, API calls, and bundle weight.
 6. Confirm that all added or changed images are optimized through code and use stable dimensions, responsive sizing, lazy loading where appropriate, and safe allow-listed sources.
-7. Update `README.md` if the task added or changed a feature, setup step, package command, runtime behavior, project structure, test workflow, or important limitation.
-8. Run the relevant checks:
+7. Confirm that any public route, metadata, structured-data, `robots.ts`, `sitemap.ts`, or `llms.txt` change treats SEO, GEO, and AEO visibility as a priority, implements the real-data-backed pieces that are unblocked, and documents any deferred pieces.
+8. Update `README.md` if the task added or changed a feature, setup step, package command, runtime behavior, project structure, test workflow, or important limitation.
+9. Run the relevant checks:
 
 ```bash
 cd /Users/MacBook/Documents/Sals3/sals3-ecommerce
@@ -170,7 +173,7 @@ npm run test:e2e
 npm audit --audit-level=high
 ```
 
-9. For full project verification, use:
+10. For full project verification, use:
 
 ```bash
 cd /Users/MacBook/Documents/Sals3/sals3-ecommerce
@@ -179,9 +182,9 @@ npm run verify
 npm audit --audit-level=high
 ```
 
-10. Fix all lint errors, format errors, type errors, test failures, build failures, and critical or high-severity security vulnerabilities.
-11. Do not mark the task as complete if required validation commands fail.
-12. Summarize:
+11. Fix all lint errors, format errors, type errors, test failures, build failures, and critical or high-severity security vulnerabilities.
+12. Do not mark the task as complete if required validation commands fail.
+13. Summarize:
 
     - Files changed
     - Architectural decisions
