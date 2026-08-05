@@ -79,13 +79,29 @@ Separately reported: some product cards on deep pages show a colored placeholder
 | sals3-ecommerce | #21 | merged | PDP/cart/guest-header, reconciled against real backend |
 | sals3-ecommerce | #24 | merged | Cap client-side product search at 2 pages/section |
 | sals3-ecommerce | #25 | merged | Decouple deals/for-you fetch failures |
-| sals3-ecommerce | #26 | open | Truncate overlong title/imageAlt instead of rejecting the page |
-| sals3-portal | #2 | open | Single-product lookup via CJ's `pid` filter |
-| sals3-portal | #3 | open | Self-correct `totalPages` past CJ's real depth (defense-in-depth) |
+| sals3-ecommerce | #26 | merged | Truncate overlong title/imageAlt instead of rejecting the page |
+| sals3-ecommerce | #28 | merged | Switch `fetchProductBySlug()` to `sals3-portal`'s real single-product endpoint |
+| sals3-portal | #2 | merged | Single-product lookup via CJ's `pid` filter |
+| sals3-portal | #3 | merged | Self-correct `totalPages` past CJ's real depth (defense-in-depth) |
+
+All seven PRs from this session merged the same day.
+
+## Update — PR #28: switching to the real single-product endpoint
+
+Once `sals3-portal` PR #2 merged, `fetchProductBySlug()` was rewritten to call
+`GET /api/storefront/products/<slug>` directly instead of PR #24's capped
+page-scan stopgap. Verified live against the real local `sals3-portal`
+instance set up earlier in this session: a product page that previously
+needed the scan (and 404'd for most real products past page 2 of a section)
+now resolves in a single request — 2.8s vs. 8–10s under the old scan. The
+"most real products 404 on their own detail page" regression noted at the
+PR #21/#24 merge is lifted. `fetchProductsByCategory()` (related products)
+is unchanged — still the capped stopgap, since `sals3-portal` has no
+category-filter endpoint yet.
 
 ## Verification
 
-Every PR above: `npm run lint`, `format:check`, `typecheck:clean`, `build`, `test:run`, `test:e2e`, `npm audit --audit-level=high` — all passing at merge/open time. PR #26's e2e run required temporarily hiding `.env.local` to match true CI conditions (no real backend configured), since the repo's own Husky hooks run full `verify` unconditionally and would otherwise test against the now-real local backend instead of the DummyJSON-free, no-backend-configured condition the e2e suite assumes.
+Every PR above: `npm run lint`, `format:check`, `typecheck:clean`, `build`, `test:run`, `test:e2e`, `npm audit --audit-level=high` — all passing at merge time. Several PRs' e2e runs required temporarily hiding `.env.local` to match true CI conditions (no real backend configured), since the repo's own Husky hooks run full `verify` unconditionally and would otherwise test against the now-real local backend instead of the no-backend-configured condition the e2e suite assumes (see [[sals3-skills]] entry 30).
 
 ## Lessons
 
