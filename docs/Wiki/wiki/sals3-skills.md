@@ -18,6 +18,7 @@ related:
   - "[[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]]"
   - "[[sals3-session-2026-08-05-part02-footer-and-pagination]]"
   - "[[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints]]"
+  - "[[sals3-session-2026-08-05-part04-home-page-seo-geo-aeo]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -148,3 +149,33 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** Before pushing another commit to a branch that already had a PR, run `gh pr view --json state,mergedAt` (or check the branch's PR list) first. If the PR is `MERGED`, create a fresh branch off `develop` instead of pushing more commits to the old one — pushing succeeds silently either way, so a green `git push` is not evidence the commit reached `develop`.
 
 **Where applied:** Opened PR #16 from a corrected state, and added a PR-template checklist item (`.github/pull_request_template.md`) so this is checked at PR-open time going forward, not just remembered.
+
+### 17. `generateMetadata` belongs on `page.tsx`, not `layout.tsx` — and URL fields must still be gated on `getSiteUrl()`
+
+**Confirmed:** 2026-08-05, adding per-route Open Graph and Twitter Card tags to the home page.
+
+**Incident:** The global `layout.tsx` already exported `metadata` (title and description). Adding a second `generateMetadata` export on `page.tsx` at first looked like a conflict — but Next.js App Router resolves metadata by merging from the outermost layout inward, with the most-specific route winning. The per-page export overrides the layout fallback on that route only; other routes are unaffected.
+
+**Lesson:** `layout.tsx` metadata is a global fallback. Route-specific tags (`og:url`, `canonical`, `og:type: website`, Twitter Card) belong in `generateMetadata()` on `page.tsx`. All URL fields must still be gated on `getSiteUrl()` (see skill 14) — `generateMetadata` is not exempt. Gate `alternates.canonical`, `openGraph.url`, and any absolute-URL field the same way as in a JSON-LD component: read from env, omit when unset, never guess.
+
+**Where applied:** `src/app/page.tsx` — `generateMetadata()` returns `title`, `description`, `robots`, `openGraph`, `twitter`, and `alternates.canonical`, with the URL fields all gated.
+
+### 18. `WebSite` JSON-LD's `SearchAction` is a valid forward-looking signal — document its placeholder status in code
+
+**Confirmed:** 2026-08-05, building `WebSiteSchema.tsx`.
+
+**Incident:** The `WebSite` schema's `potentialAction` (`SearchAction`) targets a `/search` route that does not yet exist. It was tempting to skip it until the route exists, but the GEO/AEO value of the `SearchAction` signal — telling AI crawlers and Google that this is a searchable site — accrues before the route is live, and removing it later requires another PR.
+
+**Lesson:** It is acceptable to emit a forward-looking `SearchAction` in `WebSite` JSON-LD when the route is confirmed as planned. Document the placeholder status explicitly in a code comment so the next developer knows to update the target URL when the search route ships. Gate the whole action (along with `url`) behind `getSiteUrl()` — skip both when the domain isn't confirmed, because a `SearchAction` without a real `url` parent isn't useful to a crawler anyway.
+
+**Where applied:** `src/components/schema/WebSiteSchema.tsx` — comment reads: *"The SearchAction target (/search?q=) is a forward-looking signal; the search route does not exist yet. Replace the target once the real search URL ships."*
+
+### 19. Prettier can fail `format:check` on a new file even when no obvious style violation exists — run `prettier --write` on it immediately
+
+**Confirmed:** 2026-08-05, after adding `generateMetadata` to `src/app/page.tsx`.
+
+**Incident:** `npm run format:check` failed on `page.tsx` despite the code reading as well-formatted. The cause was a trailing blank line introduced by a multi-replace edit (`\n\n` before the `const` block after the new export). Prettier's output for that file differed by exactly one blank line.
+
+**Lesson:** After any multi-chunk edit to a file (especially one produced by a tool that patches raw text), run `npx prettier --write <file>` on the changed file immediately and re-run `format:check` before moving to the next step. Catching it early saves discovering it only at the verification stage, when it forces a re-run of the full suite. The fix itself is instant; the cost is the extra round-trip.
+
+**Where applied:** `src/app/page.tsx` — fixed by `npx prettier --write src/app/page.tsx` between the typecheck and build steps.

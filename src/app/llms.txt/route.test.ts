@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/site';
 import { GET } from './route';
 
 describe('GET /llms.txt', () => {
@@ -12,5 +12,6 @@ describe('GET /llms.txt', () => {
     );
     expect(body).toContain(SITE_NAME);
     expect(body).toContain(SITE_DESCRIPTION);
+    expect(body).toContain(SITE_TAGLINE);
   });
 });

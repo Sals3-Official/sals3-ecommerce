@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
-import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/site';
 
 export const revalidate = 86400;
 
 export function GET() {
-  const body = `# ${SITE_NAME}\n\n> ${SITE_DESCRIPTION}\n`;
+  const body = [
+    `# ${SITE_NAME}`,
+    '',
+    `> ${SITE_DESCRIPTION}`,
+    '',
+    `## Mission`,
+    '',
+    SITE_TAGLINE,
+  ].join('\n');
 
   return new NextResponse(body, {
     headers: {
