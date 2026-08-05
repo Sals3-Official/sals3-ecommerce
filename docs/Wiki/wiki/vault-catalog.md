@@ -56,6 +56,12 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]] — session record for the marketplace landing page, the first real screen (merged to `develop` 2026-08-05).
 - [[sals3-session-2026-08-05-part02-footer-and-pagination]] — site footer (compliance-claim audit) and numbered pagination, code merged to `develop`.
 - [[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints]] — `robots.txt`, `llms.txt`, global `Organization` JSON-LD shipped; PDP/cart-dependent GEO/AEO items parked.
+- [[sals3-session-2026-08-05-part04-home-page-seo-geo-aeo]] — `generateMetadata`, `WebSiteSchema` JSON-LD, sr-only `<h1>`, `sitemap` in `robots.ts`, enriched `llms.txt`. Merged to `develop`.
+- [[sals3-session-2026-08-05-part05-product-detail-page]] — first `/p/[id]` product detail page. Not yet committed.
+- [[sals3-session-2026-08-05-part06-guest-header-strip]] — signed-out header strip, `/login`/`/signup` placeholders. Not yet committed.
+- [[sals3-session-2026-08-05-part07-cart]] — client-only shopping cart, live Add to Cart/Buy Now, `/cart` route. Not yet committed.
+- [[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit]] — add-to-cart toast, first `ui-ux-pro-max` audit pass. Not yet committed.
+- [[sals3-session-2026-08-05-part09-ui-ux-pro-audit]] — `ui-ux-pro`/`frontend-design` audit, tablet-breakpoint bug fix. Not yet committed.
 
 ## Raw reference assets
 

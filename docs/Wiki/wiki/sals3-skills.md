@@ -19,6 +19,10 @@ related:
   - "[[sals3-session-2026-08-05-part02-footer-and-pagination]]"
   - "[[sals3-session-2026-08-05-part03-geo-aeo-seo-machine-endpoints]]"
   - "[[sals3-session-2026-08-05-part04-home-page-seo-geo-aeo]]"
+  - "[[sals3-session-2026-08-05-part05-product-detail-page]]"
+  - "[[sals3-session-2026-08-05-part07-cart]]"
+  - "[[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit]]"
+  - "[[sals3-session-2026-08-05-part09-ui-ux-pro-audit]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -179,3 +183,63 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** After any multi-chunk edit to a file (especially one produced by a tool that patches raw text), run `npx prettier --write <file>` on the changed file immediately and re-run `format:check` before moving to the next step. Catching it early saves discovering it only at the verification stage, when it forces a re-run of the full suite. The fix itself is instant; the cost is the extra round-trip.
 
 **Where applied:** `src/app/page.tsx` — fixed by `npx prettier --write src/app/page.tsx` between the typecheck and build steps.
+
+### 20. `DesignSync`'s read methods work on a plain `PROJECT_TYPE_PROJECT`, not only `PROJECT_TYPE_DESIGN_SYSTEM`
+
+**Confirmed:** 2026-08-05, building the `/p/[id]` product detail page.
+
+**Incident:** Bogs referenced `claude.ai/design/p/bbfb99d1-616f-4c5c-ae85-e1f61f91756e` (the same project as skill 5) and named a "claude_design MCP" that isn't in this environment's toolset. `DesignSync.list_projects` returned an empty array (no writable design-system projects), which looked like a dead end. But `DesignSync.get_project` on that exact ID returned `{ type: "PROJECT_TYPE_PROJECT", canEdit: true }` — a regular Claude Design project, not a design-system one — and `list_files`/`get_file` worked on it anyway.
+
+**Lesson:** `list_projects` only enumerates *writable design-system* projects; it is not proof a given project ID is unreachable. If the user supplies a specific `claude.ai/design/p/<uuid>` link, try `get_project` with that ID directly before concluding `DesignSync` can't reach it. The tool's write path (`finalize_plan`/`write_files`) does require `PROJECT_TYPE_DESIGN_SYSTEM`, but the read path (`get_project`, `list_files`, `get_file`) does not check project type.
+
+**Where applied:** `Sals3 Marketplace.dc.html` and `support.js` read from the project to build the PDP's gallery, price box, action-bar, and reviews layout.
+
+### 21. jsdom's `localStorage` can be undefined in this repo's test environment — don't depend on it, polyfill it
+
+**Confirmed:** 2026-08-05, building the cart feature.
+
+**Incident:** `CartProvider.tsx` called `window.localStorage.getItem(...)` in a `useEffect`. Every test that rendered a page composing `SiteHeader` (which now renders a cart badge) crashed with `TypeError: Cannot read properties of undefined (reading 'getItem')` — `window.localStorage` itself was `undefined`, not merely broken. `vitest.config.mts` has `environment: 'jsdom'`, which normally ships a working `localStorage`. The console also showed `ExperimentalWarning: localStorage is not available because --localstorage-file was not provided` — Node's own experimental global `localStorage` (recent Node versions) appears to shadow or conflict with jsdom's under this setup.
+
+**Lesson:** Don't assume jsdom's `localStorage` works in this repo's test environment — verify or polyfill it explicitly rather than debugging the jsdom/Node interaction. Fixed with a small in-memory `Storage` class installed via `Object.defineProperty(window, 'localStorage', ...)` in a `beforeEach` in `test/setup.ts`, reset before every test. This also gives cleaner test isolation than a real persistent store would.
+
+**Where applied:** `test/setup.ts`; consumed by `src/lib/cart.test.ts`, `src/app/cart/page.test.tsx`, and every page test that now renders `SiteHeader` (`src/app/page.test.tsx`, `src/app/p/[id]/page.test.tsx`, `src/app/login/page.test.tsx`, `src/app/signup/page.test.tsx`).
+
+### 22. A long-lived dev server serves broken HMR after many hot-reloads — the symptom looks like a click bug, not a server bug
+
+**Confirmed:** 2026-08-05, verifying the cart feature's Add to Cart button.
+
+**Incident:** Playwright's `e2e/cart.spec.ts` and manual browser checks both showed "Add to Cart" clicks doing nothing — no `Added to cart.` text, no localStorage update — even though `toBeEnabled()` passed and no console error appeared at first glance. Calling `element.click()` directly via injected JS **did** work and updated state correctly, proving the React handler itself was fine. Adding `page.on('console', ...)` / `page.on('pageerror', ...)` surfaced the real signal: repeated `WebSocket connection ... /_next/hmr ... failed: net::ERR_INVALID_HTTP_RESPONSE` and sporadic `403 Forbidden` on `/_next/*` assets. The dev server (PID found via `Get-NetTCPConnection -LocalPort 3000`) had been running since before the session started and had absorbed a large number of file edits and Fast-Refresh full-reloads across three sessions' worth of work (see skill 11 for the general "find the real PID" lesson — this is the specific symptom signature to recognize).
+
+**Lesson:** If a button click silently no-ops in both Playwright and a manual browser check, but the same handler works when invoked directly via `element.click()` in injected JS, suspect a corrupted long-lived dev server before suspecting the component code. Check for broken HMR websocket / 403s in the console, confirm the real PID on the port, confirm with the owner before killing it (killing a process is a destructive-ish action per the safety rules even when it's "just" a local dev server), then let the test runner's `webServer` config (`reuseExistingServer: false` effectively, once nothing is listening) start a clean one.
+
+**Where applied:** Killed the stale PID 56420 after confirming with Bogs; `npm run test:e2e` then passed 6/6 against a fresh server on the first run.
+
+### 23. `ui-ux-pro-max`'s `--design-system` palette/typography suggestion can conflict with an already-approved brand — apply the checklist, not the palette
+
+**Confirmed:** 2026-08-05, auditing the PDP and cart against the `ui-ux-pro-max` skill after Bogs flagged it hadn't visibly been used.
+
+**Incident:** `ui-ux-pro-max --design-system "ecommerce marketplace product detail page"` returned a full recommendation — a purple `#7C3AED` palette, Rubik/Nunito Sans typography, a "Marketplace/Directory" pattern. Sals3 already has an approved brand palette and type system (`--color-brand-600` `#0a5c8a`, Plus Jakarta Sans/Outfit) chosen from the "Sals3 Marketplace" Claude Design reference across three earlier sessions ([[sals3-session-2026-08-05-part01-marketplace-landing-page]] onward). Applying the tool's generic suggestion wholesale would have silently discarded that decision.
+
+**Lesson:** `--design-system` output is generic-product-type-shaped, not brand-aware — it doesn't know a real brand decision already exists. When one does, split the output: apply the palette-independent, universally-valid items (the pre-delivery checklist — touch targets, cursor/hover feedback, contrast, motion, ARIA), and explicitly skip the palette/typography/pattern suggestion rather than let it silently override an approved decision. This is the same principle the footer session applied to mockup claims — a reference tool's output is a source to weigh, not an automatic override. State the skip and the reason to the owner rather than silently deviating either way.
+
+**Where applied:** Applied — `cursor-pointer` + hover transitions on every custom button (native `<button>` doesn't get `cursor: pointer` for free), cart quantity-stepper buttons bumped from 32×32px to the 44×44px touch-target minimum. Not applied — the purple palette, the alternate type pairing, the "Marketplace/Directory" section pattern.
+
+### 24. Verify responsive breakpoints live, in the browser — reading the Tailwind classes is not enough
+
+**Confirmed:** 2026-08-05, running `ui-ux-pro`'s Responsive Containers checklist against the PDP.
+
+**Incident:** `src/app/p/[id]/page.tsx`'s gallery/info grid used `lg:grid-cols-2` (1024px). Reading the code, this looks reasonable — a single-column fallback below desktop width. Checked live in the browser at 768px anyway (`getBoundingClientRect()` on the product image and the Add to Cart button, not just a visual glance): the product photo alone rendered ~703px tall, pushing `Add to Cart` to 1042px down — below the fold on a 1024px-tall viewport, a real conversion-blocking bug that the code alone didn't reveal.
+
+**Lesson:** A breakpoint choice that reads fine in Tailwind class names can still produce a broken layout at a specific, common width — the gap between `sm`/`md` and `lg` is wide enough (640/768px to 1024px) that a single-column fallback can render very badly at 768–1023px, exactly where tablets live. Check actual rendered dimensions at 375/768/1024/1440px via the browser (`getBoundingClientRect()` or equivalent), not just by reading which breakpoint prefix was used.
+
+**Where applied:** Moved the PDP's and the cart page's grid breakpoints from `lg` to `md`; re-verified all three widths afterward.
+
+### 25. Don't assert on stock-dependent state from live, randomly-selected third-party product data in e2e tests
+
+**Confirmed:** 2026-08-05, fixing a flaky test during the `ui-ux-pro` audit session.
+
+**Incident:** `e2e/product.spec.ts`'s general navigation test clicked the first product card on the home page (a live, randomly-`skip`ped DummyJSON deal — see [[sals3-session-2026-08-05-part01-marketplace-landing-page]]) and asserted `Add to Cart` is enabled. It failed intermittently: some random products are legitimately out of stock, and a correctly-disabled button for an out-of-stock product isn't a bug.
+
+**Lesson:** When a test navigates through live, non-deterministic third-party data (as this repo's e2e tests do — no mocking, real DummyJSON), don't assert on any property that varies per-item (stock, price, rating) unless the test pinned a specific, known item id first. General navigation/rendering tests should assert structure (the button renders, the heading exists), not item-specific state; a dedicated test using a fixed id (`e2e/cart.spec.ts` already uses `/p/1`, `/p/2`) is the right place for state-specific assertions.
+
+**Where applied:** `e2e/product.spec.ts` now asserts `toBeVisible()` instead of `toBeEnabled()` on the Add to Cart button for the random-product navigation test.
