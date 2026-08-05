@@ -198,15 +198,40 @@ brand tokens (`--color-brand-600` `#0a5c8a`, `--color-surface` `#f6f7f8`).
 ## Home Page
 
 `src/app/page.tsx` renders the marketplace landing page: header (logo, search,
-delivery region, cart/orders/account links), live category strip, an Embla promo
-carousel, a portal-fed deals grid, and a paginated "For you" grid. Promo carousel
-images live in `public/home-promos/` and slide metadata lives in
-`src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
-assets, `next/image`, manual controls, dot buttons, and no autoplay. The category
-strip, deals grid, and "For you" grid read live data through
-`src/services/products.ts`. The category strip builds internal `/c/<slug>` links
-from validated CJ category slugs. The deals grid fetches 5 CJ products ranked by
-supplier listing count when available. The "For you" grid uses the `?page=`
+delivery region, cart/orders/account links), a full-bleed category band, an
+Embla promo carousel, a portal-fed deals grid, and a paginated "For you" grid.
+Promo carousel images live in `public/home-promos/` and slide metadata lives
+in `src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
+assets, `next/image`, manual controls, dot buttons, and no autoplay.
+
+The category band (`src/components/home/CategoryRow.tsx`) sits directly under
+`SiteHeader`, outside `<main>`, so its white `border-y` band spans the full
+viewport instead of the 1152px content column. It is fully server-rendered —
+no client component, no scroll-chevron mechanics. Below the `md` breakpoint it
+is a native horizontal touch-scroll row (`no-scrollbar` hides the browser
+scrollbar); at `md` and up it becomes an equal-width grid
+(`md:grid md:auto-cols-fr md:grid-flow-col`) that never overflows, so there is
+nothing to scroll and no chevrons. Each tile (`CategoryRowItem.tsx`) is a 56px
+`rounded-2xl` icon holder plus a 2-line-wrapping label — deliberately neutral
+grey (`bg-surface-sunken`/`text-ink-muted`), not the brand colour, per the
+build spec's "brand colour for actions only" rule; navigation is not an
+action. Icon geometry is hand-authored inline SVG keyed by category id
+(`src/components/home/category-icons.tsx`) — no icon library, since the real
+storefront feed has no icon field. A category id with no mapped icon falls
+back to the feed's real 2-letter `code`. `CategoryRowSkeleton.tsx` matches the
+tile geometry exactly and is wired as a `<Suspense>` fallback around the
+category row; it is structural rather than a real defer today, since
+`homeCategories` resolves in the same `Promise.all` as the rest of the page's
+data, same as every section here — a genuinely streamed category fetch would
+need a page-wide rendering change beyond this component's scope, and this
+repo's `page.test.tsx` (`renderWithCart(await Home())`, a plain client render
+of an already-resolved tree) cannot execute a nested async Server Component to
+test it if it were.
+
+The category band, deals grid, and "For you" grid read live data through
+`src/services/products.ts`. The category band builds internal `/c/<slug>`
+links from validated CJ category slugs. The deals grid fetches 5 CJ products
+ranked by supplier listing count when available. The "For you" grid uses the `?page=`
 query string for pagination and fetches 14 products per page, so the 14 products
 plus 1 sponsored card fill 15 desktop grid cells. If the portal or CJ product
 API is unavailable or returns invalid data, the page shows the local placeholder

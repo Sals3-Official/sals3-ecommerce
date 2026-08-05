@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
-import CategoryStrip from '@/components/home/CategoryStrip';
+import CategoryRow from '@/components/home/CategoryRow';
+import CategoryRowSkeleton from '@/components/home/CategoryRowSkeleton';
 import PromoCarousel from '@/components/home/PromoCarousel';
 import DealsSection from '@/components/home/DealsSection';
 import ForYouSection from '@/components/home/ForYouSection';
@@ -154,10 +156,25 @@ export default async function Home({ searchParams }: HomeProps = {}) {
     <div className="flex flex-1 flex-col bg-surface">
       <WebSiteSchema />
       <SiteHeader />
+      {/* Suspense boundary is structural, not a real defer: homeCategories
+          resolves in the Promise.all above, same as every other section on
+          this page, so the skeleton fallback never actually renders here.
+          A genuinely streamed category row (fetch started, then awaited
+          inside its own async child component) is valid Next.js and works
+          in the real dev server, but this repo's page.test.tsx renders via
+          `renderWithCart(await Home())` — a plain client render() of an
+          already-resolved tree — which cannot execute a nested async
+          Server Component at all (proved directly: even an async
+          `findByRole` times out). Making this one section stream while the
+          rest of the page still blocks is also a page-wide architecture
+          change beyond this refactor's scope. CategoryRowSkeleton stays
+          built and tested for when that decision is made deliberately. */}
+      <Suspense fallback={<CategoryRowSkeleton />}>
+        <CategoryRow categories={homeCategories} />
+      </Suspense>
       <main className="mx-auto w-full max-w-6xl px-6 py-5 pb-16">
         {/* sr-only h1: correct heading hierarchy for crawlers and screen readers */}
         <h1 className="sr-only">{SITE_TAGLINE}</h1>
-        <CategoryStrip categories={homeCategories} />
         <PromoCarousel />
         <DealsSection deals={homeProducts.deals} />
         <ForYouSection
