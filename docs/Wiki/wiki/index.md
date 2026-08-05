@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-05
+updated: 2026-08-06
 status: canonical
 authority: navigation
 owner_approved: true
@@ -36,7 +36,7 @@ related:
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
-- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents, once any exist.
+- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (30 entries as of 2026-08-06).
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel|2026-08-05 Landing Page API Carousel Turnover Prompt]] — copy-paste handoff prompt for the next agent after that session.
@@ -67,6 +67,7 @@ related:
 - [[sals3-session-2026-08-05-part07-cart|Cart Session]] — client-only (`localStorage`) shopping cart, live Add to Cart/Buy Now on the PDP, `/cart` route. PR #21 open, not yet merged.
 - [[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit|Cart Toast and UX Audit Session]] — add-to-cart toast notification; first `ui-ux-pro-max` audit pass (checklist applied, generic palette suggestion rejected). PR #21 open, not yet merged.
 - [[sals3-session-2026-08-05-part09-ui-ux-pro-audit|UI-UX-Pro and Frontend-Design Audit Session]] — `ui-ux-pro`/`frontend-design` audit; found and fixed a real tablet-breakpoint bug, added missing press states, fixed a flaky e2e test. PR #21 open, not yet merged.
+- [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes|PR #21/#22 Reconciliation and CJ Bugfixes Session]] — reconciled the PDP/cart PR against AJ's real `sals3-portal` backend PR; found and fixed three real production bugs (CJ rate-limit hammering, a for-you failure discarding the deals section, and the actual root cause — Zod rejecting a whole page over one overlong title) after two reasonable-but-wrong hypotheses. PR #21, #24, #25 merged; PR #26 and two `sals3-portal` PRs open.
 
 ## Domains not started yet
 

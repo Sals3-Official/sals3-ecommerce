@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-08-05
+updated: 2026-08-06
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -23,6 +23,7 @@ related:
   - "[[sals3-session-2026-08-05-part07-cart]]"
   - "[[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit]]"
   - "[[sals3-session-2026-08-05-part09-ui-ux-pro-audit]]"
+  - "[[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -243,3 +244,53 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** When a test navigates through live, non-deterministic third-party data (as this repo's e2e tests do — no mocking, real DummyJSON), don't assert on any property that varies per-item (stock, price, rating) unless the test pinned a specific, known item id first. General navigation/rendering tests should assert structure (the button renders, the heading exists), not item-specific state; a dedicated test using a fixed id (`e2e/cart.spec.ts` already uses `/p/1`, `/p/2`) is the right place for state-specific assertions.
 
 **Where applied:** `e2e/product.spec.ts` now asserts `toBeVisible()` instead of `toBeEnabled()` on the Add to Cart button for the random-product navigation test.
+
+### 26. Verify a bug's actual root cause with direct evidence before shipping a fix for a plausible one
+
+**Confirmed:** 2026-08-06, chasing a "home page pagination loses everything past ~page 19" report.
+
+**Incident:** Two plausible-sounding hypotheses were built and shipped as real fixes before the actual cause was found: (1) the client-side PDP product search hammering CJ's 1-request/second rate limit, and (2) `sals3-portal`'s reported `totalPages` not reflecting how many pages are actually reachable. Both were reasonable given the evidence available at the time, and both are legitimate improvements regardless — but neither was what caused this specific incident. Only after `curl`-ing the exact failing query directly (got real data back, disproving both hypotheses) and adding temporary `console.error` logging around the actual `catch` block did the real cause surface: a Zod schema rejecting an entire 14-item page over one product's overlong `title`.
+
+**Lesson:** When a bug has more than one plausible explanation, don't stop at the first one that fits the symptoms — verify directly (a raw `curl` against the real dependency, temporary logging in the actual catch path) before calling it fixed. A hypothesis-shaped fix can still be worth keeping (both of the above were), but say so plainly rather than presenting it as confirmed root cause.
+
+**Where applied:** Bug 3's `totalPages` self-correction and Bug 1's rate-limit cap were both kept as real defense-in-depth, explicitly relabeled as not-the-actual-cause once Bug 5 (schema rejection) was confirmed with direct evidence. See [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]].
+
+### 27. A Zod array schema rejects the whole array when any single element fails — truncate real external strings, don't hard-reject them
+
+**Confirmed:** 2026-08-06, the actual root cause behind skill 26's incident.
+
+**Incident:** `StorefrontProductSchema`'s `title: z.string().max(120)` and `imageAlt: z.string().max(160)` are correct for typical products, but real CJ product titles are long marketing-style names that routinely exceed both limits. `ProductsResponseSchema.safeParse()` on the whole page's `products` array fails validation if *any one* element fails — so one overlong real title anywhere in a 14-item page took the entire page down, not just that row.
+
+**Lesson:** When validating a real external API's array response with Zod, decide deliberately whether a single bad element should fail the whole batch or just that element. For a length cap on freeform text from an upstream you don't control, prefer `.transform((v) => v.slice(0, max))` over `.max(n)` — display length still gets bounded, but one long real value degrades one field instead of the whole page. This is the same principle `sals3-portal`'s own `src/lib/cj/schemas.ts` already documents for its own CJ parsing ("one changed or missing value degrades a single cell instead of failing the page") — the ecommerce-side schema was the one place still doing the opposite.
+
+**Where applied:** `src/services/products.ts`'s `truncatedText()` helper, applied to `title` and `imageAlt`.
+
+### 28. When reconciling two branches that independently touched the same file, diff against the other's base to prove nothing was removed — don't just resolve the conflict and trust it
+
+**Confirmed:** 2026-08-05/06, merging a PDP/cart PR against a parallel PR that rewrote the same service file to call a real backend instead of a placeholder one.
+
+**Incident:** The two branches' `products.ts` had genuine schema-level conflicts, not just textual ones. After resolving and merging, the owner directly asked whether the other engineer's already-shipped work had been broken — a fair question, since a resolved conflict alone doesn't prove that.
+
+**Lesson:** After reconciling a merge conflict in a file someone else's PR already shipped, run `git diff origin/develop -- <file> | grep -c '^-[^-]'` (count of removed lines) and confirm it's `0` for the functions/exports that are supposed to be untouched, plus a full `git diff origin/develop -- <other-files>` for files that shouldn't have changed at all. A clean merge with no conflict markers is not the same claim as "nothing of theirs was removed" — check it explicitly and be ready to show the count, not just assert it.
+
+**Where applied:** Verified and reported before merging PR #21: `0` removed lines in AJ's `fetchProducts`/`fetchProductCategories`, `0` diff on `page.tsx`/`ProductCard.tsx`/`next.config.ts`.
+
+### 29. Check the upstream API's own documented parameters before assuming a new backend endpoint is the only fix
+
+**Confirmed:** 2026-08-05, designing the fix for "no way to fetch one product by id."
+
+**Incident:** The instinct was to design and build a brand-new single-product endpoint on `sals3-portal` from scratch. Reading CJ's own public API documentation first (`https://developers.cjdropshipping.com/en/api/api2/api/product.html`) showed the existing `/product/list` endpoint — already called by `sals3-portal`'s `fetchCjProducts()` for the list view — already accepts a `pid` filter parameter for an exact single-product match. No new CJ integration was needed, only wiring an existing, undocumented-to-the-client capability through.
+
+**Lesson:** Before designing a new backend endpoint to solve "we can't fetch X directly," check whether the upstream API already supports fetching X via an existing endpoint's undocumented-to-your-own-client parameters. Read the third party's own docs, not just your own codebase's current usage of it — a service can call an API correctly for its current use case while leaving real capability unused.
+
+**Where applied:** `sals3-portal`'s new `GET /api/storefront/products/[id]` route resolves via the existing `/product/list?pid=` filter — one upstream call, no new CJ integration.
+
+### 30. A repo's own Husky hooks running full `verify` will test against a local `.env.local`, not CI's no-secrets condition — hide it temporarily to get an honest local check
+
+**Confirmed:** 2026-08-06, verifying the schema-truncation fix (skill 27).
+
+**Incident:** `npm run test:e2e` failed locally on a test that asserts "no backend configured → notFound()" — because a real, working `sals3-portal` instance and a real `.env.local` had just been set up in this same session for manual verification. The test's premise (no reachable backend) was no longer true in this local environment, but the fix under test was fine — CI (which never sees `.env.local`, since it's gitignored) would pass.
+
+**Lesson:** When a repo's local dev environment has real credentials configured for manual testing, but its automated suite assumes no backend is configured (matching CI), a local `npm run test:e2e` or Husky-hook-triggered `npm run verify` will fail on tests whose premise your own local setup just invalidated. Temporarily move `.env.local` aside (`mv .env.local .env.local.bak`, verify, `mv` back) to get a true CI-equivalent local check rather than mistaking an environment-caused failure for a real regression.
+
+**Where applied:** PR #26's e2e run and Husky pre-commit/pre-push hooks both required this to pass cleanly while `E:\sals3-portal` was running locally with real credentials.

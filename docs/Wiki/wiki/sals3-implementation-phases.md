@@ -2,7 +2,7 @@
 tags: [sals3, roadmap, implementation-plan, task-tracker, canonical]
 aliases: [Sals3 Implementation Phases, Sals3 Task Phases, Sals3 Build Register]
 created: 2026-07-31
-updated: 2026-08-05
+updated: 2026-08-06
 status: canonical
 authority: execution-plan
 owner_approved: false
@@ -108,8 +108,8 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 ### Stage 3 — Catalogue read path (partially started)
 
-- [~] Build the catalogue service: product, variant, category, media. (`src/services/products.ts` exists as of 2026-08-05 — a Zod-validated wrapper around `https://dummyjson.com/products` with pagination and category support, a placeholder external source, not Sals3's own product/variant/category/media model. Now wired to the landing page's deals and "For you" grids, PR #11, and to the product route below — but still not a real Sals3 catalogue.)
-- [~] Build the list route and product route, server-rendered. (Product route done, PR #21 open 2026-08-05: `/p/[id]` — server-rendered, `notFound()` on a missing/invalid id, `generateMetadata`, reviews, related products. No variant selectors — DummyJSON carries no variant data, none was invented. List route (`/c/[category]`) still doesn't exist.)
+- [~] Build the catalogue service: product, variant, category, media. (`src/services/products.ts` — as of PR #22 (merged 2026-08-05) a Zod-validated wrapper around the real, protected `sals3-portal` storefront API, itself proxying CJdropshipping — a real supplier feed, still not Sals3's own product/variant/category/media model. Wired to the landing page's deals/"For you" grids and the product route below. Two real data-shape bugs found and fixed 2026-08-06: real CJ titles exceeding the schema's length cap failed an entire page's validation (PR #26), and `sals3-portal`'s `totalPages` didn't reflect real reachable depth (its own PR #3). See [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]].)
+- [~] Build the list route and product route, server-rendered. (Product route done, PR #21 merged 2026-08-06: `/p/[id]` — server-rendered, `notFound()` on a missing/invalid id or lookup failure, `generateMetadata`, related products. No reviews/description/brand/warranty section — the real `sals3-portal` schema carries none of those fields, so none are shown (an honest cut, not an oversight — see the session note above). No variant selectors — the real backend carries no variant data, none was invented. **Known regression:** most real products currently 404 on their own detail page — the client-side by-slug lookup is capped at 2 pages/section to avoid hammering CJ's rate limit (PR #24), pending a real single-product endpoint on `sals3-portal` (its own PR #2, open). List route (`/c/[category]`) still doesn't exist.)
 - [ ] Build filters with counts and the sort control.
 - [ ] Build state preservation — test all 6 conditions (build spec section 6.4).
 - [ ] Load a realistic quantity of test products, not 20.
