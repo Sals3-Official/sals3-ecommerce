@@ -106,10 +106,10 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 > [!WARNING] Do not go to Stage 3 with an unclear data model — a change at Stage 6 costs 10 times more than a change here.
 
-### Stage 3 — Catalogue read path (not started)
+### Stage 3 — Catalogue read path (partially started)
 
-- [~] Build the catalogue service: product, variant, category, media. (`src/services/products.ts` exists as of 2026-08-05 — a Zod-validated wrapper around `https://dummyjson.com/products` with pagination and category support, a placeholder external source, not Sals3's own product/variant/category/media model. Now wired to the landing page's deals and "For you" grids, PR #11 — but still not a real Sals3 catalogue.)
-- [ ] Build the list route and product route, server-rendered.
+- [~] Build the catalogue service: product, variant, category, media. (`src/services/products.ts` exists as of 2026-08-05 — a Zod-validated wrapper around `https://dummyjson.com/products` with pagination and category support, a placeholder external source, not Sals3's own product/variant/category/media model. Now wired to the landing page's deals and "For you" grids, PR #11, and to the product route below — but still not a real Sals3 catalogue.)
+- [~] Build the list route and product route, server-rendered. (Product route done, PR #21 open 2026-08-05: `/p/[id]` — server-rendered, `notFound()` on a missing/invalid id, `generateMetadata`, reviews, related products. No variant selectors — DummyJSON carries no variant data, none was invented. List route (`/c/[category]`) still doesn't exist.)
 - [ ] Build filters with counts and the sort control.
 - [ ] Build state preservation — test all 6 conditions (build spec section 6.4).
 - [ ] Load a realistic quantity of test products, not 20.
@@ -126,10 +126,10 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 **Exit test:** every golden cart returns the exact expected total, deterministically.
 
-### Stage 5 — Cart and checkout (not started)
+### Stage 5 — Cart and checkout (partially started)
 
-- [ ] Build the cart service and fulfillment groups.
-- [ ] Build the checkout page with progressive disclosure.
+- [~] Build the cart service and fulfillment groups. (Cart done, PR #21 open 2026-08-05: client-only, `localStorage`-backed — `src/lib/cart.ts` plus `CartProvider`, `/cart` route, live Add to Cart/Buy Now on the PDP, an add-to-cart toast. No fulfillment groups — no seller/shipment-group data model exists yet, none was invented. Not a server cart: no account, no database, no price/promotion engine behind it — Stage 4 hasn't started, so cart line prices are just the catalogue price.)
+- [ ] Build the checkout page with progressive disclosure. (`/checkout` deliberately not built — `Proceed to Checkout` on `/cart` renders disabled with a plain-English note.)
 - [ ] Build the guest path.
 - [ ] Add the idempotency key and quote version check.
 - [ ] Connect one payment method. Add Cash on Delivery.

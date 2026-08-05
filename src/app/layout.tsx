@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Plus_Jakarta_Sans as PlusJakartaSans, Outfit } from 'next/font/google';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
+import { CartProvider } from '@/components/cart/CartProvider';
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import './globals.css';
 
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     >
       <body className="flex min-h-full flex-col font-sans">
         <OrganizationSchema />
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );

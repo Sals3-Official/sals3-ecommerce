@@ -46,6 +46,9 @@ next-env.d.ts
 docs/.obsidian/workspace.json
 docs/.obsidian/workspace-mobile.json
 
+# Claude Code per-person local permission grants - not shared content
+.claude/settings.local.json
+
 # safety net: scripts/typecheck-clean-next.mjs's temp swap dir, in case
 # it's ever left behind after an interrupted run
 .next-typecheck-tmp-*

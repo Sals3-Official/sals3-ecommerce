@@ -3,14 +3,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_PRODUCTS_PAGE_SIZE,
   DEFAULT_STOREFRONT_API_URL,
+  fetchProductBySlug,
   fetchProductCategories,
   fetchProducts,
+  fetchProductsByCategory,
   parseProductsPagination,
   ProductsApiError,
   STOREFRONT_CATEGORIES_PATH,
   STOREFRONT_PRODUCTS_PATH,
   toHomeCategory,
   toHomeProduct,
+  toProductDetail,
 } from './products';
 
 const validProductsResponse = {
@@ -54,6 +57,19 @@ function jsonResponse(payload: unknown, init?: ResponseInit) {
     },
     ...init,
   });
+}
+
+function emptyProductsPage(
+  overrides: Partial<typeof validProductsResponse> = {},
+) {
+  return {
+    products: [],
+    total: 0,
+    page: 1,
+    limit: DEFAULT_PRODUCTS_PAGE_SIZE,
+    totalPages: 1,
+    ...overrides,
+  };
 }
 
 afterEach(() => {
@@ -214,5 +230,120 @@ describe('fetchProducts', () => {
         0,
       ).imageUrl,
     ).toBeUndefined();
+  });
+});
+
+describe('fetchProductBySlug', () => {
+  it('pages through both sections and returns the matching product', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const requestedUrls: string[] = [];
+
+    const fetcher: typeof fetch = async (url) => {
+      const requestUrl = new URL(String(url));
+      requestedUrls.push(requestUrl.search);
+      const section = requestUrl.searchParams.get('section');
+
+      if (section === 'deals') {
+        return jsonResponse(validProductsResponse);
+      }
+
+      return jsonResponse(emptyProductsPage());
+    };
+
+    const product = await fetchProductBySlug('air-cooler', { fetcher });
+
+    expect(product?.title).toBe('Quiet tower air cooler');
+    expect(
+      requestedUrls.some((search) => search.includes('section=for-you')),
+    ).toBe(true);
+    expect(
+      requestedUrls.some((search) => search.includes('section=deals')),
+    ).toBe(true);
+  });
+
+  it('returns undefined for an invalid slug without making a request', async () => {
+    let called = false;
+    const fetcher: typeof fetch = async () => {
+      called = true;
+      return jsonResponse(emptyProductsPage());
+    };
+
+    expect(await fetchProductBySlug('Not A Slug', { fetcher })).toBeUndefined();
+    expect(called).toBe(false);
+  });
+
+  it('returns undefined when no product matches', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const fetcher: typeof fetch = async () => jsonResponse(emptyProductsPage());
+
+    expect(
+      await fetchProductBySlug('missing-slug', { fetcher }),
+    ).toBeUndefined();
+  });
+});
+
+describe('fetchProductsByCategory', () => {
+  it('collects matching products across both sections up to the limit', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    const fetcher: typeof fetch = async (url) => {
+      const requestUrl = new URL(String(url));
+      const section = requestUrl.searchParams.get('section');
+
+      if (section === 'for-you') {
+        return jsonResponse(validProductsResponse);
+      }
+
+      return jsonResponse(emptyProductsPage());
+    };
+
+    const products = await fetchProductsByCategory('home-living', {
+      limit: 6,
+      fetcher,
+    });
+
+    expect(products).toHaveLength(1);
+    expect(products[0]?.slug).toBe('air-cooler');
+  });
+
+  it('rejects an invalid category slug without making a request', async () => {
+    let called = false;
+    const fetcher: typeof fetch = async () => {
+      called = true;
+      return jsonResponse(emptyProductsPage());
+    };
+
+    await expect(
+      fetchProductsByCategory('../admin', { fetcher }),
+    ).rejects.toMatchObject({ name: 'ProductsApiError' });
+    expect(called).toBe(false);
+  });
+});
+
+describe('toProductDetail', () => {
+  it('maps a storefront product into trimmed PDP-ready detail', () => {
+    const product = validProductsResponse.products[0]!;
+    const detail = toProductDetail(product);
+
+    expect(detail).toEqual({
+      id: 'air-cooler',
+      title: 'Quiet tower air cooler',
+      category: 'home-living',
+      price: { amountMinor: 199900, currency: 'PHP' },
+      oldPrice: { amountMinor: 249900, currency: 'PHP' },
+      ratingLine: 'Rating 4.5, 2 reviews',
+      shipLine: 'Bulky',
+      imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
+      imageAlt: 'Quiet tower air cooler',
+      tone: 'ocean',
+    });
+  });
+
+  it('drops disallowed image hosts', () => {
+    const product = {
+      ...validProductsResponse.products[0]!,
+      imageUrl: 'https://example.com/product.webp',
+    };
+
+    expect(toProductDetail(product).imageUrl).toBeUndefined();
   });
 });

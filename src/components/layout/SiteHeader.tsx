@@ -2,11 +2,14 @@ import Link from 'next/link';
 import Logo from '@/components/layout/Logo';
 import SearchBox from '@/components/layout/SearchBox';
 import RegionButton from '@/components/layout/RegionButton';
+import GuestUtilityBar from '@/components/layout/GuestUtilityBar';
+import CartCountBadge from '@/components/cart/CartCountBadge';
 import { CartIcon, UserIcon } from '@/components/icons/Icon';
 
 export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/85 backdrop-blur-md">
+      <GuestUtilityBar />
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5 sm:gap-4 sm:px-6">
         <Logo />
         <SearchBox />
@@ -18,6 +21,7 @@ export default function SiteHeader() {
         >
           <CartIcon />
           <span className="hidden sm:inline">Cart</span>
+          <CartCountBadge />
         </Link>
         <Link
           href="/orders"

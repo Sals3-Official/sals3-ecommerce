@@ -5,6 +5,7 @@ import type {
   PlaceholderTone,
   Product as HomeProduct,
 } from '@/lib/home-placeholder-data';
+import type { ProductDetail } from '@/lib/product-detail';
 
 export const DEFAULT_STOREFRONT_API_URL = 'http://localhost:3001';
 export const STOREFRONT_PRODUCTS_PATH = '/api/storefront/products';
@@ -89,6 +90,17 @@ type FetchProductsOptions = {
 };
 
 type FetchProductCategoriesOptions = {
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+};
+
+type FetchProductBySlugOptions = {
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+};
+
+type FetchProductsByCategoryOptions = {
+  limit?: unknown;
   fetcher?: typeof fetch;
   signal?: AbortSignal;
 };
@@ -221,6 +233,90 @@ export async function fetchProductCategories({
   return parsedPayload.data;
 }
 
+async function collectSectionProducts(
+  section: z.infer<typeof StorefrontSectionSchema>,
+  page: number,
+  fetcher: typeof fetch,
+  signal: AbortSignal | undefined,
+): Promise<Product[]> {
+  const response = await fetchProducts({
+    section,
+    page,
+    limit: MAX_PRODUCTS_PAGE_SIZE,
+    fetcher,
+    signal,
+  });
+
+  if (page >= response.totalPages) {
+    return response.products;
+  }
+
+  const rest = await collectSectionProducts(section, page + 1, fetcher, signal);
+
+  return [...response.products, ...rest];
+}
+
+/**
+ * The storefront API has no dedicated single-product or category-filter
+ * route yet — only the paginated `section` list. Until one exists, PDP
+ * lookups page through both sections and match by slug/category
+ * client-side. Replace with a direct endpoint once the backend adds one.
+ */
+async function collectAllProducts({
+  fetcher,
+  signal,
+}: {
+  fetcher: typeof fetch;
+  signal?: AbortSignal;
+}): Promise<Product[]> {
+  const sections = await Promise.all(
+    StorefrontSectionSchema.options.map((section) =>
+      collectSectionProducts(section, 1, fetcher, signal),
+    ),
+  );
+
+  return sections.flat();
+}
+
+export async function fetchProductBySlug(
+  slug: unknown,
+  { fetcher = fetch, signal }: FetchProductBySlugOptions = {},
+): Promise<Product | undefined> {
+  const parsedSlug = StorefrontProductSchema.shape.slug.safeParse(slug);
+
+  if (!parsedSlug.success) {
+    return undefined;
+  }
+
+  const products = await collectAllProducts({ fetcher, signal });
+
+  return products.find((product) => product.slug === parsedSlug.data);
+}
+
+export async function fetchProductsByCategory(
+  category: unknown,
+  { limit, fetcher = fetch, signal }: FetchProductsByCategoryOptions = {},
+): Promise<Product[]> {
+  const parsedCategory =
+    StorefrontProductSchema.shape.category.safeParse(category);
+  const parsedLimit = queryIntegerSchema(
+    MAX_PRODUCTS_PAGE_SIZE,
+    DEFAULT_PRODUCTS_PAGE_SIZE,
+  ).parse(limit);
+
+  if (!parsedCategory.success) {
+    throw new ProductsApiError('Invalid product category.', {
+      cause: parsedCategory.error,
+    });
+  }
+
+  const products = await collectAllProducts({ fetcher, signal });
+
+  return products
+    .filter((product) => product.category === parsedCategory.data)
+    .slice(0, parsedLimit);
+}
+
 function getAllowedProductImageUrl(url: string | null): string | undefined {
   if (url === null) {
     return undefined;
@@ -261,5 +357,20 @@ export function toHomeCategory(category: ProductCategory): HomeCategory {
     id: category.id,
     code: category.code,
     name: category.name,
+  };
+}
+
+export function toProductDetail(product: Product, index = 0): ProductDetail {
+  return {
+    id: product.slug,
+    title: product.title,
+    category: product.category,
+    price: peso(product.priceMinor),
+    oldPrice: peso(Math.max(product.oldPriceMinor, product.priceMinor)),
+    ratingLine: product.ratingLine,
+    shipLine: product.shipLine,
+    imageUrl: getAllowedProductImageUrl(product.imageUrl),
+    imageAlt: product.imageAlt,
+    tone: PRODUCT_TONES[index % PRODUCT_TONES.length]!,
   };
 }

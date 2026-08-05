@@ -35,6 +35,7 @@ homeViewports.forEach((viewport) => {
     await expect(page.getByText(/free shipping this weekend/i)).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /deals/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /for you/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^log in$/i })).toBeVisible();
     await expect(page).toHaveTitle(/Sals3/);
     await expect
       .poll(() =>

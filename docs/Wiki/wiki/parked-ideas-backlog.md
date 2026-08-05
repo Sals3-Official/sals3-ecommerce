@@ -6,7 +6,7 @@ tags:
 aliases:
   - Parked Ideas Backlog
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-05
 status: canonical
 authority: parked-backlog
 owner_approved: true
@@ -37,9 +37,9 @@ Log each parked idea in the same turn it is parked, under `## Active parked item
 
 ### 2026-08-05 — GEO/AEO PDP and cart machine-readable structure
 - **What:** From [[sals3-geo-aeo-seo-strategy-proposal]]: `generateMetadata` per PDP, `Product`/`Offer`/`AggregateRating`/`FAQPage` JSON-LD, `useOptimistic` cart UX, and `sitemap.xml`.
-- **Why parked:** All target routes (`/p/[id]`, `/c/[category]`, `/cart`) that don't exist yet — only the home page is built (see [[sals3-implementation-phases]] Stage 3/5). The JSON-LD piece additionally needs a real product catalog: `src/services/products.ts` currently reads DummyJSON, an external placeholder, and marking that up as Sals3's own `Product`/`Offer`/rating data would be fabricated structured data (the strategy doc's own §3 revision note warns this risks a Google manual action).
-- **Unblock condition:** PDP and cart routes exist with real (or at least Sals3-owned) product data, per [[sals3-ux-build-specification]]'s Stage 3 (catalogue read path) and Stage 5 (cart/checkout).
-- **Related:** [[sals3-geo-aeo-seo-strategy-proposal]], [[sals3-implementation-phases]], [[sals3-ux-build-specification]]
+- **Why parked:** `generateMetadata` per PDP is now done (`/p/[id]` and `/cart` both exist, PR #21 open 2026-08-05 — see [[sals3-session-2026-08-05-part05-product-detail-page]] and [[sals3-session-2026-08-05-part07-cart]]). The rest stays parked: `Product`/`Offer`/`AggregateRating` JSON-LD still needs a real product catalog — `src/services/products.ts` reads DummyJSON, an external placeholder, and marking that up as Sals3's own data would be fabricated structured data (the strategy doc's own §3 revision note warns this risks a Google manual action). `useOptimistic` cart UX doesn't apply to the cart as shipped — it's a client-only, synchronous `localStorage` store with no server round-trip to optimistically cover; that item is only relevant once Stage 5's real server cart exists. `/c/[category]` (the list route) still doesn't exist, so `FAQPage`/category-hub JSON-LD stays fully blocked.
+- **Unblock condition:** `Product`/`Offer`/`AggregateRating` JSON-LD — a real, Sals3-owned product catalog (Stage 3). `useOptimistic` — a real server-backed cart (Stage 5, not the client-only cart shipped 2026-08-05). `FAQPage`/category-hub pieces — the `/c/[category]` route.
+- **Related:** [[sals3-geo-aeo-seo-strategy-proposal]], [[sals3-implementation-phases]], [[sals3-ux-build-specification]], [[sals3-session-2026-08-05-part05-product-detail-page]], [[sals3-session-2026-08-05-part07-cart]]
 
 ### 2026-08-05 — GEO/AEO neuromarketing UI and citation-first content
 - **What:** From [[sals3-geo-aeo-seo-strategy-proposal]] §4–5: price-anchoring/loss-aversion UI (real-inventory-backed only, never fabricated urgency), persona-filtered social proof, and ~60-word citation-first lead summaries on PDP/category-hub content.
