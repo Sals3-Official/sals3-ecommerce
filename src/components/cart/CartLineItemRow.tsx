@@ -35,9 +35,9 @@ export default function CartLineItemRow({
           <ProductImagePlaceholder tone={line.tone} />
         )}
       </div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <p className="text-sm text-pretty text-ink">{line.title}</p>
-        <div className="mt-2.5 flex items-center gap-2">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={onDecrease}
