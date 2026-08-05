@@ -25,65 +25,37 @@ vi.mock('embla-carousel-react', () => {
 
 function productFixture(id: number) {
   return {
-    id,
+    id: `live-product-${id}`,
+    slug: `live-product-${id}`,
     title: `Live product ${id}`,
-    description: 'A live product from the API.',
+    priceMinor: 99900 + id,
+    oldPriceMinor: 129900 + id,
+    imageUrl: null,
+    imageAlt: `Live product ${id}`,
+    ratingLine: 'Rating 4.5, 1 review',
+    shipLine: 'Standard',
     category: 'beauty',
-    price: 9.99,
-    discountPercentage: 10,
-    rating: 4.5,
-    stock: 12,
-    tags: ['beauty'],
-    brand: 'Sals3',
-    sku: `SKU-${id}`,
-    weight: 1,
-    dimensions: {
-      width: 1,
-      height: 1,
-      depth: 1,
-    },
-    warrantyInformation: '1 week warranty',
-    shippingInformation: 'Ships in 3 to 5 days',
-    availabilityStatus: 'In Stock',
-    reviews: [
-      {
-        rating: 5,
-        comment: 'Good item.',
-        date: '2026-08-05T00:00:00.000Z',
-        reviewerName: 'Test Buyer',
-        reviewerEmail: 'buyer@example.com',
-      },
-    ],
-    returnPolicy: 'No return policy',
-    minimumOrderQuantity: 1,
-    meta: {
-      createdAt: '2026-08-05T00:00:00.000Z',
-      updatedAt: '2026-08-05T00:00:00.000Z',
-      barcode: '1234567890',
-      qrCode: 'https://assets.dummyjson.com/public/qr-code.png',
-    },
-    images: ['https://cdn.dummyjson.com/product-images/beauty/1/1.webp'],
-    thumbnail:
-      'https://cdn.dummyjson.com/product-images/beauty/1/thumbnail.webp',
   };
 }
 
 function mockProductsFetch(total = 21) {
+  vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+
   const fetchMock = vi.fn<typeof fetch>(async (url) => {
     const requestUrl = new URL(String(url));
 
-    if (requestUrl.pathname === '/products/categories') {
+    if (requestUrl.pathname === '/api/storefront/categories') {
       return new Response(
         JSON.stringify([
           {
-            slug: 'beauty',
+            id: 'beauty',
+            code: 'BE',
             name: 'Beauty',
-            url: 'https://dummyjson.com/products/category/beauty',
           },
           {
-            slug: 'mobile-accessories',
+            id: 'mobile-accessories',
+            code: 'MA',
             name: 'Mobile Accessories',
-            url: 'https://dummyjson.com/products/category/mobile-accessories',
           },
         ]),
         {
@@ -95,17 +67,19 @@ function mockProductsFetch(total = 21) {
     }
 
     const limit = Number(requestUrl.searchParams.get('limit') ?? 10);
-    const skip = Number(requestUrl.searchParams.get('skip') ?? 0);
+    const page = Number(requestUrl.searchParams.get('page') ?? 1);
+    const start = (page - 1) * limit;
 
     return new Response(
       JSON.stringify({
         products: Array.from(
-          { length: Math.max(0, Math.min(limit, total - skip)) },
-          (_, index) => productFixture(skip + index + 1),
+          { length: Math.max(0, Math.min(limit, total - start)) },
+          (_, index) => productFixture(start + index + 1),
         ),
         total,
-        skip,
+        page,
         limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       }),
       {
         headers: {
@@ -122,6 +96,7 @@ function mockProductsFetch(total = 21) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -193,7 +168,7 @@ describe('Home page', () => {
     render(await Home());
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://dummyjson.com/products?limit=14&skip=0',
+      'http://localhost:3001/api/storefront/products?section=for-you&page=1&limit=14',
       expect.objectContaining({
         cache: 'no-store',
       }),
@@ -212,19 +187,19 @@ describe('Home page', () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://dummyjson.com/products/categories',
+      new URL('http://localhost:3001/api/storefront/categories'),
       expect.objectContaining({
         cache: 'no-store',
       }),
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://dummyjson.com/products?limit=14&skip=14',
+      'http://localhost:3001/api/storefront/products?section=for-you&page=2&limit=14',
       expect.objectContaining({
         cache: 'no-store',
       }),
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://dummyjson.com/products?limit=5&skip=0',
+      'http://localhost:3001/api/storefront/products?section=deals&page=1&limit=5',
       expect.objectContaining({
         cache: 'no-store',
       }),

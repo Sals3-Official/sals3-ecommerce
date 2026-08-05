@@ -35,14 +35,21 @@ Do not put application code in `docs/`. Do not put vault notes in `src/`.
 
 ## API Services
 
-Product API calls live in `src/services/products.ts`. `fetchProducts()` reads from
-`https://dummyjson.com/products`, sends validated `limit` and `skip` pagination
-parameters, validates external JSON with Zod, and maps API products into home
-page cards. `fetchProductsByOffset()` supports bounded offset reads for
-homepage deal slots. `fetchProductCategories()` reads
-`https://dummyjson.com/products/categories`, validates category `slug` and
-`name`, and maps categories into internal `/c/<slug>` navigation links. Invalid
-`page`, `limit`, and `skip` input falls back to safe defaults.
+Product API calls live in `src/services/products.ts`. `fetchProducts()` reads
+from the protected `sals3-portal` storefront API, sends validated `section`,
+`page`, and `limit` parameters, validates external JSON with Zod, and maps API
+products into home page cards. The portal feed is backed by the same
+CJdropshipping supplier tab at `/products?source=cj`. `fetchProductCategories()`
+reads CJ categories through the protected portal category feed and maps
+categories into internal `/c/<slug>` navigation links. Invalid `page` and
+`limit` input falls back to safe defaults.
+
+Required `.env.local` values:
+
+```text
+SALS3_PORTAL_API_URL=http://localhost:3001
+SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
+```
 
 ## Install
 
@@ -125,8 +132,10 @@ when the env var is unset so no domain is guessed.
 `src/app/llms.txt/route.ts` serves a daily-revalidated, plain-text `/llms.txt`
 identifying the site by name, description, and a one-sentence mission statement.
 It does not list a product catalog — the current product data
-(`src/services/products.ts`) is an external DummyJSON placeholder, not Sals3's
-own catalog.
+(`src/services/products.ts`) expects the Sals3 Portal storefront feed. The home
+page still falls back to local placeholder products when the portal is not
+configured or unavailable, so crawler-facing catalog claims stay limited until
+real persistent catalogue data exists.
 
 `OrganizationSchema` (`src/components/schema/OrganizationSchema.tsx`) renders a
 global `Organization` JSON-LD block in `src/app/layout.tsx`. `WebSiteSchema`
@@ -151,24 +160,24 @@ depend on.
 
 `src/app/page.tsx` renders the marketplace landing page: header (logo, search,
 delivery region, cart/orders/account links), live category strip, an Embla promo
-carousel, a random deals grid, and a paginated "For you" grid. Promo carousel
+carousel, a portal-fed deals grid, and a paginated "For you" grid. Promo carousel
 images live in `public/home-promos/` and slide metadata lives in
 `src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
 assets, `next/image`, manual controls, dot buttons, and no autoplay. The category
 strip, deals grid, and "For you" grid read live data through
-`src/services/products.ts`. The category strip ignores remote category URLs and
-builds internal `/c/<slug>` links from validated slugs. The deals grid chooses a
-safe random `skip` value server-side and fetches 5 products. The "For you" grid
-uses the `?page=` query string for pagination and fetches 14 products per page,
-so the 14 products plus 1 sponsored card fill 15 desktop grid cells. If the
-external product API is unavailable or returns invalid data, the page shows the
-local placeholder products and categories from `src/lib/home-placeholder-data.ts`
-with a fallback status note.
+`src/services/products.ts`. The category strip builds internal `/c/<slug>` links
+from validated CJ category slugs. The deals grid fetches 5 CJ products ranked by
+supplier listing count when available. The "For you" grid uses the `?page=`
+query string for pagination and fetches 14 products per page, so the 14 products
+plus 1 sponsored card fill 15 desktop grid cells. If the portal or CJ product
+API is unavailable or returns invalid data, the page shows the local placeholder
+products and categories from `src/lib/home-placeholder-data.ts` with a fallback
+status note.
 A visually-hidden `<h1>` (`sr-only`) provides a correct heading hierarchy for
 crawlers and screen readers without altering the visual design.
 Product images are rendered with `next/image` and limited to the allow-listed
-`cdn.dummyjson.com/product-images/**` host path. Money values follow the build
-spec's minor-unit convention (`src/lib/money.ts`).
+CJ image hosts from the portal feed. Money values follow the build spec's
+minor-unit convention (`src/lib/money.ts`).
 
 ## README Rule
 

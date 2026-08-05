@@ -1,15 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DEFAULT_PRODUCTS_PAGE_SIZE,
+  DEFAULT_STOREFRONT_API_URL,
   fetchProductCategories,
   fetchProducts,
-  fetchProductsByOffset,
-  getRandomProductsSkip,
   parseProductsPagination,
-  PRODUCT_CATEGORIES_API_URL,
-  PRODUCTS_API_URL,
   ProductsApiError,
+  STOREFRONT_CATEGORIES_PATH,
+  STOREFRONT_PRODUCTS_PATH,
   toHomeCategory,
   toHomeProduct,
 } from './products';
@@ -17,63 +16,34 @@ import {
 const validProductsResponse = {
   products: [
     {
-      id: 1,
-      title: 'Essence Mascara Lash Princess',
-      description: 'The Essence Mascara Lash Princess is a popular mascara.',
-      category: 'beauty',
-      price: 9.99,
-      discountPercentage: 10.48,
-      rating: 2.56,
-      stock: 99,
-      tags: ['beauty', 'mascara'],
-      brand: 'Essence',
-      sku: 'BEA-ESS-ESS-001',
-      weight: 4,
-      dimensions: {
-        width: 15.14,
-        height: 13.08,
-        depth: 22.99,
-      },
-      warrantyInformation: '1 week warranty',
-      shippingInformation: 'Ships in 3-5 business days',
-      availabilityStatus: 'In Stock',
-      reviews: [
-        {
-          rating: 3,
-          comment: 'Would not recommend.',
-          date: '2025-04-30T09:41:02.053Z',
-          reviewerName: 'Eleanor Pena',
-          reviewerEmail: 'eleanor.pena@example.com',
-        },
-      ],
-      returnPolicy: 'No return policy',
-      minimumOrderQuantity: 48,
-      meta: {
-        createdAt: '2025-04-30T09:41:02.053Z',
-        updatedAt: '2025-04-30T09:41:02.053Z',
-        barcode: '5784719087687',
-        qrCode: 'https://assets.dummyjson.com/public/qr-code.png',
-      },
-      images: ['https://cdn.dummyjson.com/product-images/beauty/1/1.webp'],
-      thumbnail:
-        'https://cdn.dummyjson.com/product-images/beauty/1/thumbnail.webp',
+      id: 'air-cooler',
+      slug: 'air-cooler',
+      title: 'Quiet tower air cooler',
+      priceMinor: 199900,
+      oldPriceMinor: 249900,
+      imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
+      imageAlt: 'Quiet tower air cooler',
+      ratingLine: 'Rating 4.5, 2 reviews',
+      shipLine: 'Bulky',
+      category: 'home-living',
     },
   ],
   total: 1,
-  skip: 0,
-  limit: 30,
+  page: 1,
+  limit: 14,
+  totalPages: 1,
 };
 
 const validCategoriesResponse = [
   {
-    slug: 'mobile-accessories',
-    name: 'Mobile Accessories',
-    url: 'https://dummyjson.com/products/category/mobile-accessories',
+    id: 'home-living',
+    code: 'HL',
+    name: 'Home and living',
   },
   {
-    slug: 'skin-care',
-    name: 'Skin Care',
-    url: 'https://dummyjson.com/products/category/skin-care',
+    id: 'electronics',
+    code: 'EL',
+    name: 'Electronics',
   },
 ];
 
@@ -86,8 +56,13 @@ function jsonResponse(payload: unknown, init?: ResponseInit) {
   });
 }
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('fetchProducts', () => {
-  it('fetches products from DummyJSON and validates the response', async () => {
+  it('fetches the protected storefront product feed', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     let requestedUrl: Parameters<typeof fetch>[0] | undefined;
     let requestedInit: Parameters<typeof fetch>[1] | undefined;
 
@@ -98,17 +73,24 @@ describe('fetchProducts', () => {
       return jsonResponse(validProductsResponse);
     };
 
-    const response = await fetchProducts({ page: 2, limit: 10, fetcher });
+    const response = await fetchProducts({
+      section: 'deals',
+      page: 2,
+      limit: 10,
+      fetcher,
+    });
 
-    expect(requestedUrl).toBe(`${PRODUCTS_API_URL}?limit=10&skip=10`);
+    expect(requestedUrl).toBe(
+      `${DEFAULT_STOREFRONT_API_URL}${STOREFRONT_PRODUCTS_PATH}?section=deals&page=2&limit=10`,
+    );
     expect(requestedInit).toMatchObject({
       cache: 'no-store',
       headers: {
         Accept: 'application/json',
+        Authorization: 'Bearer secret',
       },
     });
-    expect(response.products).toHaveLength(1);
-    expect(response.products[0]?.title).toBe('Essence Mascara Lash Princess');
+    expect(response.products[0]?.title).toBe('Quiet tower air cooler');
   });
 
   it('sanitizes invalid pagination input to safe defaults', () => {
@@ -123,34 +105,14 @@ describe('fetchProducts', () => {
     });
   });
 
-  it('fetches products by a validated offset', async () => {
-    let requestedUrl: Parameters<typeof fetch>[0] | undefined;
-
-    const fetcher: typeof fetch = async (url) => {
-      requestedUrl = url;
-
-      return jsonResponse(validProductsResponse);
-    };
-
-    await fetchProductsByOffset({
-      skip: '-1',
-      limit: '1000',
-      fetcher,
-    });
-
-    expect(requestedUrl).toBe(
-      `${PRODUCTS_API_URL}?limit=${DEFAULT_PRODUCTS_PAGE_SIZE}&skip=0`,
+  it('requires the storefront API token', async () => {
+    await expect(fetchProducts({ fetcher: vi.fn() })).rejects.toThrow(
+      'Storefront API token is not configured.',
     );
   });
 
-  it('calculates a bounded random skip for deal products', () => {
-    expect(getRandomProductsSkip(21, 5, () => 0)).toBe(0);
-    expect(getRandomProductsSkip(21, 5, () => 0.5)).toBe(8);
-    expect(getRandomProductsSkip(21, 5, () => 1)).toBe(16);
-    expect(getRandomProductsSkip(3, 5, () => 0.5)).toBe(0);
-  });
-
   it('fetches product categories and maps them to landing navigation', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     let requestedUrl: Parameters<typeof fetch>[0] | undefined;
     let requestedInit: Parameters<typeof fetch>[1] | undefined;
 
@@ -163,36 +125,41 @@ describe('fetchProducts', () => {
 
     const response = await fetchProductCategories({ fetcher });
 
-    expect(requestedUrl).toBe(PRODUCT_CATEGORIES_API_URL);
+    expect(requestedUrl).toEqual(
+      new URL(STOREFRONT_CATEGORIES_PATH, DEFAULT_STOREFRONT_API_URL),
+    );
     expect(requestedInit).toMatchObject({
       cache: 'no-store',
       headers: {
         Accept: 'application/json',
+        Authorization: 'Bearer secret',
       },
     });
     expect(toHomeCategory(response[0]!)).toEqual({
-      id: 'mobile-accessories',
-      code: 'MA',
-      name: 'Mobile Accessories',
+      id: 'home-living',
+      code: 'HL',
+      name: 'Home and living',
     });
   });
 
   it('rejects invalid product category slugs', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     const fetcher: typeof fetch = async () =>
       jsonResponse([
         {
-          slug: '../admin',
+          id: '../admin',
+          code: 'BA',
           name: 'Bad Category',
-          url: 'https://dummyjson.com/products/category/bad-category',
         },
       ]);
 
     await expect(fetchProductCategories({ fetcher })).rejects.toThrow(
-      'Product categories API returned invalid data.',
+      'Storefront categories API returned invalid data.',
     );
   });
 
   it('throws a typed error when the API response is not successful', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     const fetcher: typeof fetch = async () =>
       new Response('Server error', {
         status: 500,
@@ -206,23 +173,25 @@ describe('fetchProducts', () => {
   });
 
   it('throws a typed error when the API returns invalid product data', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     const fetcher: typeof fetch = async () =>
       jsonResponse({
         products: [
           {
-            id: 'not-a-number',
+            id: 'bad',
           },
         ],
         total: 1,
-        skip: 0,
-        limit: 30,
+        page: 1,
+        limit: 14,
+        totalPages: 1,
       });
 
     await expect(fetchProducts({ fetcher })).rejects.toBeInstanceOf(
       ProductsApiError,
     );
     await expect(fetchProducts({ fetcher })).rejects.toThrow(
-      'Products API returned invalid data.',
+      'Storefront products API returned invalid data.',
     );
   });
 
@@ -230,18 +199,17 @@ describe('fetchProducts', () => {
     const product = validProductsResponse.products[0]!;
 
     expect(toHomeProduct(product, 0)).toMatchObject({
-      id: '1',
-      title: 'Essence Mascara Lash Princess',
-      imageUrl:
-        'https://cdn.dummyjson.com/product-images/beauty/1/thumbnail.webp',
-      imageAlt: 'Essence Mascara Lash Princess product image',
+      id: 'air-cooler',
+      title: 'Quiet tower air cooler',
+      imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
+      imageAlt: 'Quiet tower air cooler',
     });
 
     expect(
       toHomeProduct(
         {
           ...product,
-          thumbnail: 'https://example.com/product.webp',
+          imageUrl: 'https://example.com/product.webp',
         },
         0,
       ).imageUrl,

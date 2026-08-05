@@ -23,9 +23,6 @@ import {
 import {
   fetchProductCategories,
   fetchProducts,
-  fetchProductsByOffset,
-  getRandomProductsSkip,
-  getProductsTotalPages,
   parseProductsPagination,
   toHomeCategory,
   toHomeProduct,
@@ -74,10 +71,10 @@ type HomeProducts = {
   };
 };
 
-async function getRandomDealProducts(total: number): Promise<HomeProduct[]> {
-  const response = await fetchProductsByOffset({
+async function getDealProducts(): Promise<HomeProduct[]> {
+  const response = await fetchProducts({
+    section: 'deals',
     limit: DEALS_PRODUCT_COUNT,
-    skip: getRandomProductsSkip(total, DEALS_PRODUCT_COUNT),
   });
 
   return response.products.map(toHomeProduct);
@@ -103,23 +100,12 @@ async function getHomeProducts(
   });
 
   try {
-    const firstResponse = await fetchProducts(requestedPagination);
-    const totalPages = getProductsTotalPages(
-      firstResponse.total,
-      firstResponse.limit,
-    );
-    const response =
-      requestedPagination.page > totalPages
-        ? await fetchProducts({
-            page: totalPages,
-            limit: requestedPagination.limit,
-          })
-        : firstResponse;
-    const currentPage = Math.min(requestedPagination.page, totalPages);
+    const response = await fetchProducts(requestedPagination);
+    const currentPage = response.page;
     let dealProducts = deals;
 
     try {
-      dealProducts = await getRandomDealProducts(firstResponse.total);
+      dealProducts = await getDealProducts();
     } catch {
       dealProducts = deals;
     }
@@ -130,7 +116,7 @@ async function getHomeProducts(
       regionNote: '',
       pagination: {
         currentPage,
-        totalPages,
+        totalPages: response.totalPages,
       },
     } satisfies HomeProducts;
   } catch {
