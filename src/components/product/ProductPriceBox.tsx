@@ -11,8 +11,7 @@ type ProductPriceBoxProps = {
   tone: PlaceholderTone;
   price: Money;
   oldPrice: Money;
-  inStock: boolean;
-  stockLine: string;
+  shipLine: string;
 };
 
 export default function ProductPriceBox({
@@ -23,8 +22,7 @@ export default function ProductPriceBox({
   tone,
   price,
   oldPrice,
-  inStock,
-  stockLine,
+  shipLine,
 }: ProductPriceBoxProps) {
   const off = percentOff(oldPrice.amountMinor, price.amountMinor);
   const hasDiscount = oldPrice.amountMinor > price.amountMinor;
@@ -44,9 +42,7 @@ export default function ProductPriceBox({
           </>
         ) : null}
       </div>
-      <p className={`mt-1 text-sm ${inStock ? 'text-ink-muted' : 'text-deal'}`}>
-        {stockLine}
-      </p>
+      <p className="mt-1 text-sm text-ink-muted">{shipLine}</p>
       <div className="mt-4">
         <ProductAddToCartButtons
           productId={productId}
@@ -55,7 +51,6 @@ export default function ProductPriceBox({
           imageAlt={imageAlt}
           tone={tone}
           unitPrice={price}
-          inStock={inStock}
         />
       </div>
     </div>

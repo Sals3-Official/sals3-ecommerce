@@ -35,22 +35,28 @@ Do not put application code in `docs/`. Do not put vault notes in `src/`.
 
 ## API Services
 
-Product API calls live in `src/services/products.ts`. `fetchProducts()` reads from
-`https://dummyjson.com/products`, sends validated `limit` and `skip` pagination
-parameters, validates external JSON with Zod, and maps API products into home
-page cards. `fetchProductsByOffset()` supports bounded offset reads for
-homepage deal slots. `fetchProductCategories()` reads
-`https://dummyjson.com/products/categories`, validates category `slug` and
-`name`, and maps categories into internal `/c/<slug>` navigation links.
-`fetchProductById()` reads a single product from
-`https://dummyjson.com/products/<id>`; the `id` is Zod-validated as a positive
-integer first, and both an invalid id and a real 404 resolve to `undefined` so
-the caller can render `notFound()` without a separate error path.
-`fetchProductsByCategory()` reads
-`https://dummyjson.com/products/category/<slug>`, used to build the PDP's
-related-products section. Invalid `page`, `limit`, and `skip` input falls back
-to safe defaults; an invalid category slug throws instead of building an
-unvalidated URL.
+Product API calls live in `src/services/products.ts`. `fetchProducts()` reads
+from the protected `sals3-portal` storefront API, sends validated `section`,
+`page`, and `limit` parameters, validates external JSON with Zod, and maps API
+products into home page cards. The portal feed is backed by the same
+CJdropshipping supplier tab at `/products?source=cj`. `fetchProductCategories()`
+reads CJ categories through the protected portal category feed and maps
+categories into internal `/c/<slug>` navigation links. Invalid `page` and
+`limit` input falls back to safe defaults.
+
+The storefront API has no dedicated single-product or category-filter route
+yet — only the paginated `section` list. `fetchProductBySlug()` and
+`fetchProductsByCategory()` (used by the PDP) page through every `for-you`
+and `deals` result and match by `slug`/`category` client-side as a stopgap.
+Replace both with a direct backend call once `sals3-portal` adds one; this
+approach re-fetches the whole catalog per PDP view and won't scale.
+
+Required `.env.local` values:
+
+```text
+SALS3_PORTAL_API_URL=http://localhost:3001
+SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
+```
 
 ## Install
 
@@ -133,8 +139,10 @@ when the env var is unset so no domain is guessed.
 `src/app/llms.txt/route.ts` serves a daily-revalidated, plain-text `/llms.txt`
 identifying the site by name, description, and a one-sentence mission statement.
 It does not list a product catalog — the current product data
-(`src/services/products.ts`) is an external DummyJSON placeholder, not Sals3's
-own catalog.
+(`src/services/products.ts`) expects the Sals3 Portal storefront feed. The home
+page still falls back to local placeholder products when the portal is not
+configured or unavailable, so crawler-facing catalog claims stay limited until
+real persistent catalogue data exists.
 
 `OrganizationSchema` (`src/components/schema/OrganizationSchema.tsx`) renders a
 global `Organization` JSON-LD block in `src/app/layout.tsx`. `WebSiteSchema`
@@ -166,55 +174,67 @@ for the source strategy and what's still parked (Product/Offer/FAQPage JSON-LD,
 
 `src/app/page.tsx` renders the marketplace landing page: header (logo, search,
 delivery region, cart/orders/account links), live category strip, an Embla promo
-carousel, a random deals grid, and a paginated "For you" grid. Promo carousel
+carousel, a portal-fed deals grid, and a paginated "For you" grid. Promo carousel
 images live in `public/home-promos/` and slide metadata lives in
 `src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
 assets, `next/image`, manual controls, dot buttons, and no autoplay. The category
 strip, deals grid, and "For you" grid read live data through
-`src/services/products.ts`. The category strip ignores remote category URLs and
-builds internal `/c/<slug>` links from validated slugs. The deals grid chooses a
-safe random `skip` value server-side and fetches 5 products. The "For you" grid
-uses the `?page=` query string for pagination and fetches 14 products per page,
-so the 14 products plus 1 sponsored card fill 15 desktop grid cells. If the
-external product API is unavailable or returns invalid data, the page shows the
-local placeholder products and categories from `src/lib/home-placeholder-data.ts`
-with a fallback status note.
+`src/services/products.ts`. The category strip builds internal `/c/<slug>` links
+from validated CJ category slugs. The deals grid fetches 5 CJ products ranked by
+supplier listing count when available. The "For you" grid uses the `?page=`
+query string for pagination and fetches 14 products per page, so the 14 products
+plus 1 sponsored card fill 15 desktop grid cells. If the portal or CJ product
+API is unavailable or returns invalid data, the page shows the local placeholder
+products and categories from `src/lib/home-placeholder-data.ts` with a fallback
+status note.
 A visually-hidden `<h1>` (`sr-only`) provides a correct heading hierarchy for
 crawlers and screen readers without altering the visual design.
 Product images are rendered with `next/image` and limited to the allow-listed
-`cdn.dummyjson.com/product-images/**` host path. Money values follow the build
-spec's minor-unit convention (`src/lib/money.ts`).
+CJ image hosts from the portal feed. Money values follow the build spec's
+minor-unit convention (`src/lib/money.ts`).
 
 ## Product Page (PDP)
 
-`src/app/p/[id]/page.tsx` renders a product detail page at `/p/<id>`. Every
+`src/app/p/[id]/page.tsx` renders a product detail page at `/p/<slug>`. Every
 product card on the home page (`src/components/home/ProductCard.tsx`) already
-links here. The route validates `id` as a positive integer, fetches the
-product through `fetchProductById()`, and calls Next's `notFound()` — a real
-404, not a soft redirect — for both a missing product and an invalid id.
+links here using the real backend's `slug` as the `[id]` route param — the
+folder is still named `[id]` but the value it receives is a slug string, not
+a numeric id. The route fetches the product through `fetchProductBySlug()`
+and calls Next's `notFound()` — a real 404, not a soft redirect — when no
+product matches. A storefront API failure (missing/invalid token, unreachable
+`sals3-portal`) currently resolves to the same `notFound()`, since there's no
+site-wide error boundary yet to tell "doesn't exist" apart from "couldn't be
+reached" (see the pre-existing `error.tsx`/`not-found.tsx` gap noted below).
 
 The page composes small, single-purpose components under
 `src/components/product/`: `ProductGallery` (client component, thumbnail
-click-to-swap — the only interactive piece on the page), `ProductPriceBox`,
-`ProductFulfillmentCard` (shipping/returns/warranty), `ProductReviews`, and
+click-to-swap when there's more than one image), `ProductPriceBox`, and
 `RelatedProducts` (same-category products via `fetchProductsByCategory()`,
 reusing the home page's `ProductGrid`/`ProductCard`).
 
-Known, deliberate limitations of this first pass:
+**Rebuilt against the real `sals3-portal` schema (`StorefrontProductSchema`)
+after PR #22 merged** — that schema only carries `id`, `slug`, `title`,
+`priceMinor`, `oldPriceMinor`, a single `imageUrl`, `imageAlt`, `ratingLine`,
+`shipLine`, and `category`. It has no `images[]` gallery, `reviews[]`,
+`description`, `brand`, `stock`, `returnPolicy`, or `warrantyInformation` —
+those existed only on the old DummyJSON shape. Rather than show fabricated
+placeholder content for fields the real backend doesn't provide, this pass
+**removed** the reviews section, the shipping/returns/warranty card, the
+description paragraph, and stock-based Add to Cart/Buy Now disabling
+entirely. Restore them once `sals3-portal` actually returns that data — do
+not re-add with invented values in the meantime.
 
-- **Cart is not wired up.** "Add to Cart" and "Buy Now" render as disabled
-  buttons with a plain-language note, because `/cart` doesn't exist yet
-  (build spec Stage 5). Wire them up when the cart route ships.
-- **No seller/verified-badge card.** DummyJSON has no marketplace-seller
-  entity, and Sals3 has no real seller data yet (Stage 7). Only real fields
-  (brand, shipping, returns, warranty, stock) are shown — nothing fabricated.
-- **No colour/size variant selectors.** DummyJSON products don't carry
-  variant data, so none is shown or invented.
+- **No in-stock/out-of-stock gating right now.** The real backend has no
+  stock field at all, so Add to Cart/Buy Now are always enabled — this is a
+  regression from the DummyJSON-backed build and from the "never sell an
+  out-of-stock item" rule in the management bible; it must come back once
+  `sals3-portal` exposes real inventory data.
+- **No seller/verified-badge card.** Sals3 has no real seller data yet
+  (Stage 7).
+- **No colour/size variant selectors.** The real backend carries no variant
+  data, so none is shown or invented.
 - **No image zoom lightbox.** The gallery swaps the main image on thumbnail
-  click; a full zoom modal was left out of this first pass to keep the
-  change small and reviewable.
-- **Still DummyJSON placeholder data**, same caveat as the home page — see
-  the Machine and AI Discovery section above for why this blocks PDP JSON-LD.
+  click; a full zoom modal was left out to keep the change small.
 
 ## Guest Header Strip and Auth Placeholders
 

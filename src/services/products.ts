@@ -5,21 +5,19 @@ import type {
   PlaceholderTone,
   Product as HomeProduct,
 } from '@/lib/home-placeholder-data';
-import {
-  formatReviewDate,
-  starsLine,
-  type ProductDetail,
-  type ProductReview,
-} from '@/lib/product-detail';
+import type { ProductDetail } from '@/lib/product-detail';
 
-export const PRODUCTS_API_URL = 'https://dummyjson.com/products';
-export const PRODUCT_CATEGORIES_API_URL = `${PRODUCTS_API_URL}/categories`;
+export const DEFAULT_STOREFRONT_API_URL = 'http://localhost:3001';
+export const STOREFRONT_PRODUCTS_PATH = '/api/storefront/products';
+export const STOREFRONT_CATEGORIES_PATH = '/api/storefront/categories';
 export const DEFAULT_PRODUCTS_PAGE_SIZE = 10;
 export const MAX_PRODUCTS_PAGE_SIZE = 30;
 export const MAX_PRODUCTS_PAGE = 1000;
-export const MAX_PRODUCTS_SKIP = MAX_PRODUCTS_PAGE * MAX_PRODUCTS_PAGE_SIZE;
 
-const PRODUCT_IMAGE_HOSTNAME = 'cdn.dummyjson.com';
+const PRODUCT_IMAGE_HOSTS = [
+  'cf.cjdropshipping.com',
+  'oss-cf.cjdropshipping.com',
+];
 const PRODUCT_TONES: PlaceholderTone[] = ['ocean', 'dusk', 'meadow', 'clay'];
 const CATEGORY_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -37,77 +35,40 @@ const ProductsPaginationSchema = z.object({
   limit: queryIntegerSchema(MAX_PRODUCTS_PAGE_SIZE, DEFAULT_PRODUCTS_PAGE_SIZE),
 });
 
-const ProductsOffsetSchema = z.object({
-  skip: z
-    .preprocess(
-      (value) => (Array.isArray(value) ? value[0] : value),
-      z.coerce.number().int().min(0).max(MAX_PRODUCTS_SKIP),
-    )
-    .catch(0),
-  limit: queryIntegerSchema(MAX_PRODUCTS_PAGE_SIZE, DEFAULT_PRODUCTS_PAGE_SIZE),
-});
+const StorefrontSectionSchema = z.enum(['for-you', 'deals']);
 
-const ProductReviewSchema = z.object({
-  rating: z.number().min(0).max(5),
-  comment: z.string(),
-  date: z.string(),
-  reviewerName: z.string(),
-  reviewerEmail: z.string().email(),
-});
-
-const ProductSchema = z.object({
-  id: z.number().int().positive(),
-  title: z.string().min(1),
-  description: z.string(),
-  category: z.string().min(1),
-  price: z.number().nonnegative(),
-  discountPercentage: z.number().nonnegative(),
-  rating: z.number().min(0).max(5),
-  stock: z.number().int().nonnegative(),
-  tags: z.array(z.string()),
-  brand: z.string().optional(),
-  sku: z.string(),
-  weight: z.number().nonnegative(),
-  dimensions: z.object({
-    width: z.number().nonnegative(),
-    height: z.number().nonnegative(),
-    depth: z.number().nonnegative(),
-  }),
-  warrantyInformation: z.string(),
-  shippingInformation: z.string(),
-  availabilityStatus: z.string(),
-  reviews: z.array(ProductReviewSchema),
-  returnPolicy: z.string(),
-  minimumOrderQuantity: z.number().int().positive(),
-  meta: z.object({
-    createdAt: z.string(),
-    updatedAt: z.string(),
-    barcode: z.string(),
-    qrCode: z.string().url(),
-  }),
-  images: z.array(z.string().url()),
-  thumbnail: z.string().url(),
+const StorefrontProductSchema = z.object({
+  id: z.string().min(1).max(120),
+  slug: z.string().regex(CATEGORY_SLUG_PATTERN),
+  title: z.string().min(1).max(120),
+  priceMinor: z.number().int().positive(),
+  oldPriceMinor: z.number().int().positive(),
+  imageUrl: z.string().url().nullable(),
+  imageAlt: z.string().min(1).max(160),
+  ratingLine: z.string().min(1).max(80),
+  shipLine: z.string().min(1).max(120),
+  category: z.string().regex(CATEGORY_SLUG_PATTERN),
 });
 
 export const ProductsResponseSchema = z.object({
-  products: z.array(ProductSchema),
+  products: z.array(StorefrontProductSchema),
   total: z.number().int().nonnegative(),
-  skip: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
   limit: z.number().int().positive(),
+  totalPages: z.number().int().positive(),
 });
 
 const ProductCategorySchema = z.object({
-  slug: z.string().regex(CATEGORY_SLUG_PATTERN),
+  id: z.string().regex(CATEGORY_SLUG_PATTERN),
+  code: z.string().min(1).max(4),
   name: z.string().min(1).max(80),
-  url: z.string().url(),
 });
 
 export const ProductCategoriesResponseSchema = z.array(ProductCategorySchema);
 
-export type Product = z.infer<typeof ProductSchema>;
+export type Product = z.infer<typeof StorefrontProductSchema>;
 export type ProductsResponse = z.infer<typeof ProductsResponseSchema>;
 export type ProductsPagination = z.infer<typeof ProductsPaginationSchema>;
-export type ProductsOffset = z.infer<typeof ProductsOffsetSchema>;
 export type ProductCategory = z.infer<typeof ProductCategorySchema>;
 
 export class ProductsApiError extends Error {
@@ -121,14 +82,8 @@ export class ProductsApiError extends Error {
 }
 
 type FetchProductsOptions = {
+  section?: unknown;
   page?: unknown;
-  limit?: unknown;
-  fetcher?: typeof fetch;
-  signal?: AbortSignal;
-};
-
-type FetchProductsByOffsetOptions = {
-  skip?: unknown;
   limit?: unknown;
   fetcher?: typeof fetch;
   signal?: AbortSignal;
@@ -139,7 +94,7 @@ type FetchProductCategoriesOptions = {
   signal?: AbortSignal;
 };
 
-type FetchProductByIdOptions = {
+type FetchProductBySlugOptions = {
   fetcher?: typeof fetch;
   signal?: AbortSignal;
 };
@@ -160,43 +115,68 @@ export function getProductsTotalPages(total: number, limit: number): number {
   return Math.max(1, Math.ceil(total / limit));
 }
 
-export function getRandomProductsSkip(
-  total: number,
-  limit: number,
-  random = Math.random,
-): number {
-  const maximumSkip = Math.max(0, total - limit);
-  const randomValue = Math.min(Math.max(random(), 0), 0.999999);
-
-  return Math.floor(randomValue * (maximumSkip + 1));
+function getStorefrontApiUrl(path: string): URL {
+  return new URL(
+    path,
+    process.env.SALS3_PORTAL_API_URL ?? DEFAULT_STOREFRONT_API_URL,
+  );
 }
 
-function getProductsApiUrl({ skip, limit }: ProductsOffset): string {
-  const url = new URL(PRODUCTS_API_URL);
+function getAuthorizationHeader(): string {
+  const token = process.env.SALS3_STOREFRONT_API_TOKEN;
 
+  if (token === undefined || token === '') {
+    throw new ProductsApiError('Storefront API token is not configured.');
+  }
+
+  return `Bearer ${token}`;
+}
+
+function getProductsApiUrl({
+  section,
+  page,
+  limit,
+}: {
+  section: z.infer<typeof StorefrontSectionSchema>;
+  page: number;
+  limit: number;
+}): string {
+  const url = getStorefrontApiUrl(STOREFRONT_PRODUCTS_PATH);
+
+  url.searchParams.set('section', section);
+  url.searchParams.set('page', String(page));
   url.searchParams.set('limit', String(limit));
-  url.searchParams.set('skip', String(skip));
 
   return url.toString();
 }
 
-export async function fetchProductsByOffset({
-  skip,
+export async function fetchProducts({
+  section = 'for-you',
+  page,
   limit,
   fetcher = fetch,
   signal,
-}: FetchProductsByOffsetOptions = {}): Promise<ProductsResponse> {
-  const offset = ProductsOffsetSchema.parse({ skip, limit });
-  const response = await fetcher(getProductsApiUrl(offset), {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
+}: FetchProductsOptions = {}): Promise<ProductsResponse> {
+  const parsedSection = StorefrontSectionSchema.catch('for-you').parse(section);
+  const pagination = parseProductsPagination({ page, limit });
+  const response = await fetcher(
+    getProductsApiUrl({
+      section: parsedSection,
+      page: pagination.page,
+      limit: pagination.limit,
+    }),
+    {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        Authorization: getAuthorizationHeader(),
+      },
+      signal,
     },
-    signal,
-  });
+  );
 
   if (!response.ok) {
-    throw new ProductsApiError('Products API request failed.', {
+    throw new ProductsApiError('Storefront products API request failed.', {
       status: response.status,
     });
   }
@@ -205,54 +185,8 @@ export async function fetchProductsByOffset({
   const parsedPayload = ProductsResponseSchema.safeParse(payload);
 
   if (!parsedPayload.success) {
-    throw new ProductsApiError('Products API returned invalid data.', {
-      cause: parsedPayload.error,
-    });
-  }
-
-  return parsedPayload.data;
-}
-
-export async function fetchProducts({
-  page,
-  limit,
-  fetcher = fetch,
-  signal,
-}: FetchProductsOptions = {}): Promise<ProductsResponse> {
-  const pagination = parseProductsPagination({ page, limit });
-
-  return fetchProductsByOffset({
-    skip: (pagination.page - 1) * pagination.limit,
-    limit: pagination.limit,
-    fetcher,
-    signal,
-  });
-}
-
-export async function fetchProductCategories({
-  fetcher = fetch,
-  signal,
-}: FetchProductCategoriesOptions = {}): Promise<ProductCategory[]> {
-  const response = await fetcher(PRODUCT_CATEGORIES_API_URL, {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-    },
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new ProductsApiError('Product categories API request failed.', {
-      status: response.status,
-    });
-  }
-
-  const payload: unknown = await response.json();
-  const parsedPayload = ProductCategoriesResponseSchema.safeParse(payload);
-
-  if (!parsedPayload.success) {
     throw new ProductsApiError(
-      'Product categories API returned invalid data.',
+      'Storefront products API returned invalid data.',
       {
         cause: parsedPayload.error,
       },
@@ -262,73 +196,109 @@ export async function fetchProductCategories({
   return parsedPayload.data;
 }
 
-export function parseProductId(input: unknown): number | undefined {
-  const parsedId = z.coerce.number().int().positive().safeParse(input);
-
-  return parsedId.success ? parsedId.data : undefined;
-}
-
-function getProductByIdApiUrl(id: number): string {
-  return `${PRODUCTS_API_URL}/${id}`;
-}
-
-/**
- * Returns undefined for both an invalid id and a real 404 — callers (the
- * PDP route) treat "no such product" as a single case and render notFound().
- */
-export async function fetchProductById(
-  id: unknown,
-  { fetcher = fetch, signal }: FetchProductByIdOptions = {},
-): Promise<Product | undefined> {
-  const productId = parseProductId(id);
-
-  if (productId === undefined) {
-    return undefined;
-  }
-
-  const response = await fetcher(getProductByIdApiUrl(productId), {
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
+export async function fetchProductCategories({
+  fetcher = fetch,
+  signal,
+}: FetchProductCategoriesOptions = {}): Promise<ProductCategory[]> {
+  const response = await fetcher(
+    getStorefrontApiUrl(STOREFRONT_CATEGORIES_PATH),
+    {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        Authorization: getAuthorizationHeader(),
+      },
+      signal,
     },
-    signal,
-  });
-
-  if (response.status === 404) {
-    return undefined;
-  }
+  );
 
   if (!response.ok) {
-    throw new ProductsApiError('Product API request failed.', {
+    throw new ProductsApiError('Storefront categories API request failed.', {
       status: response.status,
     });
   }
 
   const payload: unknown = await response.json();
-  const parsedProduct = ProductSchema.safeParse(payload);
+  const parsedPayload = ProductCategoriesResponseSchema.safeParse(payload);
 
-  if (!parsedProduct.success) {
-    throw new ProductsApiError('Product API returned invalid data.', {
-      cause: parsedProduct.error,
-    });
+  if (!parsedPayload.success) {
+    throw new ProductsApiError(
+      'Storefront categories API returned invalid data.',
+      {
+        cause: parsedPayload.error,
+      },
+    );
   }
 
-  return parsedProduct.data;
+  return parsedPayload.data;
 }
 
-function getProductsByCategoryApiUrl(category: string, limit: number): string {
-  const url = new URL(`${PRODUCTS_API_URL}/category/${category}`);
+async function collectSectionProducts(
+  section: z.infer<typeof StorefrontSectionSchema>,
+  page: number,
+  fetcher: typeof fetch,
+  signal: AbortSignal | undefined,
+): Promise<Product[]> {
+  const response = await fetchProducts({
+    section,
+    page,
+    limit: MAX_PRODUCTS_PAGE_SIZE,
+    fetcher,
+    signal,
+  });
 
-  url.searchParams.set('limit', String(limit));
+  if (page >= response.totalPages) {
+    return response.products;
+  }
 
-  return url.toString();
+  const rest = await collectSectionProducts(section, page + 1, fetcher, signal);
+
+  return [...response.products, ...rest];
+}
+
+/**
+ * The storefront API has no dedicated single-product or category-filter
+ * route yet — only the paginated `section` list. Until one exists, PDP
+ * lookups page through both sections and match by slug/category
+ * client-side. Replace with a direct endpoint once the backend adds one.
+ */
+async function collectAllProducts({
+  fetcher,
+  signal,
+}: {
+  fetcher: typeof fetch;
+  signal?: AbortSignal;
+}): Promise<Product[]> {
+  const sections = await Promise.all(
+    StorefrontSectionSchema.options.map((section) =>
+      collectSectionProducts(section, 1, fetcher, signal),
+    ),
+  );
+
+  return sections.flat();
+}
+
+export async function fetchProductBySlug(
+  slug: unknown,
+  { fetcher = fetch, signal }: FetchProductBySlugOptions = {},
+): Promise<Product | undefined> {
+  const parsedSlug = StorefrontProductSchema.shape.slug.safeParse(slug);
+
+  if (!parsedSlug.success) {
+    return undefined;
+  }
+
+  const products = await collectAllProducts({ fetcher, signal });
+
+  return products.find((product) => product.slug === parsedSlug.data);
 }
 
 export async function fetchProductsByCategory(
   category: unknown,
   { limit, fetcher = fetch, signal }: FetchProductsByCategoryOptions = {},
-): Promise<ProductsResponse> {
-  const parsedCategory = ProductCategorySchema.shape.slug.safeParse(category);
+): Promise<Product[]> {
+  const parsedCategory =
+    StorefrontProductSchema.shape.category.safeParse(category);
   const parsedLimit = queryIntegerSchema(
     MAX_PRODUCTS_PAGE_SIZE,
     DEFAULT_PRODUCTS_PAGE_SIZE,
@@ -340,42 +310,24 @@ export async function fetchProductsByCategory(
     });
   }
 
-  const response = await fetcher(
-    getProductsByCategoryApiUrl(parsedCategory.data, parsedLimit),
-    {
-      cache: 'no-store',
-      headers: {
-        Accept: 'application/json',
-      },
-      signal,
-    },
-  );
+  const products = await collectAllProducts({ fetcher, signal });
 
-  if (!response.ok) {
-    throw new ProductsApiError('Product category API request failed.', {
-      status: response.status,
-    });
-  }
-
-  const payload: unknown = await response.json();
-  const parsedPayload = ProductsResponseSchema.safeParse(payload);
-
-  if (!parsedPayload.success) {
-    throw new ProductsApiError('Product category API returned invalid data.', {
-      cause: parsedPayload.error,
-    });
-  }
-
-  return parsedPayload.data;
+  return products
+    .filter((product) => product.category === parsedCategory.data)
+    .slice(0, parsedLimit);
 }
 
-function getAllowedProductImageUrl(url: string): string | undefined {
+function getAllowedProductImageUrl(url: string | null): string | undefined {
+  if (url === null) {
+    return undefined;
+  }
+
   try {
     const parsedUrl = new URL(url);
 
     if (
       parsedUrl.protocol === 'https:' &&
-      parsedUrl.hostname === PRODUCT_IMAGE_HOSTNAME
+      PRODUCT_IMAGE_HOSTS.includes(parsedUrl.hostname)
     ) {
       return parsedUrl.toString();
     }
@@ -386,101 +338,39 @@ function getAllowedProductImageUrl(url: string): string | undefined {
   return undefined;
 }
 
-function toMinorUnits(price: number): number {
-  return Math.round(price * 10000);
-}
-
-function getOldPriceAmount(price: number, discountPercentage: number): number {
-  const currentAmount = toMinorUnits(price);
-
-  if (discountPercentage <= 0 || discountPercentage >= 95) {
-    return currentAmount;
-  }
-
-  return Math.max(
-    currentAmount,
-    Math.round(currentAmount / (1 - discountPercentage / 100)),
-  );
-}
-
 export function toHomeProduct(product: Product, index: number): HomeProduct {
   return {
-    id: String(product.id),
+    id: product.slug,
     title: product.title,
-    price: peso(toMinorUnits(product.price)),
-    oldPrice: peso(
-      getOldPriceAmount(product.price, product.discountPercentage),
-    ),
-    ratingLine: `Rating ${product.rating.toFixed(1)}, ${product.reviews.length} reviews`,
-    shipLine: product.shippingInformation,
+    price: peso(product.priceMinor),
+    oldPrice: peso(Math.max(product.oldPriceMinor, product.priceMinor)),
+    ratingLine: product.ratingLine,
+    shipLine: product.shipLine,
     tone: PRODUCT_TONES[index % PRODUCT_TONES.length]!,
-    imageUrl: getAllowedProductImageUrl(product.thumbnail),
-    imageAlt: `${product.title} product image`,
+    imageUrl: getAllowedProductImageUrl(product.imageUrl),
+    imageAlt: product.imageAlt,
   };
-}
-
-function getCategoryCode(name: string): string {
-  const words = name.match(/[A-Za-z0-9]+/g) ?? [];
-  const rawCode =
-    words.length > 1
-      ? `${words[0]?.[0] ?? ''}${words[1]?.[0] ?? ''}`
-      : (words[0] ?? name).slice(0, 2);
-
-  return rawCode.toUpperCase();
 }
 
 export function toHomeCategory(category: ProductCategory): HomeCategory {
   return {
-    id: category.slug,
-    code: getCategoryCode(category.name),
+    id: category.id,
+    code: category.code,
     name: category.name,
   };
 }
 
-function toProductReview(
-  review: Product['reviews'][number],
-  productId: number,
-  index: number,
-): ProductReview {
-  return {
-    id: `${productId}-review-${index}`,
-    starsLine: starsLine(review.rating),
-    comment: review.comment,
-    reviewerName: review.reviewerName,
-    dateLine: formatReviewDate(review.date),
-  };
-}
-
 export function toProductDetail(product: Product, index = 0): ProductDetail {
-  const images = product.images
-    .map((url) => getAllowedProductImageUrl(url))
-    .filter((url): url is string => url !== undefined);
-
   return {
-    id: String(product.id),
+    id: product.slug,
     title: product.title,
-    description: product.description,
-    brand: product.brand,
     category: product.category,
-    price: peso(toMinorUnits(product.price)),
-    oldPrice: peso(
-      getOldPriceAmount(product.price, product.discountPercentage),
-    ),
-    ratingLine: `${starsLine(product.rating)} ${product.rating.toFixed(1)}`,
-    reviewCountLine:
-      product.reviews.length === 1
-        ? '1 review'
-        : `${product.reviews.length} reviews`,
-    images,
-    imageAlt: `${product.title} product image`,
+    price: peso(product.priceMinor),
+    oldPrice: peso(Math.max(product.oldPriceMinor, product.priceMinor)),
+    ratingLine: product.ratingLine,
+    shipLine: product.shipLine,
+    imageUrl: getAllowedProductImageUrl(product.imageUrl),
+    imageAlt: product.imageAlt,
     tone: PRODUCT_TONES[index % PRODUCT_TONES.length]!,
-    shipLine: product.shippingInformation,
-    returnPolicy: product.returnPolicy,
-    warranty: product.warrantyInformation,
-    inStock: product.stock > 0,
-    stockLine: product.stock > 0 ? `${product.stock} in stock` : 'Out of stock',
-    reviews: product.reviews.map((review, reviewIndex) =>
-      toProductReview(review, product.id, reviewIndex),
-    ),
   };
 }

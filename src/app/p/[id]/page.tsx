@@ -4,13 +4,12 @@ import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductPriceBox from '@/components/product/ProductPriceBox';
-import ProductFulfillmentCard from '@/components/product/ProductFulfillmentCard';
-import ProductReviews from '@/components/product/ProductReviews';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import { SITE_NAME, getSiteUrl } from '@/lib/site';
 import type { Product as HomeProduct } from '@/lib/home-placeholder-data';
+import type { ProductDetail } from '@/lib/product-detail';
 import {
-  fetchProductById,
+  fetchProductBySlug,
   fetchProductsByCategory,
   toHomeProduct,
   toProductDetail,
@@ -31,21 +30,39 @@ function truncateForMetaDescription(text: string): string {
   return `${text.slice(0, META_DESCRIPTION_MAX_LENGTH - 1).trimEnd()}…`;
 }
 
+/**
+ * The storefront API call (missing/invalid token, unreachable backend) and a
+ * genuine "no such product" both surface as "no detail available" here —
+ * there's no site-wide error boundary yet to tell them apart (tracked gap,
+ * see hot.md). Both currently resolve to notFound().
+ */
+async function getProductDetail(
+  id: string,
+): Promise<ProductDetail | undefined> {
+  try {
+    const product = await fetchProductBySlug(id);
+
+    return product ? toProductDetail(product) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
   const { id } = await params;
-  const product = await fetchProductById(id);
+  const detail = await getProductDetail(id);
 
-  if (!product) {
+  if (!detail) {
     return { title: `Product not found — ${SITE_NAME}` };
   }
 
-  const detail = toProductDetail(product);
   const title = `${detail.title} — ${SITE_NAME}`;
-  const description = truncateForMetaDescription(detail.description);
+  const description = truncateForMetaDescription(
+    `${detail.title} — ${detail.ratingLine}. ${detail.shipLine}.`,
+  );
   const siteUrl = getSiteUrl();
-  const image = detail.images[0];
 
   return {
     title,
@@ -56,10 +73,10 @@ export async function generateMetadata({
       title,
       description,
       siteName: SITE_NAME,
-      ...(image ? { images: [image] } : {}),
+      ...(detail.imageUrl ? { images: [detail.imageUrl] } : {}),
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
+      card: detail.imageUrl ? 'summary_large_image' : 'summary',
       title,
       description,
     },
@@ -74,12 +91,12 @@ async function getRelatedProducts(
   excludeId: string,
 ): Promise<HomeProduct[]> {
   try {
-    const response = await fetchProductsByCategory(category, {
+    const products = await fetchProductsByCategory(category, {
       limit: RELATED_PRODUCT_COUNT + 1,
     });
 
-    return response.products
-      .filter((product) => String(product.id) !== excludeId)
+    return products
+      .filter((product) => product.slug !== excludeId)
       .slice(0, RELATED_PRODUCT_COUNT)
       .map(toHomeProduct);
   } catch {
@@ -89,13 +106,12 @@ async function getRelatedProducts(
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { id } = await params;
-  const product = await fetchProductById(id);
+  const detail = await getProductDetail(id);
 
-  if (!product) {
+  if (!detail) {
     notFound();
   }
 
-  const detail = toProductDetail(product);
   const relatedProducts = await getRelatedProducts(detail.category, detail.id);
 
   return (
@@ -108,7 +124,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </p>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <ProductGallery
-            images={detail.images}
+            images={detail.imageUrl ? [detail.imageUrl] : []}
             imageAlt={detail.imageAlt}
             tone={detail.tone}
           />
@@ -117,31 +133,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <h1 className="text-xl font-bold text-pretty">{detail.title}</h1>
               <div className="mt-1 flex items-center gap-2 text-sm text-ink-muted">
                 <span>{detail.ratingLine}</span>
-                <span>{detail.reviewCountLine}</span>
               </div>
             </div>
             <ProductPriceBox
               productId={detail.id}
               title={detail.title}
-              imageUrl={detail.images[0]}
+              imageUrl={detail.imageUrl}
               imageAlt={detail.imageAlt}
               tone={detail.tone}
               price={detail.price}
               oldPrice={detail.oldPrice}
-              inStock={detail.inStock}
-              stockLine={detail.stockLine}
-            />
-            <ProductFulfillmentCard
               shipLine={detail.shipLine}
-              returnPolicy={detail.returnPolicy}
-              warranty={detail.warranty}
             />
-            <p className="text-sm text-ink-muted text-pretty">
-              {detail.description}
-            </p>
           </div>
         </div>
-        <ProductReviews reviews={detail.reviews} />
         <RelatedProducts products={relatedProducts} />
       </main>
       <SiteFooter />
