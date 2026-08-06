@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -19,6 +19,9 @@ related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
+  - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
+  - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
@@ -74,15 +77,18 @@ related:
 - Real inventory/variant data is not present in the storefront contract, so the intended out-of-stock purchase guard is not yet complete.
 - Google buyer sign-in now creates a Firebase-backed server session cookie, but no protected buyer account, server cart, checkout, profile, or authorization workflow exists yet. Email/password is still unavailable; when it lands it must re-validate with `src/lib/auth/login-schema.ts` on the server and add password-specific rate limiting and CSRF protection. `/login/reset` is referenced by the form but not built.
 
-## Approved catalog and commerce decisions - 2026-08-06
+## Approved catalog and commerce decisions - 2026-08-07
 
-The original all-in-one ADR was fact-checked and split into five approved, independently auditable decisions. They are approved direction, not implemented behavior.
+The original all-in-one ADR and later seller/supplier decisions are now split into eight approved, independently auditable ADRs. They are approved direction, not implemented behavior.
 
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] - CJ is a supplier; Sals3 publishes a curated, separate catalog through a server-side modular boundary. Seller identity is separate from per-offer fulfillment mode. Original copy, rights-aware media, objective hard rejects, reviewable risk signals, and secure employee administration are required.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] - the workbook is adopted as **Sals3 Taxonomy v0** for pilot use, not declared fully production-ready. It contains 1,345 data rows and 29 L1 departments; the 13-row matrix is only a partial summary. Real-product mapping, category-form QA, and provenance/license review remain required.
 - [[ADR-003-international-availability-shipping-and-pricing]] - Sals3 supports explicitly enabled countries rather than making an unverified worldwide claim. Geo-IP is a hint, regional zones are browse estimates, and checkout requires a fresh destination/postal quote. Phase 1 is USD. Pricing uses landed cost and contribution economics, not a flat markup.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment]] - a verified server-side payment event queues an idempotent direct CJ order flow. CJ wallet balance, retries, outbox/reconciliation, signed webhook verification, `messageId` deduplication, and tracking-source conflict rules are required. CJ documents Delivered and other logistics statuses; an aggregator is optional only after evaluation.
 - [[ADR-005-payment-settlement-refunds-and-cod]] - customer payment, gateway settlement, supplier spend, refunds, and delivery are separate states. COD is disabled/out of phase 1 until courier, remittance, refusal/return, fraud, accounting, and market controls are approved and verified.
+- [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] - Retailer and Dropshipper use separate registrations, accounts, and logins; one account has one immutable business model. Dropshippers source through healthy connections they own. CJ is the first provider adapter, and Sals3's current CJ credential belongs to a separate Sals3 Official Dropshipper Account. Shopify is not a supplier connection.
+- [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] - supplier delist, zero stock, cost spike, freight loss, connection failure, and material source changes protect new checkout automatically and open one actionable seller attention case with severity-based in-app, push, and email delivery. Accepted orders remain active and render immutable product/variant/price/terms/media/supplier snapshots; no later listing change or silent substitution rewrites history.
+- [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] - Dropshippers install curated Supplier Apps and connect their own provider accounts/API credentials. Customer payment/Sals3 commission/seller payout are separate from seller-to-supplier payment. CJ does not pay the Sals3 seller; it charges the seller's own CJ account/wallet. Zero balance permits catalog access but not automatic balance fulfillment; affected offers funding-hold and accepted orders become actionable `AWAITING_SUPPLIER_FUNDS` exceptions. Exact commercial rates/providers remain pending.
 - [[cj-candidate-to-sals3-product-draft-implementation-spec]] - approved implementation contract connecting Aj's existing **CJ Candidate Explorer** (`sals3-portal` `/products`) to the Sals3 Catalog Admin API. Phase 1 is human-on-exception: selected green items auto-publish, yellow items auto-publish as **Live · Needs Attention**, and red items block or auto-pause. It defines persistent status surfaces, deduplicated in-app attention, shortlist/preflight gates, country/permit/IP controls, identity, editor, API, sync, and rollback. No implementation is claimed.
 - Shopify is not part of the active Sals3 plan or CJ import path. Earlier Shopify pop-up-store material is historical/sample context only and must not create implementation tasks.
 
@@ -123,18 +129,24 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 
 [[sals3-portal-code-review-2026-08-06]] records seven read-only findings. The live pagination/page-size mismatch is highest priority. Long-process cache growth and fabricated totals are current correctness/operations risks. Permission-error handling is defense-in-depth because every present role currently includes `product:read`.
 
+The current CJ integration is also single-account prototype infrastructure: global `CJ_API_KEY`, shared in-memory token cache, fixed CJ service/base URL, direct CJ catalogue UI, and development `userId`/`sellerId`. No real registration, tenant, encrypted per-account credential, `SupplierConnection`, or provider selector exists. Preserve Aj's verified CJ behavior but move it behind `CjSupplierAdapter`; do not treat the global key as a multi-tenant design.
+
 ## Current build priorities implied by the decisions
 
 1. Resolve the fabricated comparison price defect.
-2. Approve one low-risk category-and-market pilot rule pack with official-source anchors and named compliance/review owners.
-3. Implement shortlist, preflight, hard gates, versioned scoring, attention/exception queues, near-duplicate detection, and WIP limits before any selected CJ candidate can enter auto-publication.
-4. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
-5. Implement Product, Variant, Offer, Seller, Media, SupplierProductLink, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
-6. Pilot and validate selected Taxonomy v0 branches against representative CJ products.
-7. Add secure employee administration, audited auto-publication, Live · Needs Attention, red auto-pause, manual exception, and compliance workflows.
-8. Implement points-aware supplier jobs and exact destination freight quoting.
-9. Build server cart/checkout and payment reconciliation before order fulfillment.
-10. Implement the ADR-004 state machine and recovery controls before sending real CJ orders.
+2. Implement real authentication plus separate Retailer/Dropshipper registration, immutable business-model entitlements, and tenant isolation.
+3. Implement `SellerAccount`, `SupplierProvider`, `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding`; migrate the current CJ key to the Sals3 Official Dropshipper Account using encrypted secret storage.
+4. Approve one low-risk category-and-market pilot rule pack with official-source anchors and named compliance/review owners.
+5. Implement shortlist, preflight, hard gates, versioned scoring, attention/exception queues, near-duplicate detection, and WIP limits before any selected CJ candidate can enter auto-publication.
+6. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
+7. Implement Product, Variant, Offer, Media, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
+8. Pilot and validate selected Taxonomy v0 branches against representative CJ products.
+9. Add secure employee administration, audited auto-publication, Live · Needs Attention, red auto-pause, manual exception, and compliance workflows.
+10. Implement points-aware supplier jobs and exact destination freight quoting.
+11. Build server cart/checkout and payment reconciliation before order fulfillment.
+12. Implement the ADR-004 state machine and recovery controls before sending real CJ orders.
+13. Implement ADR-007 immutable `OrderLineSnapshot`, controlled revision media, supplier-change event processing, notification outbox, active-order-aware delist/disconnect, and no-silent-substitution tests.
+14. Implement ADR-008 curated Supplier Apps/installations, declared provider capabilities, seller-owned connection/payment isolation, marketplace commission ledger, payout statements, and supplier funding-readiness/funding-hold recovery.
 
 ## Recent session notes
 

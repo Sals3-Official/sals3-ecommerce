@@ -2,7 +2,7 @@
 tags: [sals3, roadmap, implementation-plan, task-tracker, canonical]
 aliases: [Sals3 Implementation Phases, Sals3 Task Phases, Sals3 Build Register]
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: canonical
 authority: execution-plan
 owner_approved: false
@@ -11,6 +11,9 @@ related:
   - "[[sals3-management-bible]]"
   - "[[sals3-master-blueprint]]"
   - "[[sals3-feature-landscape-and-expansion-map]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
+  - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
+  - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
 ---
 
 # Sals3 Implementation Phases
@@ -93,12 +96,12 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
 
 ### Stage 2 — Data model and contracts (not started)
 
-- [ ] Define entities: product, variant, offer, seller, category, attribute, media, supplier link, buyer, and address per ADR-001/002.
+- [ ] Define entities: product, variant, offer, `SellerAccount`, category, attribute, media, `SupplierProvider`, `SupplierConnection`, provider product/variant references, `OfferSupplierBinding`, buyer, and address per ADR-001/002/006.
 - [x] Approve the CJ-Candidate-Explorer-to-Sals3 contract: candidate-only shortlist, full preflight, hard gates, green/yellow/red human-on-exception operation, auto-publication, Live · Needs Attention, red block/auto-pause, no phase-1 batch import, WIP limits, identity, country/permit/IP controls, editor, API, sync, security, rollback, and tests. See [[cj-candidate-to-sals3-product-draft-implementation-spec]]. This is a specification milestone, not an implementation claim.
 - [ ] Define the `Money` and `PriceLine` types (build spec section 16.3).
 - [ ] Write API schemas. Generate typed clients.
 - [ ] Write the 5 golden scenarios (build spec section 20.5).
-- [ ] Add versioned `CategoryMappingRule`, `AttributeMappingRule`, `SupplierProductLink`, mapping log/review state, and audit entities per ADR-001/002.
+- [ ] Add versioned `CategoryMappingRule`, `AttributeMappingRule`, `ProviderProductReference`, `ProviderVariantReference`, mapping log/review state, and audit entities per ADR-001/002/006.
 
 **Exit test:** the team agrees on the entity names, and the schemas generate a client.
 
@@ -151,10 +154,19 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
 
 ### Stage 7 — Seller and administration tools (not started)
 
-- [ ] Build seller sign-up and verification.
+- [ ] Build separate Retailer and Dropshipper registrations and verification. One account has one immutable business model; anyone needing both creates separate accounts and logins. No phase-1 account switcher or automatic conversion.
+- [ ] Build Dropshipper-only Supplier Connections: approved provider registry, connection/reauthorization/disconnect states, encrypted secret references, tenant isolation, and sourcing lock until a connection is healthy.
+- [ ] Move Aj's existing CJ integration behind `CjSupplierAdapter`; bootstrap the current key once into the separate Sals3 Official Dropshipper Account instead of retaining a global multi-tenant credential.
+- [ ] Support one connection per provider per Dropshipper account in phase 1. Enable CJ first; keep Printful, Printify, BigBuy, and Syncee as unevaluated/disabled candidates until separately approved and verified.
+- [ ] Present approved providers as curated **Apps & Integrations -> Supplier Apps**. Build installation/scopes/capability records and tenant-owned connections; do not support arbitrary third-party runtime plugins in phase 1.
+- [ ] Separate customer payment/Sals3 commission/seller payout from seller-owned supplier payment. Build order-line commission, seller payable, supplier cost, fee/reserve/refund/chargeback, and payout-statement ledger entries; commercial values remain `[?]`.
+- [ ] Build CJ funding readiness and pre-payment balance checks. Zero/insufficient balance allows catalog access but funding-holds auto-fulfilled offers, creates `AWAITING_SUPPLIER_FUNDS` for accepted orders, and triggers actionable in-app/push/email recovery with a deadline.
 - [ ] Build secure employee product sourcing, attention/exception queue, and audited automatic publication under ADR-001/002.
 - [ ] Connect Aj's **CJ Candidate Explorer** to shortlist and full preflight; enforce hard gates, versioned scores, near-duplicate detection, `PASS`/`PASS_WITH_ATTENTION`/`REVIEW`/`HOLD`/`BLOCKED`, no phase-1 batch import, and active-job WIP limits.
 - [ ] Build CJ-row badges, screening drawer, Product Sourcing queue, My Products Live/Needs Attention/Auto-Paused filters, Issues & Tasks, immediate red in-app attention, and grouped/deduplicated yellow attention.
+- [ ] Build supplier anomaly handling per ADR-007: variant/offer/market-scoped auto-protection, clickable attention evidence/actions, reliable in-app/push/email outbox, severity routing, deduplication, cooldown, retry, and delivery audit.
+- [ ] Build immutable `ProductRevision` media and `OrderLineSnapshot` records at order acceptance. Seller/supplier delist or later source edits must block future sales without changing or cancelling accepted orders.
+- [ ] Build active-order-aware seller delist and supplier disconnect, fulfillment exception handling, and explicit no-silent-substitution/customer-consent controls.
 - [ ] Build versioned country/category allowlists, permit and brand-authorization evidence, counterfeit/IP quarantine, protected-document access audit, and policy-change re-evaluation.
 - [ ] Implement **Customize for Sals3** from the existing CJ listing through the approved [[cj-candidate-to-sals3-product-draft-implementation-spec]] contract.
 - [ ] Build seller order view and stock control.
@@ -162,7 +174,7 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
 - [ ] Build dispute and return handling for the seller.
 - [ ] Build support tools: order search, refund, note.
 
-**Exit test:** a real seller completes sign-up, upload, sale, and payout without developer help.
+**Exit test:** real Retailer and Dropshipper accounts complete their separate registrations; cannot switch models or cross tenant boundaries; the Dropshipper connects an approved supplier, then completes sourcing, upload, sale, and payout without developer help.
 
 > [!WARNING] Teams frequently forget this stage. A marketplace without seller tools cannot operate — give it a real estimate, not an afterthought.
 

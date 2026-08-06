@@ -2,7 +2,7 @@
 tags: [sals3, proposal, seller-center, ux, architecture, research-plan, pillar-3]
 aliases: [Global Seller Center UX Blueprint, Seller Center UX Blueprint v2, Seller Center Bets and Cuts]
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 status: proposed
 authority: proposal
 owner_approved: false
@@ -12,6 +12,7 @@ related:
   - "[[sals3-ux-build-specification]]"
   - "[[sals3-cj-dropshipping-integration-plan]]"
   - "[[sals3-implementation-phases]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[parked-ideas-backlog]]"
   - "[[index]]"
 ---
@@ -23,6 +24,9 @@ related:
 > Source: `C:\Users\Bogs\Documents\Codex\2026-08-06\ag\outputs\global-seller-center-ux-blueprint-v2.pdf` (18 pages, ~315 KB), a Codex-generated output dated 2026-08-06. Copied into `Raw/sals3_global_seller_center_ux_blueprint_v2_2026-08-06.pdf`; original left untouched at the Codex outputs path. This is explicitly a **revision 2** ("Revised per internal review") of an earlier draft — the same outputs folder also contains `global-seller-center-ux-blueprint.pdf` (16 pages, v1), which this document supersedes on every point it covers. The v1 file was **not** separately ingested; only v2 is summarized below. The document is self-described as desk research (no interviews, no usability testing) and repeatedly flags this — see §3 below.
 
 # Sals3 — Global Seller Center UX Blueprint (v2) — Proposal
+
+> [!IMPORTANT] Approved registration override
+> [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] governs seller onboarding and supplier connections. Ignore any generic or shared seller-signup/account-switching suggestion in this proposal: Retailer and Dropshipper require separate registrations, accounts, and logins, with no phase-1 business-model switcher.
 
 ## What changed in this revision (v2 vs. v1)
 
