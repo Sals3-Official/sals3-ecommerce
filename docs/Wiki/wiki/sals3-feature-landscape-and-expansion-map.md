@@ -9,7 +9,7 @@ aliases:
   - Sals3 Feature Landscape
   - Sals3 Expansion Map
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-06
 status: canonical
 authority: blueprint-map
 owner_approved: false
@@ -53,7 +53,7 @@ related:
 | Feed that changes with time of day | **Deferred** | Needs consent, measurement, traffic volume. |
 | Swipe-to-pay as primary control | **Rejected** | Lowers completion rate; fails WCAG 2.5.7. |
 | Glass effect on many surfaces | **Rejected** | 2 surfaces only — header and bottom bar. |
-| False urgency / false scarcity | **Rejected** | Forbidden pattern, legal risk under RA 11967. |
+| False urgency / false scarcity | **Rejected** | Forbidden and misleading across markets; apply each market's consumer law, including RA 11967 when applicable. |
 
 ## Pillar 1 — Shopify pop-up store
 
@@ -66,10 +66,10 @@ Not covered by the build spec (out of its stated scope). Still Candidate, per [[
 
 - **Approved** — Curated, high-density storefront catalog, one clear price-forward priority per screen (build spec section 4).
 - **Approved** — Product page: 4-question first screen, fixed section order, review filtering/summary chips (build spec section 7).
-- **Approved** — 1-click/guest checkout, Cash on Delivery as a main option — exact payment-partner list still unconfirmed (build spec section 8, 21.3).
-- **Approved** — Real, arrival-date-based shipping display, shown early, never increasing at checkout (build spec section 5.3, 8.3).
+- **Approved** — guest checkout and one online prepaid method in the first vertical slice. **COD is deferred/disabled for phase 1** by ADR-005 until its operational and risk gate passes.
+- **Approved** — Show real delivery timing early. Browse estimates must be labelled; after an exact destination quote is confirmed, do not silently increase it. An expired/changed quote requires explicit reconfirmation before payment (ADR-003).
 - **Approved** — Real-time stock guard — build spec section 6.3 makes this concrete, not aspirational.
-- **Candidate — supplier quality gate:** the *original* CJ Dropshipping-style rating/sales filter from [[sals3-master-blueprint]] is a different concern the build spec doesn't address; still unconfirmed.
+- **Approved — evidence-based supplier curation:** objective hard rejects plus reviewable compliance, IP, commercial, mapping, and editorial signals under ADR-001. Rating/review signals are labelled proxies, not verified sales facts.
 
 ## Pillar 3 — Enterprise Seller Center
 
@@ -80,14 +80,14 @@ Not covered by the build spec (out of its stated scope). Still Candidate, per [[
 
 ## Catalog and taxonomy
 
-- **Candidate** — Automated supplier rating/sales quality gate (blueprint-only concept, not in the build spec).
-- **Candidate** — Media & content review queue (photo/watermark cleanup) — explicitly scoped as a separate workflow/specialist in the blueprint.
-- **Candidate, not adopted** — [[universal-category-variation-taxonomy-reference]] as the actual category/attribute source for the Catalog service.
+- **Approved** — evidence-based supplier eligibility and review funnel under ADR-001; fixed rating/sales thresholds are not approved facts.
+- **Approved** — media, rights, and original-content review before publication under ADR-001.
+- **Approved for pilot** — [[universal-category-variation-taxonomy-reference]] as Sals3 Taxonomy v0 under ADR-002; category branches still require real-product validation before production-ready status.
 
 ## Branding, trust, and compliance
 
-- **Approved** — White-label packaging, invoices, tracking portal, support desk (build spec section 9, consistent with the blueprint).
-- **Approved** — RA 11967 / merchant-identity / anti-dark-pattern compliance (build spec sections 9, 14, 22) — legal review by a Philippine lawyer still required before launch.
+- **Approved** — truthful merchant and fulfillment identity, invoices, tracking, and support. Claim branded/white-label packaging only when the actual fulfillment path supports it.
+- **Approved** — merchant identity, consumer disclosure, and anti-dark-pattern controls for Sals3 and every enabled market. RA 11967 applies when the Philippines is in scope; it is not the only jurisdictional gate.
 
 ## Not yet on the map
 
