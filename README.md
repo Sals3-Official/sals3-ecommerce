@@ -76,6 +76,29 @@ SALS3_PORTAL_API_URL=http://localhost:3001
 SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 ```
 
+## Catalog Admin API (phase 1)
+
+`src/modules/catalog/candidates/` implements the CJ candidate hard-gate,
+pilot quality-score, and compliance-gate engine from
+[`cj-candidate-to-sals3-product-draft-implementation-spec.md`](docs/Wiki/wiki/cj-candidate-to-sals3-product-draft-implementation-spec.md)
+sections 8.4–8.7 and 14. Every function is pure (signals + a versioned
+policy in, a decision out) and unit-tested — no database, queue, or hidden
+state.
+
+`POST /api/v1/admin/catalog/candidates/cj` (`src/app/api/v1/admin/catalog/candidates/cj/route.ts`)
+is the one live route built on top of that engine so far. It performs real
+service-to-service auth, rate limiting, header/body validation, and
+structured logging — then **always returns `503
+CATALOG_PERSISTENCE_NOT_CONFIGURED`**. This is expected, not a bug: no
+database/ORM/queue exists in this repo yet (owner decision, 2026-08-06:
+"Hold — logic/contracts/UI only, no fake persistence"). The route never
+creates a `SupplierCandidate` and never fabricates a `PASS`/score. Required
+`.env.local` addition:
+
+```text
+CATALOG_ADMIN_API_TOKEN=<shared secret with sals3-portal>
+```
+
 ## Install
 
 Use npm. Do not switch package managers unless the owner approves.
