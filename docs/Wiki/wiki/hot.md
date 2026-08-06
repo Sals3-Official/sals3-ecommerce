@@ -21,6 +21,8 @@ related:
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
+  - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
+  - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
 ---
 
 # Sals3 - Current State Cache
@@ -59,10 +61,11 @@ related:
 - Client-only `localStorage` cart with Add to Cart/Buy Now and cart toast; no server cart or checkout exists.
 - Route-independent SEO/GEO/AEO foundations: `robots.txt`, `llms.txt`, Organization/WebSite JSON-LD, home metadata, and sitemap wiring where real data permits it.
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
+- `sals3-portal` renamed to "Seller Center" with 7 new permission-gated screens (Overview, Orders, Inventory, a new-listing wizard, Finances, Payouts, Market rules) built against its own real design system - illustrative data throughout, no order/inventory/finance/payout backend. See [[sals3-session-2026-08-06-part13-seller-center-first-build]].
 
 ### Incomplete or placeholder
 
-- No production Sals3 catalog database, product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, return flow, or Seller Center exists.
+- No production Sals3 catalog database, product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, or return flow exists. A Seller Center UI prototype now exists in `sals3-portal` (see below) - real routes and real permission enforcement, but illustrative data throughout and no order/inventory/finance/payout backend.
 - Current customer product data is CJ-sourced through the protected `sals3-portal` storefront API, not yet a curated Sals3 catalog.
 - `/c/[category]` does not exist.
 - The cart is browser-local only; `/checkout` does not exist.
@@ -139,6 +142,7 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 - [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]]
 - [[sals3-session-2026-08-06-part11-pwa-icons-and-cart-mobile-overflow]]
 - [[sals3-session-2026-08-06-part12-category-row-tile-band-and-related-products-dedup]]
+- [[sals3-session-2026-08-06-part13-seller-center-first-build]]
 
 ## Reusable lessons
 
