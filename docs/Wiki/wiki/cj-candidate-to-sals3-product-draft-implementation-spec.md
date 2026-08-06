@@ -1475,16 +1475,42 @@ evidence that it works.
 - `Check for Sals3` row action, shortlist drawer, `Product Sourcing` navigation
   (CJ Candidate Explorer / Shortlisted / Exception Queue), and a Shortlisted
   queue that reads real rows scoped to the session's seller.
-- 113 unit/component tests and 31 Playwright tests pass, including an assertion
+- **CJ enrichment evidence fetch (part of section 8.3).** Three live calls per
+  candidate — `/product/query` (detail, with variants embedded),
+  `/product/stock/getInventoryByPid` (per-warehouse and per-variant stock), and
+  `/product/productComments` — normalised into a `supplier_snapshots` record
+  with a SHA-256 checksum and capture timestamp, one row per candidate. Runs
+  sequentially under CJ's one-request-per-second limit, outside the shortlist
+  transaction, and logs `pointsInfo` from every response. Roughly 30 points per
+  candidate.
+- 133 unit/component tests and 31 Playwright tests pass, including an assertion
   that no preflight decision label can ever render.
+
+Two CJ API facts verified live on 2026-08-07, both of which silently corrupt
+inventory if assumed otherwise, and both now covered by regression tests:
+
+- `variantInventories` is returned in a different order from the detail
+  response's `variants`. The join must be on `vid`, never array index.
+- The two inventory levels name the same field differently: product-level
+  warehouse entries use `totalInventoryNum`, per-variant entries use
+  `totalInventory`. One shared schema parsed every per-variant total as null
+  while 36,338 real units existed. After the fix the five variants summed to
+  exactly the warehouse total.
 
 ### Explicitly NOT implemented
 
-- **Full preflight (section 8.3).** No CJ product-detail, variant, inventory,
-  media, freight, or review-comment enrichment fetch exists. Therefore no
-  `PASS`, `PASS_WITH_ATTENTION`, `REVIEW`, `HOLD`, or `BLOCKED` decision and no
-  quality score is produced anywhere. The hard-gate, scoring, and
-  compliance-gate engines from sections 8.5, 8.6, and 14 are **not** built.
+- **The preflight decision (sections 8.4, 8.5, 8.6, 14).** Evidence is now
+  fetched, but nothing judges it: the hard-gate, scoring, and compliance-gate
+  engines are **not** built, so no `PASS`, `PASS_WITH_ATTENTION`, `REVIEW`,
+  `HOLD`, or `BLOCKED` decision and no quality score is produced anywhere. The
+  evidence panel shows facts with no verdict attached.
+- **Freight evidence** (`/logistic/freightCalculate`, part of section 8.3). It
+  needs an approved destination market and ADR-003 has approved none, so it is
+  not called. Destination availability and landed cost therefore cannot be
+  evaluated at all yet.
+- **Supplier description sanitisation.** The CJ `description` is fetched and
+  stored but never rendered, because no sanitiser exists. Section 12's media
+  pipeline and section 9.4's source panel both remain unbuilt.
 - The Exception Queue is empty by construction, not by missing data.
 - Product, ProductOption, Variant, Offer, MediaAsset, ProductRevision,
   AttentionIssue, ComplianceEvaluation, CostSnapshot, OutboxEvent, and every
