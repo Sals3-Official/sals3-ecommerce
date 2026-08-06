@@ -2,7 +2,7 @@
 tags: [architecture, strategy, sample, sals3]
 aliases: [Sals3 Master Blueprint, Master System Architecture]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-06
 status: sample
 authority: strategic-vision
 owner_approved: false
@@ -17,7 +17,7 @@ related:
 ---
 
 > [!NOTE] Provenance
-> Authored by AJ & Bogs prior to this vault's creation; moved here from the shared BOGS Dashboard vault on 2026-07-31 without content changes. `status: sample` and `owner_approved: false` reflect this document's own governance disclaimer (see below) — treat it as strategic vision pending Sals3 Leadership alignment, not an approved build contract. Source UI mockups and the presentation deck live in `Raw/`.
+> Authored by AJ & Bogs prior to this vault's creation; moved here from the shared BOGS Dashboard vault on 2026-07-31. `status: sample` and `owner_approved: false` mean it is not an approved build contract. Its Shopify pop-up/dual-track sections are specifically superseded by Bogs's 2026-08-06 decision to build only the custom Sals3 customer site and Seller Center. Source UI mockups and the presentation deck live in `Raw/`.
 
 # Sals3 Next-Generation Hybrid Marketplace
 ## Super-Detailed Master System Architecture, Commercial Strategy & Transition Blueprint

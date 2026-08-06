@@ -50,7 +50,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-end-to-end-process-flow]] — canonical Sals3 flowchart.
 - [[sals3-manual-testing-checklist]] — canonical Sals3 manual testing queue.
 - [[sals3-feature-landscape-and-expansion-map]] — canonical Sals3 capability map.
-- [[sals3-master-blueprint]] — Executive Summary, 3 Core Pillars (Shopify pop-up, custom customer site, enterprise Seller Center), 10-step item lifecycle, curated catalog pipeline, Seller Center modules (order management, product management, finance/payout), development timeline, white-label branding protocol. Business-strategy narrative still current; technical specifics superseded by the build spec.
+- [[sals3-master-blueprint]] — historical/sample Executive Summary and former 3-pillar strategy. Its Shopify pop-up/dual-track plan is retired; current technical and operating direction comes from the approved ADRs, implementation spec, build spec, and execution plan.
 - [[universal-category-variation-taxonomy-reference]] — adopted as Sals3 Taxonomy v0 for pilot use via ADR-002; not yet fully production-validated.
 - [[sals3-cj-dropshipping-integration-plan]] — superseded historical CJ auto-import proposal; ADR-001/002 govern the current direction.
 - [[sals3-portal-code-review-2026-08-06]] — 7 findings from reading `sals3-portal`'s CJ integration/storefront-API code directly (pagination mismatch, unbounded cache, dead reset logic, fabricated total, uncaught `PermissionError`, and two documented/defensive-coded items). Findings only, not fixed.
@@ -77,6 +77,13 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 - [[sals3-global-seller-center-ux-blueprint-proposal]] — Pillar 3 Global Seller Center UX blueprint (v2): three funded v1 bets, a binding cut list, a Tier 1/Tier 2 architecture split with a debt register, and a formal Stage 1 research go/no-go gate. Proposed, not yet reviewed by AJ/Bogs as a product strategy — but see its 2026-08-06 addendum: a real, owner-directed 7-screen UI prototype now exists in `sals3-portal` (illustrative data, no backend), described fully in [[sals3-session-2026-08-06-part13-seller-center-first-build]].
 
+## Catalog and supplier pipeline
+
+- [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract: green auto-publish, yellow Live · Needs Attention, red block/auto-pause, persistent status UI, anti-junk/counterfeit/country gates, exception handling, customization, and supplier sync; not yet implemented.
+- [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
+- [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — Taxonomy v0 and category/attribute mapping decision.
+- [[ADR-003-international-availability-shipping-and-pricing]] — market, freight, and contribution-pricing decision used by publish validation.
+
 ## Raw reference assets
 
 - `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx`), the marketing banner pitch PDF (`sals3_marketing_banner_pitch_2026-08-05.pdf`, see [[sals3-marketing-banner-integration-proposal]]), the GEO/AEO/SEO strategy PDF (`sals3_geo_aeo_seo_strategy_2026-08-05.pdf`, see [[sals3-geo-aeo-seo-strategy-proposal]]), and the Global Seller Center UX Blueprint v2 PDF (`sals3_global_seller_center_ux_blueprint_v2_2026-08-06.pdf`, see [[sals3-global-seller-center-ux-blueprint-proposal]]). Not linkable as Obsidian notes; referenced here for discovery.
@@ -88,4 +95,4 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 ## Domains not started yet
 
-Add a new section here in the same task that a domain's first real note is created (e.g. Payments/Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System). Do not pre-list domains with no notes.
+Add a new section here in the same task that a domain's first real note is created (e.g. Payments/Payout, Finance/Tax, Design System). Do not pre-list domains with no notes.

@@ -31,13 +31,13 @@ related:
 | `[?]` | Requires an owner/leadership decision or real-data evidence. |
 | `[P]` | Parked. Do not build without fresh owner approval. |
 | `[C]` | Candidate. Useful idea, but not approved as an active build task. |
+| `[R]` | Rejected or retired. Preserve for history; do not build. |
 
-## Two parallel tracks
+## One active track
 
-Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build spec doesn't cover the interim cash-flow measure (it's out of the spec's stated scope, "does not cover the business plan"):
+- **Active track — the new Sals3 system:** the custom customer site and Seller Center. Everything below is governed by [[sals3-ux-build-specification]] section 20.
 
-- **Track A — Shopify pop-up store:** interim cash flow while Track B is built. Not addressed by the build spec at all.
-- **Track B — the actual new system:** everything below. This is what [[sals3-ux-build-specification]] section 20 governs.
+The earlier dual-track plan in [[sals3-master-blueprint]] is historical and no longer governs execution.
 
 ## Constitutional rules for every phase
 
@@ -48,14 +48,11 @@ Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build 
 5. Follow the build spec's own dependency table (section 20.2) — do not build a screen before tokens/components exist, the cart before pricing exists, the checkout before idempotency exists, etc.
 6. Do not build a parked or candidate item from [[sals3-feature-landscape-and-expansion-map]] without explicit owner approval.
 
-## Track A — Shopify pop-up store (interim, not started)
+## Retired track — Shopify pop-up store
 
-- [ ] Deploy Shopify theme (Dawn Theme per the blueprint) as the interim storefront.
-- [ ] Apply a quality filter to the Shopify catalog.
-- [ ] Integrate local payment gateways on Shopify (methods TBD — pending Leadership confirmation).
-- [ ] Log all Shopify customer and order records for later migration into the new system.
+- [R] Do not deploy or integrate a Shopify interim storefront. Bogs rejected Shopify for the active Sals3 plan on 2026-08-06. Historical blueprint material remains for provenance only.
 
-## Track B — Foundation before Stage 1 (not started)
+## Foundation before Stage 1 (not started)
 
 ### Vault and planning
 
@@ -82,7 +79,7 @@ Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build 
 
 As of 2026-08-06, the repository and local verification pipeline exist, a verified storefront slice exists, and ADR-001 through ADR-005 record the approved catalog/commerce direction. Old-system discovery work in days 1-7, the deployed skeleton/health endpoint, and the production data model remain incomplete.
 
-## Track B — The 8 stages (build spec section 20.3)
+## The 8 stages (build spec section 20.3)
 
 ### Stage 1 — Foundation (in progress)
 
@@ -97,6 +94,7 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
 ### Stage 2 — Data model and contracts (not started)
 
 - [ ] Define entities: product, variant, offer, seller, category, attribute, media, supplier link, buyer, and address per ADR-001/002.
+- [x] Approve the CJ-Candidate-Explorer-to-Sals3 contract: candidate-only shortlist, full preflight, hard gates, green/yellow/red human-on-exception operation, auto-publication, Live · Needs Attention, red block/auto-pause, no phase-1 batch import, WIP limits, identity, country/permit/IP controls, editor, API, sync, security, rollback, and tests. See [[cj-candidate-to-sals3-product-draft-implementation-spec]]. This is a specification milestone, not an implementation claim.
 - [ ] Define the `Money` and `PriceLine` types (build spec section 16.3).
 - [ ] Write API schemas. Generate typed clients.
 - [ ] Write the 5 golden scenarios (build spec section 20.5).
@@ -154,7 +152,11 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
 ### Stage 7 — Seller and administration tools (not started)
 
 - [ ] Build seller sign-up and verification.
-- [ ] Build secure employee product sourcing, upload, review, and approval queue under ADR-001/002.
+- [ ] Build secure employee product sourcing, attention/exception queue, and audited automatic publication under ADR-001/002.
+- [ ] Connect Aj's **CJ Candidate Explorer** to shortlist and full preflight; enforce hard gates, versioned scores, near-duplicate detection, `PASS`/`PASS_WITH_ATTENTION`/`REVIEW`/`HOLD`/`BLOCKED`, no phase-1 batch import, and active-job WIP limits.
+- [ ] Build CJ-row badges, screening drawer, Product Sourcing queue, My Products Live/Needs Attention/Auto-Paused filters, Issues & Tasks, immediate red in-app attention, and grouped/deduplicated yellow attention.
+- [ ] Build versioned country/category allowlists, permit and brand-authorization evidence, counterfeit/IP quarantine, protected-document access audit, and policy-change re-evaluation.
+- [ ] Implement **Customize for Sals3** from the existing CJ listing through the approved [[cj-candidate-to-sals3-product-draft-implementation-spec]] contract.
 - [ ] Build seller order view and stock control.
 - [ ] Build commission calculation and payout report — `[?]` blocked on confirmed commission/fee structure.
 - [ ] Build dispute and return handling for the seller.

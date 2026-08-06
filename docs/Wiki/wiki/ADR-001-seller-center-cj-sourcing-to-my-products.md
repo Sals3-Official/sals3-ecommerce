@@ -7,6 +7,7 @@ status: approved
 authority: architecture-decision
 owner_approved: true
 related:
+  - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
@@ -19,17 +20,19 @@ related:
 
 # ADR-001 - Curated CJ sourcing into Sals3 My Products
 
+Implementation companion: [[cj-candidate-to-sals3-product-draft-implementation-spec]] defines the approved identity, field ownership, editor, API, workflow, synchronization, security, and verification contract. It remains unimplemented until verified code and infrastructure exist.
+
 > [!IMPORTANT] Approved direction; not implemented
 > Approved by Bogs on 2026-08-06 after a content and fact-check review. This ADR governs catalog ownership, product curation, and system boundaries. The linked ADRs separately govern taxonomy, international pricing/shipping, fulfillment, and payment/COD. No implementation is claimed by this status.
 
 ## Problem
 
-`sals3-portal` currently exposes CJ-sourced listings, but a supplier feed is not yet a Sals3 catalog. Sals3 needs a controlled way for an employee to discover a CJ item, create a Sals3-managed product record, supply truthful merchandising content, review commercial and compliance risks, and publish it without coupling the customer storefront to CJ's raw schema or availability.
+`sals3-portal` currently exposes CJ-sourced listings, but a supplier feed is not yet a Sals3 catalog. Sals3 needs a controlled way for an employee to discover a CJ item, create a Sals3-managed product record, generate or edit truthful merchandising content, evaluate commercial and compliance risks, and publish it without coupling the customer storefront to CJ's raw schema or availability. Phase 1 minimizes manual work through exception-based automated approval and publication.
 
 ## Evidence
 
 - Current `sals3-portal` code is the strict source of truth for its API contracts; it is a read-oriented CJ integration today.
-- CJ exposes product detail, variants, categories, comments, freight calculation, ordering, wallet balance, and signed webhook capabilities. It does not provide enough trustworthy data to auto-publish customer-facing products without Sals3 review.
+- CJ exposes product detail, variants, categories, comments, freight calculation, ordering, wallet balance, and signed webhook capabilities. Its raw list data is not sufficient for publication; fresh Sals3-controlled hard gates, transformation, policy evaluation, and evidence are required. Human review is reserved for unresolved exceptions.
 - The canonical build specification separates storefront, BFF/API, Catalog, Pricing, Order, Seller, and worker responsibilities.
 - Raw supplier titles, descriptions, photos, ratings, and comparison prices cannot automatically be represented as original or verified Sals3 content.
 
@@ -127,30 +130,31 @@ Recommended funnel:
 
 ```text
 CJ candidate
-  -> technical eligibility
-  -> compliance and IP screening
-  -> commercial viability
-  -> category/attribute mapping
-  -> editorial and media review
-  -> optional sample order
-  -> publish
+  -> explicit shortlist and full preflight
+  -> technical, compliance, IP, and commercial hard gates
+  -> category/attribute and media validation
+  -> GREEN: auto-publish
+  -> YELLOW: auto-publish with attention
+  -> RED: block or auto-pause; human exception handling where resolvable
 ```
 
 Review counts and sampled ratings may be used as explicitly labelled proxies. The first 20 results or reviews are not a statistically representative catalog sample. Initial thresholds and weights are experimental until calibrated against delivery, refund, and support outcomes.
 
 ### 5. Require truthful publish content
 
-Before publication, require at least:
+Before automatic or manual publication, require at least:
 
-- original Sals3 title and merchandising description;
+- Sals3-controlled truthful title and structured merchandising description;
 - selected Sals3 category and validated required attributes;
 - valid variants, price, inventory state, and destination availability;
-- reviewed media with source/provenance recorded;
+- validated, rights-known media with source/provenance recorded;
 - truthful seller and fulfillment wording;
 - no fabricated rating, sales count, urgency, discount, or comparison price;
 - compliance flags resolved for the intended launch markets.
 
-CJ product detail does expose a `description` and `productImageSet`. Sals3 may use them as source material only where permitted; they do not bypass the editorial and rights review.
+CJ product detail does expose a `description` and `productImageSet`. Sals3 may use them as source material only where permitted; they do not bypass content validation, provenance, rights evidence, or publication gates.
+
+Phase 1 uses a **human-on-exception** policy. Eligible selected imports are auto-approved and auto-published. Non-blocking quality weaknesses publish as **Live · Needs Attention**. Legal, safety, counterfeit/IP, permit, required mapping/data, availability, freight, margin, duplicate, source-status, and media-rights blockers prevent publication or auto-pause the affected live offer. No raw CJ row, score, warning, or client request can override a blocker.
 
 ### 6. Copy media only with a recorded right to use it
 

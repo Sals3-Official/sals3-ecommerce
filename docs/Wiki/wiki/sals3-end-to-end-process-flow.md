@@ -8,6 +8,7 @@ authority: product-alignment
 maintenance: required-after-every-sals3-workflow-change
 review_cadence: every-sals3-implementation-checkpoint
 related:
+  - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-management-bible]]"
   - "[[sals3-implementation-phases]]"
   - "[[sals3-manual-testing-checklist]]"
@@ -34,43 +35,47 @@ Update this note in the same task whenever a verified Sals3 workflow, guardrail,
 
 ```mermaid
 graph TD
-    Step1["1. Discover supplier candidate<br/>(CJ API or approved source)"] --> Step2["2. Eligibility and risk screening<br/>(objective rejects + review signals)"]
-    Step2 --> Step3["3. Map taxonomy, variants, and attributes<br/>(versioned confidence + review)"]
-    Step3 --> Step4["4. Editorial and media review<br/>(original copy + licensed assets)"]
+    Step1["1. Discover supplier candidate<br/>(CJ API or approved source)"] --> Step2["2. Automated eligibility and risk screening<br/>(hard blockers + attention signals)"]
+    Step2 --> Step3["3. Map taxonomy, variants, and attributes<br/>(versioned confidence + exceptions)"]
+    Step3 --> Step4["4. Validate controlled copy and media<br/>(truthful content + rights-known assets)"]
     Step4 --> Step5["5. Destination and contribution pricing<br/>(exact country/quote before payment)"]
-    Step5 --> Step6["6. Publish Sals3 catalog offer<br/>(truthful seller and fulfillment copy)"]
+    Step5 --> Step6["6. Auto-publish eligible Sals3 offer<br/>(attention or auto-pause on exceptions)"]
     Step6 --> Step7["7. Server checkout and verified payment<br/>(idempotent gateway event)"]
     Step7 --> Step8["8. Direct supplier fulfillment<br/>(wallet guard + retry/reconciliation)"]
     Step8 --> Step9["9. Signed tracking and exception sync<br/>(CJ/carrier sources reconciled)"]
     Step9 --> Step10["10. Delivery, refund/return, and settlement<br/>(separate auditable states)"]
 ```
 
-## Dual-track strategy (how Pillar 1 relates to Pillars 2/3)
+## Active platform strategy
 
 ```mermaid
 graph TD
-    Vision["Sals3 Rebuild Vision"] --> TrackA["Track A: Immediate Cash Flow<br/>(Shopify Pop-Up Store - Month 1)"]
-    Vision --> TrackB["Track B: Custom Marketplace Rebuild<br/>(Customer Site & Seller Center - Months 1-4)"]
-
-    TrackA --> Sales["Immediate Revenue & Product Demand Testing"]
-    TrackB --> Platform["High-Converting Customer Site + Enterprise Seller Center"]
+    Vision["Sals3 Rebuild Vision"] --> Customer["Custom Sals3 Customer Site"]
+    Vision --> Seller["Sals3 Seller Center"]
+    Seller --> Catalog["Sals3-managed catalog and operations"]
+    Catalog --> Customer
 ```
+
+The earlier Shopify pop-up track is rejected as an active implementation path. Preserve it only in historical/sample notes; do not build, integrate, or plan migration around Shopify.
 
 ## Curated catalog pipeline (quality gate)
 
 ```mermaid
 graph TD
-    RawFeed["Supplier candidate"] --> Technical{"Objective eligibility passes?"}
-    Technical -- no --> Reject["Reject or hold with reason"]
-    Technical -- yes --> Risk["Compliance, IP, and commercial review signals"]
-    Risk --> Mapping{"Category/variant mapping confident?"}
-    Mapping -- no --> Review["Human mapping review"]
-    Mapping -- yes --> Editorial["Original copy and media-rights review"]
-    Review --> Editorial
-    Editorial --> Quote{"Supported destination and viable landed cost?"}
-    Quote -- no --> Hold["Do not publish for that market"]
-    Quote -- yes --> Publish["Publish Sals3-managed offer"]
+    RawFeed["CJ discovery feed"] --> Shortlist["Explicit shortlist<br/>(candidate record only)"]
+    Shortlist --> Preflight["Fresh full preflight<br/>(detail, variants, stock, freight, reviews, policy)"]
+    Preflight --> Technical{"Hard gates pass?"}
+    Technical -- no --> Reject["Review, hold, or block<br/>with reason and evidence"]
+    Technical -- yes --> Score{"Versioned result?"}
+    Score -- green --> Publish["Auto-create + auto-approve + auto-publish"]
+    Score -- yellow --> Attention["Auto-publish<br/>Live · Needs Attention"]
+    Score -- red --> Reject
+    Publish --> Sync["Supplier and policy sync"]
+    Attention --> Sync
+    Sync -- new blocker --> Pause["Auto-pause affected offer"]
 ```
+
+The exact CJ-listing-to-editor handoff, status surfaces, field ownership, synchronization, attention, and publish gates are defined in [[cj-candidate-to-sals3-product-draft-implementation-spec]]. Aj's existing work is named **CJ Candidate Explorer** and remains the read-only discovery source. Browsing creates no catalog record. Only an explicitly selected candidate with a fresh `PASS` or `PASS_WITH_ATTENTION` preflight may import; phase 1 has no batch import. Green auto-publishes, yellow auto-publishes with attention, and red blocks or auto-pauses. Country eligibility, permits, and counterfeit/IP evidence remain separate from CJ freight availability. The customer storefront reads only the Sals3 published record.
 
 ## Full source
 

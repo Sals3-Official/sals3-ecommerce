@@ -23,16 +23,14 @@ related: ["[[sals3-management-bible]]", "[[sals3-implementation-phases]]", "[[ho
 
 ## Before each manual testing session (template — adjust once a real stack exists)
 
-- [ ] Confirm which environment is running (local dev, staging, Shopify pop-up, production) and its exact URL.
+- [ ] Confirm which environment is running (local dev, staging, or production) and its exact URL.
 - [ ] Record baseline numbers relevant to the test (stock, order count, payout balance) before any mutation-sensitive test.
 - [ ] Use copies of source workbooks/exports; preserve the originals.
 - [ ] Back up the database first if it contains real evidence.
 
-## Pillar 1 — Shopify pop-up store
+## Retired — Shopify pop-up store
 
-- [ ] Storefront loads and the Smart Quality Filter has visibly been applied (no obviously low-quality/junk listings).
-- [ ] Checkout completes end-to-end with at least one real payment method.
-- [ ] Order and customer records are being logged somewhere migratable, not only inside Shopify's own admin.
+- [x] No manual Shopify testing required. The owner rejected Shopify as an active Sals3 path on 2026-08-06; preserve this heading only to explain why older test items disappeared.
 
 ## Pillar 2 — Customer website (partially started)
 
