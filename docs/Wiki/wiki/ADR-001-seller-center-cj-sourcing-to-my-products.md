@@ -77,9 +77,10 @@ Sals3 BFF / server API
 ```
 
 - The browser and client components never receive CJ credentials or call trusted CJ operations directly.
-- `sals3-ecommerce` consumes a stable Sals3 catalog contract rather than depending on CJ's raw schema.
-- `sals3-portal` remains the strict reference for its current code and contracts. Do not add a writable catalog there merely to avoid designing the approved Sals3 catalog boundary.
-- Final repository placement must follow the target BFF/service structure in [[sals3-ux-build-specification]] before code begins.
+- `sals3-ecommerce` consumes a stable Sals3 catalog contract rather than depending on CJ's raw schema. It reads that contract through `sals3-portal`'s protected storefront endpoints and never connects to the catalog database directly.
+- `sals3-portal` remains the strict reference for its current code and contracts.
+- **Revised 2026-08-07 by Bogs:** the writable catalog **is** hosted in `sals3-portal`, together with the Seller Center screens that write to it. This supersedes the earlier line forbidding a writable catalog there. The modular boundary is still required — catalog domain code stays in `src/modules/catalog/`, database access in `src/lib/db/`, and neither depends on React — but the boundary is now enforced by module structure inside one deployable instead of by a network hop between two. Internal writes use Server Actions, so no service-to-service credential exists for them. See [[cj-candidate-to-sals3-product-draft-implementation-spec#3.2 Initial physical placement]] for the recorded rationale and trade-off.
+- Approved persistence stack: PostgreSQL, Drizzle ORM, Drizzle Kit, `postgres.js`, Zod. Prisma was evaluated and rejected; do not reintroduce it.
 
 ### 3. Separate account business model from offer fulfillment mode
 

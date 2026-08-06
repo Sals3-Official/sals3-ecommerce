@@ -70,7 +70,8 @@ related:
 
 ### Incomplete or placeholder
 
-- No production Sals3 catalog database, product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, or return flow exists. A Seller Center UI prototype now exists in `sals3-portal` (see below) - real routes and real permission enforcement, but illustrative data throughout and no order/inventory/finance/payout backend.
+- No product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, or return flow exists. A Seller Center UI prototype now exists in `sals3-portal` (see below) - real routes and real permission enforcement, but illustrative data throughout and no order/inventory/finance/payout backend.
+- A **first real catalog database does now exist**, in `sals3-portal` only: PostgreSQL + Drizzle ORM, three tables (`supplier_candidates`, `idempotency_records`, append-only `audit_events`), covering the CJ candidate **Shortlist** step and nothing more. Verified against the live database. Full preflight, scoring, hard gates, import, publication, and attention state are **not** built - so no `PASS`/`BLOCKED` decision or quality score exists anywhere. See [[cj-candidate-to-sals3-product-draft-implementation-spec#26. Verified implementation status — 2026-08-07]].
 - Current customer product data is CJ-sourced through the protected `sals3-portal` storefront API, not yet a curated Sals3 catalog.
 - `/c/[category]` does not exist.
 - The cart is browser-local only; `/checkout` does not exist.
@@ -80,6 +81,10 @@ related:
 ## Approved catalog and commerce decisions - 2026-08-07
 
 The original all-in-one ADR and later seller/supplier decisions are now split into eight approved, independently auditable ADRs. They are approved direction, not implemented behavior.
+
+> [!IMPORTANT] Persistence stack and placement - decided 2026-08-07 by Bogs
+> Approved stack: **PostgreSQL + Drizzle ORM + Drizzle Kit + `postgres.js` + Zod**. Prisma was evaluated and rejected; do not reintroduce it.
+> The catalog database lives in **`sals3-portal`**, with the Seller Center screens that write to it. This **supersedes** the earlier spec/ADR-001 wording that placed it in `sals3-ecommerce` and forbade a writable catalog in the portal. Internal catalog writes use Server Actions, so no service-to-service credential exists for them; `sals3-ecommerce` still reads through the protected `/api/storefront/*` endpoints. Rationale and trade-off recorded in [[cj-candidate-to-sals3-product-draft-implementation-spec#3.2 Initial physical placement]].
 
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] - CJ is a supplier; Sals3 publishes a curated, separate catalog through a server-side modular boundary. Seller identity is separate from per-offer fulfillment mode. Original copy, rights-aware media, objective hard rejects, reviewable risk signals, and secure employee administration are required.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] - the workbook is adopted as **Sals3 Taxonomy v0** for pilot use, not declared fully production-ready. It contains 1,345 data rows and 29 L1 departments; the 13-row matrix is only a partial summary. Real-product mapping, category-form QA, and provenance/license review remain required.
