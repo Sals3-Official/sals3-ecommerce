@@ -19,6 +19,7 @@ related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
+  - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
@@ -81,6 +82,8 @@ The original all-in-one ADR was fact-checked and split into five approved, indep
 - [[ADR-003-international-availability-shipping-and-pricing]] - Sals3 supports explicitly enabled countries rather than making an unverified worldwide claim. Geo-IP is a hint, regional zones are browse estimates, and checkout requires a fresh destination/postal quote. Phase 1 is USD. Pricing uses landed cost and contribution economics, not a flat markup.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment]] - a verified server-side payment event queues an idempotent direct CJ order flow. CJ wallet balance, retries, outbox/reconciliation, signed webhook verification, `messageId` deduplication, and tracking-source conflict rules are required. CJ documents Delivered and other logistics statuses; an aggregator is optional only after evaluation.
 - [[ADR-005-payment-settlement-refunds-and-cod]] - customer payment, gateway settlement, supplier spend, refunds, and delivery are separate states. COD is disabled/out of phase 1 until courier, remittance, refusal/return, fraud, accounting, and market controls are approved and verified.
+- [[cj-candidate-to-sals3-product-draft-implementation-spec]] - approved implementation contract connecting Aj's existing **CJ Candidate Explorer** (`sals3-portal` `/products`) to the Sals3 Catalog Admin API. Phase 1 is human-on-exception: selected green items auto-publish, yellow items auto-publish as **Live · Needs Attention**, and red items block or auto-pause. It defines persistent status surfaces, deduplicated in-app attention, shortlist/preflight gates, country/permit/IP controls, identity, editor, API, sync, and rollback. No implementation is claimed.
+- Shopify is not part of the active Sals3 plan or CJ import path. Earlier Shopify pop-up-store material is historical/sample context only and must not create implementation tasks.
 
 ## Corrected external facts
 
@@ -92,6 +95,9 @@ As verified against current official CJ documentation on 2026-08-06:
 - CJ uses endpoint-specific daily points plus per-second limits. The current documented base allowance is 50,000 points/day plus transaction-based points; responses include `pointsInfo`.
 - `/product/list` costs more points than common detail/variant/freight operations and does not provide the previously assumed free `totalVerifiedInventory` field in the current route used by the portal.
 - Freight calculation is destination-specific and can use postal code; one representative country cannot prove every country in a region.
+- CJ documents `listedNum` as the number of platform listings, not units sold, orders, or buyers.
+- `GET /product/productComments` provides a total and individual review scores/comments, but the documentation does not expose a direct units-sold field or documented aggregate product-rating field. Treat derived review metrics as CJ supplier-platform evidence, never as Sals3 buyer reviews.
+- A CJ freight result proves neither import legality nor product eligibility. Country/category policy, permits, certifications, and IP rights require separate evidence and review.
 
 References:
 
@@ -119,13 +125,15 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 ## Current build priorities implied by the decisions
 
 1. Resolve the fabricated comparison price defect.
-2. Design the server-side catalog/BFF boundary against the current build spec and portal contract.
-3. Define Product, Variant, Offer, Seller, Media, SupplierProductLink, mapping, and audit entities.
-4. Pilot and validate selected Taxonomy v0 branches against representative CJ products.
-5. Add secure employee administration and a review/publish workflow.
-6. Implement points-aware supplier jobs and exact destination freight quoting.
-7. Build server cart/checkout and payment reconciliation before order fulfillment.
-8. Implement the ADR-004 state machine and recovery controls before sending real CJ orders.
+2. Approve one low-risk category-and-market pilot rule pack with official-source anchors and named compliance/review owners.
+3. Implement shortlist, preflight, hard gates, versioned scoring, attention/exception queues, near-duplicate detection, and WIP limits before any selected CJ candidate can enter auto-publication.
+4. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
+5. Implement Product, Variant, Offer, Seller, Media, SupplierProductLink, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
+6. Pilot and validate selected Taxonomy v0 branches against representative CJ products.
+7. Add secure employee administration, audited auto-publication, Live · Needs Attention, red auto-pause, manual exception, and compliance workflows.
+8. Implement points-aware supplier jobs and exact destination freight quoting.
+9. Build server cart/checkout and payment reconciliation before order fulfillment.
+10. Implement the ADR-004 state machine and recovery controls before sending real CJ orders.
 
 ## Recent session notes
 

@@ -16,20 +16,20 @@ related:
 ---
 
 > [!WARNING] Superseded on 2026-08-06
-> This note preserves the original proposal for history. Do not implement it as written. [[ADR-001-seller-center-cj-sourcing-to-my-products]] now governs catalog import, curation, and architecture; [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] governs taxonomy and mapping. In particular, low-confidence mappings do not auto-publish, the mostly blank examples column is not the primary classifier, and rating/sales thresholds are not treated as verified CJ facts.
+> This note preserves the original proposal for history. Do not implement it as written. [[ADR-001-seller-center-cj-sourcing-to-my-products]] now governs catalog import, curation, and architecture; [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] governs taxonomy and mapping. [[cj-candidate-to-sals3-product-draft-implementation-spec]] supersedes this note's blanket “do not auto-publish” rule with the approved phase-1 human-on-exception model: green selected imports auto-publish, yellow selected imports publish with attention, and red blockers never auto-publish. Low-confidence required mappings remain blockers, the mostly blank examples column is not the primary classifier, and rating/sales thresholds are not treated as verified CJ facts.
 
 # Sals3 — CJ Dropshipping Integration Plan
 
 ## The question this answers
 
-Can the Seller Center's "Add Product" form (see the Shopee seller-center screenshots shared 2026-08-03 — Basic info, Specification, Description, Sales Information/variations, Shipping, Others) auto-populate from CJ Dropshipping data, given the owner has CJ API access? **Yes, technically** — this is exactly the master blueprint's Step 1 ("Supplier Feed Ingestion... fetched via CJ Dropshipping API"). But "auto-populate" hides three real sub-problems this note addresses: which build (Track A or B) needs it, the category/attribute mapping gap, and quality control before publish.
+Can the Seller Center's "Add Product" form (see the Shopee seller-center screenshots shared 2026-08-03 — Basic info, Specification, Description, Sales Information/variations, Shipping, Others) auto-populate from CJ Dropshipping data, given the owner has CJ API access? **Yes, technically.** This historical note explored the old dual-track context, category/attribute mapping gap, and quality control. The current single Sals3 path and exact behavior are now defined by [[cj-candidate-to-sals3-product-draft-implementation-spec]].
 
-## 0. Scope check — Track A vs Track B
+## 0. Historical scope check — former Track A vs active Sals3
 
 Don't build this twice. Two separate things could plausibly want CJ auto-import:
 
-- **Track A (Shopify pop-up store):** Shopify has ready-made CJ Dropshipping apps on its App Store that already do exactly this. If Track A needs CJ products fast, install one — do not custom-build a CJ importer for a temporary storefront.
-- **Track B (the real Sals3 Seller Center):** this is what the shared screenshots and "ang build namin" actually refer to. This plan is for Track B only.
+- **Former Track A (Shopify pop-up store):** retired by the owner's 2026-08-06 no-Shopify decision. Do not install, integrate, or plan migration around Shopify.
+- **Active Sals3 Seller Center:** this is what the shared screenshots and "ang build namin" refer to. Current work is governed by [[cj-candidate-to-sals3-product-draft-implementation-spec]], not this historical proposal.
 
 ## 1. Why "auto-populate" isn't a single step
 

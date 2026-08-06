@@ -23,7 +23,7 @@ related:
 # Sals3 Management Bible
 
 > [!IMPORTANT] Domain authority
-> This note is a navigational distillation, not the primary source. For technical rules, always defer to [[sals3-ux-build-specification]] (Final status, 1 August 2026) — it is the authoritative build spec, and this note must not contradict it. Use [[sals3-implementation-phases]] for the complete task list and build status. Use [[sals3-end-to-end-process-flow]] for the canonical flowchart. [[sals3-master-blueprint]] remains the source for business-strategy narrative (the 3-pillar/dual-track concept) that the build spec's own stated scope excludes ("does not cover the business plan"). Historical session notes do not override these notes.
+> This note is a navigational distillation, not the primary source. For technical rules, always defer to [[sals3-ux-build-specification]] (Final status, 1 August 2026) — it is the authoritative build spec, and this note must not contradict it. Use [[sals3-implementation-phases]] for the complete task list and build status. Use [[sals3-end-to-end-process-flow]] for the canonical flowchart. [[sals3-master-blueprint]] preserves the earlier 3-pillar/Shopify strategy as historical sample material; Shopify is no longer an active Sals3 track. Historical session notes do not override current approved decisions.
 
 > [!WARNING] Still draft at the distillation level
 > `owner_approved: false` here reflects that this summary note has not been line-reviewed as a whole. The build specification and approved ADRs remain the governing sources. Supplier curation is now governed by ADR-001; payment-provider commercial values and market-specific legal/accounting treatment remain open.
@@ -36,20 +36,18 @@ related:
 Sals3 answers:
 
 - what a buyer can browse, order, and pay for (Pillar 2 — Customer Shopping Website);
-- what a seller/supplier can list, fulfill, and get paid for (Pillar 3 — Enterprise Seller Center);
-- how the business keeps selling and generating cash flow while the custom platform is built (Pillar 1 — temporary Shopify pop-up store).
+- what a seller/supplier can list, fulfill, and get paid for (Pillar 3 — Enterprise Seller Center).
 
-## 2. The 3 core pillars
+## 2. The active platform surfaces
 
-1. **Pillar 1 — Shopify pop-up store (Month 1):** interim cash-flow engine. Not the long-term platform.
-2. **Pillar 2 — Custom B2C customer website (`sals3.com`, Months 1-4):** where buyers shop.
-3. **Pillar 3 — Custom Sals3 Enterprise Seller Center (Months 1-4):** where sellers/suppliers work.
+1. **Custom B2C customer website (`sals3.com`):** where buyers shop.
+2. **Custom Sals3 Enterprise Seller Center:** where sellers/suppliers work.
 
-See [[sals3-master-blueprint#2. The 3 Core Pillars of Sals3 Architecture]] for full detail.
+The earlier Shopify pop-up surface is retired. See [[sals3-master-blueprint#2. The 3 Core Pillars of Sals3 Architecture]] only for historical context.
 
 ## 3. Canonical item lifecycle
 
-The current lifecycle (supplier discovery → evidence-based curation → taxonomy mapping → editorial/media review → destination pricing → publish → verified payment → direct fulfillment → tracking/reconciliation → delivery/refund/settlement) is canonical. See [[sals3-end-to-end-process-flow]] for the maintained flowchart.
+The current lifecycle (supplier discovery → automated evidence-based screening → taxonomy mapping → controlled content/media validation → destination pricing → green auto-publication or yellow attention/red exception → verified payment → direct fulfillment → tracking/reconciliation → delivery/refund/settlement) is canonical. See [[sals3-end-to-end-process-flow]] for the maintained flowchart.
 
 ## 4. Non-negotiable boundaries
 

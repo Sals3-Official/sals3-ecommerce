@@ -55,12 +55,12 @@ related:
 | Glass effect on many surfaces | **Rejected** | 2 surfaces only — header and bottom bar. |
 | False urgency / false scarcity | **Rejected** | Forbidden and misleading across markets; apply each market's consumer law, including RA 11967 when applicable. |
 
-## Pillar 1 — Shopify pop-up store
+## Retired — Shopify pop-up store
 
-Not covered by the build spec (out of its stated scope). Still Candidate, per [[sals3-master-blueprint]]:
+Rejected as an active Sals3 implementation path by Bogs on 2026-08-06. Historical references in [[sals3-master-blueprint]] do not create work:
 
-- **Candidate** — Dawn theme deployment with a quality filter applied manually/semi-automated.
-- **Candidate** — Local payment gateway integration on Shopify.
+- **Rejected** — Dawn theme deployment and Shopify product import.
+- **Rejected** — Shopify payment integration and later Shopify-data migration.
 
 ## Pillar 2 — Customer shopping website
 
@@ -69,7 +69,7 @@ Not covered by the build spec (out of its stated scope). Still Candidate, per [[
 - **Approved** — guest checkout and one online prepaid method in the first vertical slice. **COD is deferred/disabled for phase 1** by ADR-005 until its operational and risk gate passes.
 - **Approved** — Show real delivery timing early. Browse estimates must be labelled; after an exact destination quote is confirmed, do not silently increase it. An expired/changed quote requires explicit reconfirmation before payment (ADR-003).
 - **Approved** — Real-time stock guard — build spec section 6.3 makes this concrete, not aspirational.
-- **Approved — evidence-based supplier curation:** objective hard rejects plus reviewable compliance, IP, commercial, mapping, and editorial signals under ADR-001. Rating/review signals are labelled proxies, not verified sales facts.
+- **Approved — evidence-based supplier curation:** human-on-exception operation under ADR-001 and [[cj-candidate-to-sals3-product-draft-implementation-spec]]: green selected imports auto-publish, yellow publishes with attention, and red blocks or auto-pauses. Rating/review signals are labelled proxies, not verified sales facts.
 
 ## Pillar 3 — Enterprise Seller Center
 

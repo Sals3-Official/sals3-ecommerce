@@ -51,10 +51,10 @@ related:
 - [[sals3-ux-build-specification|Sals3 UX and Build Specification]] — **the current canonical technical authority.** Final status, 1 August 2026. Design rules, screen layouts, system architecture, API contracts, price/promotion engine, 8-stage build order, realistic time/effort expectations. Supersedes the earlier sample blueprint on every technical point it covers.
 - [[sals3-management-bible|Sals3 Management Bible]] — canonical behavior, boundaries, and contracts; now points to the build spec for technical detail.
 - [[sals3-implementation-phases|Sals3 Implementation Phases]] — complete task register, phase status, and acceptance gates (rebuilt around the build spec's 8 stages).
-- [[sals3-end-to-end-process-flow|Sals3 End-to-End Process Flow]] — canonical flowchart: 10-step item lifecycle, dual-track strategy, catalog quality gate.
+- [[sals3-end-to-end-process-flow|Sals3 End-to-End Process Flow]] — canonical flowchart: 10-step item lifecycle, custom Sals3 platform surfaces, and human-on-exception catalog quality gate.
 - [[sals3-manual-testing-checklist|Sals3 Manual Testing Checklist]] — resumable owner-verified testing queue, ready for when a codebase exists.
 - [[sals3-feature-landscape-and-expansion-map|Sals3 Feature Landscape and Expansion Map]] — full capability map by pillar and status.
-- [[sals3-master-blueprint|Sals3 Master Blueprint]] — earlier business-strategy document (v4.0, sample status) — 3-pillar/dual-track concept, not superseded, but its technical specifics are now superseded by the build spec.
+- [[sals3-master-blueprint|Sals3 Master Blueprint]] — earlier business-strategy document (v4.0, sample status). Its Shopify/dual-track plan is retired; use it only as historical context.
 - [[universal-category-variation-taxonomy-reference|Universal Category and Variation Taxonomy]] — adopted as **Sals3 Taxonomy v0** for pilot use via ADR-002; 1,345 data records and 29 L1 departments, with real-product QA and provenance/license review still required.
 - [[sals3-cj-dropshipping-integration-plan|CJ Dropshipping Integration Plan]] — superseded historical proposal; ADR-001 and ADR-002 now govern catalog import and category/attribute mapping.
 - [[sals3-portal-code-review-2026-08-06|sals3-portal Code Review]] — seven read-only findings from the validated local portal checkout; findings only, not fixed.
@@ -79,8 +79,12 @@ related:
 
 ## Seller Center
 
-- [[sals3-global-seller-center-ux-blueprint-proposal|Global Seller Center UX Blueprint (v2) Proposal]] — Pillar 3 product-strategy/UX pitch: three funded v1 bets (financial truth, batch fulfillment, rapid listing), a binding v1 cut list, a Tier 1/Tier 2 architecture split with a documented-debt register, and a formal Stage 1 field-research go/no-go gate. Proposed only, not reviewed by AJ or Bogs; no Seller Center code exists yet (Stage 7 of the build order).
+- [[sals3-global-seller-center-ux-blueprint-proposal|Global Seller Center UX Blueprint (v2) Proposal]] — Pillar 3 product-strategy/UX pitch. Proposal status remains unapproved, but its addendum records the owner-directed 7-screen Seller Center UI prototype in `sals3-portal`. Data and product-editor backend remain unimplemented.
+
+## Catalog and supplier pipeline
+
+- [[cj-candidate-to-sals3-product-draft-implementation-spec|CJ Candidate to Sals3 Product Draft Implementation Specification]] — approved handoff from Aj's CJ Candidate Explorer to Sals3. Defines green auto-publication, yellow Live · Needs Attention, red block/auto-pause, shortlist/preflight anti-junk gates, status UI, in-app attention, country/IP controls, API, sync, recovery, and tests; not yet implemented.
 
 ## Domains not started yet
 
-Add sections here as real work begins — e.g. Payments and Payout, Catalog/Supplier Pipeline, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.
+Add sections here as real work begins — e.g. Payments and Payout, Finance/Tax, Design System. Do not pre-create empty domain sections; add one only when its first real note exists, so this index never implies more work is done than actually is.

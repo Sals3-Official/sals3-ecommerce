@@ -7,6 +7,7 @@ status: approved
 authority: architecture-decision
 owner_approved: true
 related:
+  - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[universal-category-variation-taxonomy-reference]]"
   - "[[sals3-cj-dropshipping-integration-plan]]"
