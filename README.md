@@ -116,6 +116,10 @@ method > Google, register a Web App if needed, and add authorized domains such
 as `localhost` and the production host without protocol or port. Do not commit
 service account JSON files or `.env.local`.
 
+`firebase-admin` is pinned to `13.6.0` because `14.2.0` pulled a
+`jwks-rsa`/`jose` combination that crashed the Vercel Node runtime while
+loading `firebase-admin/auth`.
+
 ## Install
 
 Use npm. Do not switch package managers unless the owner approves.
