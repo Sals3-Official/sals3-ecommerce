@@ -2,7 +2,7 @@
 tags: [project/sals3, canonical, domain-spec]
 aliases: [Sals3 Management Bible, Sals3 Master Plan, Sals3 Product Bible]
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-06
 status: canonical
 authority: domain-spec
 owner_approved: false
@@ -13,6 +13,11 @@ related:
   - "[[sals3-feature-landscape-and-expansion-map]]"
   - "[[sals3-master-blueprint]]"
   - "[[hot]]"
+  - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
+  - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
+  - "[[ADR-003-international-availability-shipping-and-pricing]]"
+  - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
+  - "[[ADR-005-payment-settlement-refunds-and-cod]]"
 ---
 
 # Sals3 Management Bible
@@ -21,7 +26,7 @@ related:
 > This note is a navigational distillation, not the primary source. For technical rules, always defer to [[sals3-ux-build-specification]] (Final status, 1 August 2026) — it is the authoritative build spec, and this note must not contradict it. Use [[sals3-implementation-phases]] for the complete task list and build status. Use [[sals3-end-to-end-process-flow]] for the canonical flowchart. [[sals3-master-blueprint]] remains the source for business-strategy narrative (the 3-pillar/dual-track concept) that the build spec's own stated scope excludes ("does not cover the business plan"). Historical session notes do not override these notes.
 
 > [!WARNING] Still draft at the distillation level
-> `owner_approved: false` here reflects that this *summary* note hasn't been line-reviewed, not that its content is sample. As of 2026-08-03, section 4 below reflects real, Final-status rules from [[sals3-ux-build-specification]], not illustrative blueprint numbers — only the *quality-gate/payment-partner specifics inherited from the blueprint* remain genuinely pending Leadership confirmation.
+> `owner_approved: false` here reflects that this summary note has not been line-reviewed as a whole. The build specification and approved ADRs remain the governing sources. Supplier curation is now governed by ADR-001; payment-provider commercial values and market-specific legal/accounting treatment remain open.
 
 > [!IMPORTANT] Living design
 > Follow this specification strictly during implementation once approved. A better owner idea is allowed. Review its impact, update this specification or an architecture decision, then implement it. Do not preserve a weaker design only because it was written first.
@@ -44,17 +49,17 @@ See [[sals3-master-blueprint#2. The 3 Core Pillars of Sals3 Architecture]] for f
 
 ## 3. Canonical item lifecycle
 
-The 10-step lifecycle (supplier ingestion → quality gate → pricing → order → stock check → PO dispatch → white-label packaging → tracking → delivery/review → financial settlement) is canonical. See [[sals3-end-to-end-process-flow]] for the maintained flowchart copy.
+The current lifecycle (supplier discovery → evidence-based curation → taxonomy mapping → editorial/media review → destination pricing → publish → verified payment → direct fulfillment → tracking/reconciliation → delivery/refund/settlement) is canonical. See [[sals3-end-to-end-process-flow]] for the maintained flowchart.
 
 ## 4. Non-negotiable boundaries
 
 ### Confirmed, Final status (from [[sals3-ux-build-specification]] — real rules, not samples)
 
 - **Platform decision:** a new system, not WooCommerce. WooCommerce is the source of the old data only, imported once (build spec section 18).
-- **One final price, everywhere:** the product card, product page, and cart show the same server-calculated total; the price must never increase at checkout (section 5.1). The client never calculates a trusted total — the server issues a versioned quote (section 16.1, 16.4).
+- **Truthful estimates and one confirmed total:** browse estimates are labelled. After destination selection and quote confirmation, every surface uses the same versioned server quote; a change requires explicit reconfirmation before payment. The client never calculates a trusted total (ADR-003; build spec sections 16.1 and 16.4).
 - **Real-time stock guard:** an out-of-stock variation must not remain purchasable (section 6.3, consistent with the earlier blueprint framing).
-- **White-label integrity:** carried forward from [[sals3-master-blueprint]]; the build spec's trust rules (section 9 — seller verification, return policy, merchant identity per RA 11967) reinforce it without contradicting it.
-- **Forbidden patterns:** no false urgency/scarcity, no dark patterns, no forced account before purchase, no pre-selected extra products, no price increase at the last step (section 14) — legally grounded in Philippine RA 11967, not just a UX preference.
+- **Truthful identity and fulfillment:** show the real merchant, fulfillment source, delivery promise, and return terms. Claim branded/white-label fulfillment only when the actual supplier path supports it.
+- **Forbidden patterns:** no false urgency/scarcity, fabricated comparisons, dark patterns, forced account before purchase, pre-selected extras, or silent increase after a confirmed quote. Apply the consumer law for Sals3 and each enabled market; RA 11967 is one market-specific example.
 - **Idempotency and money safety:** checkout and refund require an idempotency key; money is stored as an integer in minor units, never a decimal (section 16.3, 16.4).
 - **Team-size reality:** confirmed team is AJ + Bogs (2 full-stack developers) — build spec section 21.2 puts this at **9 to 14 months to first launch, only with a reduced first release** (section 21.3). Do not plan against a faster timeline without changing the team size first.
 - **Language rule for every user-facing statement in the actual code (confirmed 2026-08-03, "pinakamahalaga" — Bogs's words):** all UI text, button labels, error messages, and instructions must follow **ASD-STE100 Simplified Technical English** (the build spec already mandates this for documents, section 1.4 — this extends it explicitly and permanently to code output) **and must be understandable by an elementary school student.** Treat "would a grade-schooler understand this sentence" as a real, checkable bar for every string that ships, not just a style preference — short sentences, one instruction per sentence, plain active-voice words, no jargon left unexplained.
@@ -70,16 +75,15 @@ The 10-step lifecycle (supplier ingestion → quality gate → pricing → order
 
 ### Still pending Leadership/business confirmation (from [[sals3-master-blueprint]], not covered by the build spec's stated scope)
 
-- **Quality gate:** the rating/sales threshold for curating supplier catalog items (blueprint section 4) — the build spec doesn't address supplier curation at all, only the marketplace's own UI/architecture.
 - **Exact commission rate and confirmed payment partners:** the build spec's promotion/pricing engine (section 17) is a real, buildable mechanism, but the *values* that flow through it (fees, rates, which payment methods) are still business decisions Leadership must confirm.
-- **Tax compliance specifics:** BIR/EOPT invoice and withholding logic must exist before real money moves — the build spec names Philippine RA 11967 compliance as mandatory (sections 9, 14, 17.3, 22) but a Philippine lawyer must still review before launch (build spec's own legal note, section 22).
+- **Market-specific legal/accounting treatment:** confirm incorporation, enabled markets, tax/invoice rules, consumer disclosures, and the qualified advisers for each launch market before real money moves. Older Philippine-specific rules cannot be assumed to cover an Australian-based business or every destination market.
 
 ## 5. What exists now vs. what's still open
 
-As of 2026-08-03, [[sals3-ux-build-specification]] provides a real data model (Money, PriceLine), real API contracts (products list, checkout, error codes), a real component/token system, and a real 8-stage build order — this is no longer undesigned. What remains open:
+As of 2026-08-06, [[sals3-ux-build-specification]] provides the target model, API contracts, component/token system, and 8-stage build order. Approved ADR-001 through ADR-005 refine catalog, taxonomy, pricing/shipping, fulfillment, and payment/COD. What remains open:
 
-- No codebase exists yet; nothing in the spec has been implemented or verified against running code.
-- The specific catalog/category taxonomy the Catalog service will use is only a candidate ([[universal-category-variation-taxonomy-reference]]), not adopted.
+- A real codebase and partial storefront exist, but no production Sals3 catalog, secure admin, checkout, payment, fulfillment, return, or Seller Center workflow is implemented; see [[hot]].
+- [[universal-category-variation-taxonomy-reference]] is adopted as Taxonomy v0 for pilot use, but real-product mapping, form rules, and provenance/license review are not production-validated.
 - Payment gateway, courier, and hosting/CI providers are unconfirmed (per [[team-profile-and-collaboration-preferences]]).
 - The business/marketing plan (pricing strategy, launch marketing) is explicitly out of this bible's and the build spec's scope — that's [[sals3-master-blueprint]] territory, and even there marked sample.
 

@@ -44,7 +44,7 @@ Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build 
 1. No sample commission rate or payment-partner integration becomes real code until Leadership confirms it (see [[sals3-management-bible#4. Non-negotiable boundaries]]).
 2. An out-of-stock variation must never remain purchasable once the catalogue read path exists (build spec section 6.3).
 3. The client never calculates a trusted total — only the server's versioned quote is trusted (build spec section 16.1, 16.4).
-4. BIR/EOPT tax invoice logic and RA 11967 compliance must exist before real money moves (build spec sections 9, 14, 17.3, 22) — and a Philippine lawyer must review before launch.
+4. Market-specific tax, invoice, consumer, and governing-law treatment must be confirmed before real money moves. Older Philippine-specific assumptions do not replace review for an Australian-based business and each enabled destination market.
 5. Follow the build spec's own dependency table (section 20.2) — do not build a screen before tokens/components exist, the cart before pricing exists, the checkout before idempotency exists, etc.
 6. Do not build a parked or candidate item from [[sals3-feature-landscape-and-expansion-map]] without explicit owner approval.
 
@@ -62,7 +62,7 @@ Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build 
 - [x] Second-brain vault created, mirroring the BOGS Dashboard vault structure and governance rules (this vault, 2026-07-31).
 - [x] Existing v4.0 master blueprint, UI mockups, and presentation deck consolidated into this vault.
 - [x] The build spec itself ingested and made canonical (2026-08-03). Team-profile, git sync, and turnover conventions established.
-- [ ] Sals3 Leadership alignment session held; commission rates, payment-partner list, and category structure confirmed or revised.
+- [~] Category direction confirmed as Taxonomy v0 by ADR-002; commission values, payment partners, market configuration, and category-by-category production validation remain open.
 - [?] Confirm whether `sals3.com` domain, hosting, and DNS access are already provisioned.
 
 ### The build spec's own "first 10 working days" (section 20.6) — do these before Stage 1
@@ -80,7 +80,7 @@ Per [[sals3-master-blueprint]]'s dual-track strategy, still valid — the build 
 | 9 | Build the token layer and 3 base components. | A component page |
 | 10 | Present the data model, the risks, and the estimate. | `ADR-001` and a backlog |
 
-As of 2026-08-05, the repository and local verification pipeline exist, and a verified landing-page prototype exists. The old-system discovery work in days 1-7, deployed skeleton, health endpoint, data model, and ADR-001 are still not complete.
+As of 2026-08-06, the repository and local verification pipeline exist, a verified storefront slice exists, and ADR-001 through ADR-005 record the approved catalog/commerce direction. Old-system discovery work in days 1-7, the deployed skeleton/health endpoint, and the production data model remain incomplete.
 
 ## Track B — The 8 stages (build spec section 20.3)
 
@@ -96,11 +96,11 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 ### Stage 2 — Data model and contracts (not started)
 
-- [ ] Define entities: product, variant, seller, category, attribute, buyer, address.
+- [ ] Define entities: product, variant, offer, seller, category, attribute, media, supplier link, buyer, and address per ADR-001/002.
 - [ ] Define the `Money` and `PriceLine` types (build spec section 16.3).
 - [ ] Write API schemas. Generate typed clients.
 - [ ] Write the 5 golden scenarios (build spec section 20.5).
-- [ ] Add `CategoryMappingRule`, `AttributeMappingRule`, `SupplierProductLink` to the entity list — see [[sals3-cj-dropshipping-integration-plan]].
+- [ ] Add versioned `CategoryMappingRule`, `AttributeMappingRule`, `SupplierProductLink`, mapping log/review state, and audit entities per ADR-001/002.
 
 **Exit test:** the team agrees on the entity names, and the schemas generate a client.
 
@@ -122,6 +122,8 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 - [ ] Build the promotion model (build spec section 17.1).
 - [ ] Build the rules engine and quote version.
 - [ ] Build the shipping quote input for the delivery region.
+- [ ] Implement exact destination/postal freight quote validity and contribution-pricing inputs per ADR-003.
+- [ ] Remove fabricated comparison-price behavior or back it with genuine price history.
 - [ ] Run the golden carts — every total exact.
 
 **Exit test:** every golden cart returns the exact expected total, deterministically.
@@ -132,7 +134,7 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 - [ ] Build the checkout page with progressive disclosure. (`/checkout` deliberately not built — `Proceed to Checkout` on `/cart` renders disabled with a plain-English note.)
 - [ ] Build the guest path.
 - [ ] Add the idempotency key and quote version check.
-- [ ] Connect one payment method. Add Cash on Delivery.
+- [ ] Connect one online prepaid method through verified webhooks and reconciliation. **Do not add COD in phase 1**; ADR-005 requires a separate activation gate.
 - [ ] Test a retry, a timeout, a duplicate submission.
 
 **Exit test:** the team places a real paid test order; a network retry does not create a second order.
@@ -152,7 +154,7 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 ### Stage 7 — Seller and administration tools (not started)
 
 - [ ] Build seller sign-up and verification.
-- [ ] Build product upload and approval queue — including the CJ Dropshipping auto-import case, see [[sals3-cj-dropshipping-integration-plan]].
+- [ ] Build secure employee product sourcing, upload, review, and approval queue under ADR-001/002.
 - [ ] Build seller order view and stock control.
 - [ ] Build commission calculation and payout report — `[?]` blocked on confirmed commission/fee structure.
 - [ ] Build dispute and return handling for the seller.
@@ -176,13 +178,13 @@ As of 2026-08-05, the repository and local verification pipeline exist, and a ve
 
 Given the confirmed 2-developer team, the first release must be reduced. Keep these; remove the rest until later:
 
-**Keep:** browse/search/filters/product page; cart, guest checkout, one online payment, Cash on Delivery; order tracking and return request; seller sign-up/product upload/order view/payout report; one correct price with a discount breakdown; support order search and refund.
+**Keep:** browse/search/filters/product page; cart, guest checkout, one online prepaid method; order tracking and return request; seller sign-up/product upload/order view/payout report; one correct price with a truthful breakdown; support order search and refund. **COD is removed from phase 1 by ADR-005.**
 
 **Remove for later:** vector search and recommendations; many payment methods; loyalty points and referral programs; advanced seller analytics; complex campaign types; a full support ticket system.
 
 ## Ongoing / not yet scheduled
 
-- [ ] White-label branding protocol: shipping labels, invoices, tracking portal, centralized support desk.
-- [ ] BIR/EOPT tax compliance automation, RA 11967 legal review before launch.
+- [ ] Truthful fulfillment/branding protocol: supplier capability, shipping labels, invoices, tracking, and centralized support. Do not claim white-label packaging without verified support from the actual fulfillment path.
+- [ ] Confirm incorporation and launch markets; implement and review the required tax, invoice, consumer, and governing-law controls for each market before launch.
 - [C] Learned/automated demand forecasting for supplier reorder — candidate, not approved. Build spec section 21.3 explicitly defers "vector search and recommendations."
 - [C] Automated platform/stock detection for availability — candidate, not approved.

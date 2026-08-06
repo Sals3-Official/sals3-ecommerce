@@ -33,7 +33,11 @@ related:
 - [[sals3-master-blueprint|Sals3 Master Blueprint]] — v4.0 whole-system architecture, commercial strategy, and transition plan (sample/demonstration status pending Leadership alignment).
 - [[vault-governance-and-note-lifecycle|Vault Governance and Note Lifecycle]] — authority order, status vocabulary, and change protocol.
 - [[architecture-decision-template|ADR Template]] — required structure for material design decisions.
-- [[ADR-001-seller-center-cj-sourcing-to-my-products|ADR-001 — CJ Sourcing to "My Products"]] — where a sourced-and-customized CJ product lives, the junk/counterfeit guardrail funnel, category-mapping automation, the SEO required-field gate, and worldwide per-viewer deliverability. Records what CJ's API does and does not expose. Proposed, not yet approved.
+- [[ADR-001-seller-center-cj-sourcing-to-my-products|ADR-001 — Curated CJ Sourcing to My Products]] — approved catalog ownership, curation, seller/offer, architecture, media-rights, and publish-gate decision. Not implemented.
+- [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002 — Taxonomy v0 and CJ Mapping]] — approved pilot adoption and validation rules for the source workbook and real CJ category/attribute mappings.
+- [[ADR-003-international-availability-shipping-and-pricing|ADR-003 — International Shipping and Pricing]] — approved country enablement, exact destination quotes, USD phase 1, contribution pricing, and international SEO rules.
+- [[ADR-004-cj-ordering-tracking-and-fulfillment|ADR-004 — CJ Ordering and Fulfillment]] — approved direct, idempotent CJ order, wallet, webhook, tracking, and reconciliation design.
+- [[ADR-005-payment-settlement-refunds-and-cod|ADR-005 — Payment, Refunds, and COD]] — approved payment/settlement separation; COD disabled for phase 1 pending a separate operational gate.
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
@@ -51,8 +55,9 @@ related:
 - [[sals3-manual-testing-checklist|Sals3 Manual Testing Checklist]] — resumable owner-verified testing queue, ready for when a codebase exists.
 - [[sals3-feature-landscape-and-expansion-map|Sals3 Feature Landscape and Expansion Map]] — full capability map by pillar and status.
 - [[sals3-master-blueprint|Sals3 Master Blueprint]] — earlier business-strategy document (v4.0, sample status) — 3-pillar/dual-track concept, not superseded, but its technical specifics are now superseded by the build spec.
-- [[universal-category-variation-taxonomy-reference|Universal Category and Variation Taxonomy]] — candidate catalog/category reference data, not yet adopted.
-- [[sals3-cj-dropshipping-integration-plan|CJ Dropshipping Integration Plan]] — proposed design for auto-populating the Seller Center Add Product flow from CJ, incl. the category/attribute mapping approach. Proposed, not yet AJ-reviewed.
+- [[universal-category-variation-taxonomy-reference|Universal Category and Variation Taxonomy]] — adopted as **Sals3 Taxonomy v0** for pilot use via ADR-002; 1,345 data records and 29 L1 departments, with real-product QA and provenance/license review still required.
+- [[sals3-cj-dropshipping-integration-plan|CJ Dropshipping Integration Plan]] — superseded historical proposal; ADR-001 and ADR-002 now govern catalog import and category/attribute mapping.
+- [[sals3-portal-code-review-2026-08-06|sals3-portal Code Review]] — seven read-only findings from the validated local portal checkout; findings only, not fixed.
 - [[sals3-marketing-banner-integration-proposal|Marketing Banner Integration Proposal]] — 4 proposed banner placements (home, in-feed ads, PDP, cart). Proposed, not approved; flags a colour-token mismatch against the shipped code and a target-artifact mismatch against the real Next.js app.
 - [[sals3-geo-aeo-seo-strategy-proposal|GEO/AEO/SEO Strategy Proposal]] — proposed Next.js RSC + JSON-LD architecture for search/generative-AI/answer-engine visibility, plus truthful neuromarketing patterns. Route-independent pieces (`robots.txt`, `llms.txt`, global `Organization` JSON-LD) implemented 2026-08-05; the rest needs PDP/cart routes that don't exist yet, see [[parked-ideas-backlog]].
 - `Raw/` — UI mockups, presentation deck, the build spec PDF, and the category taxonomy workbook.

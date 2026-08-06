@@ -31,7 +31,11 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-master-blueprint]] — v4.0 whole-system architecture, commercial strategy, and transition blueprint (sample/demonstration status).
 - [[vault-governance-and-note-lifecycle]] — authority, status, idea, and change rules.
 - [[architecture-decision-template]] — ADR template.
-- [[ADR-001-seller-center-cj-sourcing-to-my-products]] — ADR-001: CJ sourcing → Sals3-owned "My Products" catalogue. Junk/counterfeit guardrail funnel, category-mapping automation (map CJ category paths once, not products), SEO required-field publish gate, worldwide shipping-zone deliverability, and a verified record of CJ API capabilities and limits. Proposed, not yet approved.
+- [[ADR-001-seller-center-cj-sourcing-to-my-products]] — approved curated CJ sourcing, catalog ownership, architecture, seller/offer, content, media-rights, and publish-gate decision; not implemented.
+- [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — approved Taxonomy v0 pilot adoption, CJ mapping, provenance, and production-validation decision.
+- [[ADR-003-international-availability-shipping-and-pricing]] — approved market enablement, destination freight, currency, pricing, and international SEO decision.
+- [[ADR-004-cj-ordering-tracking-and-fulfillment]] — approved direct CJ order, wallet, webhook, tracking, and reconciliation decision.
+- [[ADR-005-payment-settlement-refunds-and-cod]] — approved payment/refund state separation and phase-1 COD exclusion.
 - [[index]] — main map of content.
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
@@ -47,8 +51,9 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-manual-testing-checklist]] — canonical Sals3 manual testing queue.
 - [[sals3-feature-landscape-and-expansion-map]] — canonical Sals3 capability map.
 - [[sals3-master-blueprint]] — Executive Summary, 3 Core Pillars (Shopify pop-up, custom customer site, enterprise Seller Center), 10-step item lifecycle, curated catalog pipeline, Seller Center modules (order management, product management, finance/payout), development timeline, white-label branding protocol. Business-strategy narrative still current; technical specifics superseded by the build spec.
-- [[universal-category-variation-taxonomy-reference]] — candidate catalog/category taxonomy data, not yet adopted.
-- [[sals3-cj-dropshipping-integration-plan]] — proposed CJ auto-import/category-mapping design. Proposed, not yet AJ-reviewed.
+- [[universal-category-variation-taxonomy-reference]] — adopted as Sals3 Taxonomy v0 for pilot use via ADR-002; not yet fully production-validated.
+- [[sals3-cj-dropshipping-integration-plan]] — superseded historical CJ auto-import proposal; ADR-001/002 govern the current direction.
+- [[sals3-portal-code-review-2026-08-06]] — 7 findings from reading `sals3-portal`'s CJ integration/storefront-API code directly (pagination mismatch, unbounded cache, dead reset logic, fabricated total, uncaught `PermissionError`, and two documented/defensive-coded items). Findings only, not fixed.
 - [[sals3-marketing-banner-integration-proposal]] — proposed marketing banner placements (home, in-feed, PDP, cart). Proposed, not yet reviewed; flags objections.
 - [[sals3-geo-aeo-seo-strategy-proposal]] — proposed GEO/AEO/SEO + neuromarketing architecture (Next.js RSC, JSON-LD entity graph, citation-first content, `llms.txt`). Route-independent pieces (`robots.txt`, `llms.txt`, global `Organization` JSON-LD) implemented and verified 2026-08-05; PDP/cart-dependent pieces parked in [[parked-ideas-backlog]].
 
