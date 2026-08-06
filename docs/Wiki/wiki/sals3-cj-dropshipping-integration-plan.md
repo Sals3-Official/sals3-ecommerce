@@ -2,8 +2,8 @@
 tags: [sals3, cj-dropshipping, catalog, integration, plan]
 aliases: [CJ Dropshipping Integration Plan, CJ Import Pipeline, Supplier Category Mapping]
 created: 2026-08-03
-updated: 2026-08-03
-status: proposed
+updated: 2026-08-06
+status: superseded
 authority: technical-design
 owner_approved: false
 related:
@@ -11,10 +11,12 @@ related:
   - "[[sals3-implementation-phases]]"
   - "[[universal-category-variation-taxonomy-reference]]"
   - "[[sals3-master-blueprint]]"
+  - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
+  - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
 ---
 
-> [!WARNING] Status: proposed, not approved
-> This is a technical design proposal in response to a real question (2026-08-03: "dapat yang fields na yan sa add product ay mag auto populate ang details that came from CJ dropshipping... possible?"). AJ has not reviewed this. Treat as a starting draft — confirm or amend before implementing, per [[team-profile-and-collaboration-preferences]]'s "governing rules are amendable, never unilaterally" principle (this isn't a governing rule, but the same confirm-first discipline applies to a real architecture proposal before it becomes implementation).
+> [!WARNING] Superseded on 2026-08-06
+> This note preserves the original proposal for history. Do not implement it as written. [[ADR-001-seller-center-cj-sourcing-to-my-products]] now governs catalog import, curation, and architecture; [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] governs taxonomy and mapping. In particular, low-confidence mappings do not auto-publish, the mostly blank examples column is not the primary classifier, and rating/sales thresholds are not treated as verified CJ facts.
 
 # Sals3 — CJ Dropshipping Integration Plan
 

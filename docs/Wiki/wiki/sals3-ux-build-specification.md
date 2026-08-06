@@ -2,7 +2,7 @@
 tags: [sals3, ux, build-spec, architecture, canonical, final]
 aliases: [Sals3 UX and Build Specification, Sals3 Build Spec, Marketplace Build Specification]
 created: 2026-08-01
-updated: 2026-08-03
+updated: 2026-08-06
 status: canonical
 authority: build-spec
 owner_approved: true
@@ -12,10 +12,16 @@ related:
   - "[[sals3-feature-landscape-and-expansion-map]]"
   - "[[sals3-master-blueprint]]"
   - "[[hot]]"
+  - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
+  - "[[ADR-003-international-availability-shipping-and-pricing]]"
+  - "[[ADR-005-payment-settlement-refunds-and-cod]]"
 ---
 
 > [!NOTE] Provenance
 > Written 1 August 2026, marked `Status: Final`. Found as `E:\Bogs 2nd brain\output\pdf\Sals3_Marketplace_Build_Specification.pdf`, moved into `Raw/` and transcribed here in full on 2026-08-03. Unlike [[sals3-master-blueprint]] (explicitly self-marked sample/demonstration), this document is a real, rigorous, ASD-STE100-style engineering specification with a concrete decision record — treat it as canonical, not aspirational. It does not cover the business/marketing plan (its own stated scope), so it complements rather than replaces the blueprint's business-strategy narrative. The original PDF remains the source of truth for exact formatting; this note is a faithful content transcription for in-vault search, linking, and agent context.
+
+> [!IMPORTANT] Approved amendments, 2026-08-06
+> Approved ADRs outrank this earlier specification where they differ. ADR-001 defines curated CJ catalog ownership and server boundaries. ADR-003 distinguishes clearly labelled browse estimates from destination-confirmed totals and forbids fabricated comparison prices. ADR-005 removes Cash on Delivery from phase 1 until a separate operational activation gate passes.
 
 # Sals3 Marketplace — UI/UX and Build Specification
 
@@ -145,7 +151,7 @@ These are the technical words in this document. Each word has one meaning.
 | Item | Decision | What the team does |
 |---|---|---|
 | New system, not WooCommerce | **ADOPT** | The team builds new services. WooCommerce is the source of the old data only. See section 18. |
-| One final price on every screen | **ADOPT** | One pricing service calculates the item price, the discount, the tax, and the shipping. All screens show the same total. |
+| One confirmed total after destination quote | **ADOPT, amended by ADR-003** | Browse estimates are labelled as estimates. After the destination quote is confirmed, one pricing service calculates the item price, discount, tax, and shipping. A change requires explicit buyer reconfirmation before payment. |
 | Group the cart by fulfillment leg | **ADOPT** | Group by the shipment, not by the seller name. One seller can send two shipments. Each group shows its own shipping fee and its own delivery date. |
 | Semantic design tokens | **ADOPT** | Build the token layer in week one. See section 11. |
 | State preservation on lists | **ADOPT** | The buyer returns from a product page to the same position with the same filters. See section 6.4. |
@@ -184,25 +190,25 @@ Price transparency is the most important advantage of Sals3. Large platforms mak
 
 ### 5.1 The one-number rule
 
-- The system **must** show one final price. This is the amount that the buyer pays.
-- The product card, the product page, and the cart **must** show the same number.
-- The price **must not** increase at the checkout. A price increase at the end destroys trust.
+- The system **must** clearly distinguish a browse estimate from the confirmed amount that the buyer pays.
+- After destination selection and quote confirmation, the product/cart/checkout surfaces must use the same versioned server quote. Do not silently increase it; an expired or changed quote requires explicit reconfirmation before payment.
+- A confirmed quote **must not silently increase** at checkout. If it expires or changes, stop payment and ask the buyer to review and confirm the new total.
 - The server calculates the price. The app **must not** calculate the price.
 
 ### 5.2 The price block on the product page
 
 ```
-P1,240                               <- final price, largest text on the page
-P1,890  -34%                         <- old price with a line through it, grey, smaller
+$21.00                               <- confirmed USD price, largest text on the page
+$32.00  -34%                         <- only when real price history proves both claims
 
 [v] All discounts are applied        <- the buyer taps to open the list
 
-    Item price              P1,890
-    Seller discount          -P450
-    Platform voucher         -P200
-    Shipping             P0 (you save P79)
+    Item price              $32.00
+    Seller discount          -$5.00
+    Platform voucher         -$3.00
+    Shipping                  -$3.00
     ------------------------------
-    You pay                 P1,240
+    You pay                 $21.00
 ```
 
 - The list is closed at the start. The buyer taps to open it.
@@ -325,11 +331,11 @@ The summary chips help the buyer to select the correct variant. This lowers the 
 - Use one page. Show the steps as closed summary rows.
 - Open one step at a time.
 - The buyer **must** be able to buy without an account.
-- Cash on Delivery is a main payment option. Do not put it at the bottom of a long list.
+- Cash on Delivery is disabled in phase 1 under ADR-005. If a later activation record approves it, show it prominently only for eligible orders and markets.
 - Keep the quantity of visible form fields low. Ask only for the data that the delivery needs.
 - Check each field after the buyer leaves the field. Do not show an error during the typing.
 - An error message appears below its field. Use a colour and an icon. Colour alone is not sufficient.
-- The last control shows the exact amount. Example: `Place Order · P1,319`.
+- The last control shows the exact amount. Example: `Place Order · $22.74 USD`.
 
 ### 8.3 Price changes during the checkout
 
@@ -348,7 +354,7 @@ Nobody knows the new Sals3. Every page must answer this question: "Is this shop 
 - Show the return policy on the product page. Do not hide it in a footer link.
 - Show buyer photographs in the reviews. Give them a high position.
 - Show a clear support control on every order screen.
-- Show the merchant identity and the price conditions. Philippine law requires this. See section 22.
+- Show the merchant identity and price conditions. Apply the consumer-disclosure rules for the enabled market. See section 22 and ADR-003.
 
 ## 10. Design rules after the purchase
 
@@ -463,7 +469,7 @@ The typical Sals3 buyer has a low-cost Android telephone and a slow mobile conne
 | A spin-to-win game at the application start | It blocks the buyer goal. |
 | A forced account before the purchase | It stops many buyers. |
 
-These rules also lower the legal risk under Philippine Republic Act 11967.
+These rules lower misleading-practice risk across markets. Apply Philippine Republic Act 11967 when the Philippines is enabled, plus the rules that apply to Sals3 and every other enabled market.
 
 ## 15. Screen layouts
 
@@ -474,7 +480,7 @@ These rules also lower the legal risk under Philippine Republic Act 11967.
 | Header | Search box, delivery region, cart count | It stays at the top. It becomes smaller when the buyer scrolls down. |
 | Category row | 8 to 10 category icons | Horizontal scroll. It shows the true top categories, not a fixed list. |
 | Deal section | Products with a real discount | Show the discount percentage. Show a real end time or no time. |
-| Product grid | 2 columns | Each card shows the photograph, the title, the final price, the old price, the rating, and the shipping cost. |
+| Product grid | 2 columns | Each card shows the photograph, title, destination-aware price/estimate, and shipping information. Show an old price or rating only when real evidence supports it. |
 | List control | Load More control | See section 6.4 for the 6 conditions. |
 | Bottom bar | Home, Categories, Cart, Orders, Account | It stays at the bottom. It uses the glass effect. |
 
@@ -500,8 +506,8 @@ See section 7.2 for the section order. The action bar stays at the bottom.
 | Free-shipping progress | "Add P120 more for free shipping" | The message is true. Otherwise the system hides it. |
 | Savings panel | The applied discounts and the total saved | The buyer taps to see each line. See section 17.3 for the wording rule. |
 | Address row | A closed summary | The buyer taps to open it. Only one row is open. |
-| Payment row | Cash on Delivery, GCash, card | Cash on Delivery is a main option. |
-| Order control | `Place Order · P1,319` | A tap control. It shows the exact amount. It is not a drag control. |
+| Payment row | Approved online prepaid method(s) | Cash on Delivery is absent in phase 1 under ADR-005. |
+| Order control | `Place Order · $22.74 USD` | A tap control. It shows the exact amount. It is not a drag control. |
 
 ## 16. System architecture
 
@@ -564,7 +570,7 @@ docs/
 ### 16.3 Money
 
 ```ts
-export type Money = { amountMinor: number; currency: "PHP" };
+export type Money = { amountMinor: number; currency: string }; // validate an ISO 4217 code
 
 export type PriceLine = {
   kind: "ITEM" | "DISCOUNT" | "SHIPPING" | "TAX" | "FEE";
@@ -574,7 +580,7 @@ export type PriceLine = {
 };
 ```
 
-- Store money as an integer in minor units. P12.34 is `1234`.
+- Store money as an integer in minor units. USD 12.34 is `1234`.
 - Do **not** use a decimal number for money. Decimal arithmetic loses value.
 - Do **not** use a product name or a slug as a financial identifier.
 
@@ -588,7 +594,7 @@ GET /api/v1/products?category=home-lighting&sort=price-asc&cursor=...
     "slug": "solar-wall-lamp",
     "title": "Solar Wall Lamp",
     "seller": { "id": "sel_7", "verified": true },
-    "price": { "amountMinor": 34900, "currency": "PHP" },
+    "price": { "amountMinor": 34900, "currency": "USD" },
     "media": [{ "kind": "IMAGE", "url": "...", "alt": "..." }]
   }],
   "nextCursor": "opaque-token",
@@ -664,7 +670,7 @@ function quoteCart(cart, context, rules): Quote {
 ### 17.3 The wording rule
 
 > [!CAUTION] Legal warning
-> Do not write "Maximum vouchers applied" unless the engine tests every allowed combination. A false savings claim is a misleading statement. Philippine Republic Act 11967 covers this subject.
+> Do not write "Maximum vouchers applied" unless the engine tests every allowed combination. A false savings claim is misleading. Apply the consumer law for Sals3 and each enabled market; Philippine Republic Act 11967 is one market-specific example.
 >
 > Safe text: "These discounts are applied." Then show the list.
 
@@ -847,7 +853,7 @@ These rules stop the most common build mistakes. Follow the order.
 - Build the checkout page with progressive disclosure.
 - Build the guest path.
 - Add the idempotency key and the quote version check.
-- Connect one payment method. Add Cash on Delivery.
+- Connect one online prepaid method with verified webhooks and reconciliation. Do not add Cash on Delivery in phase 1; ADR-005 requires a separate activation record.
 - Test a retry, a timeout, and a duplicate submission.
 
 *Exit test:* the team places a real paid test order, and a network retry does not create a second order.
@@ -906,7 +912,7 @@ The design work runs at the same time as the system work. It does not wait.
 
 Write these 5 scenarios at stage 2. Each scenario has one exact expected result. The team runs them at every stage after stage 4.
 
-1. One seller. Payment by GCash. One product discount and one shipping fee.
+1. One seller. Payment by the approved phase-1 online method. One product discount and one shipping fee.
 2. Two sellers. Two shipments. Two arrival dates. One partial refund.
 3. A guest buys. The buyer creates an account later. The order joins the new account.
 4. Four voucher types: expired, seller-funded, non-stackable, and limited by usage.
@@ -976,7 +982,7 @@ A small team must reduce the first release. Cut the scope, not the quality. Keep
 | Keep in the first release | Remove from the first release |
 |---|---|
 | Browse, search, filters, product page | Vector search and recommendations |
-| Cart, guest checkout, one online payment, Cash on Delivery | Many payment methods |
+| Cart, guest checkout, one online prepaid method | Cash on Delivery and many payment methods |
 | Order tracking and return request | Loyalty points and referral programs |
 | Seller sign-up, product upload, order view, payout report | Advanced seller analytics |
 | One correct price with a discount breakdown | Complex campaign types |
@@ -1062,7 +1068,7 @@ Each source has a reliability level. Use level A for a decision. Do not use leve
 | Level | Source | Use in this document |
 |---|---|---|
 | A | Republic Act 11967, Internet Transactions Act — lawphil.net/statutes/repacts/ra2023/ra_11967_2023.html | Merchant identity, price transparency, consumer redress. Sections 9, 14, 17.3. |
-| A | Philippine Trustmark, Department of Trade and Industry — trustmark.dti.gov.ph | The verification mark on the seller card. |
+| A | Official market regulator or trustmark source | A verification mark may appear only for an enabled market and after direct verification. Philippine DTI Trustmark is a market-specific example, not a global default. |
 | A | W3C Web Content Accessibility Guidelines 2.2 | Contrast ratio, focus mark, drag alternative. Section 13. |
 | A | W3C Design Tokens Format Module — designtokens.org | The 3-level token structure. Section 11.1. |
 | A | EU Digital Services Act | Dark pattern prohibition. It applies to EU users. A lawyer must confirm the effect on Sals3. |
@@ -1070,7 +1076,7 @@ Each source has a reliability level. Use level A for a decision. Do not use leve
 | B | Baymard Institute, checkout research | The causes of an abandoned cart. Use the causes. Do not use the percentages as a promise. |
 
 > [!CAUTION] Legal note
-> This document is not legal advice. A Philippine lawyer must review the compliance sections before the launch.
+> This document is not legal advice. Confirm incorporation and enabled markets, then obtain qualified legal/accounting review for the business and each launch market before accepting real orders.
 
 > [!NOTE] How to use this document
 > Use section 3 as the decision record. Use sections 4 to 15 to design the screens. Use sections 16 to 19 to write the code. Use section 20 for the build order. Use section 21 to set the expectations with the owner.
