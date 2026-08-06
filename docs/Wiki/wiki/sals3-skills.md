@@ -24,6 +24,7 @@ related:
   - "[[sals3-session-2026-08-05-part08-cart-toast-and-ux-audit]]"
   - "[[sals3-session-2026-08-05-part09-ui-ux-pro-audit]]"
   - "[[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]]"
+  - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -364,3 +365,53 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** Skill 22's `.next`-directory-lock lesson (EPERM on `typecheck:clean`/`build`) and this port conflict are two symptoms of the same root condition — more than one Next.js dev process pointed at this one repo directory at the same time — not two unrelated issues. When blocked this way, don't force a workaround that risks the documented HMR-corruption failure mode (skill 22): ask once, state the blocker plainly if it doesn't clear, and fall back to static/automated verification (reasoning about CSS overflow behaviour, unit tests against the real placeholder data) rather than silently claiming a live check that didn't happen.
 
 **Where applied:** Reported the blocked `getBoundingClientRect()` checks as an explicit open item rather than a completed verification step.
+
+### 38. `sals3-portal`'s Airbnb ESLint config flags a bare reference to a `function`-declared handler in a JSX prop, even though the exact same handler as a `const` arrow passes
+
+**Confirmed:** 2026-08-06, building Seller Center's Orders workspace (row selection, print/undo).
+
+**Incident:** `onCheckedChange={toggleAll}`, `onToggle={toggleOne}`, and `onPrint={handlePrint}` — three plain identifier references to handlers declared with `function toggleAll() {...}` inside the component body — all failed `react/jsx-no-bind`. The rule's options (`allowArrowFunctions: true, allowFunctions: false`) look like they only govern *inline* functions written directly at the JSX callsite, but the rule also resolves an identifier back to its declaration and applies the same allow/deny split there: a `function`-declared handler referenced by name is treated the same as writing a `function(){}` inline, and is rejected.
+
+**Lesson:** In this repo's Airbnb config, declare component-body event handlers as `const foo = () => {...}` (arrow function expressions), not `function foo() {...}` (function declarations), even when they're only ever referenced by identifier and never written inline in JSX. This isn't only a JSX-callsite style rule — it's effectively a "how you declare the handler" rule too.
+
+**Where applied:** `OrdersWorkspace.tsx`'s `toggleOne`/`toggleAll`/`handlePrint` converted from `function` declarations to `const` arrow functions; no other change was needed to pass lint.
+
+### 39. A stale-closure bug in an "undo previous value" pattern: reading a second `useState` back inside the same handler that just set it returns the pre-update value, not the one you meant to save
+
+**Confirmed:** 2026-08-06, Seller Center Orders' print/undo action — caught by manual browser testing, not a unit test.
+
+**Incident:** `handlePrint` called `setBeforePrint(new Set(selected))` to snapshot the selection, then cleared `selected`, then built a toast whose `Undo` button read `setSelected(beforePrint ?? new Set())`. Because React state setters don't update the variable in the current closure synchronously, `beforePrint` inside that same `handlePrint` call (and the toast callback defined within it) was still last render's value — `null` on the very first print, or one print behind on every print after that. `Undo` silently restored the wrong selection (usually empty) instead of the one just cleared.
+
+**Lesson:** Don't use a second piece of `useState` to hand a "snapshot of the value I'm about to clear" from one place in an event handler to another callback defined in the same handler call — a plain local `const` captured by the closure is correct and sufficient (each call to the handler gets its own closure with its own snapshot), and doesn't have the one-render-behind problem a state setter does.
+
+**Where applied:** `OrdersWorkspace.tsx`'s `handlePrint`: replaced the `beforePrint` state with `const previousSelection = new Set(selected)` read directly in the toast's `onClick`. Confirmed fixed by dispatching a real DOM click on the toast's Undo button (see skill 40) and reading the resulting selection back.
+
+### 40. When the session's Browser-pane preview can't composite frames, coordinate-based clicks and immediate post-click state reads are unreliable — dispatch a real DOM `.click()` instead
+
+**Confirmed:** 2026-08-06, verifying Seller Center's toast/Undo interactions.
+
+**Incident:** `computer{action:"screenshot"}` and `zoom` both failed with "the Browser pane is not displayed, so the page is not compositing frames." Coordinate- and ref-based `computer{action:"left_click"}` calls on a sonner toast's `Undo` button *reported* success (a resolved coordinate, no tool error) but the click's `onClick` handler never actually fired — confirmed by adding a temporary `console.log` inside the handler and seeing nothing in `read_console_messages` after the click. Dispatching the identical action via `javascript_tool` (`document.querySelector(...).click()`) fired the handler every time and updated state correctly.
+
+**Lesson:** In this environment, a `computer` click reporting a resolved coordinate is not proof the click actually reached the element's event handler — when the Browser pane can't composite (confirmed via a failed `screenshot`/`zoom` call), verify interactive behavior with a real DOM `.click()` via `javascript_tool` instead, and read state back only after that, not immediately inside the same synchronous script (React's state update lands on the next microtask/paint, so read it in a *separate* tool call, optionally after a short `wait`).
+
+**Where applied:** All Orders/Inventory/Payouts toast, undo, and dialog interactions this session were verified via `javascript_tool`-dispatched `.click()`, not `computer` coordinate clicks.
+
+### 41. Playwright's `reuseExistingServer: true` will happily reuse a dev server this session had been manually testing against for a long time — and inherits skill 22's "long-lived dev server serves broken behavior" failure mode from a different mechanism (an external server, not a stray leftover process)
+
+**Confirmed:** 2026-08-06, the first `npx playwright test` run for Seller Center's new E2E specs.
+
+**Incident:** 9 of 26 new tests failed with symptoms that looked like real product bugs: a checkbox `.check()` reporting "did not change its state," text assertions finding nothing, a schedule button's `aria-pressed` not flipping. All 9 were run against port 3001, which `playwright.config.ts`'s `webServer.reuseExistingServer: !process.env.CI` correctly detected as already listening — but the server listening there was this session's own manually-managed browser-preview dev server, which had absorbed a long sequence of Fast-Refresh reloads over many file edits earlier in the same session (the same root condition skill 22 documents for a stray leftover process, here reached via a *different* path: an actively-used preview server, not an orphaned one). Stopping that server and re-running let Playwright start its own fresh instance; 7 of the 9 failures disappeared with no code change. The remaining 2 were genuine test-authoring bugs (ambiguous text locators matching 2 elements), unrelated to the server.
+
+**Lesson:** Before trusting a first E2E run's failures as real bugs, check whether `webServer.reuseExistingServer` picked up a server this same session has been manually poking at for a while (not just a forgotten background process from an earlier session) — the same "many hot-reloads → broken behavior" symptom applies either way. Stop any dev server this session is managing on the test port before running the suite, so Playwright's `webServer` starts a guaranteed-fresh one, and treat failures found *before* doing that as unconfirmed.
+
+**Where applied:** Stopped the session's `sals3-portal-dev` browser-preview server before the final `npx playwright test` / `npm run verify` runs; all 26 tests passed.
+
+### 42. Recording a real, owner-directed partial build against a vault proposal that is explicitly "not approved, not started": add a dated addendum, don't flip the proposal's `status`/`owner_approved` fields
+
+**Confirmed:** 2026-08-06, building Seller Center's first 7 screens after [[sals3-global-seller-center-ux-blueprint-proposal]] had recorded the whole initiative as `status: proposed`, `owner_approved: false`, gated behind Stages 1–6 and a field-research go/no-go.
+
+**Incident:** Bogs gave a direct, in-conversation instruction to build a static-data UI prototype of the proposal's 7 screens into `sals3-portal` — a real owner decision, but one that approves *building this specific UI pass*, not the underlying Pillar-3 product strategy (cost model, field-research validation, launch market) the proposal's `owner_approved: false` is actually gating. Flipping the frontmatter to `approved`/`true` would have overstated what was actually decided; leaving the note completely unchanged would have understated it (a real, first, owner-directed build now exists).
+
+**Lesson:** When an owner approves a concrete slice of a broader not-yet-approved proposal, record that as a dated addendum section on the proposal itself (what was built, what it does and doesn't validate, which of the proposal's own gaps/cuts still apply) rather than changing the proposal's own `status`/`owner_approved` fields — those fields should keep answering "is the strategy this document argues for approved," not "did any code get written referencing it." Cross-link a full session note for the implementation detail.
+
+**Where applied:** Added an "Addendum, 2026-08-06" section to [[sals3-global-seller-center-ux-blueprint-proposal]] with `status`/`owner_approved` left unchanged; the full build record lives in [[sals3-session-2026-08-06-part13-seller-center-first-build]].

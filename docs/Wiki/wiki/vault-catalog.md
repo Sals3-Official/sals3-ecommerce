@@ -40,7 +40,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (33 entries as of 2026-08-06).
+- [[sals3-skills]] — consolidated engineering lessons (42 entries as of 2026-08-06).
 
 ## Business and product
 
@@ -71,10 +71,11 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]] — PR #21 reconciled against PR #22's real backend; three real production bugs found and fixed (CJ rate-limit hammering, deals-section discard, and the actual root cause — a Zod schema rejecting a whole page over one overlong title). PR #21/#24/#25 merged; PR #26 and two `sals3-portal` PRs open.
 - [[sals3-session-2026-08-06-part11-pwa-icons-and-cart-mobile-overflow]] — real Sals3 logo for the iOS/Android "Add to Home Screen" icon; a real mobile cart bug (price column overflow, root-caused to flexbox's `min-width: auto` default). PR #30/#31 open.
 - [[sals3-session-2026-08-06-part12-category-row-tile-band-and-related-products-dedup]] — related-products duplicate-key fix, Stage-2 title-compiler/catalogue-`ProductCard` groundwork (unwired), and a two-pass category row refactor ending in a tile-band restyle per an owner design handoff. Uncommitted.
+- [[sals3-session-2026-08-06-part13-seller-center-first-build]] — first Seller Center code: 7 permission-gated screens built into `sals3-portal`, renamed "Seller Center." Real routes and real server-enforced permissions; illustrative data throughout, no order/inventory/finance/payout backend. A real stale-closure undo bug found and fixed; 5 new engineering lessons recorded ([[sals3-skills]] entries 38–42).
 
 ## Seller Center
 
-- [[sals3-global-seller-center-ux-blueprint-proposal]] — Pillar 3 Global Seller Center UX blueprint (v2): three funded v1 bets, a binding cut list, a Tier 1/Tier 2 architecture split with a debt register, and a formal Stage 1 research go/no-go gate. Proposed, not yet reviewed; no Seller Center code exists.
+- [[sals3-global-seller-center-ux-blueprint-proposal]] — Pillar 3 Global Seller Center UX blueprint (v2): three funded v1 bets, a binding cut list, a Tier 1/Tier 2 architecture split with a debt register, and a formal Stage 1 research go/no-go gate. Proposed, not yet reviewed by AJ/Bogs as a product strategy — but see its 2026-08-06 addendum: a real, owner-directed 7-screen UI prototype now exists in `sals3-portal` (illustrative data, no backend), described fully in [[sals3-session-2026-08-06-part13-seller-center-first-build]].
 
 ## Raw reference assets
 

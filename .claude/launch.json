@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "sals3-portal-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "E:\\sals3-portal", "run", "dev"],
+      "port": 3001
     }
   ]
 }
