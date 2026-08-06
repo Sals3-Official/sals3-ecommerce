@@ -2,7 +2,7 @@
 tags: [sals3, cj-dropshipping, catalog, integration, plan]
 aliases: [CJ Dropshipping Integration Plan, CJ Import Pipeline, Supplier Category Mapping]
 created: 2026-08-03
-updated: 2026-08-06
+updated: 2026-08-07
 status: superseded
 authority: technical-design
 owner_approved: false
@@ -13,12 +13,16 @@ related:
   - "[[sals3-master-blueprint]]"
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
 ---
 
 > [!WARNING] Superseded on 2026-08-06
 > This note preserves the original proposal for history. Do not implement it as written. [[ADR-001-seller-center-cj-sourcing-to-my-products]] now governs catalog import, curation, and architecture; [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] governs taxonomy and mapping. [[cj-candidate-to-sals3-product-draft-implementation-spec]] supersedes this note's blanket “do not auto-publish” rule with the approved phase-1 human-on-exception model: green selected imports auto-publish, yellow selected imports publish with attention, and red blockers never auto-publish. Low-confidence required mappings remain blockers, the mostly blank examples column is not the primary classifier, and rating/sales thresholds are not treated as verified CJ facts.
 
 # Sals3 — CJ Dropshipping Integration Plan
+
+> [!IMPORTANT] Newer account and provider decision
+> [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] supersedes this historical note's seller-type and `SupplierProductLink` assumptions. Use separate immutable Retailer/Dropshipper accounts plus tenant-owned `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding` records.
 
 ## The question this answers
 
