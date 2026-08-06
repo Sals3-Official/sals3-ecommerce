@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import GuestAuthLinks from '@/components/layout/GuestAuthLinks';
 import {
   GUEST_UTILITY_LEFT_LINKS,
   GUEST_UTILITY_RIGHT_LINKS,
@@ -32,18 +33,7 @@ export default function GuestUtilityBar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/login"
-            className="font-bold text-ink transition-colors duration-200 hover:text-brand-600 hover:underline"
-          >
-            Log In
-          </Link>
-          <Link
-            href="/signup"
-            className="font-bold text-brand-600 transition-colors duration-200 hover:text-brand-900 hover:underline"
-          >
-            Sign Up
-          </Link>
+          <GuestAuthLinks />
         </nav>
       </div>
     </div>

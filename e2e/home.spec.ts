@@ -48,3 +48,51 @@ homeViewports.forEach((viewport) => {
       .toBe(true);
   });
 });
+
+test('opens the signed-in account menu and logs out', async ({ page }) => {
+  let didDeleteSession = false;
+
+  await page.route('**/api/auth/session', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      didDeleteSession = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'signed-out' }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        didDeleteSession
+          ? { signedIn: false }
+          : { signedIn: true, firstName: 'AJ' },
+      ),
+    });
+  });
+  await page.route('**/api/auth/csrf', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ csrfToken: 'x'.repeat(43) }),
+    });
+  });
+
+  await page.goto('/');
+  const accountMenu = page.getByRole('button', { name: /aj account menu/i });
+
+  await expect(accountMenu).toBeVisible();
+  await expect(page.getByRole('link', { name: /^log in$/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^sign up$/i })).toHaveCount(0);
+  await accountMenu.click();
+  await expect(page.getByRole('menu', { name: /account menu/i })).toBeVisible();
+
+  await page.getByRole('menuitem', { name: /log out/i }).click();
+
+  await expect(page.getByRole('link', { name: /^log in$/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /my account/i })).toHaveCount(0);
+  expect(didDeleteSession).toBe(true);
+});

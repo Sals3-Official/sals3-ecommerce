@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-jakarta);
   --font-display: var(--font-outfit);
+  --font-auth: var(--font-instrument);
 
   /* Primitive */
   --color-brand-900: #0b2c4d;
@@ -29,6 +30,31 @@
   --color-surface-sunken-strong: #e9edf0;
   --color-surface-dark: #1e293b;
   --color-deal: var(--color-red-600);
+
+  /*
+   * Auth surface (login). This screen is a standalone full-bleed split layout
+   * with its own approved palette, so it does not reuse the marketplace
+   * brand/ink scale. --color-auth-muted is deliberately one step darker than
+   * the source design's #6b7a84: that value measures 4.43:1 on white and the
+   * text using it is 13px, below the 4.5:1 minimum. #64737d measures 4.89:1
+   * and is visually indistinguishable at that size.
+   */
+  --color-auth-ink: #04151f;
+  --color-auth-label: #253742;
+  --color-auth-body: #46565f;
+  --color-auth-muted: #64737d;
+  --color-auth-navy: #003460;
+  --color-auth-navy-dark: #002a4e;
+  --color-auth-azure: #0072ab;
+  --color-auth-field: #c3ccd2;
+  --color-auth-divider: #dde3e7;
+  --color-auth-hero: #001f3a;
+  --color-auth-google-border: #747775;
+  --color-auth-google-border-hover: #46565f;
+  --color-auth-google-ink: #1f1f1f;
+  --color-auth-tint: #eef4f6;
+  --color-auth-tint-soft: #f6f8f9;
+  --color-auth-tint-strong: #eef2f4;
 
   /* On-dark (footer) */
   --color-footer-ink: #e6edf3;
@@ -84,5 +110,29 @@ a {
     var(--color-brand-900),
     var(--color-brand-600) 60%,
     var(--color-teal-500)
+  );
+}
+
+/*
+ * Login hero overlays. Two stacked non-opaque layers over the photo: a bottom
+ * scrim that carries the headline contrast, and a cool glow that ties the photo
+ * to the brand navy. Kept in CSS rather than Tailwind arbitrary values because
+ * multi-stop gradients are unreadable as utility strings.
+ */
+.auth-hero-scrim {
+  background: linear-gradient(
+    to top,
+    rgb(0 20 38 / 0.95) 0%,
+    rgb(0 20 38 / 0.74) 28%,
+    rgb(0 26 48 / 0.2) 62%,
+    rgb(0 26 48 / 0.05) 100%
+  );
+}
+
+.auth-hero-glow {
+  background: radial-gradient(
+    120% 90% at 0% 30%,
+    rgb(0 114 171 / 0.38) 0%,
+    rgb(0 31 58 / 0) 55%
   );
 }

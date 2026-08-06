@@ -4,9 +4,8 @@ export type GuestUtilityLink = {
 };
 
 /**
- * Shown above the main header row while no account is signed in. Sals3 has
- * no auth/session system yet (see hot.md), so this always renders the
- * signed-out state — swap for a real check once sign-in exists.
+ * Shown above the main header row. Account-specific links are now rendered by
+ * `GuestAuthLinks` only after the verified server session reports signed out.
  */
 export const GUEST_UTILITY_LEFT_LINKS: GuestUtilityLink[] = [
   { label: 'Feedback', href: '/contact' },
