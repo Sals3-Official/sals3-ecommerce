@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: canonical
 authority: navigation
 owner_approved: true
@@ -38,6 +38,9 @@ related:
 - [[ADR-003-international-availability-shipping-and-pricing|ADR-003 — International Shipping and Pricing]] — approved country enablement, exact destination quotes, USD phase 1, contribution pricing, and international SEO rules.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment|ADR-004 — CJ Ordering and Fulfillment]] — approved direct, idempotent CJ order, wallet, webhook, tracking, and reconciliation design.
 - [[ADR-005-payment-settlement-refunds-and-cod|ADR-005 — Payment, Refunds, and COD]] — approved payment/settlement separation; COD disabled for phase 1 pending a separate operational gate.
+- [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections|ADR-006 — Seller Registration and Supplier Connections]] — approved separate Retailer/Dropshipper accounts, immutable business model, tenant-owned supplier connections, CJ adapter migration, and future-provider boundary; not implemented.
+- [[ADR-007-supplier-change-attention-and-immutable-order-snapshots|ADR-007 — Supplier Changes and Immutable Orders]] — approved anomaly auto-protection, actionable in-app/push/email attention, active-order continuity, controlled media locking, and immutable ordered-item snapshots; not implemented.
+- [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders|ADR-008 — Supplier Apps, Commission, and Seller-Funded Orders]] — approved Shopify-like curated Supplier Apps, seller-owned provider accounts/wallets, separate customer/supplier money rails, Sals3 commission mechanism, and CJ funding-hold behavior; exact rates/providers pending.
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
@@ -83,7 +86,7 @@ related:
 
 ## Catalog and supplier pipeline
 
-- [[cj-candidate-to-sals3-product-draft-implementation-spec|CJ Candidate to Sals3 Product Draft Implementation Specification]] — approved handoff from Aj's CJ Candidate Explorer to Sals3. Defines green auto-publication, yellow Live · Needs Attention, red block/auto-pause, shortlist/preflight anti-junk gates, status UI, in-app attention, country/IP controls, API, sync, recovery, and tests; not yet implemented.
+- [[cj-candidate-to-sals3-product-draft-implementation-spec|CJ Candidate to Sals3 Product Draft Implementation Specification]] — approved handoff from Aj's CJ Candidate Explorer through a tenant-owned healthy CJ connection to Sals3. Defines anti-junk gates, auto-publication/attention, customization, identity, API, sync, recovery, and tests; not yet implemented.
 
 ## Domains not started yet
 

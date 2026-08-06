@@ -2,7 +2,7 @@
 tags: [sals3, adr, seller-center, cj-dropshipping, catalog, architecture]
 aliases: [ADR-001, CJ Sourcing to My Products, My Products Import Flow]
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -12,6 +12,8 @@ related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
+  - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[sals3-cj-dropshipping-integration-plan]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
   - "[[sals3-ux-build-specification]]"
@@ -79,17 +81,19 @@ Sals3 BFF / server API
 - `sals3-portal` remains the strict reference for its current code and contracts. Do not add a writable catalog there merely to avoid designing the approved Sals3 catalog boundary.
 - Final repository placement must follow the target BFF/service structure in [[sals3-ux-build-specification]] before code begins.
 
-### 3. Separate seller identity from fulfillment mode
+### 3. Separate account business model from offer fulfillment mode
 
-A seller may use more than one fulfillment source. Do not encode fulfillment as a permanent seller type.
+Each `SellerAccount` has one immutable business model: `RETAILER` or `DROPSHIPPER`. Retail and dropshipping require separate registrations, accounts, and logins, even when owned by the same person or business. There is no shared-login organization switcher or business-model toggle in phase 1. A Dropshipper account may use multiple approved supplier providers through connections it owns; this does not change its account business model. See [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]].
 
 Minimum logical model:
 
 ```text
-Seller
+SellerAccount
+- id
 - legal identity
 - display identity
 - merchant-of-record role
+- businessModel: RETAILER | DROPSHIPPER
 
 Product
 - Sals3 catalog identity
@@ -100,10 +104,10 @@ Variant
 - product option combination and sellable identity
 
 Offer
-- sellerId
+- sellerAccountId
 - variantId
 - fulfillmentMode
-- supplierId / supplierProductId / supplierVariantId
+- offerSupplierBindingId when supplier-fulfilled
 - warehouse and cost state
 - availability state
 ```
@@ -156,14 +160,16 @@ CJ product detail does expose a `description` and `productImageSet`. Sals3 may u
 
 Phase 1 uses a **human-on-exception** policy. Eligible selected imports are auto-approved and auto-published. Non-blocking quality weaknesses publish as **Live · Needs Attention**. Legal, safety, counterfeit/IP, permit, required mapping/data, availability, freight, margin, duplicate, source-status, and media-rights blockers prevent publication or auto-pause the affected live offer. No raw CJ row, score, warning, or client request can override a blocker.
 
+After publication or purchase, ADR-007 governs supplier changes. Pause future sales at the smallest affected scope, notify the seller through the canonical attention case and required severity channels, and preserve immutable accepted-order product, variant, price, terms, media, and supplier-binding snapshots.
+
 ### 6. Copy media only with a recorded right to use it
 
 Approved product media should be copied to controlled Sals3 storage for availability, performance, transformation, and auditability. Hosting the file does not establish copyright ownership. Store the supplier/source URL, import date, rights basis or supplier terms reference, checksum, and review status.
 
 ### 7. Phase the rollout
 
-1. Build the logical catalog, seller, variant, offer, media, and supplier-link model.
-2. Add secure single-tenant employee administration with audit logging and least privilege.
+1. Build the logical catalog, seller-account, variant, offer, media, provider-reference, supplier-connection, and offer-binding model.
+2. Add real authentication, separate Retailer/Dropshipper registration, immutable account entitlements, tenant isolation, encrypted secret references, audit logging, and least privilege.
 3. Pilot a small set of low-regulatory-risk categories.
 4. Validate category mapping and quality signals against real CJ products.
 5. Add pricing and destination availability from [[ADR-003-international-availability-shipping-and-pricing]].

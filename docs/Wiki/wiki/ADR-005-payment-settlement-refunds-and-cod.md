@@ -2,7 +2,7 @@
 tags: [sals3, adr, payments, settlement, refunds, cod, risk]
 aliases: [ADR-005, Payment Settlement and COD, COD Decision]
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -10,6 +10,7 @@ related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
   - "[[parked-ideas-backlog]]"
+  - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
 ---
 
 # ADR-005 - Payment settlement, refunds, and Cash on Delivery
@@ -71,7 +72,9 @@ Possible future controls such as partial deposit, order cap, or restricted zones
 
 ### 5. Keep commission separate
 
-Single-seller supplier costs, payment fees, tax, refunds, and fulfillment liabilities are not seller commission. Third-party commission and payout remain parked until a real third-party seller and approved commercial values exist.
+Supplier costs, payment fees, tax, refunds, reserves, chargebacks, and fulfillment liabilities are not seller commission. ADR-008 approves the mechanism for real Dropshipper accounts: Sals3 records a transparent marketplace commission on the Sals3 customer-sale rail, while the seller separately funds its own supplier account/order. Exact commission rate, fee basis, payment provider, responsible party for processing/refund costs, reserve, and payout schedule remain pending explicit commercial and legal/accounting approval.
+
+Never ask CJ or another supplier to calculate or release the Sals3 seller payout. Never treat a supplier wallet as the Sals3 seller balance. Use separate immutable ledger entries and reversals for commission, seller payable, supplier spend, payment fees, reserves, refunds, and chargebacks.
 
 ## Verification required
 

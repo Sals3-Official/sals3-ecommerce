@@ -2,7 +2,7 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: canonical
 authority: navigation
 owner_approved: true
@@ -36,6 +36,9 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-003-international-availability-shipping-and-pricing]] — approved market enablement, destination freight, currency, pricing, and international SEO decision.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment]] — approved direct CJ order, wallet, webhook, tracking, and reconciliation decision.
 - [[ADR-005-payment-settlement-refunds-and-cod]] — approved payment/refund state separation and phase-1 COD exclusion.
+- [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] — approved separate business-model registrations/accounts, tenant-owned supplier connections, CJ adapter migration, and controlled multi-provider architecture.
+- [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] — approved supplier delist/stock/price anomaly handling, multi-channel seller attention, active-order continuity, and immutable ordered-item/media snapshots.
+- [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] — approved curated installable Supplier Apps, tenant-owned provider accounts/wallets, separate payout/supplier-payment rails, commission mechanism, and insufficient-funding controls.
 - [[index]] — main map of content.
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
@@ -79,7 +82,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 ## Catalog and supplier pipeline
 
-- [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract: green auto-publish, yellow Live · Needs Attention, red block/auto-pause, persistent status UI, anti-junk/counterfeit/country gates, exception handling, customization, and supplier sync; not yet implemented.
+- [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract through an owned healthy connection: green auto-publish, yellow attention, red block/auto-pause, anti-junk/country/IP gates, customization, and supplier sync; not yet implemented.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — Taxonomy v0 and category/attribute mapping decision.
 - [[ADR-003-international-availability-shipping-and-pricing]] — market, freight, and contribution-pricing decision used by publish validation.

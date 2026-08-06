@@ -2,7 +2,7 @@
 tags: [sals3, process-flow, flowchart, lifecycle]
 aliases: [Sals3 End-to-End Flow, Sals3 Process Flowchart]
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: canonical
 authority: product-alignment
 maintenance: required-after-every-sals3-workflow-change
@@ -17,6 +17,9 @@ related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
+  - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
+  - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
 ---
 
 # Sals3 — End-to-End Process Flow
@@ -35,13 +38,16 @@ Update this note in the same task whenever a verified Sals3 workflow, guardrail,
 
 ```mermaid
 graph TD
-    Step1["1. Discover supplier candidate<br/>(CJ API or approved source)"] --> Step2["2. Automated eligibility and risk screening<br/>(hard blockers + attention signals)"]
+    Account["Separate Dropshipper registration<br/>(immutable account business model)"] --> Connect["Connect an approved supplier<br/>(healthy tenant-owned connection)"]
+    Connect --> Step1["1. Discover supplier candidate<br/>(CJ API or approved source)"]
+    Step1 --> Step2["2. Automated eligibility and risk screening<br/>(hard blockers + attention signals)"]
     Step2 --> Step3["3. Map taxonomy, variants, and attributes<br/>(versioned confidence + exceptions)"]
     Step3 --> Step4["4. Validate controlled copy and media<br/>(truthful content + rights-known assets)"]
     Step4 --> Step5["5. Destination and contribution pricing<br/>(exact country/quote before payment)"]
     Step5 --> Step6["6. Auto-publish eligible Sals3 offer<br/>(attention or auto-pause on exceptions)"]
     Step6 --> Step7["7. Server checkout and verified payment<br/>(idempotent gateway event)"]
-    Step7 --> Step8["8. Direct supplier fulfillment<br/>(wallet guard + retry/reconciliation)"]
+    Step7 --> Lock["Immutable ordered-item snapshot<br/>(revision, variant, price, media, supplier binding)"]
+    Lock --> Step8["8. Direct supplier fulfillment<br/>(wallet guard + retry/reconciliation)"]
     Step8 --> Step9["9. Signed tracking and exception sync<br/>(CJ/carrier sources reconciled)"]
     Step9 --> Step10["10. Delivery, refund/return, and settlement<br/>(separate auditable states)"]
 ```
@@ -72,10 +78,15 @@ graph TD
     Score -- red --> Reject
     Publish --> Sync["Supplier and policy sync"]
     Attention --> Sync
-    Sync -- new blocker --> Pause["Auto-pause affected offer"]
+    Sync -- new blocker --> Pause["Auto-pause affected variant/offer/market"]
+    Pause --> Notify["Clickable seller attention<br/>(in-app + severity-based push/email)"]
 ```
 
-The exact CJ-listing-to-editor handoff, status surfaces, field ownership, synchronization, attention, and publish gates are defined in [[cj-candidate-to-sals3-product-draft-implementation-spec]]. Aj's existing work is named **CJ Candidate Explorer** and remains the read-only discovery source. Browsing creates no catalog record. Only an explicitly selected candidate with a fresh `PASS` or `PASS_WITH_ATTENTION` preflight may import; phase 1 has no batch import. Green auto-publishes, yellow auto-publishes with attention, and red blocks or auto-pauses. Country eligibility, permits, and counterfeit/IP evidence remain separate from CJ freight availability. The customer storefront reads only the Sals3 published record.
+The exact CJ-listing-to-editor handoff, status surfaces, field ownership, synchronization, attention, and publish gates are defined in [[cj-candidate-to-sals3-product-draft-implementation-spec]]. [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] governs the prerequisite: a separately registered Dropshipper account must own a healthy approved supplier connection. Aj's existing work is named **CJ Candidate Explorer** and becomes the CJ provider adapter's discovery surface. Browsing creates no catalog record. Only an explicitly selected candidate with a fresh `PASS` or `PASS_WITH_ATTENTION` preflight may import; phase 1 has no batch import. Green auto-publishes, yellow auto-publishes with attention, and red blocks or auto-pauses. Country eligibility, permits, and counterfeit/IP evidence remain separate from freight availability. The customer storefront reads only the Sals3 published record.
+
+[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] governs changes after publication and purchase. Supplier delist, stock loss, price spike, freight loss, or source edits protect future checkout and open actionable seller attention. An accepted order remains active and renders its immutable ordered-item/media snapshot; later product changes never rewrite it. Existing fulfillment continues through its exact committed supplier binding unless the order enters an explicit exception.
+
+[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] separates installable provider access and money movement. A Dropshipper connects and funds its own CJ/approved-provider account. The Sals3 customer-payment rail records commission and seller payable; the supplier rail charges the seller's own provider wallet/payment method. No ready funding path blocks new automatic-fulfillment checkout, while an accepted order remains active in `AWAITING_SUPPLIER_FUNDS` with actionable recovery.
 
 ## Full source
 

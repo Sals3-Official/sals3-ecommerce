@@ -2,7 +2,7 @@
 tags: [sals3, cj-dropshipping, catalog, product-editor, seller-center, implementation-spec]
 aliases: [CJ Candidate Explorer to Sals3, CJ Candidate to Sals3 Draft, CJ Product Customization Handoff, Product Editor Handoff Spec]
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 status: approved
 authority: implementation-spec
 owner_approved: true
@@ -11,6 +11,9 @@ related:
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
+  - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
+  - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
+  - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
   - "[[sals3-end-to-end-process-flow]]"
   - "[[sals3-implementation-phases]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
@@ -21,6 +24,8 @@ related:
 
 > [!IMPORTANT] Approved contract; not implemented
 > Bogs approved resolving the CJ-to-product-editor design blockers and the phase-1 exception-based auto-publication model on 2026-08-06. This note defines the implementation contract. It does not claim that the database, APIs, editor, worker, notification system, or publish flow exists.
+>
+> [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] adds the approved seller-account and provider boundary: this flow is available only to a Dropshipper account through a healthy supplier connection it owns. Its registration, tenancy, connection, and provider-identity rules override older single-tenant assumptions in this note.
 
 ## 1. Problem
 
@@ -96,7 +101,7 @@ The current development-role switch is not production authentication. Publishing
 
 ### 4.2 Duplicate import
 
-- `SupplierProductLink` has a unique key on `(supplier, externalProductId)`.
+- `ProviderProductReference` has a unique key on `(supplierProviderId, externalProductId)`.
 - Re-importing the same CJ `pid` returns the existing Sals3 product or active draft. It does not create a duplicate product.
 - If the product exists but the requesting seller has no offer, the flow creates a draft offer for that seller after authorization.
 - Different CJ `pid` values are not auto-merged. A similarity check can flag a possible duplicate for review.
@@ -108,8 +113,10 @@ Every import request requires an `Idempotency-Key`. The same key and same payloa
 
 - `Product.slug` is unique among active public products. Historical slugs remain reserved for redirects.
 - `Variant.sals3Sku` is globally unique and immutable after first publication.
-- `SupplierVariantLink` is unique on `(supplierProductLinkId, externalVariantId)`.
-- `Offer` is unique on `(sellerId, variantId, marketCode, fulfillmentMode)`.
+- `ProviderVariantReference` is unique on `(providerProductReferenceId, externalVariantId)`.
+- `SupplierConnection` is unique on `(sellerAccountId, supplierProviderId)` in phase 1.
+- `Offer` is unique on `(sellerAccountId, variantId, marketCode, fulfillmentMode)`.
+- `OfferSupplierBinding` binds one exact offer to the supplier connection and provider variant used to fulfill it.
 - One variant cannot contain the same option twice.
 - One product cannot contain two active variants with the same normalized option combination.
 - Idempotency records store actor, operation, request hash, result reference, and expiry policy.
@@ -162,7 +169,7 @@ Variant
 
 Offer
 - id
-- sellerId
+- sellerAccountId
 - variantId
 - marketCode
 - fulfillmentMode
@@ -179,10 +186,24 @@ Offer
 ### 5.2 Supplier and synchronization
 
 ```text
-SupplierProductLink
+SupplierProvider
+- id
+- code: CJ_DROPSHIPPING | future approved provider code
+- adapterKey
+- status
+
+SupplierConnection
+- id
+- sellerAccountId
+- supplierProviderId
+- status: NOT_CONNECTED | AUTHORIZING | CONNECTED | DEGRADED | REAUTH_REQUIRED | DISCONNECTED | REVOKED
+- encryptedCredentialReference
+- connectedAt / lastVerifiedAt
+
+ProviderProductReference
 - id
 - productId
-- supplier: CJ_DROPSHIPPING
+- supplierProviderId
 - externalProductId: CJ pid
 - sourceStatus
 - snapshotChecksum
@@ -190,9 +211,9 @@ SupplierProductLink
 - lastSuccessfulSyncAt
 - syncState
 
-SupplierVariantLink
+ProviderVariantReference
 - id
-- supplierProductLinkId
+- providerProductReferenceId
 - variantId
 - externalVariantId: CJ vid
 - externalSku
@@ -203,7 +224,8 @@ SupplierVariantLink
 
 SupplierSnapshot
 - id
-- supplierProductLinkId
+- supplierConnectionId
+- providerProductReferenceId
 - schemaVersion
 - checksum
 - capturedAt
@@ -211,6 +233,13 @@ SupplierSnapshot
 - variantReferences
 - inventoryReference
 - redactedPayloadReference
+
+OfferSupplierBinding
+- id
+- offerId
+- supplierConnectionId
+- providerVariantReferenceId
+- state
 ```
 
 Store raw supplier payloads only in protected storage. Redact secrets and unnecessary personal data. Keep schema version, checksum, request ID, and capture time for diagnosis.
@@ -221,9 +250,9 @@ Store raw supplier payloads only in protected storage. Redact secrets and unnece
 CatalogImportJob
 SupplierCandidate
 - id
-- supplier
+- supplierConnectionId
 - externalProductId
-- intendedSellerId
+- intendedSellerAccountId
 - intendedMarketCodes
 - shortlistState
 - lastPreflightId
@@ -265,11 +294,15 @@ AttentionIssue
 - id
 - productId / variantId / marketCode / offerId
 - code
-- severity: BLOCKER | WARNING | RECOMMENDATION
-- lifecycle: OPEN | ACKNOWLEDGED | RESOLVED | DISMISSED
+- policyImpact: BLOCKER | WARNING | RECOMMENDATION
+- notificationSeverity: CRITICAL | HIGH | MEDIUM | LOW
+- lifecycle: OPEN | ACKNOWLEDGED | RESOLVED | SUPERSEDED
 - sourceRuleVersion
 - evidenceReference
 - recommendedAction
+- automaticAction
+- checkoutAllowed
+- acceptedOrdersAffected
 - firstObservedAt / lastObservedAt / resolvedAt
 - notificationFingerprint
 ProductReviewDecision
@@ -787,13 +820,13 @@ Operational colors are derived from canonical decisions; color alone is never th
 Rules:
 
 - Yellow never contains an unresolved legal, safety, IP, permit, required-field, availability, freight, or margin blocker.
-- Red events produce an immediate in-app notification and appear in **Action Required** or **Auto-Paused**.
-- Yellow events update the persistent badge and a grouped daily in-app summary; they do not create repeated alerts on every sync.
+- Red/Critical events produce an immediate in-app record plus push and email delivery attempts, and appear in **Action Required** or **Auto-Paused**.
+- Yellow/Medium events update the persistent badge and grouped digest according to policy; they do not create repeated alerts on every sync.
 - Use `notificationFingerprint` to deduplicate the same product/reason/rule version.
 - Rechecks can auto-resolve transient stock, freight, freshness, or margin issues when new evidence passes current policy.
 - A policy change re-evaluates affected offers. Newly ineligible live offers auto-pause; history remains intact.
 - Every attention item states reason, evidence timestamp, affected scope, recommended action, and whether customer purchase is currently allowed.
-- External email, SMS, or paid notification services are deferred. Phase 1 uses existing Seller Center surfaces and in-app notification state.
+- `AttentionIssue` remains the canonical source of truth. Push/email use a reliable notification outbox with delivery audit, retry, cooldown, and dead-letter handling. Channel failure never delays checkout protection. ADR-007 governs severity routing and immutable accepted-order behavior.
 
 ## 12. Media pipeline
 
@@ -1013,8 +1046,11 @@ Use signed CJ webhooks where available. Deduplicate by `messageId`. Acknowledge 
 | CJ title/description change | Show source difference only |
 | New CJ media | Add candidate media to review queue |
 | Supplier product deletion | Pause offers and preserve tombstone/snapshot |
+| Supplier funding not ready | Funding-hold affected auto-fulfilled offers; catalog remains accessible; accepted orders use `AWAITING_SUPPLIER_FUNDS` recovery |
 
 Checkout performs a fresh server-side stock, variant, cost, and freight validation. Published catalog sync reduces risk but does not replace checkout validation.
+
+Every material supplier change opens or updates one deduplicated `AttentionIssue` that shows old/new values, affected variants/offers/markets/active orders, automatic action, evidence time, and recovery actions. Seller delist and supplier changes affect new purchases only; accepted orders render an immutable `OrderLineSnapshot` and continue their committed fulfillment unless the order itself enters an explicit exception. See ADR-007.
 
 ## 16. Concurrency, revisions, and recovery
 
@@ -1066,13 +1102,19 @@ catalog.audit.read
 - Publish, pause, archive, price override, rights approval, and compliance approval are always audited.
 - The API checks permission and resource scope. Hidden controls are not authorization.
 
-Initial single-tenant operation can use one Sals3 employee tenant. Entity keys and authorization checks must still carry seller/tenant scope so a future seller cannot access another seller's offer or draft.
+Phase 1 requires real seller-account tenancy. Retailer and Dropshipper registrations create separate accounts with immutable business models; one login cannot switch between them. Every sourcing, draft, offer, connection, secret reference, and mutation is scoped to the authenticated seller account. Cross-account access is denied even when the same person or legal business owns both accounts.
 
 ## 18. Admin API contract
 
 Use a versioned typed contract. Exact framework routing can vary, but semantics below are binding.
 
 ```text
+GET    /api/v1/admin/supplier-providers
+GET    /api/v1/admin/supplier-connections
+POST   /api/v1/admin/supplier-connections/{providerCode}/connect
+POST   /api/v1/admin/supplier-connections/{connectionId}/verify
+POST   /api/v1/admin/supplier-connections/{connectionId}/reauthorize
+POST   /api/v1/admin/supplier-connections/{connectionId}/disconnect
 POST   /api/v1/admin/catalog/candidates/cj
 GET    /api/v1/admin/catalog/candidates/{candidateId}
 POST   /api/v1/admin/catalog/candidates/{candidateId}/preflight
@@ -1106,10 +1148,10 @@ Import request:
 
 ```json
 {
-  "supplier": "CJ_DROPSHIPPING",
+  "supplierConnectionId": "scn_...",
   "externalProductId": "CJ_PID",
   "preflightId": "cpf_...",
-  "sellerId": "sel_...",
+  "sellerAccountId": "sacct_...",
   "marketCodes": ["ENABLED_MARKET_CODE"],
   "fulfillmentMode": "SUPPLIER_DROPSHIP"
 }
@@ -1117,7 +1159,7 @@ Import request:
 
 `marketCodes` must contain at least one currently enabled market. The API rejects unknown or disabled markets. The request does not assume a country from IP address or supplier origin.
 
-`preflightId` must belong to the same candidate, seller, markets, source snapshot, and current policy version. It must be unexpired and `PASS` or `PASS_WITH_ATTENTION`. Changing any bound input requires a new preflight.
+`preflightId` must belong to the same candidate, seller account, supplier connection, provider product, markets, source snapshot, and current policy version. The connection must still be `CONNECTED` and owned by a `DROPSHIPPER` account. It must be unexpired and `PASS` or `PASS_WITH_ATTENTION`. Changing any bound input requires a new preflight.
 
 Import completion returns the canonical product/revision identifiers, publication state, attention count, attention severity summary, and whether purchase is currently permitted. The client never infers Live or Needs Attention from score alone.
 
@@ -1130,6 +1172,12 @@ Typed errors include:
 ```text
 AUTHENTICATION_REQUIRED
 PERMISSION_DENIED
+BUSINESS_MODEL_FORBIDDEN
+SUPPLIER_CONNECTION_REQUIRED
+SUPPLIER_CONNECTION_UNHEALTHY
+SUPPLIER_REAUTH_REQUIRED
+SUPPLIER_FUNDING_REQUIRED
+CROSS_TENANT_ACCESS_DENIED
 RESOURCE_NOT_FOUND
 IDEMPOTENCY_CONFLICT
 VERSION_CONFLICT
@@ -1180,6 +1228,11 @@ Do not log CJ tokens, API keys, webhook secrets, full raw payloads, or customer 
 
 ### 20.1 Import and identity
 
+- Create separate Retailer and Dropshipper registrations; prove neither account can switch business model or access the other's resources.
+- Deny sourcing to a Retailer account and to a Dropshipper account without a healthy owned supplier connection.
+- Migrate the existing CJ credential to the Sals3 Official Dropshipper Account without exposing or duplicating the secret.
+- Prove two Dropshipper accounts cannot read or use each other's supplier connections, drafts, offers, or snapshots.
+- Prove CJ catalog browsing/import works with zero balance but automatic-fulfillment checkout is funding-held without a verified payment path.
 - Import one simple CJ product and create one Sals3 product.
 - Retry the same idempotency key and create no duplicate.
 - Import the same `pid` with a new key and return the existing product.
@@ -1286,6 +1339,8 @@ Do not log CJ tokens, API keys, webhook secrets, full raw payloads, or customer 
 
 Build one vertical slice before widening category coverage:
 
+Prerequisites from ADR-006 come before the candidate-import slice: real authentication; separate Retailer and Dropshipper registrations; immutable seller-account business model; tenant authorization; provider registry; encrypted supplier-connection secrets; disconnect behavior; and Aj's existing CJ code moved behind `CjSupplierAdapter`. Bootstrap the current environment credential once into the Sals3 Official Dropshipper Account; it must not remain the multi-tenant runtime credential.
+
 1. Define database schema, migrations, typed contracts, permissions, and audit model.
 2. Approve one low-risk category-and-market pilot rule pack, its official-source anchors, and accountable policy/review owners.
 3. Implement candidate shortlist, full preflight, hard gates, `PASS`/`PASS_WITH_ATTENTION`/exception decisions, versioned score, attention/exception queues, near-duplicate detection, and WIP limits without creating catalog records.
@@ -1320,6 +1375,7 @@ A rollback rehearsal is required before production publication.
 This specification resolves the internal design blockers for:
 
 - import identity and duplicate handling;
+- separate Retailer/Dropshipper registration, immutable account business model, tenant isolation, supplier connections, generic provider adapters, and CJ credential migration;
 - field ownership and synchronization;
 - variant identity and source changes;
 - separate workflow states;
