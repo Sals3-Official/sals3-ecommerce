@@ -88,16 +88,34 @@ state.
 `POST /api/v1/admin/catalog/candidates/cj` (`src/app/api/v1/admin/catalog/candidates/cj/route.ts`)
 is the one live route built on top of that engine so far. It performs real
 service-to-service auth, rate limiting, header/body validation, and
-structured logging — then **always returns `503
-CATALOG_PERSISTENCE_NOT_CONFIGURED`**. This is expected, not a bug: no
-database/ORM/queue exists in this repo yet (owner decision, 2026-08-06:
-"Hold — logic/contracts/UI only, no fake persistence"). The route never
-creates a `SupplierCandidate` and never fabricates a `PASS`/score. Required
-`.env.local` addition:
+persists the **Shortlist** step only (spec section 8.1): it creates or
+reuses a `SupplierCandidate` row in Postgres, idempotently, and returns its
+real `candidateId`. It never returns a `decision`/score — full preflight
+(spec section 8.3) needs a live CJ product-detail/variant/inventory/media
+enrichment fetch, which is separate, larger work and is not implemented
+yet. Required `.env.local` additions:
 
 ```text
 CATALOG_ADMIN_API_TOKEN=<shared secret with sals3-portal>
+DATABASE_URL=postgresql://sals3_app:<password>@localhost:5432/sals3?schema=public
 ```
+
+Local Postgres setup (owner decision, 2026-08-06: Postgres, not SQLite):
+
+```bash
+createuser sals3_app --pwprompt
+createdb sals3 --owner sals3_app
+npx prisma migrate deploy
+```
+
+`prisma/schema.prisma` currently defines three tables:
+`SupplierCandidate` (the Shortlist record), `IdempotencyRecord`
+(spec section 4.2 — same key + same body replays the stored result; same
+key + different body returns `409 IDEMPOTENCY_CONFLICT`), and the
+append-only `AuditEvent`. Every other entity in spec section 5 (Product,
+Variant, Offer, MediaAsset, ...) is intentionally not modeled — building
+them without the full preflight/import flow that populates them would be
+schema for its own sake.
 
 ## Install
 

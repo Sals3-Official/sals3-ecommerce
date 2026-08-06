@@ -29,6 +29,8 @@ export const CATALOG_API_ERROR_CODES = [
   'MARGIN_POLICY_FAILED',
   'PUBLISH_VALIDATION_FAILED',
   'VALIDATION_FAILED',
+  /** Generic infra fallback (e.g. a database outage) — not in spec's list verbatim. */
+  'INTERNAL_ERROR',
 ] as const;
 
 /**

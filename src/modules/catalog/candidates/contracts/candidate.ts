@@ -18,6 +18,22 @@ export type CreateCjCandidateRequest = z.infer<
 >;
 
 /**
+ * `POST /candidates/cj` response (spec section 8.1: the Shortlist step
+ * only). No `decision`/score field — full preflight is not implemented
+ * yet, so this route never claims one ran.
+ */
+export const CandidateShortlistResponseSchema = z.object({
+  candidateId: z.string().min(1),
+  shortlistState: z.enum(['SHORTLISTED', 'PREFLIGHT_PENDING']),
+  reused: z.boolean(),
+  requestId: z.string(),
+});
+
+export type CandidateShortlistResponse = z.infer<
+  typeof CandidateShortlistResponseSchema
+>;
+
+/**
  * Spec section 5.3, phase-1 non-persisted shape. Nothing produces one live
  * yet — this schema exists so the shape is real and tested for forward
  * compatibility once persistence lands.

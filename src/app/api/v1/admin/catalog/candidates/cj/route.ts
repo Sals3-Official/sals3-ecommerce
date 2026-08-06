@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import {
+  createOrReuseCandidate,
+  withIdempotency,
+} from '@/modules/catalog/candidates/candidate-repository';
 import { CreateCjCandidateRequestSchema } from '@/modules/catalog/candidates/contracts/candidate';
 import {
   ActorIdSchema,
@@ -25,13 +29,14 @@ function jsonError(
 }
 
 /**
- * Spec section 18: `POST /api/v1/admin/catalog/candidates/cj`.
+ * Spec section 18/8.1: `POST /api/v1/admin/catalog/candidates/cj`.
  *
- * This route validates auth, rate limits, headers, and the request body for
- * real. It never creates a `SupplierCandidate` — no database exists yet
- * (owner decision: "Hold", see `CATALOG_PERSISTENCE_NOT_CONFIGURED` in
- * `contracts/errors.ts`). It always short-circuits with that transitional
- * error on an otherwise-valid request rather than fabricating a decision.
+ * Persists only the "Shortlist" step — creates or reuses a
+ * `SupplierCandidate` row, idempotently. Full preflight (hard gates + score
+ * run against real CJ enrichment data) is not implemented yet — the CJ
+ * detail/variant/inventory/media/review fetch it needs is separate,
+ * larger work. This route never returns a `decision`/score; claiming one
+ * ran without real signals would be worse than not running it.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   if (!isCatalogAdminRequestAuthorized(request)) {
@@ -92,20 +97,51 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  // Structured, redacted request log (spec section 19) — a phase-1
-  // stand-in for the durable AuditEvent the spec ultimately wants.
-  // eslint-disable-next-line no-console
-  console.info(
-    JSON.stringify({
-      event: 'catalog.candidate.cj.request',
-      externalProductId: parsed.data.externalProductId,
-      outcome: 'CATALOG_PERSISTENCE_NOT_CONFIGURED',
-    }),
-  );
+  try {
+    const idempotency = await withIdempotency(
+      idempotencyKey,
+      parsed.data,
+      actorId,
+      'candidates.cj.shortlist',
+      () =>
+        createOrReuseCandidate({
+          supplier: parsed.data.supplier,
+          externalProductId: parsed.data.externalProductId,
+          intendedSellerId: parsed.data.intendedSellerId,
+          intendedMarketCodes: parsed.data.intendedMarketCodes,
+          actorId,
+        }),
+    );
 
-  return jsonError(
-    503,
-    'CATALOG_PERSISTENCE_NOT_CONFIGURED',
-    'Candidate screening is not yet backed by persistence. No candidate was created.',
-  );
+    if (idempotency.outcome === 'conflict') {
+      return jsonError(
+        409,
+        'IDEMPOTENCY_CONFLICT',
+        'This Idempotency-Key was already used with a different request body.',
+      );
+    }
+
+    return NextResponse.json(
+      {
+        candidateId: idempotency.result.candidateId,
+        shortlistState: idempotency.result.shortlistState,
+        reused: idempotency.result.reused,
+        requestId: crypto.randomUUID(),
+      },
+      {
+        status: idempotency.result.reused ? 200 : 201,
+        headers: { 'Cache-Control': 'no-store' },
+      },
+    );
+  } catch (error) {
+    // No stack trace, database error detail, or internal path in the
+    // response — logged server-side only.
+    // eslint-disable-next-line no-console
+    console.error('[catalog-admin] candidates/cj failed', error);
+    return jsonError(
+      500,
+      'INTERNAL_ERROR',
+      'The candidate could not be processed. Try again.',
+    );
+  }
 }

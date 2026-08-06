@@ -1,6 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetCatalogAdminRateLimiter } from '@/lib/catalog-admin/rate-limit';
+
+vi.mock('@/modules/catalog/candidates/candidate-repository', () => ({
+  createOrReuseCandidate: vi.fn(),
+  withIdempotency: vi.fn(),
+}));
+
+// eslint-disable-next-line import/first
+import {
+  createOrReuseCandidate,
+  withIdempotency,
+} from '@/modules/catalog/candidates/candidate-repository';
+// eslint-disable-next-line import/first
 import { POST } from './route';
+
+const mockedWithIdempotency = withIdempotency as unknown as ReturnType<
+  typeof vi.fn
+>;
+const mockedCreateOrReuseCandidate =
+  createOrReuseCandidate as unknown as ReturnType<typeof vi.fn>;
 
 const VALID_BODY = {
   supplier: 'CJ_DROPSHIPPING',
@@ -39,6 +57,25 @@ describe('POST /api/v1/admin/catalog/candidates/cj', () => {
   beforeEach(() => {
     vi.stubEnv('CATALOG_ADMIN_API_TOKEN', 'test-token');
     resetCatalogAdminRateLimiter();
+    mockedWithIdempotency.mockReset();
+    mockedWithIdempotency.mockImplementation(
+      async (
+        _key: string,
+        _payload: unknown,
+        _actorId: string,
+        _op: string,
+        run: () => Promise<unknown>,
+      ) => {
+        const result = await run();
+        return { outcome: 'ok', result, replayed: false };
+      },
+    );
+    mockedCreateOrReuseCandidate.mockReset();
+    mockedCreateOrReuseCandidate.mockResolvedValue({
+      candidateId: 'cand_1',
+      shortlistState: 'PREFLIGHT_PENDING',
+      reused: false,
+    });
   });
 
   afterEach(() => {
@@ -84,13 +121,60 @@ describe('POST /api/v1/admin/catalog/candidates/cj', () => {
     expect(response.status).toBe(400);
   });
 
-  it('returns 503 CATALOG_PERSISTENCE_NOT_CONFIGURED on an otherwise-valid request — never a fabricated success', async () => {
+  it('returns 201 and a real candidateId on a fresh shortlist — never CATALOG_PERSISTENCE_NOT_CONFIGURED', async () => {
+    mockedWithIdempotency.mockResolvedValue({
+      outcome: 'ok',
+      replayed: false,
+      result: {
+        candidateId: 'cand_new',
+        shortlistState: 'PREFLIGHT_PENDING',
+        reused: false,
+      },
+    });
+
     const response = await POST(buildRequest({}));
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(201);
     const body = await response.json();
-    expect(body.error).toBe('CATALOG_PERSISTENCE_NOT_CONFIGURED');
-    expect(body).not.toHaveProperty('candidateId');
-    expect(body).not.toHaveProperty('decision');
+    expect(body.candidateId).toBe('cand_new');
+    expect(body.reused).toBe(false);
+    expect(body.error).toBeUndefined();
+  });
+
+  it('returns 200 when the candidate already exists (reused, not duplicated)', async () => {
+    mockedWithIdempotency.mockResolvedValue({
+      outcome: 'ok',
+      replayed: false,
+      result: {
+        candidateId: 'cand_existing',
+        shortlistState: 'SHORTLISTED',
+        reused: true,
+      },
+    });
+
+    const response = await POST(buildRequest({}));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.candidateId).toBe('cand_existing');
+    expect(body.reused).toBe(true);
+  });
+
+  it('returns 409 IDEMPOTENCY_CONFLICT when the same key was used with a different payload', async () => {
+    mockedWithIdempotency.mockResolvedValue({ outcome: 'conflict' });
+
+    const response = await POST(buildRequest({}));
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
+  it('returns 500 INTERNAL_ERROR without leaking detail when the repository throws', async () => {
+    mockedWithIdempotency.mockRejectedValue(new Error('connection refused'));
+
+    const response = await POST(buildRequest({}));
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBe('INTERNAL_ERROR');
+    expect(JSON.stringify(body)).not.toMatch(/connection refused/);
   });
 
   it('sets Cache-Control: no-store on every response', async () => {

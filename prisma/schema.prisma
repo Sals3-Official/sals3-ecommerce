@@ -1,0 +1,80 @@
+// Catalog Admin API persistence (phase 1). Scope is deliberately narrow:
+// only the "Shortlist" step from cj-candidate-to-sals3-product-draft-
+// implementation-spec.md section 8.1 is persisted here. Full preflight
+// (hard gates + score run against real CJ enrichment data), Product,
+// Variant, Offer, and every other entity in section 5 remain future work —
+// this schema does not claim they exist.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Spec section 5.1: the only supplier integrated today.
+enum Supplier {
+  CJ_DROPSHIPPING
+}
+
+/// Spec section 8.1: "The first persisted step is Shortlist. It creates
+/// SupplierCandidate, not Product, Variant, Offer, MediaAsset, or public
+/// search data." Every candidate created today is `SHORTLISTED` — full
+/// preflight (spec section 8.3, needs a live CJ enrichment fetch) is not
+/// implemented yet, so nothing produces the five spec decisions
+/// (PASS/PASS_WITH_ATTENTION/REVIEW/HOLD/BLOCKED). `PREFLIGHT_PENDING` is
+/// reserved for when a preflight job is actually queued.
+enum ShortlistState {
+  SHORTLISTED
+  PREFLIGHT_PENDING
+}
+
+/// Spec section 5.3 (phase-1 subset). Unique on (supplier, externalProductId)
+/// per section 4.2: "Re-importing the same CJ pid returns the existing Sals3
+/// product or active draft. It does not create a duplicate."
+model SupplierCandidate {
+  id                  String         @id @default(cuid())
+  supplier            Supplier
+  externalProductId   String
+  intendedSellerId    String
+  intendedMarketCodes String[]
+  shortlistState      ShortlistState @default(SHORTLISTED)
+  createdAt           DateTime       @default(now())
+  createdBy           String
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([supplier, externalProductId])
+  @@index([intendedSellerId])
+}
+
+/// Spec section 4.2: "Every import request requires an Idempotency-Key. The
+/// same key and same payload return the original result. The same key with
+/// a different payload returns 409 IDEMPOTENCY_CONFLICT." Spec section 4.3:
+/// "Idempotency records store actor, operation, request hash, result
+/// reference, and expiry policy."
+model IdempotencyRecord {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  actorId         String
+  operation       String
+  requestHash     String
+  resultReference Json
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+}
+
+/// Spec section 5.3: "AuditEvent is append-only. Corrections create a new
+/// event. They do not rewrite history." No update/delete path is exposed
+/// anywhere in application code for this model.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  payload    Json
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
