@@ -6,6 +6,10 @@ import { SITE_TAGLINE } from '@/lib/site';
 import renderWithCart from '../../test/render-with-cart';
 import Home from './page';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 vi.mock('embla-carousel-react', () => {
   const emblaApi = {
     canScrollNext: () => true,
@@ -39,10 +43,21 @@ function productFixture(id: number) {
   };
 }
 
-function mockProductsFetch(total = 21) {
+function mockProductsFetch(
+  total = 21,
+  sessionResponse: Record<string, unknown> = { signedIn: false },
+) {
   vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
 
   const fetchMock = vi.fn<typeof fetch>(async (url) => {
+    if (String(url) === '/api/auth/session') {
+      return new Response(JSON.stringify(sessionResponse), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
     const requestUrl = new URL(String(url));
 
     if (requestUrl.pathname === '/api/storefront/categories') {
@@ -133,15 +148,27 @@ describe('Home page', () => {
 
     renderWithCart(await Home());
 
-    expect(screen.getByRole('link', { name: /^log in$/i })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(
+      await screen.findByRole('link', { name: /^log in$/i }),
+    ).toHaveAttribute('href', '/login');
     expect(screen.getByRole('link', { name: /^sign up$/i })).toHaveAttribute(
       'href',
       '/signup',
     );
     expect(screen.queryByRole('link', { name: /track my order/i })).toBeNull();
+  });
+
+  it('hides Log In and Sign Up when the server session verifies', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch(21, { signedIn: true, firstName: 'AJ' });
+
+    renderWithCart(await Home());
+
+    expect(
+      await screen.findByRole('button', { name: /aj account menu/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^log in$/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^sign up$/i })).toBeNull();
   });
 
   it('renders the category navigation', async () => {

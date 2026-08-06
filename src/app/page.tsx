@@ -63,6 +63,8 @@ type HomeProps = {
   }>;
 };
 
+type HomeSearchParams = Awaited<NonNullable<HomeProps['searchParams']>>;
+
 type HomeProducts = {
   deals: HomeProduct[];
   products: HomeProduct[];
@@ -120,9 +122,8 @@ async function getForYouProducts(
 }
 
 async function getHomeProducts(
-  searchParamsPromise?: HomeProps['searchParams'],
+  searchParams?: HomeSearchParams,
 ): Promise<HomeProducts> {
-  const searchParams = await searchParamsPromise;
   const requestedPagination = parseProductsPagination({
     page: searchParams?.page,
     limit: FOR_YOU_PRODUCT_COUNT,
@@ -147,8 +148,9 @@ async function getHomeProducts(
 }
 
 export default async function Home({ searchParams }: HomeProps = {}) {
+  const resolvedSearchParams = await searchParams;
   const [homeProducts, homeCategories] = await Promise.all([
-    getHomeProducts(searchParams),
+    getHomeProducts(resolvedSearchParams),
     getHomeCategories(),
   ]);
 

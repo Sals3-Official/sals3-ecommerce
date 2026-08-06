@@ -24,6 +24,8 @@ sals3-ecommerce/
 ├── public/                  # Static public assets
 ├── scripts/                 # Local automation scripts
 ├── src/app/                 # Next.js App Router source
+├── src/components/          # UI components (auth, layout, catalog, ...)
+├── src/lib/                 # Schemas, constants, and pure helpers
 ├── src/services/            # API service wrappers and tests
 ├── test/                    # Shared test setup/helpers
 ├── AGENTS.md                # Mandatory agent rules
@@ -75,6 +77,44 @@ Required `.env.local` values:
 SALS3_PORTAL_API_URL=http://localhost:3001
 SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 ```
+
+## Authentication
+
+`/login` supports Google sign-in through Firebase Authentication. The browser
+uses the Firebase Web SDK only long enough to complete the Google popup and get
+a Firebase ID token. The token is posted to `POST /api/auth/session`, where
+Firebase Admin verifies a recent sign-in and sets a 24-hour `httpOnly`
+`sals3_session` cookie. Client Firebase persistence is `inMemoryPersistence`
+and is cleared after the server cookie exchange. Signed-in header
+personalization reads only the verified server session and exposes at most a
+sanitized first name. The account menu signs out with the same CSRF-protected
+cookie flow and clears only the server session. The top `Log In` and `Sign Up`
+links render only after the verified server session reports signed out, and the
+account shortcut is hidden unless that same session reports signed in.
+
+Required Firebase values in `.env.local`:
+
+```text
+NEXT_PUBLIC_FIREBASE_API_KEY=<Firebase Web App apiKey>
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=sals3-b82b6.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=sals3-b82b6
+NEXT_PUBLIC_FIREBASE_APP_ID=<Firebase Web App appId>
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/firebase-service-account.json
+```
+
+If a service account file path is not available, set these server-only secrets
+instead:
+
+```text
+FIREBASE_PROJECT_ID=sals3-b82b6
+FIREBASE_CLIENT_EMAIL=<service account client_email>
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+Firebase Console setup for `sals3-b82b6`: enable Authentication > Sign-in
+method > Google, register a Web App if needed, and add authorized domains such
+as `localhost` and the production host without protocol or port. Do not commit
+service account JSON files or `.env.local`.
 
 ## Install
 
@@ -314,19 +354,112 @@ specifically so it isn't mistaken for the shipped card.
 `src/components/layout/GuestUtilityBar.tsx` renders a thin strip above the
 main header row (Feedback, Sell on Sals3, Customer Care, Log In, Sign Up),
 matching the signed-out state from a reference marketplace screenshot. Sals3
-has no auth/session system yet, so this strip always renders — there is no
-signed-in variant to switch to. Link targets reuse the existing footer stub
-routes (`/sell`, `/contact`) from `src/lib/footer-data.ts` where they already
-overlap, plus a new `/help`. "Track My Order" was deliberately left out: the
-main header's existing `Orders` link already covers that, and Bogs flagged
-the duplication during review.
+now verifies the server session before showing auth-specific header actions:
+signed-out visitors see `Log In` and `Sign Up`, while signed-in visitors see
+only the first-name account dropdown in the main header. Link targets reuse the
+existing footer stub routes (`/sell`, `/contact`) from `src/lib/footer-data.ts`
+where they already overlap, plus a new `/help`. "Track My Order" was
+deliberately left out: the main header's existing `Orders` link already covers
+that, and Bogs flagged the duplication during review.
 
 `Log In` and `Sign Up` link to real routes, `/login` and `/signup`
-(`src/app/login/page.tsx`, `src/app/signup/page.tsx`), which currently show a
-plain-English "not ready yet" placeholder (`src/components/auth/AuthComingSoon.tsx`)
-instead of a non-functional form — building a login form with no backend to
-submit to would be misleading. Both pages set `robots: { index: false, follow: false }`
-so an empty placeholder isn't indexed.
+(`src/app/login/page.tsx`, `src/app/signup/page.tsx`). `/login` is now a built
+UI (see [Login Screen](#login-screen)); `/signup` still shows the plain-English
+"not ready yet" placeholder (`src/components/auth/AuthComingSoon.tsx`). Both
+pages set `robots: { index: false, follow: false }`.
+
+## Login Screen
+
+`/login` implements the approved Claude Design source `Sals3 Login.dc.html`: a
+full-bleed 50/50 split with the brand photo and value proposition on the left
+and the sign-in card on the right. The site header and footer are deliberately
+absent — the route is a single-task surface and the hero's circular back
+control is the way out.
+
+### How to see it
+
+```bash
+npm run dev
+```
+
+Then open <http://localhost:3000/login>. Below the `lg` breakpoint the split
+stacks: the hero becomes a band above the form.
+
+### Files
+
+| File                                       | Role                                                       |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| `src/app/login/page.tsx`                   | Route composition and `noindex` metadata                   |
+| `src/components/auth/AuthHeroPanel.tsx`    | Left panel: photo, scrims, back control, value proposition |
+| `src/components/auth/LoginCard.tsx`        | Right panel: logo, heading, legal copy (Server Component)  |
+| `src/components/auth/LoginForm.tsx`        | Client form: state, validation, unavailable notice         |
+| `src/components/auth/EmailField.tsx`       | Email input                                                |
+| `src/components/auth/PasswordField.tsx`    | Password input with the Show/Hide reveal toggle            |
+| `src/components/auth/AuthField.tsx`        | Shared label + control + error layout                      |
+| `src/components/auth/auth-field-styles.ts` | Shared control class strings                               |
+| `src/components/auth/GoogleMark.tsx`       | Inline Google "G" SVG                                      |
+| `src/lib/auth/login-schema.ts`             | Zod credential schema and field-error mapping              |
+| `src/lib/auth/auth-links.ts`               | Every href the screen points at                            |
+
+Auth palette tokens and the two hero gradient overlays live in
+`src/app/globals.css`. The screen's typeface is Instrument Sans, registered in
+`src/app/layout.tsx` with `preload: false` so no other route pays for the font
+file, and applied through the `font-auth` utility.
+
+### Required setup
+
+None. No environment variables, no backend, no packages were added.
+
+### Security posture
+
+No Sals3 auth endpoint exists yet, so **nothing is transmitted**:
+
+- The form has no `action` and its submit handler always calls
+  `preventDefault()`. Without that, the browser's default GET submit would put
+  the password in the URL query string, the address bar, and every log
+  downstream. `e2e/login.spec.ts` asserts the URL stays clean after submit.
+- The password lives only in React state — never web storage, never a log — and
+  is cleared after a submit attempt. Both are asserted in
+  `src/components/auth/LoginForm.test.tsx`.
+- `Continue with Google` reports the same unavailable state instead of
+  redirecting. No OAuth client or allow-listed callback URL exists, and an
+  unvalidated redirect is exactly the open-redirect shape to avoid.
+- Validation uses one Zod schema (`src/lib/auth/login-schema.ts`) with generic,
+  input-only messages, so the form can't be used to enumerate accounts. When a
+  real endpoint lands, **the server must re-validate with the same schema** and
+  add rate limiting and CSRF protection — the client check is UX only.
+- `next.config.ts` now sends `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`, and `Permissions-Policy` on document routes, plus
+  `Cache-Control: no-store` on `/login`.
+
+### Known limitations
+
+- **Sign-in does nothing.** A valid submit shows a notice saying accounts are
+  not switched on yet. This is intentional until an auth backend exists.
+- `/login/reset` (Forgot password), `/help/pricing`, `/legal/terms`, and
+  `/legal/privacy` are not built yet. The last three are the same stub hrefs the
+  footer already ships; `/login/reset` is new and will 404 until built.
+- The header rule in `next.config.ts` excludes `/_next/`. With a broader
+  `/:path*` matcher, `next dev` (16.3.0) answered its own chunk requests with
+  403 and the HMR websocket handshake failed, silently leaving every client
+  component unhydrated. Verified by removing and re-adding the rule against
+  `e2e/login.spec.ts`.
+- `next dev` overrides the configured `Cache-Control`, so the production value
+  is asserted in `test/next-config-headers.test.ts` rather than end-to-end.
+- `public/login-hero.jpg` (2200×1228, 327 KB) is a resized, recompressed copy of
+  the supplied `public/login-bg.jpeg` (2752×1536, 2.1 MB), which is no longer
+  referenced by any code and can be deleted.
+
+### Verification
+
+```bash
+npm run verify
+npm audit --audit-level=high
+```
+
+Login-specific tests: `src/lib/auth/login-schema.test.ts`,
+`src/components/auth/LoginForm.test.tsx`, `src/app/login/page.test.tsx`,
+`test/next-config-headers.test.ts`, and `e2e/login.spec.ts`.
 
 ## Cart
 

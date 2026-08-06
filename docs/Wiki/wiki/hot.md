@@ -58,7 +58,8 @@ related:
 
 - Marketplace landing page, header, footer, promo carousel, category row, deals/For You grids, and numbered pagination.
 - Product route `/p/[id]` backed by the current `sals3-portal` single-product API contract.
-- Guest header strip and `noindex` login/signup placeholders; no real authentication exists.
+- Guest header strip and a `noindex` signup placeholder. Real buyer account pages, protected checkout, and role-aware account UI do not exist yet.
+- `/login` is a built, `noindex` split-hero sign-in UI implementing the approved `Sals3 Login.dc.html` design (Instrument Sans, auth palette tokens, Zod-validated fields, Show/Hide reveal). Email/password remains a local placeholder: no credential endpoint is called, the password never leaves React state, and Continue reports that accounts are not switched on yet. Continue with Google now uses Firebase Authentication for a Google popup, exchanges the fresh Firebase ID token for a server-verified 24-hour `httpOnly` `sals3_session` cookie through `/api/auth/session`, clears client Firebase persistence, then redirects home without a success banner. The header verifies that server session before showing a sanitized first-name account dropdown, hides the account shortcut from signed-out visitors, hides top `Log In`/`Sign Up` links while signed in, and signs out through a CSRF-protected session delete. `next.config.ts` sends baseline security headers on document routes plus `Cache-Control: no-store` on `/login`.
 - Client-only `localStorage` cart with Add to Cart/Buy Now and cart toast; no server cart or checkout exists.
 - Route-independent SEO/GEO/AEO foundations: `robots.txt`, `llms.txt`, Organization/WebSite JSON-LD, home metadata, and sitemap wiring where real data permits it.
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
@@ -71,7 +72,7 @@ related:
 - `/c/[category]` does not exist.
 - The cart is browser-local only; `/checkout` does not exist.
 - Real inventory/variant data is not present in the storefront contract, so the intended out-of-stock purchase guard is not yet complete.
-- No real signed-in buyer or employee role flow exists.
+- Google buyer sign-in now creates a Firebase-backed server session cookie, but no protected buyer account, server cart, checkout, profile, or authorization workflow exists yet. Email/password is still unavailable; when it lands it must re-validate with `src/lib/auth/login-schema.ts` on the server and add password-specific rate limiting and CSRF protection. `/login/reset` is referenced by the form but not built.
 
 ## Approved catalog and commerce decisions - 2026-08-06
 
