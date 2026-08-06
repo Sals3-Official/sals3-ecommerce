@@ -1521,6 +1521,21 @@ inventory if assumed otherwise, and both now covered by regression tests:
 - The versioned HTTP admin API surface in section 18. Internal writes use
   Server Actions instead; see the revised section 3.2.
 
+### Parked, with a named unblock condition
+
+Three of the gaps above are parked in [[parked-ideas-backlog]] rather than
+left as open TODOs, because each is blocked by an owner decision, not by
+engineering effort:
+
+- **Preflight decision engine** (§8.4, §8.5, §8.6, §14) — blocked on an
+  ADR-002 pilot category/market rule pack. Without one, §14.1 makes every
+  candidate `NOT_IN_PILOT`, so the engine would be correct and return `HOLD`
+  for everything.
+- **Destination freight evidence** (§8.3, §13) — blocked on an ADR-003
+  approved market. There is no legitimate destination to quote against.
+- **Supplier HTML sanitisation** (§9.4, §12) — to be designed together with
+  the structured `descriptionDocument` format, not bolted on.
+
 ### Known limitations to carry forward
 
 - Authentication is still `sals3-portal`'s development role switch

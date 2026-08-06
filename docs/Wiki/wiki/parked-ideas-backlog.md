@@ -6,12 +6,13 @@ tags:
 aliases:
   - Parked Ideas Backlog
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: canonical
 authority: parked-backlog
 owner_approved: true
 related:
   - "[[vault-governance-and-note-lifecycle]]"
+  - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
 ---
 
 # Parked Ideas Backlog
@@ -73,3 +74,21 @@ Log each parked idea in the same turn it is parked, under `## Active parked item
 - **Why parked:** The first curated catalog phase is single-seller, so third-party commission and seller payout are not reachable. Payment fees, supplier cost, tax, refunds, settlement, and the order ledger are **not commission** and remain required for prepaid commerce under ADR-003/005. Commission values and payout rules stay parked until a real third-party seller and approved commercial structure exist.
 - **Unblock condition:** A real third-party seller (retail or dropshipper) is being onboarded — the near-future direction Bogs confirmed on 2026-08-06 — **and** Leadership has confirmed the commission rate and payment-partner list.
 - **Related:** [[ADR-001-seller-center-cj-sourcing-to-my-products]], [[sals3-global-seller-center-ux-blueprint-proposal]], [[sals3-implementation-phases]], [[sals3-management-bible]]
+
+### 2026-08-07 — CJ candidate preflight decision engine (hard gates, quality score, compliance gate)
+- **What:** Sections 8.4, 8.5, 8.6, and 14 of [[cj-candidate-to-sals3-product-draft-implementation-spec]]: the objective hard gates, the versioned pilot quality score, the country/category compliance gate, and the `PASS`/`PASS_WITH_ATTENTION`/`REVIEW`/`HOLD`/`BLOCKED` decision that combines them.
+- **Why parked:** Not blocked by code — the **evidence** it would judge is already fetched and stored (see §26 of the spec). It is blocked by a business decision: ADR-002 has approved no pilot category/market rule pack, and spec §14.1 says a category with no rule for a market is `NOT_IN_PILOT`. Building the engine now would be correct and fully tested, and would return `HOLD` for **every** candidate no matter how good it is. That is the spec working as designed, not a bug — but it ships an operationally useless funnel and invites someone to later "fix" it by weakening the gate. Bogs was offered this trade-off on 2026-08-07 and chose to wire the evidence fetch first.
+- **Unblock condition:** Bogs or a named rule owner approves a minimal pilot pack — at least one low-regulatory-risk category, one enabled market, and a margin/contribution floor — per ADR-002 §5 and ADR-003 §4. The engine can then be built to produce a decision that can genuinely reach `PASS`.
+- **Related:** [[cj-candidate-to-sals3-product-draft-implementation-spec]], [[ADR-002-sals3-taxonomy-and-cj-category-mapping]], [[ADR-003-international-availability-shipping-and-pricing]], [[hot]]
+
+### 2026-08-07 — CJ destination freight evidence for preflight
+- **What:** `POST /logistic/freightCalculate` as part of preflight evidence (spec §8.3), plus the destination-availability and landed-cost checks that depend on it (spec §8.5, §13).
+- **Why parked:** Freight is destination-specific and ADR-003 has approved no launch market, so there is no legitimate destination to quote against. The shortlist currently records a clearly labelled placeholder market code precisely because no approved one exists. Quoting freight to a guessed country would produce a real-looking number that means nothing, and ADR-003 §2 already warns that one representative country cannot stand in for a region.
+- **Unblock condition:** ADR-003's versioned enabled-country allow-list has at least one approved market with representative postal codes. Note ADR-003's own CJ quota priority order — freight confirmation ranks below paid-order creation, so the central limiter matters once this is live.
+- **Related:** [[cj-candidate-to-sals3-product-draft-implementation-spec]], [[ADR-003-international-availability-shipping-and-pricing]]
+
+### 2026-08-07 — Supplier HTML sanitisation and the CJ source-comparison panel
+- **What:** Sanitising CJ's `description` HTML so it can be shown as source material (spec §9.4's source-comparison panel), and the wider media pipeline in spec §12.
+- **Why parked:** The CJ `description` is already fetched and stored in `supplier_snapshots` — roughly 985 characters of raw supplier HTML for the probed product. Nothing sanitises it, so it is deliberately never rendered; the evidence panel shows structured facts only. Adding a sanitiser is a real decision (which library, which allow-list, stored-XSS test coverage) and spec §5.1 requires the published description to use a structured allow-listed document format rather than pasted supplier HTML, so this should be built with that target shape in mind rather than as a quick `dangerouslySetInnerHTML` with a filter.
+- **Unblock condition:** Picked up together with the Product Editor's Description tab (spec §9.4), so the sanitiser and the structured `descriptionDocument` format are designed as one piece.
+- **Related:** [[cj-candidate-to-sals3-product-draft-implementation-spec]], [[nextjs-component-security-code-rules]]
