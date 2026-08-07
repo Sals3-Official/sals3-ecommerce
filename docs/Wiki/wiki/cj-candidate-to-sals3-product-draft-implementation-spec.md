@@ -1581,9 +1581,19 @@ one of these three checks is provisional, not policy-approved.
   candidate states this honestly rather than faking success.
 - The versioned HTTP admin API surface in section 18. Internal writes use
   Server Actions instead; see the revised section 3.2.
-- Any per-seller CJ connection, Shopify-style Supplier App, or AliExpress
+- ~~Any per-seller CJ connection, Shopify-style Supplier App, or AliExpress
   integration — still one global `CJ_API_KEY` and one dev/official seller
-  context (`seller-001`). Explicitly deferred to a separate task.
+  context (`seller-001`). Explicitly deferred to a separate task.~~ **Done
+  2026-08-07, third session** for CJ specifically: `seller_accounts`,
+  `supplier_providers`, `supplier_connections`, and encrypted
+  `supplier_connection_secrets` exist; Supplier Apps (`/supplier-apps`) lets
+  a Dropshipper connect/disconnect/reconnect their own CJ account, and the
+  ingestion/evaluation pipeline plus every seller-facing screen source
+  through that connection instead of the global key. `identityId` is still
+  the `dev-user` placeholder (no real seller registration/login exists),
+  and AliExpress/any second provider is still not built - only
+  `CJ_DROPSHIPPING` is seeded. See [[hot]] and
+  [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]].
 
 ### Parked, with a named unblock condition
 
