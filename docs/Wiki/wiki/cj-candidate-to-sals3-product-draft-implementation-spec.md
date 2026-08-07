@@ -6,7 +6,7 @@ updated: 2026-08-07
 status: approved
 authority: implementation-spec
 owner_approved: true
-implementation_status: not-started
+implementation_status: shortlist-step-implemented
 related:
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
@@ -67,25 +67,49 @@ The existing CJ listing is a candidate source only. The customer storefront must
 
 ### 3.2 Initial physical placement
 
-Use a modular monolith for the first implementation:
+> [!IMPORTANT] Revised 2026-08-07 by Bogs — placement moved to `sals3-portal`
+> This section previously placed the catalog database and Catalog Admin API in
+> `sals3-ecommerce` and forbade a writable catalog in `sals3-portal`. That is
+> **superseded**: the catalog database now lives in `sals3-portal`, alongside
+> the Seller Center screens that write to it. The rationale below records why,
+> so the reversal is auditable rather than silent.
+
+Use a modular monolith for the first implementation, hosted in `sals3-portal`:
 
 - Keep Seller Center screens in `sals3-portal`.
-- Put the phase-1 Catalog Admin API, domain model, database access, and published read model in `sals3-ecommerce` as server-only modules.
-- Use `src/modules/catalog/` for catalog domain/application code and versioned route handlers under `src/app/api/v1/`. Exact subfiles follow the repository's component and security rules when implementation begins.
-- Catalog modules and versioned contracts must not depend on React components.
-- `sals3-portal` calls the Catalog Admin API from its server. The browser never calls CJ and never receives CJ credentials.
-- Do not add the writable canonical catalog to `sals3-portal`.
+- Put the catalog domain model, database access, and candidate persistence in `sals3-portal` as server-only modules.
+- Use `src/modules/catalog/` for catalog domain/application code. Database schema and client live in `src/lib/db/`.
+- Catalog modules must not depend on React components.
+- Seller Center writes reach the catalog through **Server Actions**, not a cross-service HTTP API. Next.js verifies the request origin for Server Actions, which covers CSRF for those mutations.
+- `sals3-ecommerce` reads published catalog data through `sals3-portal`'s existing protected storefront endpoints (`/api/storefront/*`). It does not connect to the catalog database directly.
+- The browser never calls CJ, never receives CJ credentials, and never sends a trusted CJ object — only a stable supplier identifier.
 
-If the backend is extracted later, preserve the API and domain contracts. Repository extraction must not change product identity or audit history.
+Why the reversal, recorded for audit:
+
+- The writing UI and the written tables are now in one deployable, so an internal write needs no network hop and no shared service credential. One fewer secret to store, rotate, and leak.
+- The earlier split required a `CATALOG_ADMIN_API_TOKEN` shared between two repos purely to let one Sals3 app write to another. That credential no longer exists.
+- Trade-off accepted: `sals3-portal` is now the catalog's owner, so extracting a standalone catalog service later means moving `src/modules/catalog/` and `src/lib/db/` out of the portal. Domain and Zod contracts are kept free of React and of Next.js request types specifically so that move stays mechanical.
+
+If the backend is extracted later, preserve the domain contracts. Repository extraction must not change product identity or audit history.
+
+#### 3.2.1 Approved persistence stack (2026-08-07)
+
+- PostgreSQL.
+- Drizzle ORM and Drizzle Kit for schema, typed queries, and checked-in SQL migrations.
+- `postgres.js` as the driver.
+- Zod for every external and client input.
+
+Prisma was evaluated and rejected by Bogs. Do not reintroduce it.
 
 ### 3.3 Service authentication
 
 - The portal requires a real authenticated employee session before production use.
-- The portal sends a server-only service credential and verified `actorId` to the Catalog Admin API.
-- The Catalog Admin API authenticates the calling service and authorizes the actor for every mutation.
-- Service credentials use rotation and never use a `NEXT_PUBLIC_` variable.
-- Sensitive responses use `Cache-Control: no-store`.
-- Cookie-backed mutations require CSRF protection.
+- Every catalog mutation authorizes the actor server-side through `requirePermission` before any read or write. A hidden or disabled control is never the authorization check.
+- Under the revised 3.2 placement there is **no service-to-service credential** for internal catalog writes: the writing UI and the tables share one deployable, so no such secret exists to rotate or leak. The `sals3-ecommerce` storefront feed keeps its own shared secret (`SALS3_STOREFRONT_API_TOKEN`) for reads.
+- Database credentials are server-only and never use a `NEXT_PUBLIC_` variable. The database client refuses to load in a client bundle. Non-local database hosts require verified TLS.
+- Sensitive responses use `Cache-Control: no-store`; catalog pages that read the database are rendered dynamically, not cached.
+- Cookie-backed mutations require CSRF protection. Server Actions rely on Next.js's built-in origin verification.
+- Abuse-sensitive catalog operations (shortlist, preflight, import) are rate-limited per actor and audited.
 
 The current development-role switch is not production authentication. Publishing stays disabled outside an explicitly configured non-production environment until real employee authentication exists.
 
@@ -1426,3 +1450,112 @@ Implementation is complete only when:
 - publish bypass, rollback, webhook replay, and reconciliation tests pass;
 - the customer PDP reads only the published Sals3 revision for the migrated vertical slice;
 - README, runbooks, current-state notes, and manual testing records match verified behavior.
+
+## 26. Verified implementation status — 2026-08-07
+
+Only the items below are implemented and verified. Everything else in this
+specification remains unimplemented. Do not read a section's presence here as
+evidence that it works.
+
+### Implemented and verified in `sals3-portal`
+
+- Postgres schema and checked-in Drizzle migration for three tables:
+  `supplier_candidates` (unique on `(supplier, external_product_id)`),
+  `idempotency_records`, and append-only `audit_events`.
+- The **Shortlist** step from section 8.1: `checkForSals3Candidate` Server
+  Action, permission-gated with `catalog.candidate.shortlist`, per-actor rate
+  limited, Zod-validated, writing inside one transaction.
+- Section 4.2 duplicate handling: re-shortlisting the same CJ `pid` reuses the
+  existing row. Verified against the live database — four requests produced one
+  candidate row, one audit event, and four idempotency records
+  (`reused: false` once, then `true`).
+- Section 4.2 idempotency: same key plus same payload replays the stored
+  result; same key plus a different payload is rejected. Only a SHA-256 digest
+  of the payload is stored.
+- `Check for Sals3` row action, shortlist drawer, `Product Sourcing` navigation
+  (CJ Candidate Explorer / Shortlisted / Exception Queue), and a Shortlisted
+  queue that reads real rows scoped to the session's seller.
+- **CJ enrichment evidence fetch (part of section 8.3).** Three live calls per
+  candidate — `/product/query` (detail, with variants embedded),
+  `/product/stock/getInventoryByPid` (per-warehouse and per-variant stock), and
+  `/product/productComments` — normalised into a `supplier_snapshots` record
+  with a SHA-256 checksum and capture timestamp, one row per candidate. Runs
+  sequentially under CJ's one-request-per-second limit, outside the shortlist
+  transaction, and logs `pointsInfo` from every response. Roughly 30 points per
+  candidate.
+- 133 unit/component tests and 31 Playwright tests pass, including an assertion
+  that no preflight decision label can ever render.
+
+Two CJ API facts verified live on 2026-08-07, both of which silently corrupt
+inventory if assumed otherwise, and both now covered by regression tests:
+
+- `variantInventories` is returned in a different order from the detail
+  response's `variants`. The join must be on `vid`, never array index.
+- The two inventory levels name the same field differently: product-level
+  warehouse entries use `totalInventoryNum`, per-variant entries use
+  `totalInventory`. One shared schema parsed every per-variant total as null
+  while 36,338 real units existed. After the fix the five variants summed to
+  exactly the warehouse total.
+
+### Explicitly NOT implemented
+
+- **The preflight decision (sections 8.4, 8.5, 8.6, 14).** Evidence is now
+  fetched, but nothing judges it: the hard-gate, scoring, and compliance-gate
+  engines are **not** built, so no `PASS`, `PASS_WITH_ATTENTION`, `REVIEW`,
+  `HOLD`, or `BLOCKED` decision and no quality score is produced anywhere. The
+  evidence panel shows facts with no verdict attached.
+- **Freight evidence** (`/logistic/freightCalculate`, part of section 8.3). It
+  needs an approved destination market and ADR-003 has approved none, so it is
+  not called. Destination availability and landed cost therefore cannot be
+  evaluated at all yet.
+- **Supplier description sanitisation.** The CJ `description` is fetched and
+  stored but never rendered, because no sanitiser exists. Section 12's media
+  pipeline and section 9.4's source panel both remain unbuilt.
+- The Exception Queue is empty by construction, not by missing data.
+- Product, ProductOption, Variant, Offer, MediaAsset, ProductRevision,
+  AttentionIssue, ComplianceEvaluation, CostSnapshot, OutboxEvent, and every
+  other entity in section 5 beyond the three tables above.
+- Import job (section 8.11 steps 5-12), publication, attention state,
+  auto-publish/auto-pause, media pipeline, supplier synchronization, webhooks,
+  preview tokens, and the Product Editor.
+- The versioned HTTP admin API surface in section 18. Internal writes use
+  Server Actions instead; see the revised section 3.2.
+
+### Parked, with a named unblock condition
+
+Three of the gaps above are parked in [[parked-ideas-backlog]] rather than
+left as open TODOs, because each is blocked by an owner decision, not by
+engineering effort:
+
+- **Preflight decision engine** (§8.4, §8.5, §8.6, §14) — blocked on an
+  ADR-002 pilot category/market rule pack. Without one, §14.1 makes every
+  candidate `NOT_IN_PILOT`, so the engine would be correct and return `HOLD`
+  for everything.
+- **Destination freight evidence** (§8.3, §13) — blocked on an ADR-003
+  approved market. There is no legitimate destination to quote against.
+- **Supplier HTML sanitisation** (§9.4, §12) — to be designed together with
+  the structured `descriptionDocument` format, not bolted on.
+
+### Known limitations to carry forward
+
+- Authentication is still `sals3-portal`'s development role switch
+  (`PORTAL_DEV_ROLE`), not real employee sign-in. Section 3.3's production
+  gate still applies.
+- No ADR-003 launch market is approved, so the shortlist records a clearly
+  labelled placeholder market code. It must become a real seller-selected
+  market before anything publishes.
+- The rate limiter is per server instance. It needs a shared store if the
+  portal ever runs more than one instance.
+- **No database exists outside a developer machine.** There is no staging or
+  production Postgres, so `DATABASE_URL` is unset in CI and in preview
+  deploys. Two consequences are now permanent design constraints rather than
+  temporary quirks: the database client connects lazily, so importing it never
+  requires configuration and a build never needs a database; and any page that
+  reads the catalog must check `isDatabaseConfigured()` and render an honest
+  "not configured in this environment" state instead of failing. Provisioning a
+  real database is a separate, unmade infrastructure decision (spec §23's
+  "selected database" input) — the local Postgres is a developer convenience,
+  not an approved deployment.
+- `drizzle-kit` carries moderate-severity advisories through a transitive
+  `esbuild` dev-server issue. It is a devDependency only and never runs in the
+  application runtime; `npm audit --audit-level=high` passes.

@@ -70,7 +70,10 @@ related:
 
 ### Incomplete or placeholder
 
-- No production Sals3 catalog database, product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, or return flow exists. A Seller Center UI prototype now exists in `sals3-portal` (see below) - real routes and real permission enforcement, but illustrative data throughout and no order/inventory/finance/payout backend.
+- No product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, or return flow exists. A Seller Center UI prototype now exists in `sals3-portal` (see below) - real routes and real permission enforcement, but illustrative data throughout and no order/inventory/finance/payout backend.
+- A **first real catalog database does now exist**, in `sals3-portal` only: PostgreSQL + Drizzle ORM, four tables (`supplier_candidates`, `idempotency_records`, `supplier_snapshots`, append-only `audit_events`). It covers the CJ candidate **Shortlist** step plus a real **CJ evidence fetch** (detail, variants, per-warehouse and per-variant inventory, review counts) stored as one checksummed snapshot per candidate. Verified against the live CJ API and the live database.
+- What is still missing is the **judgement**, not the evidence: hard gates, quality scoring, and the compliance gate are **not** built, so no `PASS`/`BLOCKED` decision or quality score exists anywhere. Freight evidence is also not fetched, because ADR-003 has approved no destination market. Import, publication, and attention state remain unbuilt. See [[cj-candidate-to-sals3-product-draft-implementation-spec#26. Verified implementation status — 2026-08-07]].
+- Two CJ API traps found and fixed while wiring the fetch, worth remembering: `variantInventories` comes back in a different order from the detail response's `variants` (join on `vid`, never index), and the product-level and per-variant inventory objects name the same field differently (`totalInventoryNum` vs `totalInventory`). The second one silently reported zero stock for every variant while 36,338 real units existed.
 - Current customer product data is CJ-sourced through the protected `sals3-portal` storefront API, not yet a curated Sals3 catalog.
 - `/c/[category]` does not exist.
 - The cart is browser-local only; `/checkout` does not exist.
@@ -80,6 +83,10 @@ related:
 ## Approved catalog and commerce decisions - 2026-08-07
 
 The original all-in-one ADR and later seller/supplier decisions are now split into eight approved, independently auditable ADRs. They are approved direction, not implemented behavior.
+
+> [!IMPORTANT] Persistence stack and placement - decided 2026-08-07 by Bogs
+> Approved stack: **PostgreSQL + Drizzle ORM + Drizzle Kit + `postgres.js` + Zod**. Prisma was evaluated and rejected; do not reintroduce it.
+> The catalog database lives in **`sals3-portal`**, with the Seller Center screens that write to it. This **supersedes** the earlier spec/ADR-001 wording that placed it in `sals3-ecommerce` and forbade a writable catalog in the portal. Internal catalog writes use Server Actions, so no service-to-service credential exists for them; `sals3-ecommerce` still reads through the protected `/api/storefront/*` endpoints. Rationale and trade-off recorded in [[cj-candidate-to-sals3-product-draft-implementation-spec#3.2 Initial physical placement]].
 
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] - CJ is a supplier; Sals3 publishes a curated, separate catalog through a server-side modular boundary. Seller identity is separate from per-offer fulfillment mode. Original copy, rights-aware media, objective hard rejects, reviewable risk signals, and secure employee administration are required.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] - the workbook is adopted as **Sals3 Taxonomy v0** for pilot use, not declared fully production-ready. It contains 1,345 data rows and 29 L1 departments; the 13-row matrix is only a partial summary. Real-product mapping, category-form QA, and provenance/license review remain required.
@@ -136,8 +143,8 @@ The current CJ integration is also single-account prototype infrastructure: glob
 1. Resolve the fabricated comparison price defect.
 2. Implement real authentication plus separate Retailer/Dropshipper registration, immutable business-model entitlements, and tenant isolation.
 3. Implement `SellerAccount`, `SupplierProvider`, `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding`; migrate the current CJ key to the Sals3 Official Dropshipper Account using encrypted secret storage.
-4. Approve one low-risk category-and-market pilot rule pack with official-source anchors and named compliance/review owners.
-5. Implement shortlist, preflight, hard gates, versioned scoring, attention/exception queues, near-duplicate detection, and WIP limits before any selected CJ candidate can enter auto-publication.
+4. **Approve one low-risk category-and-market pilot rule pack** with official-source anchors and named compliance/review owners. **This is now the single highest-leverage open item** — the evidence side of preflight is built and verified, so the decision engine is blocked only on this. Until it exists, spec §14.1 makes every candidate `NOT_IN_PILOT`, which means a correctly-built engine would `HOLD` everything.
+5. Implement preflight hard gates, versioned scoring, near-duplicate detection, attention/exception queues, and WIP limits. Shortlist itself is **done** (see the verified state above); these are the remaining, rule-pack-dependent parts.
 6. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
 7. Implement Product, Variant, Offer, Media, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
 8. Pilot and validate selected Taxonomy v0 branches against representative CJ products.

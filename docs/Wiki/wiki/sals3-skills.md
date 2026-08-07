@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-07
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -25,6 +25,7 @@ related:
   - "[[sals3-session-2026-08-05-part09-ui-ux-pro-audit]]"
   - "[[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]]"
   - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
+  - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -415,3 +416,107 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** When an owner approves a concrete slice of a broader not-yet-approved proposal, record that as a dated addendum section on the proposal itself (what was built, what it does and doesn't validate, which of the proposal's own gaps/cuts still apply) rather than changing the proposal's own `status`/`owner_approved` fields — those fields should keep answering "is the strategy this document argues for approved," not "did any code get written referencing it." Cross-link a full session note for the implementation detail.
 
 **Where applied:** Added an "Addendum, 2026-08-06" section to [[sals3-global-seller-center-ux-blueprint-proposal]] with `status`/`owner_approved` left unchanged; the full build record lives in [[sals3-session-2026-08-06-part13-seller-center-first-build]].
+
+### 43. Two levels of the same external API can name the same field differently — one shared Zod schema silently reports zero instead of failing
+
+**Confirmed:** 2026-08-07, wiring CJ inventory evidence into candidate preflight.
+
+**Incident:** CJ's `GET /product/stock/getInventoryByPid` returns two collections. `data.inventories[]` (product level, per warehouse) uses `totalInventoryNum`, `cjInventoryNum`, `factoryInventoryNum`. `data.variantInventories[].inventory[]` (per variant, per country) describes the same idea with `totalInventory`, `cjInventory`, `factoryInventory` — no `Num` suffix, and no `areaEn`/`countryNameEn` at all. One `cjWarehouseInventorySchema` was reused for both. Because this repo's `looseNumber` primitive turns an absent key into `null` rather than throwing, every per-variant total parsed as `null`, and the drawer honestly rendered "not reported" for all five variants of a product that had **36,338** units in stock. Nothing errored, no test failed, and the product-level warehouse total displayed correctly right next to the nulls.
+
+**Lesson:** Tolerant parsing and shared schemas are individually good and combine into a silent-data-loss trap: a tolerant primitive converts "this schema does not match this payload" into a plausible empty value. When one endpoint returns the same concept at two levels of nesting, assume the field names differ until a real payload proves otherwise, and give each level its own schema. Then add a test that parses a **verbatim** captured payload for each level and asserts the number is present — plus, ideally, an internal consistency check (here, the five variant stocks summing to exactly the warehouse total) that would catch the failure even if a future field rename slips through.
+
+**Where applied:** Split `cjVariantStockSchema` from `cjWarehouseInventorySchema` in `src/lib/cj/enrichment-schemas.ts`; `src/lib/cj/enrichment-schemas.test.ts` pins both real payload shapes and includes a guard asserting that parsing variant stock with the warehouse schema yields `null`, so the mistake cannot silently return.
+
+### 44. A shape-probing script with a depth cap hides the exact divergence it was written to find
+
+**Confirmed:** 2026-08-07, immediately before skill 43's bug shipped.
+
+**Incident:** Before writing any CJ enrichment schema, a throwaway probe called the live API and printed a structural summary rather than full payloads, to keep output readable. Its recursive `shape()` helper collapsed anything deeper than two levels to `object{...}`. The per-variant inventory objects sat at exactly that depth, so the probe printed `variantInventories: array(5) of { vid: string(...), inventory: array(1) of object{...} }` — confirming the array existed while hiding the field names inside it. That truncated line was then used as the basis for reusing the warehouse schema. A second, targeted probe that printed those objects in full exposed the different field names in seconds.
+
+**Lesson:** Probing a real API before writing schemas is the right instinct (this repo's own CJ schemas exist because the vendor docs are wrong), but a depth-limited or summarised dump is not evidence about anything below the cut. Print the full JSON for every nesting level a schema will actually read, or probe each level with its own focused script. Treat `object{...}`, `[Object]`, and `...` in your own diagnostic output as "not yet verified," not as "verified to be an object."
+
+**Where applied:** Re-probed with a script that printed complete `variantInventories[0]` and `inventories[0]` objects; the field-name divergence was immediately visible and became skill 43's fix.
+
+### 45. An e2e text locator that also matches a nav link makes the test pass without the feature running at all
+
+**Confirmed:** 2026-08-07, the first Playwright run for the "Check for Sals3" shortlist action.
+
+**Incident:** The spec asserted that clicking the row action shows a `Shortlisted` status. The test used a page-wide `page.getByText('Shortlisted', { exact: true })`. The Seller Center sidebar contains a **`Shortlisted` nav link**, which is always visible, so the assertion was satisfied the moment the page loaded. All five tests passed on the first run. The feature had done nothing: a `psql` count found zero rows in `supplier_candidates`, and the dev server log showed no Server Action POST at all. The false pass was only caught by checking the database rather than trusting green tests. Scoping the locator to `page.getByRole('table')` made the tests fail correctly, exposing the real (separate) problem.
+
+**Lesson:** This is a strictly more dangerous variant of the ambiguous-locator problem in skill 41 — there the ambiguity *failed* the test and demanded attention; here it *passed* and actively concealed a non-working feature. Any status or label text that also appears in navigation, breadcrumbs, page headings, or tabs must be asserted through a container-scoped locator. And for a feature whose whole purpose is to write a row, assert the row: a green UI test proves rendering, not persistence.
+
+**Where applied:** `e2e/catalog-shortlist.spec.ts` scopes every row assertion to `getByRole('table')` or `getByRole('dialog')`, and the shortlist behaviour was separately confirmed by querying `supplier_candidates`, `audit_events`, and `idempotency_records` directly.
+
+### 46. A modal that marks the page behind it `aria-hidden` stops every role-based locator outside it from resolving
+
+**Confirmed:** 2026-08-07, after fixing skill 45's locator scoping.
+
+**Incident:** With row assertions correctly scoped to `getByRole('table')`, the click tests still failed — `element(s) not found` — even though the database proved the action had written a real row. The cause was the drawer that opens on success: Base UI's `Sheet` marks the background subtree `aria-hidden="true"` / `data-base-ui-inert` while the dialog is open. Playwright's role- and text-based queries skip `aria-hidden` subtrees by design, so once the drawer opened, `getByRole('table')` no longer matched anything, and every assertion scoped to it failed regardless of what the row displayed.
+
+**Lesson:** An accessible modal implementation deliberately hides the rest of the page from assistive tech, and role-based test locators follow that same tree. After an interaction that opens a dialog, assert against `getByRole('dialog')` — that is also what the user is actually looking at — and only assert on the underlying page after closing it. A locator that worked before the click is not evidence it will resolve after.
+
+**Where applied:** `e2e/catalog-shortlist.spec.ts` asserts the outcome inside `page.getByRole('dialog')`, with a comment recording why, so the scoping is not "simplified" back to a page-wide query later.
+
+### 47. `z.unknown()` still requires the key to exist — a tolerant transform is not tolerant to a missing field
+
+**Confirmed:** 2026-08-07, writing schemas for the CJ enrichment endpoints.
+
+**Incident:** This repo's CJ primitives (`looseText`, `looseNumber`) are built on `z.unknown().transform(...)` specifically so that a changed upstream value degrades one field instead of failing a response — the behaviour the schema file's own header promises. A partial fixture revealed that Zod 4 still rejects the object when the key is **absent**: `Invalid input: expected nonoptional, received undefined`. So the primitives tolerated a wrong *type* but not a missing *key*, meaning one field disappearing from a CJ response would have thrown away an entire enrichment payload and left a candidate with no evidence.
+
+**Lesson:** "Tolerant" has two independent axes — wrong type and absent key — and `z.unknown()` only covers the first. If the intent is "a missing field degrades one value," the primitive must be `.optional()` as well, with the transform's fallback handling `undefined`. Verify this with a fixture that omits the field entirely, not one that sets it to a wrong type; the latter passes either way and proves nothing.
+
+**Where applied:** Every primitive in `src/lib/cj/primitives.ts` is now `z.unknown().optional().transform(...)`; the existing 27 `/product/list` schema tests still pass, confirming the change only loosens behaviour.
+
+### 48. Do not hold a database transaction open across a third-party API call
+
+**Confirmed:** 2026-08-07, designing CJ evidence capture for a shortlisted candidate.
+
+**Incident:** The obvious shape was one transaction: create the candidate, fetch CJ evidence, store the snapshot, write the audit event — all atomic. CJ enforces one request per second, and evidence needs three calls, so that transaction would stay open for roughly 2.5 seconds per click, holding a pooled connection and its row locks for the entire third-party round trip. With a bounded pool of 10, a handful of concurrent employees would exhaust it while every connection sat idle waiting on a supplier API.
+
+**Lesson:** Split the fast, must-be-atomic database work from the slow external call. Commit the local decision first, then fetch, then persist the result in a second short transaction. This also produces better failure semantics: a supplier outage leaves a truthful partial state (candidate shortlisted, evidence absent and labelled as un-fetched) instead of rolling back a decision the user genuinely made because someone else's API was briefly down. Say which of the two outcomes is correct in the UI copy — "could not fetch" is not the same claim as "there is none."
+
+**Where applied:** `src/modules/catalog/candidates/shortlist.ts` commits the shortlist; `capture-evidence.ts` fetches outside any transaction and then upserts the snapshot plus its audit event in a separate one.
+
+### 49. A newly added field on a Server Action's return type can arrive absent from an older client bundle — guard with truthiness, not `!== null`
+
+**Confirmed:** 2026-08-07, adding `evidence` to the "Check for Sals3" action result.
+
+**Incident:** The drawer branched on `result.evidence !== null` to decide between rendering the evidence panel and showing a "could not fetch" message. An existing component test whose mock predated the new field returned a payload with no `evidence` key, so the value was `undefined`, the `!== null` check passed, and the panel dereferenced `evidence.supplierSku` on `undefined` — crashing the row. The test caught it, but the same shape is reachable in production: after a deploy, a browser still running the previous client bundle can invoke the new action and receive a payload its own rendering code does not expect.
+
+**Lesson:** A Server Action's result type is a contract between two independently-versioned halves. When adding a field, treat "field absent" as a real runtime case, not just a stale-test artifact — use a truthiness check so `null` and `undefined` take the same safe branch, and prefer a fallback that degrades to an honest message over one that assumes presence. A test whose fixture omits the field is worth keeping deliberately, as the regression guard.
+
+**Where applied:** `ShortlistDrawer.tsx` branches on `result.evidence` / `!result.evidence`; `ShortlistDrawer.test.tsx` includes a case that omits the key entirely and asserts the "could not fetch" message renders instead of throwing.
+
+### 50. The "stale dev server" failure mode recurred a third time — stop this session's own server before any first E2E run
+
+**Confirmed:** 2026-08-07, the first Playwright run against the shortlist feature.
+
+**Incident:** After a long stretch of file edits with a browser-preview dev server running on port 3001, the CJ Candidate Explorer's client components stopped hydrating: 20 rendered "Check for Sals3" buttons had no React props attached, the `<Suspense>` skeleton stayed in the DOM alongside the streamed table, and clicks did nothing. Because Aj's pre-existing `CjSearchInput` was equally dead, this was briefly diagnosed and nearly reported as a **pre-existing defect in `/products`**. A production build on a different port hydrated correctly, and then a freshly started dev server also hydrated correctly and passed all five tests — proving it was skills 22 and 41 for the third time, not a product bug.
+
+**Lesson:** This has now happened via three separate mechanisms — an orphaned server from an earlier session (22), an actively-used preview server reused by Playwright (41), and a preview server this session had been editing against for hours (here). Treat it as the default first hypothesis whenever interactive behaviour dies after a long editing stretch, *before* forming any theory about the component, the framework version, or someone else's code. Two cheap discriminators settle it in under a minute: check whether unrelated pre-existing client components on the same page are also dead, and run the production build on a different port. Never publish a "pre-existing bug in someone else's code" conclusion without doing both.
+
+**Where applied:** Restarted the dev server, confirmed 5/5, and only then trusted the run. The near-miss is recorded here because the wrong conclusion had already been drafted.
+
+### 51. `next build` imports every route module, including `force-dynamic` ones — so a connection created at module scope fails the build wherever the env var is absent
+
+**Confirmed:** 2026-08-07, the Vercel preview deploy for the CJ shortlist PR.
+
+**Incident:** `src/lib/db/client.ts` created its `postgres.js` pool at module evaluation (`const sql = globalForDb.sals3Sql ?? createSql()`), throwing `DATABASE_URL is not set.` when unset. `npm run verify` passed locally every time, because `.env.local` always supplied `DATABASE_URL`. The Vercel preview then failed, and removing `DATABASE_URL` from `.env.local` reproduced it exactly: `Failed to collect configuration for /products/shortlisted` → `at module evaluation (src/lib/db/client.ts)`. Next.js's "Collecting page data" phase imports each route module to read its config, so `export const dynamic = 'force-dynamic'` did **not** prevent it — that export controls rendering, not whether the module is loaded at build time. One page's import chain (`page.tsx` → `queries.ts` → `client.ts`) was enough to fail the entire build.
+
+**Lesson:** A module that reads required configuration at import time turns a missing env var into a build failure rather than a request failure, in every environment that lacks it: preview deploys, CI, a fresh clone. Create external connections **lazily**, on first use, so importing has no side effects. Two distinct things then need handling, and fixing only the first just moves the failure: (1) the build must not need the service, and (2) a request in an environment genuinely without it should degrade honestly — check a `isXConfigured()` helper and render a plain "not configured in this environment" state instead of a 500. Note that a green local `verify` is not evidence here at all; the only test that proves it is a build with the variable removed.
+
+**Where applied:** `src/lib/db/client.ts` now exports `getDb()` (connects on first query) plus `isDatabaseConfigured()`; the Shortlisted page renders an honest not-configured state. `src/lib/db/client.test.ts` runs in the node environment and imports the module with no `DATABASE_URL`, so moving the connection back to module scope makes that suite fail to load. Build verified both with and without the variable present.
+
+### 52. `gh pr checks` lags behind reality — never conclude "CI does not run here" from one reading of it, and check the run's `attempt`
+
+**Confirmed:** 2026-08-07, investigating why the repo's own `Verify` workflow appeared absent from `sals3-portal#6`.
+
+**Incident:** Three wrong conclusions in sequence, each corrected by a different command.
+
+1. `gh pr checks 6` listed only `Vercel` and `Vercel Preview Comments`. That was reported to Bogs as *"the repo's own verify workflow does not seem to run on PRs — maybe it is not configured."* Wrong: `gh run list --branch <branch>` showed a `Verify` run **had** triggered on the PR head and had **failed**. The same `gh pr checks` command later showed `verify fail` unprompted, so the check surface had simply lagged. `on.pull_request.branches: [develop, main]` was correct all along.
+2. The failure looked like it might be mine. Its annotation said `The job was not acquired by Runner of type hosted even after multiple attempts` after 15m1s — GitHub never assigned a runner. Not code. `gh run rerun` on the same job then succeeded on **attempt 2** with no change, which is what proved it transient.
+3. Separately and genuinely: the two pushes *after* that failed run produced **no workflow run at all**, while the sibling repo in the same org kept running fine. So the PR's final commit had no CI result, and with no `workflow_dispatch` trigger there was no way to request one short of an empty commit.
+
+**Lesson:** `gh pr checks` is a lagging view of the check-run surface, not a source of truth about whether a workflow ran — a single reading of it cannot support a claim about CI configuration. Use `gh run list --branch <branch> --json headSha,status,conclusion,attempt` and confirm the SHA matches the PR head. Read the annotation before assuming a failure is yours: a runner-acquisition message is queueing, not code, and `gh run rerun` distinguishes the two definitively while a sibling repo in the same org separates transient from org-wide billing. Finally, give every gate a `workflow_dispatch` trigger — without one, a dropped run leaves a PR permanently unverified.
+
+**Where applied:** Corrected the claim to Bogs; confirmed the workflow triggers correctly; the rerun passed on attempt 2; added `workflow_dispatch` to `sals3-portal`'s `verify.yml` so a dropped run can be re-requested by hand.
