@@ -143,8 +143,8 @@ The current CJ integration is also single-account prototype infrastructure: glob
 1. Resolve the fabricated comparison price defect.
 2. Implement real authentication plus separate Retailer/Dropshipper registration, immutable business-model entitlements, and tenant isolation.
 3. Implement `SellerAccount`, `SupplierProvider`, `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding`; migrate the current CJ key to the Sals3 Official Dropshipper Account using encrypted secret storage.
-4. Approve one low-risk category-and-market pilot rule pack with official-source anchors and named compliance/review owners.
-5. Implement shortlist, preflight, hard gates, versioned scoring, attention/exception queues, near-duplicate detection, and WIP limits before any selected CJ candidate can enter auto-publication.
+4. **Approve one low-risk category-and-market pilot rule pack** with official-source anchors and named compliance/review owners. **This is now the single highest-leverage open item** — the evidence side of preflight is built and verified, so the decision engine is blocked only on this. Until it exists, spec §14.1 makes every candidate `NOT_IN_PILOT`, which means a correctly-built engine would `HOLD` everything.
+5. Implement preflight hard gates, versioned scoring, near-duplicate detection, attention/exception queues, and WIP limits. Shortlist itself is **done** (see the verified state above); these are the remaining, rule-pack-dependent parts.
 6. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
 7. Implement Product, Variant, Offer, Media, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
 8. Pilot and validate selected Taxonomy v0 branches against representative CJ products.
