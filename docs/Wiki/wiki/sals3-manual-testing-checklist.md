@@ -51,22 +51,35 @@ related: ["[[sals3-management-bible]]", "[[sals3-implementation-phases]]", "[[ho
 
 ## Pillar 3 — Seller Center (partially started)
 
-### CJ candidate shortlist — open manual acceptance (added 2026-08-07)
+### CJ candidate shortlist and evidence fetch — open manual acceptance (added 2026-08-07)
 
-Automated coverage exists (137 unit, 32 Playwright). These are the checks a
+Automated coverage exists (166 unit, 37 Playwright). These are the checks a
 person still has to make, because they depend on real CJ data and on judgement
 about wording rather than on assertable state. Requires `sals3-portal` running
 with a configured `DATABASE_URL`.
 
-- [ ] `Check for Sals3` on a row with **many variants** shows every variant, and each variant's stock is plausible against CJ's own product page — the two inventory levels use different field names and a regression there reports "not reported" instead of failing loudly.
+- [ ] A candidate with **many variants** shows every variant, and each variant's stock is plausible against CJ's own product page — the two inventory levels use different field names and a regression there reports "not reported" instead of failing loudly.
 - [ ] The per-variant stock figures **sum to the warehouse total** shown in the same panel. A mismatch means the `vid` join or a field name has drifted.
-- [ ] Shortlisting the **same product twice** shows "Already shortlisted earlier" and does not add a second row to the Shortlisted queue.
-- [ ] With `sals3-portal` running but the database stopped, the row action reports a failure and the Shortlisted page says no database is configured — neither shows a 500 or a fabricated success.
 - [ ] A product with **no CJ reviews** shows `0` and a dash, never an invented rating; a product **with** reviews labels them CJ supplier-platform evidence and not Sals3 buyer reviews.
-- [ ] Nothing anywhere reads as a pass/fail verdict, score, or "Ready" state — no preflight exists, so any such wording is a defect.
 - [ ] `Platform listings` is never described as sales, orders, or customers.
-- [ ] Keyboard only: reach the row action, activate it, read the drawer, and close it. Screen-reader announces the status pill's text, not just a colour.
-- [ ] The page heading, sidebar link, and browser tab all read `CJ Candidate Explorer`; the topbar shows the `Product Sourcing` group.
+- [ ] Keyboard only: open a row's status badge, read the drawer, and close it. Screen-reader announces the status pill's text, not just a colour.
+
+### Automated candidate-evaluation pipeline — open manual acceptance (added 2026-08-07, second session)
+
+Requires a real CJ account, a configured `DATABASE_URL`, and `CRON_SECRET` set
+so `/api/internal/catalog/evaluate-tick` can be called directly (with
+`Authorization: Bearer <CRON_SECRET>`) to trigger a real tick without waiting
+for Vercel Cron.
+
+- [ ] Calling the tick endpoint twice back-to-back does not create a duplicate `supplier_candidates` row for the same CJ `pid`, and does not re-queue a candidate whose feed data has not changed since the last tick (cost-efficiency: no needless re-spend of CJ evidence points).
+- [ ] A CJ product whose category/name matches the §14.1 exclusion list (e.g. contains "battery" or "supplement") reaches `BLOCKED` **without** a `supplier_snapshots` row ever being created for it — confirms the screening stage actually skips the CJ evidence call rather than fetching evidence and discarding it.
+- [ ] A candidate with zero stock across every variant reaches `TEMPORARILY_INELIGIBLE`, not `BLOCKED` — it must show as retryable, with a working "Recheck now" action, and must never appear in the Exception Queue.
+- [ ] Every `BLOCKED` row's reason explanation and the Blocked/Rejected page's own copy make clear the category/market/price thresholds are placeholders, not an approved company policy — nothing should read as "Sals3 has decided this category is prohibited," only "this candidate is on hold pending an approved rule."
+- [ ] Simulate a CJ outage (revoke `CJ_API_KEY` temporarily) and confirm affected candidates land in `EVALUATION_FAILED`, retry automatically, and only reach the Exception Queue after real repeated failures — not after one transient blip.
+- [ ] `Qualified Products → Ready` is the screen that loads when clicking the `Qualified Products` sidebar parent link directly (not a 404 or the Needs Attention tab).
+- [ ] Nothing on `Ready`/`Needs Attention` claims a numeric quality score, a confidence percentage, or "guaranteed authentic" — the counterfeit check's own wording must stay conservative even for a `PASS_WITH_ATTENTION` row.
+- [ ] "Customize & List" on a `Ready`/`Needs Attention` row states plainly that the Product Editor is not built yet — it must never silently do nothing or claim success.
+- [ ] With `CRON_SECRET` unset or wrong, `GET /api/internal/catalog/evaluate-tick` returns `401` and touches no data — confirm nothing runs when the secret is misconfigured, not just when it is present.
 
 ### Not started
 
