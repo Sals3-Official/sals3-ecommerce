@@ -1546,6 +1546,16 @@ engineering effort:
   market before anything publishes.
 - The rate limiter is per server instance. It needs a shared store if the
   portal ever runs more than one instance.
+- **No database exists outside a developer machine.** There is no staging or
+  production Postgres, so `DATABASE_URL` is unset in CI and in preview
+  deploys. Two consequences are now permanent design constraints rather than
+  temporary quirks: the database client connects lazily, so importing it never
+  requires configuration and a build never needs a database; and any page that
+  reads the catalog must check `isDatabaseConfigured()` and render an honest
+  "not configured in this environment" state instead of failing. Provisioning a
+  real database is a separate, unmade infrastructure decision (spec §23's
+  "selected database" input) — the local Postgres is a developer convenience,
+  not an approved deployment.
 - `drizzle-kit` carries moderate-severity advisories through a transitive
   `esbuild` dev-server issue. It is a devDependency only and never runs in the
   application runtime; `npm audit --audit-level=high` passes.
