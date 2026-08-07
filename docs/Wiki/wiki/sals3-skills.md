@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-08
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -620,3 +620,23 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** When a page's own honest-degradation pattern is "check `isDatabaseConfigured()`, else call something that hits the database," the *order* is the entire point - a DB-dependent helper (an auth/session lookup, a settings read, anything reaching `getDb()`) must never run before that check, even when it looks like the "obvious" first line of the function (get the session/account, *then* decide what to render). Grep every caller of a new DB-dependent helper for this exact ordering before considering a feature done, not just the one page being actively edited - this was the same three-line mistake copy-pasted across 7 files in one session, because the second file was written by copying the first. Add a short comment at the check itself, not just a lesson here, so the next edit to any of these files doesn't reorder them back.
 
 **Where applied:** All 7 files (`products/{blocked,evaluating,exception-queue,qualified/ready,qualified/needs-attention}/page.tsx`, `supplier-apps/page.tsx`, `CjCatalogueView.tsx`) reordered to check `isDatabaseConfigured()` first, each with an explanatory comment; `e2e/cj-products.spec.ts`'s locators updated to accept the "no database configured" heading as a third valid outcome. Re-verified by rebuilding locally with `DATABASE_URL` removed from `.env.local` and running the affected e2e specs before pushing again - not just trusting the fix and re-pushing blind.
+
+### 63. A shared constant consumed by both Next.js and a `tsx` script must be a named export - a default export can arrive as a module namespace object and silently stringify to "[object Object]" into the database
+
+**Confirmed:** 2026-08-07, extracting `SALS3_OFFICIAL_IDENTITY_ID` so the dev session, `scripts/bootstrap-sals3-official-cj.mts`, and the new storefront resolver would stop hard-coding `'dev-user'` independently.
+
+**Incident:** ESLint's `import/prefer-default-export` fires on any module with exactly one export, so the new one-line constant module was written as `export default 'dev-user'` to satisfy it. Under Next.js/webpack that works. Under the bootstrap script's tsx/esbuild CJS interop it did not: the imported binding arrived as a module namespace object rather than the string, and because the value flows straight into a Drizzle insert as `identityId`, the driver stringified it into a real `seller_accounts` row with `identity_id = '[object Object]'`. Nothing threw at the point of the mistake - the script only failed one statement later, on the `(seller_account_id, provider_id)` unique constraint, with an error naming the *connection* insert and a UUID pointing at the bogus account. TypeScript, lint, build, and 184 unit tests were all green throughout, because no test exercises the script.
+
+**Lesson:** When one module is imported by two different toolchains (the Next.js graph and a `tsx`/esbuild script), prefer a **named** export for values, and disable `import/prefer-default-export` with the reason recorded in the file rather than reshaping the module to satisfy a lint rule that has no opinion about interop. More generally: a lint-shaped change to a module that a build script also consumes is a runtime change, not a style change - re-run the script, then *look at the rows it wrote*, before believing it worked. The failing statement is not necessarily where the bad value entered.
+
+**Where applied:** `src/lib/auth/identity.ts` exports `SALS3_OFFICIAL_IDENTITY_ID` as a named const with a scoped `eslint-disable-next-line import/prefer-default-export` and the interop reason in the file comment; the bogus `seller_accounts` row was deleted (it owned no connection) and `npm run bootstrap:cj` re-run clean. Note the disable directive must sit immediately above the export - placed above a multi-line `//` comment block it applies to the next *comment* line, and then reports as an unused directive while the real error still stands.
+
+### 64. Never round-trip a UTF-8 file through PowerShell 5.1's `Get-Content`/`Set-Content` - it silently mojibakes every non-ASCII character and rewrites the line endings
+
+**Confirmed:** 2026-08-07, bumping the `updated:` frontmatter date in three vault notes.
+
+**Incident:** A one-line PowerShell pipeline (`Get-Content $p | ForEach-Object {...} | Set-Content -Encoding utf8 $p`) was used to change `updated: 2026-08-07` to `2026-08-08` in `hot.md`, `sals3-skills.md`, and `vault-catalog.md`. Windows PowerShell 5.1's `Get-Content` reads with the system ANSI codepage unless told otherwise, so every UTF-8 em-dash was decoded as three Latin-1 characters and then re-encoded as UTF-8 - `—` became `â€"` on 61 lines of `vault-catalog.md` alone. `Set-Content` also converted LF to CRLF, so `sals3-skills.md` showed 290 changed lines for what should have been a single frontmatter edit. Nothing errored; the corruption was found only because a later `Edit` failed to match an em-dash in text the file was supposed to still contain.
+
+**Lesson:** Use the `Edit`/`Write` tools for text files, never a PowerShell read-modify-write round trip - they preserve encoding and line endings. If PowerShell is genuinely required, pass `-Encoding utf8` to **`Get-Content` as well as** `Set-Content`, and check `git diff --stat` afterwards: a line count far larger than the edit is the tell that encoding or line endings moved. Recovery without discarding the good edits in the same tree is `git show HEAD:<path> > <path>` per file, then redo the content changes with a tool that respects encoding.
+
+**Where applied:** All three notes were restored from `HEAD` and every content edit redone with the `Edit` tool; `git diff --stat` was re-checked to confirm the diff had shrunk to only the intended lines.

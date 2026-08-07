@@ -2,7 +2,7 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-08
 status: canonical
 authority: navigation
 owner_approved: true
@@ -88,6 +88,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-003-international-availability-shipping-and-pricing]] — market, freight, and contribution-pricing decision used by publish validation.
 - [[sals3-session-2026-08-07-part14-automated-candidate-evaluation-pipeline]] — turnover correction (a prior agent's turnover prompt was stale), a reopened-and-confirmed decision to build the preflight engine with labelled placeholders instead of an ADR-002 approval, and the automated ingest/screen/evaluate/decide pipeline itself. 5 new engineering lessons recorded ([[sals3-skills]] entries 53–57).
 - [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]] — ADR-006/ADR-008 implemented for real: seller accounts, encrypted per-seller supplier connections, and a tenant-scoped CJ adapter replacing the global `CJ_API_KEY`, plus three feedback-driven follow-up rounds (disconnect step-up verification, a guided Supplier Apps connect dialog, a collapsible/hover-flyout sidebar redesign). 5 new engineering lessons recorded ([[sals3-skills]] entries 58–62). `sals3-portal` PR #8 open, updated, all checks (Vercel + GitHub Actions verify) passing.
+- [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]] — the storefront feed (`/api/storefront/*`), the last runtime consumer of the global `CJ_API_KEY`, moved onto the Sals3 Official Dropshipper's own supplier connection, and the fabricated deals comparison price ([[hot]]'s number-one active risk) removed. Legacy `src/services/cj/{token,products,enrichment}.ts` deleted. The `sals3-ecommerce` contract is unchanged in both cases; both verified live end to end. 2 new engineering lessons recorded ([[sals3-skills]] entries 63–64). `sals3-portal` PRs #9 and #10 open.
 
 ## Raw reference assets
 
