@@ -76,6 +76,20 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // App Router files address the framework by named export: a route handler
+    // is discovered as GET/POST/DELETE, and a page or layout supplies
+    // `metadata` and `generateMetadata` alongside its default export. A single
+    // named export in one of these files is required by Next.js, not a style
+    // slip, so the default-export preference cannot apply here.
+    files: [
+      'src/app/**/route.{js,ts}',
+      'src/app/**/{page,layout,template,error,loading,not-found}.{js,jsx,ts,tsx}',
+    ],
+    rules: {
+      'import/prefer-default-export': 'off',
+    },
+  },
+  {
     files: [
       '**/*.test.{js,jsx,ts,tsx}',
       '**/*.spec.{js,jsx,ts,tsx}',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import nextConfig, { SECURITY_HEADERS } from '../next.config';
+import nextConfig, { NO_STORE_ROUTES, SECURITY_HEADERS } from '../next.config';
 
 /**
  * Header rules are asserted here rather than only end-to-end because
@@ -43,11 +43,23 @@ describe('next.config header rules', () => {
     expect(SECURITY_HEADERS).toContainEqual({ key, value });
   });
 
-  it('marks the login route as never cacheable', async () => {
-    const rules = await getHeaderRules();
+  it.each(['/login', '/signup'])(
+    'marks %s as never cacheable',
+    async (source) => {
+      const rules = await getHeaderRules();
 
-    expect(findRule(rules, '/login')?.headers).toEqual([
-      { key: 'Cache-Control', value: 'no-store' },
-    ]);
+      expect(findRule(rules, source)?.headers).toEqual([
+        { key: 'Cache-Control', value: 'no-store' },
+      ]);
+    },
+  );
+
+  it('covers every credential screen and nothing else', async () => {
+    // API routes send `no-store` from `noStoreJson`, so listing them here too
+    // would create a second place to keep in step.
+    expect(NO_STORE_ROUTES).toEqual(['/login', '/signup']);
+    expect(NO_STORE_ROUTES.some((route) => route.startsWith('/api'))).toBe(
+      false,
+    );
   });
 });

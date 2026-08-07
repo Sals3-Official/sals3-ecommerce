@@ -1,4 +1,59 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
+
+const CSRF_TOKEN = 'x'.repeat(43);
+const VALID_EMAIL = 'shopper@example.com';
+const VALID_PASSWORD = 'correct-horse-1';
+
+/**
+ * Playwright never reaches real Firebase: no credentials are configured for
+ * `next dev` or CI, so the server routes are stubbed at the network layer and
+ * the upstream hosts are aborted as a tripwire.
+ *
+ * That means these specs cover the client half only — form, request, state,
+ * redirect. The server guards (CSRF, origin, throttling, enumeration parity)
+ * are covered by `src/app/api/auth/login/route.test.ts`.
+ */
+async function stubAuthEndpoints(
+  page: Page,
+  login?: (route: Route) => Promise<void>,
+) {
+  await page.route('https://identitytoolkit.googleapis.com/**', (route) =>
+    route.abort(),
+  );
+  await page.route('https://securetoken.googleapis.com/**', (route) =>
+    route.abort(),
+  );
+
+  await page.route('**/api/auth/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ csrfToken: CSRF_TOKEN }),
+    }),
+  );
+
+  if (login) {
+    await page.route('**/api/auth/login', login);
+  }
+}
+
+function jsonRoute(status: number, body: unknown) {
+  return (route: Route) =>
+    route.fulfill({
+      status,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+}
+
+async function fillCredentials(page: Page) {
+  await page.getByLabel('Email address').fill(VALID_EMAIL);
+  await page.getByLabel('Password', { exact: true }).fill(VALID_PASSWORD);
+}
+
+function continueButton(page: Page) {
+  return page.getByRole('button', { name: 'Continue', exact: true });
+}
 
 test.describe('Login screen', () => {
   test.beforeEach(async ({ page }) => {
@@ -17,36 +72,112 @@ test.describe('Login screen', () => {
     ).toBeVisible();
     await expect(page.getByLabel('Email address')).toBeVisible();
     await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Continue', exact: true }),
-    ).toBeVisible();
+    await expect(continueButton(page)).toBeVisible();
     await expect(
       page.getByRole('button', { name: /continue with google/i }),
     ).toBeVisible();
   });
 
-  test('blocks an invalid credential pair with field-level messages', async ({
+  test('blocks an invalid credential pair without reaching the network', async ({
     page,
   }) => {
+    let loginCalls = 0;
+
+    await stubAuthEndpoints(page, async (route) => {
+      loginCalls += 1;
+      await jsonRoute(200, { status: 'success' })(route);
+    });
+
     await page.getByLabel('Email address').fill('not-an-email');
     await page.getByLabel('Password', { exact: true }).fill('short');
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await continueButton(page).click();
 
     await expect(page.getByText(/valid email address/i)).toBeVisible();
     await expect(page.getByText(/at least 8 characters/i)).toBeVisible();
-    await expect(page.getByRole('status')).toBeHidden();
+    // Field errors also carry role="alert", so the check is that no
+    // form-level message appeared: the failure is the input, not the submit.
+    await expect(page.getByText(/do not match an account/i)).toHaveCount(0);
+    expect(loginCalls).toBe(0);
   });
 
-  test('never puts credentials in the URL on submit', async ({ page }) => {
-    await page.getByLabel('Email address').fill('shopper@example.com');
-    await page.getByLabel('Password', { exact: true }).fill('correct-horse-1');
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  test('signs in and lands home without putting credentials in the URL', async ({
+    page,
+  }) => {
+    await stubAuthEndpoints(page, jsonRoute(200, { status: 'success' }));
+    await page.route('**/api/auth/session', jsonRoute(200, { signedIn: true }));
 
-    await expect(page.getByRole('status')).toContainText(
-      /not switched on yet/i,
+    await fillCredentials(page);
+    await continueButton(page).click();
+
+    await page.waitForURL('**/');
+    expect(new URL(page.url()).search).toBe('');
+    expect(new URL(page.url()).pathname).toBe('/');
+  });
+
+  test('keeps the password out of the query string when sign-in fails', async ({
+    page,
+  }) => {
+    await stubAuthEndpoints(
+      page,
+      jsonRoute(401, { error: 'invalid_credentials' }),
+    );
+
+    await fillCredentials(page);
+    await continueButton(page).click();
+
+    await expect(page.getByRole('alert').first()).toContainText(
+      /do not match an account/i,
     );
     expect(new URL(page.url()).search).toBe('');
-    await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');
+    expect(page.url()).not.toContain(VALID_PASSWORD);
+  });
+
+  test('never names the reason a credential was rejected', async ({ page }) => {
+    await stubAuthEndpoints(
+      page,
+      jsonRoute(401, { error: 'invalid_credentials' }),
+    );
+
+    await fillCredentials(page);
+    await continueButton(page).click();
+
+    const alert = page.getByRole('alert').first();
+
+    await expect(alert).toContainText(/do not match an account/i);
+    await expect(alert).not.toContainText(
+      /no account|not found|wrong password/i,
+    );
+  });
+
+  test('signs in an account whose address was never verified', async ({
+    page,
+  }) => {
+    // Address verification is out of scope, so an unverified account is an
+    // ordinary account.
+    await stubAuthEndpoints(page, jsonRoute(200, { status: 'success' }));
+    await page.route('**/api/auth/session', jsonRoute(200, { signedIn: true }));
+
+    await fillCredentials(page);
+    await continueButton(page).click();
+
+    await page.waitForURL('**/');
+    expect(new URL(page.url()).pathname).toBe('/');
+  });
+
+  test('tells the visitor to wait when the attempt is throttled', async ({
+    page,
+  }) => {
+    await stubAuthEndpoints(
+      page,
+      jsonRoute(429, { error: 'too_many_requests' }),
+    );
+
+    await fillCredentials(page);
+    await continueButton(page).click();
+
+    await expect(page.getByRole('alert').first()).toContainText(
+      /too many sign-in attempts/i,
+    );
   });
 
   test('reveals the password only while Show is toggled on', async ({
@@ -54,7 +185,7 @@ test.describe('Login screen', () => {
   }) => {
     const password = page.getByLabel('Password', { exact: true });
 
-    await password.fill('correct-horse-1');
+    await password.fill(VALID_PASSWORD);
     await expect(password).toHaveAttribute('type', 'password');
 
     await page.getByRole('button', { name: /show password/i }).click();
@@ -95,8 +226,6 @@ test.describe('Login screen', () => {
     );
 
     expect(overflow).toBeLessThanOrEqual(1);
-    await expect(
-      page.getByRole('button', { name: 'Continue', exact: true }),
-    ).toBeVisible();
+    await expect(continueButton(page)).toBeVisible();
   });
 });

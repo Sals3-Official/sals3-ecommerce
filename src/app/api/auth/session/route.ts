@@ -1,14 +1,16 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import getFirebaseAdminAuth from '@/lib/auth/firebase-admin';
+import {
+  clearSessionCookie,
+  setSessionCookie,
+} from '@/lib/auth/session-cookie-response';
 import { toSignedInSessionResponse } from '@/lib/auth/session-user';
 import {
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_MS,
-  SESSION_MAX_AGE_SECONDS,
   hasMatchingCsrf,
   hasSameOrigin,
-  isProduction,
   isRecentAuthTime,
   isSessionPostRateLimited,
   noStoreJson,
@@ -25,16 +27,6 @@ function unauthorized() {
 
 function forbidden() {
   return noStoreJson({ error: 'Forbidden request.' }, { status: 403 });
-}
-
-function clearSessionCookie(response: ReturnType<typeof noStoreJson>) {
-  response.cookies.set(SESSION_COOKIE_NAME, '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProduction(),
-    path: '/',
-    maxAge: 0,
-  });
 }
 
 export async function GET(request: NextRequest) {
@@ -96,13 +88,7 @@ export async function POST(request: NextRequest) {
     });
     const response = noStoreJson({ status: 'success' });
 
-    response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: isProduction(),
-      path: '/',
-      maxAge: SESSION_MAX_AGE_SECONDS,
-    });
+    setSessionCookie(response, sessionCookie);
 
     return response;
   } catch {
