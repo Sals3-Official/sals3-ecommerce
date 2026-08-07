@@ -31,6 +31,7 @@ related:
   - "[[sals3-session-2026-08-07-part14-email-password-auth]]"
   - "[[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]"
   - "[[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]"
+  - "[[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]"
 ---
 
 # Sals3 - Current State Cache
@@ -170,7 +171,11 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 
 [[sals3-portal-code-review-2026-08-06]] records seven read-only findings. The live pagination/page-size mismatch is highest priority. Long-process cache growth and fabricated totals are current correctness/operations risks. Permission-error handling is defense-in-depth because every present role currently includes `product:read`.
 
-~~The current CJ integration is also single-account prototype infrastructure: global `CJ_API_KEY`, shared in-memory token cache, fixed CJ service/base URL, direct CJ catalogue UI, and development `userId`/`sellerId`. No real registration, tenant, encrypted per-account credential, `SupplierConnection`, or provider selector exists.~~ **Done 2026-08-07, third session**: `CjSupplierAdapter` now sits behind a per-connection token cache; `seller_accounts`/`supplier_providers`/`supplier_connections`/`supplier_connection_secrets` exist with AES-256-GCM encrypted credentials; the catalogue UI and the automation pipeline both resolve the seller's own connection instead of the global key. **Storefront feed done 2026-08-07, fourth session**: `/api/storefront/*` now resolves the Sals3 Official Dropshipper's own connection through `src/lib/storefront/supplier-source.ts` and fetches through the same adapter; `src/services/cj/{token,products,enrichment}.ts` are deleted, and `CJ_API_KEY` is read by nothing but `npm run bootstrap:cj`. See [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]. Still true: `identityId` is still the `dev-user` placeholder (no real registration/login exists yet).
+~~The current CJ integration is also single-account prototype infrastructure: global `CJ_API_KEY`, shared in-memory token cache, fixed CJ service/base URL, direct CJ catalogue UI, and development `userId`/`sellerId`. No real registration, tenant, encrypted per-account credential, `SupplierConnection`, or provider selector exists.~~ **Done 2026-08-07, third session**: `CjSupplierAdapter` now sits behind a per-connection token cache; `seller_accounts`/`supplier_providers`/`supplier_connections`/`supplier_connection_secrets` exist with AES-256-GCM encrypted credentials; the catalogue UI and the automation pipeline both resolve the seller's own connection instead of the global key. **Storefront feed done 2026-08-07, fourth session**: `/api/storefront/*` now resolves the Sals3 Official Dropshipper's own connection through `src/lib/storefront/supplier-source.ts` and fetches through the same adapter; `src/services/cj/{token,products,enrichment}.ts` are deleted, and `CJ_API_KEY` is read by nothing but `npm run bootstrap:cj`. See [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]. Still true: `identityId` is still the `dev-user` placeholder (no real registration/login exists yet), and this now has a real, verified consequence - see the connection-ownership risk below.
+
+### Supplier connection ownership is stranded by identity, with no transfer tool
+
+The first real Better Auth login (2026-08-08) exposed a CJ connection created under the `dev-user` placeholder identity, unreachable and unreconnectable by the real account signing in afterward: `supplier_connections_provider_external_hash_key` is a hard unique index on `(providerId, externalAccountLookupHash)`, so the same real CJ account can have exactly one connection row, ever - soft-disconnecting the stale row does not release it for a different seller to claim, only reassigning `sellerAccountId` does. Fixed this time with a one-off script (data correction, not committed - see [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]], [[sals3-skills]] entry 66). **Open**: no permanent tool exists for this reassignment; it will recur for any connection created before a seller's first real login, and eventually between two real sellers contesting the same CJ account.
 
 ## Current build priorities implied by the decisions
 
@@ -210,6 +215,7 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 - [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]]
 - [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]
 - [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]
+- [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]
 
 ## Reusable lessons
 
