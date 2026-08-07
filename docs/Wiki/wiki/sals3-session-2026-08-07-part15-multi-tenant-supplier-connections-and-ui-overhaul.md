@@ -105,6 +105,16 @@ feedback across several rounds, each landed as its own commit:
   unrelated MCP server processes also named `node.exe`. Same root condition
   as the vault's own already-documented skill 22, reached via yet another
   path.
+- **After the Vercel deployment fix landed, PR #8's GitHub Actions `verify`
+  check failed on its own** - a genuine regression, not a flake: every page
+  this session touched called `requireDropshipperAccount()` (which hits the
+  database immediately) before its own `isDatabaseConfigured()` check,
+  crashing outright in CI's env-less runner instead of degrading honestly.
+  Confirmed via the raw `gh run view --log`, not assumed from the test
+  failures alone; fixed on all 7 affected files plus the e2e locator that
+  didn't yet know "no database configured" was a valid third outcome;
+  re-verified by reproducing CI locally (`.env.local` with `DATABASE_URL`
+  removed) before pushing again. [[sals3-skills]] lesson 62.
 - A CJ logo asset requested by filename (`E:\sals3-ecommerce\Untitled-1.png`)
   was read, confirmed to be the real Sals3 mark, and copied into
   `sals3-portal/public/brand/` - copying a user-provided local image file
