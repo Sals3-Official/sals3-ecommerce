@@ -82,10 +82,11 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 ## Catalog and supplier pipeline
 
-- [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract through an owned healthy connection: green auto-publish, yellow attention, red block/auto-pause, anti-junk/country/IP gates, customization, and supplier sync; not yet implemented.
+- [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract through an owned healthy connection: green auto-publish, yellow attention, red block/auto-pause, anti-junk/country/IP gates, customization, and supplier sync. Shortlist, CJ evidence fetch, and — as of 2026-08-07 — an automated evaluation pipeline with hard gates and a real decision are implemented and verified in `sals3-portal`; see section 26. Import, publication, and attention state remain unimplemented.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — Taxonomy v0 and category/attribute mapping decision.
 - [[ADR-003-international-availability-shipping-and-pricing]] — market, freight, and contribution-pricing decision used by publish validation.
+- [[sals3-session-2026-08-07-part14-automated-candidate-evaluation-pipeline]] — turnover correction (a prior agent's turnover prompt was stale), a reopened-and-confirmed decision to build the preflight engine with labelled placeholders instead of an ADR-002 approval, and the automated ingest/screen/evaluate/decide pipeline itself. 5 new engineering lessons recorded ([[sals3-skills]] entries 53–57). `sals3-portal` PR pending.
 
 ## Raw reference assets
 

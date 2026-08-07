@@ -1451,40 +1451,78 @@ Implementation is complete only when:
 - the customer PDP reads only the published Sals3 revision for the migrated vertical slice;
 - README, runbooks, current-state notes, and manual testing records match verified behavior.
 
-## 26. Verified implementation status — 2026-08-07
+## 26. Verified implementation status — updated 2026-08-07 (automated evaluation pipeline)
 
 Only the items below are implemented and verified. Everything else in this
 specification remains unimplemented. Do not read a section's presence here as
 evidence that it works.
 
+> [!IMPORTANT] Reversal from the first 2026-08-07 update, same day
+> The first version of this section said the preflight decision (§8.4-8.6, §14)
+> was explicitly **not** implemented, parked pending an owner-approved ADR-002
+> pilot rule pack — see [[sals3-skills]] lesson 54 for the full sequence. Bogs directed
+> building it anyway that same day, for the single-seller dev/official context
+> only, using **labelled placeholders** where the spec calls for information no
+> one has approved yet. It is now implemented and verified below — but the
+> ADR-002/ADR-003 approval this section previously said was the blocker still
+> has not happened. Do not read "implemented" as "policy-approved." See the new
+> "Labelled placeholders, not approved policy" subsection.
+
 ### Implemented and verified in `sals3-portal`
 
-- Postgres schema and checked-in Drizzle migration for three tables:
+- Postgres schema and checked-in Drizzle migrations for **five** tables:
   `supplier_candidates` (unique on `(supplier, external_product_id)`),
-  `idempotency_records`, and append-only `audit_events`.
-- The **Shortlist** step from section 8.1: `checkForSals3Candidate` Server
-  Action, permission-gated with `catalog.candidate.shortlist`, per-actor rate
-  limited, Zod-validated, writing inside one transaction.
-- Section 4.2 duplicate handling: re-shortlisting the same CJ `pid` reuses the
+  `idempotency_records`, `supplier_snapshots`, append-only `audit_events`, and
+  `candidate_evaluations` (added 2026-08-07, second session — the decision
+  model below).
+- Section 4.2 duplicate handling: re-ingesting the same CJ `pid` reuses the
   existing row. Verified against the live database — four requests produced one
   candidate row, one audit event, and four idempotency records
   (`reused: false` once, then `true`).
 - Section 4.2 idempotency: same key plus same payload replays the stored
   result; same key plus a different payload is rejected. Only a SHA-256 digest
   of the payload is stored.
-- `Check for Sals3` row action, shortlist drawer, `Product Sourcing` navigation
-  (CJ Candidate Explorer / Shortlisted / Exception Queue), and a Shortlisted
-  queue that reads real rows scoped to the session's seller.
 - **CJ enrichment evidence fetch (part of section 8.3).** Three live calls per
   candidate — `/product/query` (detail, with variants embedded),
   `/product/stock/getInventoryByPid` (per-warehouse and per-variant stock), and
   `/product/productComments` — normalised into a `supplier_snapshots` record
   with a SHA-256 checksum and capture timestamp, one row per candidate. Runs
-  sequentially under CJ's one-request-per-second limit, outside the shortlist
+  sequentially under CJ's one-request-per-second limit, outside any
   transaction, and logs `pointsInfo` from every response. Roughly 30 points per
-  candidate.
-- 133 unit/component tests and 31 Playwright tests pass, including an assertion
-  that no preflight decision label can ever render.
+  candidate. Unchanged from the first version of this section, now called from
+  the automated pipeline's evaluate step instead of a per-row click.
+- **Automated candidate-evaluation pipeline (§8.4, §8.5, §8.6, §14 — now
+  built, see the placeholders caveat below).** A protected internal route
+  (`/api/internal/catalog/evaluate-tick`, `CRON_SECRET`-gated, called by
+  `vercel.json`'s Vercel Cron entry every 5 minutes) runs: ingest the CJ feed
+  into `QUEUED` candidates → lease a bounded batch (Postgres
+  `FOR UPDATE SKIP LOCKED`, no new infrastructure) → cheap screening against
+  feed-level data only (blocks before spending a CJ evidence-fetch call) →
+  full qualification against real evidence for survivors → decide → persist
+  snapshot + decision + audit event in one short transaction. The manual
+  per-row `Check for Sals3` click is gone; the seller-facing `Check for
+  Sals3` Server Action is retired to a permission-gated `recheckCandidateNow`
+  debug action for retryable rows only.
+- Seven decision states: `QUEUED`, `EVALUATING`, `PASS`, `PASS_WITH_ATTENTION`,
+  `TEMPORARILY_INELIGIBLE`, `BLOCKED`, `EVALUATION_FAILED`. `BLOCKED` is
+  reserved for permanent reasons (policy/counterfeit match, duplicate) with no
+  override; `TEMPORARILY_INELIGIBLE` covers structurally transient failures
+  (no stock, no shipping route, invalid price) and is auto-retried with
+  exponential backoff and jitter, dead-lettering to the Exception Queue only
+  after 5 exhausted attempts. Malformed or unreachable CJ data routes to
+  `EVALUATION_FAILED`, never a fabricated pass.
+- `Product Sourcing` navigation rebuilt: **Qualified Products** (Ready /
+  Needs Attention, nested), **Evaluating**, **Blocked / Rejected**,
+  **Exception Queue** (now reads real dead-lettered rows, not a permanent
+  empty state), and **All Supplier Products** (the renamed raw CJ browser,
+  read-only status badges, no click-to-check action anywhere).
+  `/products/shortlisted` redirects to `/products/qualified/ready` rather
+  than 404ing.
+- 166 unit/component tests (43 new) and 37 Playwright tests (36 passing + 1
+  correctly skipped without `CRON_SECRET`) pass, including regression tests
+  that a screening-stage block never spends a CJ evidence call, that two
+  concurrent lease claims cannot take the same row, and that every stored
+  `BLOCKED` decision carries at least one reason code.
 
 Two CJ API facts verified live on 2026-08-07, both of which silently corrupt
 inventory if assumed otherwise, and both now covered by regression tests:
@@ -1497,13 +1535,36 @@ inventory if assumed otherwise, and both now covered by regression tests:
   while 36,338 real units existed. After the fix the five variants summed to
   exactly the warehouse total.
 
+### Labelled placeholders, not approved policy
+
+The preflight decision engine above is real, tested code — but three of its
+inputs are placeholders standing in for a business/legal decision no one has
+approved, following the same pattern already established by the shortlist's
+`PLACEHOLDER_MARKET_CODE`:
+
+- **Category/counterfeit denylist** — §14.1's own "recommended initial
+  exclusions" wording, not invented, but no ADR-002 pilot category has
+  actually been approved for any market.
+- **Destination market** — still the single placeholder `'PH'`; not an
+  ADR-003 approval.
+- **Price bounds and margin-floor estimate** — env-configured placeholder
+  numbers (`src/modules/catalog/candidates/rules/policy.ts`). The margin
+  estimate is identical for every candidate today (no per-product landed
+  cost exists), never a real per-product calculation.
+
+`candidate_evaluations.policy_version` records which policy produced a stored
+decision, specifically so these can be swapped for a real ADR-002/ADR-003
+rule pack later without a schema change. Until that approval happens, every
+`BLOCKED`/`TEMPORARILY_INELIGIBLE`/`PASS_WITH_ATTENTION` decision driven by
+one of these three checks is provisional, not policy-approved.
+
 ### Explicitly NOT implemented
 
-- **The preflight decision (sections 8.4, 8.5, 8.6, 14).** Evidence is now
-  fetched, but nothing judges it: the hard-gate, scoring, and compliance-gate
-  engines are **not** built, so no `PASS`, `PASS_WITH_ATTENTION`, `REVIEW`,
-  `HOLD`, or `BLOCKED` decision and no quality score is produced anywhere. The
-  evidence panel shows facts with no verdict attached.
+- **Category-required-attribute validation** (part of §8.5). Needs the
+  ADR-002 taxonomy-to-CJ-category mapping wired up first — that integration
+  does not exist. Separate, larger task.
+- **Image-dimension/resolution checks.** Not possible from CJ's currently
+  modelled API surface — `/product/query` returns no image dimensions.
 - **Freight evidence** (`/logistic/freightCalculate`, part of section 8.3). It
   needs an approved destination market and ADR-003 has approved none, so it is
   not called. Destination availability and landed cost therefore cannot be
@@ -1511,26 +1572,28 @@ inventory if assumed otherwise, and both now covered by regression tests:
 - **Supplier description sanitisation.** The CJ `description` is fetched and
   stored but never rendered, because no sanitiser exists. Section 12's media
   pipeline and section 9.4's source panel both remain unbuilt.
-- The Exception Queue is empty by construction, not by missing data.
 - Product, ProductOption, Variant, Offer, MediaAsset, ProductRevision,
   AttentionIssue, ComplianceEvaluation, CostSnapshot, OutboxEvent, and every
-  other entity in section 5 beyond the three tables above.
+  other entity in section 5 beyond the five tables above.
 - Import job (section 8.11 steps 5-12), publication, attention state,
   auto-publish/auto-pause, media pipeline, supplier synchronization, webhooks,
-  preview tokens, and the Product Editor.
+  preview tokens, and the Product Editor. "Customize & List" on a qualified
+  candidate states this honestly rather than faking success.
 - The versioned HTTP admin API surface in section 18. Internal writes use
   Server Actions instead; see the revised section 3.2.
+- Any per-seller CJ connection, Shopify-style Supplier App, or AliExpress
+  integration — still one global `CJ_API_KEY` and one dev/official seller
+  context (`seller-001`). Explicitly deferred to a separate task.
 
 ### Parked, with a named unblock condition
 
-Three of the gaps above are parked in [[parked-ideas-backlog]] rather than
+Two of the gaps above are parked in [[parked-ideas-backlog]] rather than
 left as open TODOs, because each is blocked by an owner decision, not by
-engineering effort:
+engineering effort. The preflight decision engine's own parked entry is now
+struck through — see that file for why: it was unparked and built with
+placeholders, but the underlying business/legal approval it names is still
+unmade.
 
-- **Preflight decision engine** (§8.4, §8.5, §8.6, §14) — blocked on an
-  ADR-002 pilot category/market rule pack. Without one, §14.1 makes every
-  candidate `NOT_IN_PILOT`, so the engine would be correct and return `HOLD`
-  for everything.
 - **Destination freight evidence** (§8.3, §13) — blocked on an ADR-003
   approved market. There is no legitimate destination to quote against.
 - **Supplier HTML sanitisation** (§9.4, §12) — to be designed together with
