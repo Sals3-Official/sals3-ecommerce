@@ -6,6 +6,7 @@ import ProductAddToCartButtons from '@/components/product/ProductAddToCartButton
 type ProductPriceBoxProps = {
   productId: string;
   title: string;
+  category: string;
   imageUrl?: string;
   imageAlt: string;
   tone: PlaceholderTone;
@@ -17,6 +18,7 @@ type ProductPriceBoxProps = {
 export default function ProductPriceBox({
   productId,
   title,
+  category,
   imageUrl,
   imageAlt,
   tone,
@@ -47,6 +49,7 @@ export default function ProductPriceBox({
         <ProductAddToCartButtons
           productId={productId}
           title={title}
+          category={category}
           imageUrl={imageUrl}
           imageAlt={imageAlt}
           tone={tone}

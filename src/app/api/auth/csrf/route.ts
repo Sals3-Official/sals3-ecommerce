@@ -16,7 +16,7 @@ export function GET() {
     httpOnly: true,
     sameSite: 'lax',
     secure: isProduction(),
-    path: '/api/auth',
+    path: '/api',
     maxAge: CSRF_MAX_AGE_SECONDS,
   });
 

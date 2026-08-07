@@ -188,6 +188,46 @@ Do not commit service account JSON files or `.env.local`.
 `jwks-rsa`/`jose` combination that crashed the Vercel Node runtime while
 loading `firebase-admin/auth`.
 
+## Klaviyo Analytics
+
+Sals3 loads Klaviyo only after the visitor accepts the analytics consent banner.
+The decision is stored in `localStorage` under `sals3_klaviyo_consent_v1`.
+Declining keeps the Klaviyo script unloaded and makes every local tracking
+helper no-op.
+
+Required Klaviyo values:
+
+```text
+NEXT_PUBLIC_KLAVIYO_SITE_ID=RuXpVU
+KLAVIYO_PRIVATE_API_KEY=<server-only private key with profiles:write>
+KLAVIYO_API_REVISION=2026-07-15
+```
+
+`NEXT_PUBLIC_KLAVIYO_SITE_ID` is the safe public Site ID used by
+`src/components/klaviyo/KlaviyoLoader.tsx`. `KLAVIYO_PRIVATE_API_KEY` must stay
+server-only; it is used only by `POST /api/klaviyo/profile-sync` to create or
+update a Klaviyo profile after the visitor is signed in and has accepted
+analytics.
+
+Tracked v1 events are limited to behavior the app really supports today:
+`Viewed Product`, Klaviyo's recently viewed item payload, `Added to Cart`,
+`Buy Now Clicked`, `Cart Viewed`, `Cart Quantity Changed`, and
+`Cart Item Removed`. Purchase, checkout, fulfilled, canceled, and refunded
+events are intentionally deferred because `/checkout`, orders, and payment
+reconciliation do not exist yet.
+
+Profile enrichment sends verified Firebase profile fields when available
+(email, phone, display-name-derived first/last name, photo URL, Firebase UID as
+a Sals3 custom property, provider IDs, email-verified state, and account
+timestamps) plus bounded browser context (locale, timezone, viewport/screen
+size, current path, referrer, UTM values, analytics-consent timestamp).
+Passwords, session cookies, CSRF tokens, private keys, payment data, hidden
+fingerprinting, precise geolocation, and raw IP collection are not sent.
+
+Analytics consent is not email or SMS marketing subscription consent. This
+integration does not add profiles to lists and does not subscribe anybody to
+campaigns.
+
 ## Install
 
 Use npm. Do not switch package managers unless the owner approves.

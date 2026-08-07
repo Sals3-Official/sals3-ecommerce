@@ -16,6 +16,11 @@ export default defineConfig({
   },
   webServer: {
     command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_KLAVIYO_SITE_ID:
+        process.env.NEXT_PUBLIC_KLAVIYO_SITE_ID ?? 'RuXpVU',
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
     url: baseURL,

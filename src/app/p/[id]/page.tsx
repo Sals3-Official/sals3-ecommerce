@@ -5,6 +5,7 @@ import SiteFooter from '@/components/layout/SiteFooter';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductPriceBox from '@/components/product/ProductPriceBox';
 import RelatedProducts from '@/components/product/RelatedProducts';
+import KlaviyoViewedProduct from '@/components/klaviyo/KlaviyoViewedProduct';
 import { SITE_NAME, getSiteUrl } from '@/lib/site';
 import type { Product as HomeProduct } from '@/lib/home-placeholder-data';
 import type { ProductDetail } from '@/lib/product-detail';
@@ -123,6 +124,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <span className="text-ink">{detail.title}</span>
         </p>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <KlaviyoViewedProduct
+            productId={detail.id}
+            title={detail.title}
+            imageUrl={detail.imageUrl}
+            unitPrice={detail.price}
+            category={detail.category}
+          />
           <ProductGallery
             images={detail.imageUrl ? [detail.imageUrl] : []}
             imageAlt={detail.imageAlt}
@@ -138,6 +146,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <ProductPriceBox
               productId={detail.id}
               title={detail.title}
+              category={detail.category}
               imageUrl={detail.imageUrl}
               imageAlt={detail.imageAlt}
               tone={detail.tone}

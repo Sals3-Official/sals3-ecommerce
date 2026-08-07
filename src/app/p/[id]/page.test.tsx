@@ -1,6 +1,7 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
 import renderWithCart from '../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
@@ -83,6 +84,16 @@ afterEach(() => {
 });
 
 describe('Product page', () => {
+  function acceptAnalytics() {
+    window.localStorage.setItem(
+      'sals3_klaviyo_consent_v1',
+      JSON.stringify({
+        decision: KLAVIYO_CONSENT_ACCEPTED,
+        decidedAt: '2026-08-08T00:00:00.000Z',
+      }),
+    );
+  }
+
   it('renders the product title, price, and rating line', async () => {
     mockFetch();
 
@@ -129,5 +140,35 @@ describe('Product page', () => {
 
     expect(metadata.title).toMatch(/quiet tower air cooler/i);
     expect(metadata.description).toMatch(/rating 4\.5, 2 reviews/i);
+  });
+
+  it('tracks a viewed product only after analytics consent', async () => {
+    const track = vi.fn();
+    const trackViewedItem = vi.fn();
+
+    acceptAnalytics();
+    window.klaviyo = { track, trackViewedItem };
+    mockFetch();
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledWith(
+        'Viewed Product',
+        expect.objectContaining({
+          ProductID: 'air-cooler',
+          ProductName: 'Quiet tower air cooler',
+          Categories: ['home-living'],
+        }),
+      );
+    });
+    expect(trackViewedItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ItemId: 'air-cooler',
+        Title: 'Quiet tower air cooler',
+      }),
+    );
   });
 });

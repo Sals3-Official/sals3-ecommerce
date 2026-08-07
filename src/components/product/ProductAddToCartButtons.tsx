@@ -4,10 +4,12 @@ import { useRouter } from 'next/navigation';
 import type { Money } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
 import { useCart } from '@/components/cart/CartProvider';
+import { trackKlaviyoBuyNowClicked } from '@/lib/klaviyo/client';
 
 type ProductAddToCartButtonsProps = {
   productId: string;
   title: string;
+  category: string;
   imageUrl?: string;
   imageAlt: string;
   tone: PlaceholderTone;
@@ -17,6 +19,7 @@ type ProductAddToCartButtonsProps = {
 export default function ProductAddToCartButtons({
   productId,
   title,
+  category,
   imageUrl,
   imageAlt,
   tone,
@@ -26,11 +29,34 @@ export default function ProductAddToCartButtons({
   const router = useRouter();
 
   function handleAddToCart() {
-    addItem({ productId, title, imageUrl, imageAlt, tone, unitPrice });
+    addItem({
+      productId,
+      title,
+      category,
+      imageUrl,
+      imageAlt,
+      tone,
+      unitPrice,
+    });
   }
 
   function handleBuyNow() {
-    addItem({ productId, title, imageUrl, imageAlt, tone, unitPrice });
+    trackKlaviyoBuyNowClicked({
+      productId,
+      title,
+      category,
+      imageUrl,
+      unitPrice,
+    });
+    addItem({
+      productId,
+      title,
+      category,
+      imageUrl,
+      imageAlt,
+      tone,
+      unitPrice,
+    });
     router.push('/cart');
   }
 
