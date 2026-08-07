@@ -93,12 +93,16 @@ Log each parked idea in the same turn it is parked, under `## Active parked item
 - **Unblock condition:** Picked up together with the Product Editor's Description tab (spec §9.4), so the sanitiser and the structured `descriptionDocument` format are designed as one piece.
 - **Related:** [[cj-candidate-to-sals3-product-draft-implementation-spec]], [[nextjs-component-security-code-rules]]
 
-### 2026-08-07 — CJ Candidate Explorer page naming and its stale "not built yet" banner
-- **What:** One page carries three different names, and its banner now contradicts its own UI. Confirmed live by Bogs on 2026-08-07 and reported as confusing.
+### ~~2026-08-07 — CJ Candidate Explorer page naming and its stale "not built yet" banner~~ — UNPARKED AND FIXED 2026-08-07
+
+> [!NOTE] Resolved the same day
+> Bogs unparked this immediately after it was logged, directing that outstanding issues be fixed before any new feature work. Fixed in `sals3-portal#6`: the page heading, tab title, and sidebar link all read `CJ Candidate Explorer` (spec §8.13's product-facing name), the topbar keeps showing the `Product Sourcing` nav group because that is what it is for, and the banner now states what is true — a candidate can be shortlisted and its CJ variants, stock, and review counts read, while nothing is imported, priced, published, or screened. The route stays `/products` so existing links and the storefront feed's references keep working. An e2e test now asserts the heading matches the sidebar name and that "is not built yet" cannot return. Entry kept, struck through, for the record.
+
+- **What:** One page carried three different names, and its banner contradicted its own UI. Confirmed live by Bogs on 2026-08-07 and reported as confusing.
   - Topbar shows `Product Sourcing` (the nav **group** label).
   - Sidebar shows `CJ Candidate Explorer`.
   - The page's own `PageHeader` still shows `Products` / "Supplier catalogue from CJdropshipping".
   - `CjCatalogueView`'s banner still ends with *"Importing a supplier product for resale is not built yet"* while every row now has a **Check for Sals3** button. The sentence is still literally true — nothing imports, publishes, or prices — but next to that button it reads as a contradiction rather than as a scope note.
-- **Why parked:** Bogs chose to defer it on 2026-08-07 rather than take another change into `sals3-portal#6` that night. It is cosmetic, not a correctness or security problem: the button's behaviour, permissions, and honest states are all covered by tests. Cause is mine — the nav label was renamed to the spec §8.13 product-facing name without updating the page header or the banner in the same pass.
-- **Unblock condition:** None. This is a small, unblocked copy change; do it in the next `sals3-portal` pass. Rename the page header to `CJ Candidate Explorer` so it matches the sidebar, and rewrite the banner to say what is now true — a candidate can be shortlisted and its CJ evidence viewed, but nothing is imported, priced, published, or screened. Keep the two labelling rules that are load-bearing: `listedNum` is a platform listing count and CJ reviews are supplier-platform evidence.
+- **Why it was parked (briefly):** Deferred on 2026-08-07 rather than taking another change into `sals3-portal#6` that night. Cosmetic, not a correctness or security problem — the button's behaviour, permissions, and honest states were already covered by tests. Cause was the nav label being renamed to the spec §8.13 product-facing name without updating the page header or banner in the same pass.
+- **Unblock condition:** None — it was never blocked, only deferred. Unparked and closed within hours.
 - **Related:** [[cj-candidate-to-sals3-product-draft-implementation-spec]], [[sals3-global-seller-center-ux-blueprint-proposal]]
