@@ -1,6 +1,12 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { RATE_LIMIT_SCOPES, SESSION_POST_RULES } from './auth-rate-limits';
+import {
+  getRequestIpKey,
+  isRateLimited,
+  resetRateLimitsForTests,
+} from './rate-limit';
 
 export const SESSION_COOKIE_NAME = 'sals3_session';
 export const CSRF_COOKIE_NAME = 'sals3_csrf';
@@ -9,16 +15,6 @@ export const SESSION_MAX_AGE_SECONDS = 24 * 60 * 60;
 export const SESSION_MAX_AGE_MS = SESSION_MAX_AGE_SECONDS * 1000;
 export const CSRF_MAX_AGE_SECONDS = 10 * 60;
 export const RECENT_SIGN_IN_SECONDS = 5 * 60;
-
-const SESSION_POST_LIMIT = 20;
-const SESSION_POST_WINDOW_MS = 60 * 1000;
-
-type RateLimitBucket = {
-  count: number;
-  resetAt: number;
-};
-
-const sessionPostAttempts = new Map<string, RateLimitBucket>();
 
 export function noStoreJson(
   body: Record<string, unknown>,
@@ -74,23 +70,15 @@ export function isRecentAuthTime(authTimeSeconds: number, nowMs = Date.now()) {
 }
 
 export function isSessionPostRateLimited(request: NextRequest) {
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const key = forwardedFor?.split(',')[0]?.trim() || 'unknown';
-  const now = Date.now();
-  const bucket = sessionPostAttempts.get(key);
-
-  if (!bucket || bucket.resetAt <= now) {
-    sessionPostAttempts.set(key, {
-      count: 1,
-      resetAt: now + SESSION_POST_WINDOW_MS,
-    });
-    return false;
-  }
-
-  bucket.count += 1;
-  return bucket.count > SESSION_POST_LIMIT;
+  return isRateLimited(RATE_LIMIT_SCOPES.sessionPost, [
+    { key: getRequestIpKey(request), rule: SESSION_POST_RULES.perIp },
+  ]);
 }
 
+/**
+ * Clears every scope, not only the session-post one. Kept under the original
+ * name so existing route tests continue to work unchanged.
+ */
 export function resetSessionPostRateLimitForTests() {
-  sessionPostAttempts.clear();
+  resetRateLimitsForTests();
 }

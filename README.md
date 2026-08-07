@@ -80,7 +80,51 @@ SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 
 ## Authentication
 
-`/login` supports Google sign-in through Firebase Authentication. The browser
+Two ways in: Google, and email with a password. Both end at the same 24-hour
+`httpOnly` `sals3_session` cookie, and nothing is gated behind being signed in
+yet — guest browsing and the local cart are unaffected.
+
+### Email and password
+
+The password is checked **on the server**, not in the browser.
+`POST /api/auth/login` verifies the same origin, throttles per address,
+re-validates the credential with the very same Zod schema the form used
+(`src/lib/auth/login-schema.ts`), checks the CSRF double submit, throttles per
+account, then calls the Firebase Identity Toolkit
+`accounts:signInWithPassword` REST endpoint. It verifies the returned ID token
+and mints the session cookie.
+
+Every credential failure — unknown address, wrong password, disabled account —
+returns one byte-identical `401 {"error":"invalid_credentials"}`, so the form
+cannot be used to discover which addresses have accounts. Response bodies carry
+a fixed error code and never a sentence; the human copy lives client-side in
+`src/lib/auth/login-status.ts`.
+
+`POST /api/auth/signup` creates the account through `accounts:signUp`, records
+the display name, and mints the same session cookie, so the form redirects
+straight to the home page with the visitor already signed in.
+
+**Email address verification is deliberately out of scope.** No verification
+mail is sent, and sign-in does not inspect the `email_verified` claim. Two
+consequences to know about:
+
+- An address can be registered by someone who does not own it.
+- Signup is the one place that does not mirror sign-in's generic posture. An
+  address that is already registered returns
+  `409 {"error":"email_unavailable"}` and the form says so. That discloses
+  membership, and it is forced rather than chosen: success now means "you are
+  signed in", which cannot be faked for an account somebody else owns. Sign-in
+  stays indistinguishable, and the signup throttle caps the harvest rate.
+
+Attempt throttling (`src/lib/auth/rate-limit.ts`) is **in-memory and
+per-process**: per-IP and per-account buckets with lazy TTL eviction. On a
+scale-out host the real ceiling is `instances × limit` and a cold start resets
+it, so treat it as best-effort throttling rather than a rate-limit control.
+Firebase's own `TOO_MANY_ATTEMPTS_TRY_LATER` is the durable backstop.
+
+### Google
+
+The browser
 uses the Firebase Web SDK only long enough to complete the Google popup and get
 a Firebase ID token. The token is posted to `POST /api/auth/session`, where
 Firebase Admin verifies a recent sign-in and sets a 24-hour `httpOnly`
@@ -111,10 +155,34 @@ FIREBASE_CLIENT_EMAIL=<service account client_email>
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-Firebase Console setup for `sals3-b82b6`: enable Authentication > Sign-in
-method > Google, register a Web App if needed, and add authorized domains such
-as `localhost` and the production host without protocol or port. Do not commit
-service account JSON files or `.env.local`.
+Optional, and only relevant to email/password:
+
+```text
+FIREBASE_WEB_API_KEY=<Web API key restricted by API, not by referrer>
+```
+
+The server-side Identity Toolkit calls fall back to
+`NEXT_PUBLIC_FIREBASE_API_KEY` when this is unset, which is fine locally. Set
+it in production **if the browser key is restricted by HTTP referrer**:
+server-to-server calls send no `Referer`, so a referrer-restricted key returns
+403 — and it will work locally while failing in production. Point this at a
+second key with an API restriction (Identity Toolkit) instead. A Web API key is
+not a secret either way; it is already in the client bundle.
+
+Firebase Console setup for `sals3-b82b6`, none of which is code:
+
+1. Authentication > Sign-in method > enable **Google**.
+2. Authentication > Sign-in method > enable **Email/Password**. Until this is
+   on, both routes return the generic outage notice and the server logs
+   `[auth] identity toolkit unavailable { code: 'PASSWORD_LOGIN_DISABLED' }`.
+3. Register a Web App if needed, and add authorized domains such as `localhost`
+   and the production host without protocol or port.
+
+Firebase's **Email enumeration protection** setting no longer changes what a
+visitor sees — sign-in collapses every credential failure itself, and signup
+discloses a taken address by design — but leave it on regardless.
+
+Do not commit service account JSON files or `.env.local`.
 
 `firebase-admin` is pinned to `13.6.0` because `14.2.0` pulled a
 `jwks-rsa`/`jose` combination that crashed the Vercel Node runtime while
@@ -353,7 +421,7 @@ before that structured entity actually exists — it lives in its own
 `catalog/` directory, separate from the live `src/components/home/ProductCard.tsx`,
 specifically so it isn't mistaken for the shipped card.
 
-## Guest Header Strip and Auth Placeholders
+## Guest Header Strip and Auth Entry Points
 
 `src/components/layout/GuestUtilityBar.tsx` renders a thin strip above the
 main header row (Feedback, Sell on Sals3, Customer Care, Log In, Sign Up),
@@ -367,12 +435,12 @@ deliberately left out: the main header's existing `Orders` link already covers
 that, and Bogs flagged the duplication during review.
 
 `Log In` and `Sign Up` link to real routes, `/login` and `/signup`
-(`src/app/login/page.tsx`, `src/app/signup/page.tsx`). `/login` is now a built
-UI (see [Login Screen](#login-screen)); `/signup` still shows the plain-English
-"not ready yet" placeholder (`src/components/auth/AuthComingSoon.tsx`). Both
-pages set `robots: { index: false, follow: false }`.
+(`src/app/login/page.tsx`, `src/app/signup/page.tsx`). Both are built, working
+credential screens on the same split-hero layout (see
+[Login and Signup Screens](#login-and-signup-screens)), and both set
+`robots: { index: false, follow: false }`.
 
-## Login Screen
+## Login and Signup Screens
 
 `/login` implements the approved Claude Design source `Sals3 Login.dc.html`: a
 full-bleed 50/50 split with the brand photo and value proposition on the left
@@ -380,69 +448,118 @@ and the sign-in card on the right. The site header and footer are deliberately
 absent — the route is a single-task surface and the hero's circular back
 control is the way out.
 
+`/signup` reuses that layout unchanged. The two screens cross-link to each
+other, so giving them different chrome would throw a visitor between two
+layouts mid-task.
+
 ### How to see it
 
 ```bash
 npm run dev
 ```
 
-Then open <http://localhost:3000/login>. Below the `lg` breakpoint the split
-stacks: the hero becomes a band above the form.
+Then open <http://localhost:3000/login> or
+<http://localhost:3000/signup>. Below the `lg` breakpoint the split stacks: the
+hero becomes a band above the form.
 
 ### Files
 
-| File                                       | Role                                                       |
-| ------------------------------------------ | ---------------------------------------------------------- |
-| `src/app/login/page.tsx`                   | Route composition and `noindex` metadata                   |
-| `src/components/auth/AuthHeroPanel.tsx`    | Left panel: photo, scrims, back control, value proposition |
-| `src/components/auth/LoginCard.tsx`        | Right panel: logo, heading, legal copy (Server Component)  |
-| `src/components/auth/LoginForm.tsx`        | Client form: state, validation, unavailable notice         |
-| `src/components/auth/EmailField.tsx`       | Email input                                                |
-| `src/components/auth/PasswordField.tsx`    | Password input with the Show/Hide reveal toggle            |
-| `src/components/auth/AuthField.tsx`        | Shared label + control + error layout                      |
-| `src/components/auth/auth-field-styles.ts` | Shared control class strings                               |
-| `src/components/auth/GoogleMark.tsx`       | Inline Google "G" SVG                                      |
-| `src/lib/auth/login-schema.ts`             | Zod credential schema and field-error mapping              |
-| `src/lib/auth/auth-links.ts`               | Every href the screen points at                            |
+| File                                         | Role                                                       |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| `src/app/login/page.tsx`                     | Sign-in route composition and `noindex` metadata           |
+| `src/app/signup/page.tsx`                    | Registration route composition and `noindex` metadata      |
+| `src/components/auth/AuthHeroPanel.tsx`      | Left panel: photo, scrims, back control, value proposition |
+| `src/components/auth/LoginCard.tsx`          | Right panel for sign-in (Server Component)                 |
+| `src/components/auth/SignupCard.tsx`         | Right panel for registration (Server Component)            |
+| `src/components/auth/LoginForm.tsx`          | Client sign-in form: state machine, validation, submit     |
+| `src/components/auth/LoginFormActions.tsx`   | Announcer, alert region, and both sign-in buttons          |
+| `src/components/auth/SignupForm.tsx`         | Client registration form                                   |
+| `src/components/auth/SignupFields.tsx`       | The four registration inputs, in focus order               |
+| `src/components/auth/FormAlert.tsx`          | Always-mounted `role="alert"` for form-level failures      |
+| `src/components/auth/StatusAnnouncer.tsx`    | Screen-reader-only progress ticker                         |
+| `src/components/auth/SubmitButton.tsx`       | Primary submit with the `aria-disabled` pending contract   |
+| `src/components/icons/StatusIcon.tsx`        | Alert, envelope, and spinner glyphs                        |
+| `src/components/auth/GoogleSignInButton.tsx` | Divider plus the whole Google popup flow                   |
+| `src/components/auth/NameField.tsx`          | Full-name input                                            |
+| `src/components/auth/EmailField.tsx`         | Email input                                                |
+| `src/components/auth/PasswordField.tsx`      | Password input; `purpose` selects sign-in/sign-up/confirm  |
+| `src/components/auth/AuthField.tsx`          | Shared label + control + error layout                      |
+| `src/components/auth/auth-field-styles.ts`   | Shared control class strings                               |
+| `src/lib/auth/login-schema.ts`               | Zod credential schema, shared by the form and the server   |
+| `src/lib/auth/signup-schema.ts`              | Registration schema built on the credential schema         |
+| `src/lib/auth/password-login.ts`             | Browser side of sign-in                                    |
+| `src/lib/auth/password-signup.ts`            | Browser side of registration                               |
+| `src/lib/auth/login-status.ts`               | Every sentence shown for a server outcome                  |
+| `src/lib/auth/identity-toolkit.ts`           | Server-only Firebase Identity Toolkit REST client          |
+| `src/lib/auth/rate-limit.ts`                 | Per-IP and per-account attempt buckets                     |
+| `src/lib/auth/auth-request-guards.ts`        | Shared origin, throttle, parse, schema, and CSRF preamble  |
+| `src/lib/auth/auth-error-codes.ts`           | The auth wire contract (safe on both sides)                |
+| `src/lib/auth/auth-links.ts`                 | Every href the screens point at                            |
 
 Auth palette tokens and the two hero gradient overlays live in
-`src/app/globals.css`. The screen's typeface is Instrument Sans, registered in
+`src/app/globals.css`. The screens' typeface is Instrument Sans, registered in
 `src/app/layout.tsx` with `preload: false` so no other route pays for the font
 file, and applied through the `font-auth` utility.
 
+`test/client-bundle-boundary.test.ts` walks the import graph from every client
+entry point and fails on a `node:` builtin or a `server-only` marker. It exists
+because that mistake is invisible: typecheck, unit tests, and the build all
+pass while the page silently stops hydrating.
+
 ### Required setup
 
-None. No environment variables, no backend, no packages were added.
+The Firebase Console steps under [Authentication](#authentication). No
+environment variable is required beyond the ones already listed, and no package
+was added for this feature.
 
 ### Security posture
-
-No Sals3 auth endpoint exists yet, so **nothing is transmitted**:
 
 - The form has no `action` and its submit handler always calls
   `preventDefault()`. Without that, the browser's default GET submit would put
   the password in the URL query string, the address bar, and every log
   downstream. `e2e/login.spec.ts` asserts the URL stays clean after submit.
-- The password lives only in React state — never web storage, never a log — and
-  is cleared after a submit attempt. Both are asserted in
-  `src/components/auth/LoginForm.test.tsx`.
-- `Continue with Google` reports the same unavailable state instead of
-  redirecting. No OAuth client or allow-listed callback URL exists, and an
-  unvalidated redirect is exactly the open-redirect shape to avoid.
-- Validation uses one Zod schema (`src/lib/auth/login-schema.ts`) with generic,
-  input-only messages, so the form can't be used to enumerate accounts. When a
-  real endpoint lands, **the server must re-validate with the same schema** and
-  add rate limiting and CSRF protection — the client check is UX only.
-- `next.config.ts` now sends `X-Content-Type-Options`, `X-Frame-Options`,
+- The password lives only in React state — never web storage, never a log,
+  never a URL. It is cleared the moment it can no longer be used, and kept
+  after a failure so a one-character typo does not force a full retype.
+- Validation uses one Zod schema (`src/lib/auth/login-schema.ts`) on both
+  sides. The server re-validates with it, so the `MAX_PASSWORD_LENGTH` bound is
+  enforced before anything reaches a hasher, and the client check is UX only.
+- CSRF is a double submit through the existing `GET /api/auth/csrf`, compared
+  with `timingSafeEqual` after an explicit length guard. Every cookie-setting
+  route also refuses a cross-origin `Origin`.
+- Nothing logs the address, the password, the ID token, or a response body. The
+  only server log on the auth path is
+  `console.error('[auth] identity toolkit unavailable', { code })` — the code
+  string alone. A distinctive sentinel password is asserted absent from the
+  response body, every response header, the request URL, web storage, and all
+  five `console` levels, across every failure path.
+- `next.config.ts` sends `X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`, and `Permissions-Policy` on document routes, plus
-  `Cache-Control: no-store` on `/login`.
+  `Cache-Control: no-store` on `/login` and `/signup`. API responses get
+  `no-store` from `noStoreJson`.
+- A pending button is marked `aria-disabled`, never `disabled`. Setting the
+  real attribute on a focused button blurs it, dropping a keyboard visitor to
+  the document body mid-request; a handler guard prevents the double submit
+  instead.
 
 ### Known limitations
 
-- **Sign-in does nothing.** A valid submit shows a notice saying accounts are
-  not switched on yet. This is intentional until an auth backend exists.
-- `/login/reset` (Forgot password), `/help/pricing`, `/legal/terms`, and
-  `/legal/privacy` are not built yet. The last three are the same stub hrefs the
-  footer already ships; `/login/reset` is new and will 404 until built.
+- **No address verification.** Nothing proves a buyer can receive mail at the
+  address on their account. This will matter for order confirmations and for
+  password reset.
+- **`/login/reset` (Forgot password) does not exist.** Real password accounts
+  exist, so a buyer who forgets a password has no in-app recovery — and with no
+  email step anywhere in signup, a mistyped address is never caught. The
+  `sendOobCode` helper in `src/lib/auth/identity-toolkit.ts` is kept, unused,
+  for exactly this; it is the recommended next piece of work.
+- Attempt throttling is per-process and resets on a cold start (see
+  [Authentication](#authentication)).
+- Playwright stubs the Sals3 auth routes at the network layer, so `e2e/` covers
+  the client half only — form, request, state, redirect. The server guards
+  (CSRF, origin, throttling, enumeration parity) are proved by the route unit
+  tests, not end to end.
+- `/help/pricing`, `/legal/terms`, and `/legal/privacy` are not built yet;
+  these are the same stub hrefs the footer already ships.
 - The header rule in `next.config.ts` excludes `/_next/`. With a broader
   `/:path*` matcher, `next dev` (16.3.0) answered its own chunk requests with
   403 and the HMR websocket handshake failed, silently leaving every client

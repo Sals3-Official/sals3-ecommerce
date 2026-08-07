@@ -1,0 +1,114 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+/**
+ * Guards the server/client module boundary.
+ *
+ * A Node-only import reaching a client component does not fail typecheck, does
+ * not fail a jsdom unit test, and does not fail the build — it fails silently
+ * in the browser, where the page stops hydrating and every control stays
+ * inert. That happened once already: `login-status.ts` reached
+ * `session-cookies.ts` through the auth error codes, dragging `node:crypto`
+ * into the login bundle.
+ *
+ * The walk is static and deliberately simple: follow relative imports from
+ * each client entry point and fail on any `node:` builtin or `server-only`
+ * marker found along the way.
+ */
+
+const SOURCE_ROOT = resolve(import.meta.dirname, '..', 'src');
+
+/** Modules the browser loads directly, or through a `'use client'` component. */
+const CLIENT_ENTRY_POINTS = [
+  'components/auth/LoginForm.tsx',
+  'components/auth/LoginFormActions.tsx',
+  'components/auth/SignupForm.tsx',
+  'components/auth/SignupFields.tsx',
+  'components/auth/GoogleSignInButton.tsx',
+  'components/auth/PasswordField.tsx',
+  'components/auth/EmailField.tsx',
+  'components/auth/NameField.tsx',
+  'components/layout/HeaderAuthContext.tsx',
+  'lib/auth/password-login.ts',
+  'lib/auth/password-signup.ts',
+  'lib/auth/logout-session.ts',
+  'lib/auth/firebase-google-login.ts',
+  'lib/auth/login-status.ts',
+];
+
+const IMPORT_PATTERN = /(?:from|import)\s+'([^']+)'/g;
+
+const CANDIDATE_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
+
+function resolveModule(specifier: string, fromFile: string) {
+  const base = specifier.startsWith('@/')
+    ? resolve(SOURCE_ROOT, specifier.slice(2))
+    : resolve(dirname(fromFile), specifier);
+
+  return CANDIDATE_SUFFIXES.map((suffix) => `${base}${suffix}`).find((path) => {
+    try {
+      readFileSync(path);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** Every server-only import reachable from `entry`, with the path that led there. */
+function findServerOnlyImports(entry: string) {
+  const visited = new Set<string>();
+  const violations: string[] = [];
+
+  function walk(file: string, trail: readonly string[]) {
+    if (visited.has(file)) {
+      return;
+    }
+
+    visited.add(file);
+
+    const source = readFileSync(file, 'utf8');
+    const specifiers = Array.from(
+      source.matchAll(IMPORT_PATTERN),
+      (m) => m[1]!,
+    );
+
+    specifiers.forEach((specifier) => {
+      const step = [...trail, specifier];
+
+      if (specifier.startsWith('node:') || specifier === 'server-only') {
+        violations.push(step.join(' -> '));
+        return;
+      }
+
+      if (!specifier.startsWith('.') && !specifier.startsWith('@/')) {
+        return;
+      }
+
+      const resolved = resolveModule(specifier, file);
+
+      if (resolved) {
+        walk(resolved, step);
+      }
+    });
+  }
+
+  walk(resolve(SOURCE_ROOT, entry), [entry]);
+
+  return violations;
+}
+
+describe('client bundle boundary', () => {
+  it.each(CLIENT_ENTRY_POINTS)('%s pulls in no server-only module', (entry) => {
+    expect(findServerOnlyImports(entry)).toEqual([]);
+  });
+
+  it('detects a violation when one exists', () => {
+    // Proves the walk actually follows the graph rather than always passing:
+    // this route legitimately reaches `node:crypto` through the CSRF check.
+    expect(
+      findServerOnlyImports('app/api/auth/login/route.ts').length,
+    ).toBeGreaterThan(0);
+  });
+});

@@ -33,3 +33,30 @@ export const AUTH_LINK_CLASS =
   'text-auth-navy underline decoration-1 underline-offset-[3px] hover:text-auth-azure';
 
 export const AUTH_ERROR_CLASS = 'text-[13px] font-medium text-red-600';
+
+/**
+ * Persistent guidance under a control (a requirement, not a failure). Muted
+ * rather than red, and it stays in place whether or not the rule is satisfied,
+ * so the text bound by `aria-describedby` never changes mid-typing.
+ */
+export const AUTH_HELPER_CLASS =
+  'flex items-center gap-1.5 text-[13px] text-auth-muted';
+
+/** Applied to the helper row once its requirement is met. */
+export const AUTH_HELPER_MET_CLASS = 'text-auth-navy';
+
+/**
+ * Boxed form-level failure.
+ *
+ * `red-700` rather than the `red-600` used for field errors: red-600 clears
+ * 4.5:1 on white but drops to 4.40:1 on the rose-50 surface and fails. The
+ * paired icon means the state is never signalled by colour alone.
+ */
+export const AUTH_ALERT_CLASS =
+  'flex items-start gap-2.5 rounded-2xl border border-red-600/30 bg-rose-50 px-4 py-3 text-[13px] leading-relaxed text-red-700';
+
+/**
+ * Secondary control inside a notice panel. Shorter than the 58px form controls,
+ * which look crushed in a tinted box, but still at the 44px touch minimum.
+ */
+export const AUTH_INLINE_BUTTON_CLASS = `${FOCUS_RING} inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-auth-navy bg-transparent px-4 text-sm font-semibold text-auth-navy transition-colors duration-150 hover:bg-auth-tint aria-disabled:cursor-not-allowed aria-disabled:opacity-70`;

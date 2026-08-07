@@ -1,36 +1,7 @@
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { z } from 'zod';
+import getCsrfToken from './auth-csrf-client';
+import authFlowError from './auth-flow-error';
 import getFirebaseAuth from './firebase-client';
-
-const csrfResponseSchema = z.object({
-  csrfToken: z.string().min(32),
-});
-
-function authFlowError(message: string, code: string) {
-  return Object.assign(new Error(message), { code });
-}
-
-async function getCsrfToken() {
-  const response = await fetch('/api/auth/csrf', { cache: 'no-store' });
-
-  if (!response.ok) {
-    throw authFlowError(
-      'Unable to start secure Google sign-in.',
-      'auth/csrf-unavailable',
-    );
-  }
-
-  const parsed = csrfResponseSchema.safeParse(await response.json());
-
-  if (!parsed.success) {
-    throw authFlowError(
-      'Unable to start secure Google sign-in.',
-      'auth/csrf-unavailable',
-    );
-  }
-
-  return parsed.data.csrfToken;
-}
 
 async function createServerSession(idToken: string, csrfToken: string) {
   const response = await fetch('/api/auth/session', {
@@ -55,10 +26,15 @@ export default async function signInWithGoogleSession() {
 
   try {
     const idToken = await result.user.getIdToken();
-    const csrfToken = await getCsrfToken();
+    const csrfToken = await getCsrfToken(
+      'Unable to start secure Google sign-in.',
+    );
 
     await createServerSession(idToken, csrfToken);
   } finally {
+    // The httpOnly cookie is the session of record. Dropping the client
+    // Firebase state means a stolen browser profile yields no reusable
+    // credential.
     await signOut(auth);
   }
 }
