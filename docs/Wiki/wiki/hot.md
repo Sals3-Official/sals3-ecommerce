@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-08
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -29,6 +29,7 @@ related:
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
   - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
   - "[[sals3-session-2026-08-07-part14-email-password-auth]]"
+  - "[[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]"
 ---
 
 # Sals3 - Current State Cache
@@ -77,10 +78,10 @@ related:
 ### Incomplete or placeholder
 
 - No product/variant/offer model, supplier import workflow, secure employee admin, checkout, payment, settlement, tax, order fulfillment, or return flow exists. A Seller Center UI prototype now exists in `sals3-portal` (see below) - real routes and real permission enforcement, but illustrative data throughout and no order/inventory/finance/payout backend.
-- A **first real catalog database does now exist**, in `sals3-portal` only: PostgreSQL + Drizzle ORM, **nine tables** (`supplier_candidates`, `idempotency_records`, `supplier_snapshots`, `candidate_evaluations`, append-only `audit_events`, plus four added 2026-08-07 third session: `seller_accounts`, `supplier_providers`, `supplier_connections`, `supplier_connection_secrets`). It covers the CJ candidate **Shortlist** step, a real **CJ evidence fetch** (detail, variants, per-warehouse and per-variant inventory, review counts) stored as one checksummed snapshot per candidate, a real **automated evaluation pipeline** (CJ feed ingestion, cheap pre-evidence screening, and a `PASS`/`PASS_WITH_ATTENTION`/`TEMPORARILY_INELIGIBLE`/`BLOCKED`/`EVALUATION_FAILED` decision with reason codes, displayed automatically), and — as of 2026-08-07, third session — real **ADR-006/ADR-008 multi-tenant supplier connections**: a Dropshipper connects their own CJ account from **Supplier Apps** (`/supplier-apps`, guided connect dialog, soft/reversible disconnect gated behind a step-up verification code, reconnect); credentials are AES-256-GCM encrypted per connection; the ingestion/evaluation pipeline and every seller-facing screen now source through a tenant-scoped `CjSupplierAdapter` instead of the global `CJ_API_KEY`. Verified against the live CJ API and the live database.
+- A **first real catalog database does now exist**, in `sals3-portal` only: PostgreSQL + Drizzle ORM, **nine tables** (`supplier_candidates`, `idempotency_records`, `supplier_snapshots`, `candidate_evaluations`, append-only `audit_events`, plus four added 2026-08-07 third session: `seller_accounts`, `supplier_providers`, `supplier_connections`, `supplier_connection_secrets`). It covers the CJ candidate **Shortlist** step, a real **CJ evidence fetch** (detail, variants, per-warehouse and per-variant inventory, review counts) stored as one checksummed snapshot per candidate, a real **automated evaluation pipeline** (CJ feed ingestion, cheap pre-evidence screening, and a `PASS`/`PASS_WITH_ATTENTION`/`TEMPORARILY_INELIGIBLE`/`BLOCKED`/`EVALUATION_FAILED` decision with reason codes, displayed automatically), and — as of 2026-08-07, third session — real **ADR-006/ADR-008 multi-tenant supplier connections**: a Dropshipper connects their own CJ account from **Supplier Apps** (`/supplier-apps`, guided connect dialog, soft/reversible disconnect gated behind a step-up verification code, reconnect); credentials are AES-256-GCM encrypted per connection; the ingestion/evaluation pipeline, every seller-facing screen, and — as of the fourth session — the customer-facing storefront feed all now source through a tenant-scoped `CjSupplierAdapter` instead of the global `CJ_API_KEY`, which nothing but `npm run bootstrap:cj` reads any more. Verified against the live CJ API and the live database.
 - The judgement now exists, but three of its inputs are **labelled placeholders, not approved policy** — same pattern as the shortlist's `PLACEHOLDER_MARKET_CODE`: the prohibited-category/counterfeit denylist (spec §14.1's own wording, not invented, but no ADR-002 category is actually approved), the destination market (still `'PH'`), and price/margin thresholds (env-configured, not product-differentiated). No versioned quality score exists (`score` is reserved, always null); near-duplicate detection beyond exact `pid` uniqueness is not built. Freight evidence is also not fetched, because ADR-003 has approved no destination market. Import, publication, and attention state remain unbuilt. **Disconnect's step-up verification code is also a labelled placeholder in one specific way**: the gate itself is real and server-enforced, but delivery (email OTP/SMS/admin passphrase) is not wired — no provider is approved and there is still only one `dev-user` placeholder identity, so there is no real seller email/phone to send to yet; outside production the code shows directly in the UI so the flow is testable now. AliExpress/additional providers remain explicitly deferred — only `CJ_DROPSHIPPING` is seeded. See [[cj-candidate-to-sals3-product-draft-implementation-spec#26. Verified implementation status — updated 2026-08-07 (automated evaluation pipeline)]], [[sals3-session-2026-08-07-part14-automated-candidate-evaluation-pipeline]], and [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]].
 - Two CJ API traps found and fixed while wiring the fetch, worth remembering: `variantInventories` comes back in a different order from the detail response's `variants` (join on `vid`, never index), and the product-level and per-variant inventory objects name the same field differently (`totalInventoryNum` vs `totalInventory`). The second one silently reported zero stock for every variant while 36,338 real units existed.
-- Current customer product data is CJ-sourced through the protected `sals3-portal` storefront API, not yet a curated Sals3 catalog.
+- Current customer product data is CJ-sourced through the protected `sals3-portal` storefront API, not yet a curated Sals3 catalog. As of 2026-08-07 (fourth session) that API sources through the Sals3 Official Dropshipper's own encrypted supplier connection rather than a global key, so the feed now requires `DATABASE_URL`, `SUPPLIER_CREDENTIAL_MASTER_KEY_BASE64`, and a one-time `npm run bootstrap:cj`; without them every feed request returns the same `502` the missing-key case already returned. The `sals3-ecommerce` request/response contract is unchanged.
 - `/c/[category]` does not exist.
 - The cart is browser-local only; `/checkout` does not exist.
 - Real inventory/variant data is not present in the storefront contract, so the intended out-of-stock purchase guard is not yet complete.
@@ -124,6 +125,12 @@ As verified against current official CJ documentation on 2026-08-06:
 - `GET /product/productComments` provides a total and individual review scores/comments, but the documentation does not expose a direct units-sold field or documented aggregate product-rating field. Treat derived review metrics as CJ supplier-platform evidence, never as Sals3 buyer reviews.
 - A CJ freight result proves neither import legality nor product eligibility. Country/category policy, permits, certifications, and IP rights require separate evidence and review.
 
+Verified 2026-08-07 (fourth session), relevant to how Sals3 pays CJ:
+
+- CJ supports nine payment methods (PayPal, wire transfer, card, CJ Wallet, Payoneer, WeChat Pay, Klarna, iDEAL, Pix), but **only Payoneer and wire transfer can top up the CJ Wallet**, and CJ pays a **2–3% top-up bonus** for doing so. Wallet withdrawals are charged 3%. Paying per order by card or PayPal instead spends an FX spread every time that a wallet top-up would largely offset.
+- Cost above mid-market by rail: PH credit card **~1.85%** (1% Visa/Mastercard assessment + ~0.85% issuer FX conversion — BPI and BDO Elite both publish 1.85%), PayPal **3–4%** above its wholesale rate.
+- `POST /authentication/getAccessToken` is rate-limited, and **misreports the reason when the limit is hit**: the same request that succeeded minutes earlier returned `code 1600300 "email must be not empty"`. See [[sals3-skills]] lesson 65 — do not debug the payload when this appears; wait.
+
 References:
 
 - <https://developers.cjdropshipping.com/en/api/api2/api/product.html>
@@ -135,9 +142,21 @@ References:
 
 ## Active risks and blockers
 
-### Fabricated comparison price
+### ~~Fabricated comparison price~~ - fixed 2026-08-07 (fourth session)
 
-`sals3-portal` currently derives `oldPriceMinor` by applying an uplift to the current price for deals. That is not evidence of a genuine prior price. Remove the comparison price or back it with real price history before selling. [[ADR-003-international-availability-shipping-and-pricing]] prohibits fabricated was/now pricing.
+~~`sals3-portal` currently derives `oldPriceMinor` by applying an uplift to the current price for deals. That is not evidence of a genuine prior price. Remove the comparison price or back it with real price history before selling.~~ **Fixed**: the 15% deals uplift is deleted; `oldPriceMinor` now always equals `priceMinor`, and because every `sals3-ecommerce` card renders the strikethrough/percent-off badge only when the old price is strictly greater, the fabricated claim disappeared with no contract change and no consumer edit. Verified live: the home page went from `₱549.67 ₱632.12 -13%` to `₱549.67`, with zero `.line-through` elements and zero percent-off badges while all 19 real prices still render. A test now asserts the opposite of the old behaviour, so reintroducing an uplift fails CI, and `feed.ts` carries a comment saying the field must never be derived from the current price again. [[ADR-003-international-availability-shipping-and-pricing]] prohibits fabricated was/now pricing.
+
+### ~~Hard-coded exchange rate~~ - fixed 2026-08-07 (fourth session)
+
+`CJ_USD_TO_PHP_RATE` was a hand-typed `58` while the real rate had moved to ~`61`. Because the markup sits on top of a fixed conversion, the drift came straight out of margin: an intended 30% was really earning **~23.7%**, about ₱28 per unit on a ₱550 item, with nothing reporting it. **Fixed**: `src/lib/storefront/fx.ts` fetches the European Central Bank's published reference rate (Frankfurter, falling back to `open.er-api.com`) and adds `CJ_FX_BUFFER_PERCENT` on top — money-changer logic, because a mid-market rate is a wholesale number nobody can transact at. ECB publishes once per business day on purpose, so shopper prices move at most daily. Fails safe: 4s timeout, second source, rejects a rate outside 30–120 or >10% from last known good, then last-good, then the configured fallback, logging `[storefront-fx]` when it degrades. `CJ_USD_TO_PHP_RATE` is now only the fallback.
+
+The buffer is **2.5%**, sized from real published rail costs rather than guessed: a PH credit card runs ~1.85% (1% card-network assessment + ~0.85% issuer FX), PayPal 3–4%. Still under the 2–3% a money changer quotes. **Open**: which CJ payment route is actually in use — only Payoneer and wire transfer can top up the CJ Wallet, and CJ pays a 2–3% top-up bonus for doing so, so paying per order by card or PayPal spends that spread every time. Confirming the route is worth more than tuning the buffer, and would justify lowering it.
+
+**This fixes one input, not the pricing.** The 30% markup still excludes freight, payment fees, returns, and duties, so it remains a flat markup where [[ADR-003-international-availability-shipping-and-pricing]] calls for landed cost and contribution economics — still blocked on approving a destination market, because freight is destination-specific.
+
+### Deals band no longer carries a discount
+
+Consequence still open for a product decision: with no discounts anywhere, the "Deals" band is a ranked selection (by CJ `listedCount`) rather than a savings claim, while `sals3-ecommerce`'s surrounding copy still reads "Sals3 mid year sale / Ends 4 August, 23:59" — placeholder marketing text, now also stale. Relabel it or wait for real promotions; not decided.
 
 ### Jurisdiction and market configuration
 
@@ -147,11 +166,11 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 
 [[sals3-portal-code-review-2026-08-06]] records seven read-only findings. The live pagination/page-size mismatch is highest priority. Long-process cache growth and fabricated totals are current correctness/operations risks. Permission-error handling is defense-in-depth because every present role currently includes `product:read`.
 
-~~The current CJ integration is also single-account prototype infrastructure: global `CJ_API_KEY`, shared in-memory token cache, fixed CJ service/base URL, direct CJ catalogue UI, and development `userId`/`sellerId`. No real registration, tenant, encrypted per-account credential, `SupplierConnection`, or provider selector exists.~~ **Done 2026-08-07, third session**: `CjSupplierAdapter` now sits behind a per-connection token cache; `seller_accounts`/`supplier_providers`/`supplier_connections`/`supplier_connection_secrets` exist with AES-256-GCM encrypted credentials; the catalogue UI and the automation pipeline both resolve the seller's own connection instead of the global key. Still true: `identityId` is still the `dev-user` placeholder (no real registration/login exists yet), and the storefront feed (`/api/storefront/*`) has not been moved off the global key — that is a separate, still-open task.
+~~The current CJ integration is also single-account prototype infrastructure: global `CJ_API_KEY`, shared in-memory token cache, fixed CJ service/base URL, direct CJ catalogue UI, and development `userId`/`sellerId`. No real registration, tenant, encrypted per-account credential, `SupplierConnection`, or provider selector exists.~~ **Done 2026-08-07, third session**: `CjSupplierAdapter` now sits behind a per-connection token cache; `seller_accounts`/`supplier_providers`/`supplier_connections`/`supplier_connection_secrets` exist with AES-256-GCM encrypted credentials; the catalogue UI and the automation pipeline both resolve the seller's own connection instead of the global key. **Storefront feed done 2026-08-07, fourth session**: `/api/storefront/*` now resolves the Sals3 Official Dropshipper's own connection through `src/lib/storefront/supplier-source.ts` and fetches through the same adapter; `src/services/cj/{token,products,enrichment}.ts` are deleted, and `CJ_API_KEY` is read by nothing but `npm run bootstrap:cj`. See [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]. Still true: `identityId` is still the `dev-user` placeholder (no real registration/login exists yet).
 
 ## Current build priorities implied by the decisions
 
-1. Resolve the fabricated comparison price defect.
+1. ~~Resolve the fabricated comparison price defect.~~ **Done 2026-08-07 (fourth session)** - see the active-risks section above.
 2. Implement real authentication plus separate Retailer/Dropshipper registration, immutable business-model entitlements, and tenant isolation.
 3. ~~Implement `SellerAccount`, `SupplierProvider`, `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding`; migrate the current CJ key to the Sals3 Official Dropshipper Account using encrypted secret storage.~~ **`SellerAccount`/`SupplierProvider`/`SupplierConnection` and the encrypted-secret migration are done (2026-08-07, third session)** — see the verified state above. `ProviderProductReference`/`ProviderVariantReference`/`OfferSupplierBinding` are not built; there is still no curated Sals3 product/offer to bind a provider reference to.
 4. **Approve one low-risk category-and-market pilot rule pack** with official-source anchors and named compliance/review owners. **This is now the single highest-leverage open item** — not because the engine is blocked on it (Bogs directed building it with labelled placeholders on 2026-08-07), but because every decision that engine currently produces is provisional until this approval replaces the placeholders. See [[parked-ideas-backlog]]'s unparked-with-placeholders entry.
@@ -164,7 +183,7 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 11. Build server cart/checkout and payment reconciliation before order fulfillment.
 12. Implement the ADR-004 state machine and recovery controls before sending real CJ orders.
 13. Implement ADR-007 immutable `OrderLineSnapshot`, controlled revision media, supplier-change event processing, notification outbox, active-order-aware delist/disconnect, and no-silent-substitution tests.
-14. Implement ADR-008 curated Supplier Apps/installations, declared provider capabilities, seller-owned connection/payment isolation, marketplace commission ledger, payout statements, and supplier funding-readiness/funding-hold recovery. **Partially done (2026-08-07, third session)**: Supplier Apps install/connect/disconnect/reconnect and seller-owned encrypted connection isolation exist for one provider (`CJ_DROPSHIPPING`). Still open: a second provider, declared-capability enforcement beyond the schema field, the commission ledger, payout statements, and funding-readiness/funding-hold recovery.
+14. Implement ADR-008 curated Supplier Apps/installations, declared provider capabilities, seller-owned connection/payment isolation, marketplace commission ledger, payout statements, and supplier funding-readiness/funding-hold recovery. **Partially done (2026-08-07, third and fourth sessions)**: Supplier Apps install/connect/disconnect/reconnect and seller-owned encrypted connection isolation exist for one provider (`CJ_DROPSHIPPING`), and every runtime read path — seller screens, the automation pipeline, and the customer-facing storefront feed — now sources through a seller's own connection rather than a global key. Still open: a second provider, declared-capability enforcement beyond the schema field, the commission ledger, payout statements, and funding-readiness/funding-hold recovery.
 
 ## Recent session notes
 
@@ -185,6 +204,7 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 - [[sals3-session-2026-08-07-part14-automated-candidate-evaluation-pipeline]]
 - [[sals3-session-2026-08-07-part14-email-password-auth]]
 - [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]]
+- [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]
 
 ## Reusable lessons
 
