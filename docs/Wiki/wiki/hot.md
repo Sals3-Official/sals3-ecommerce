@@ -19,6 +19,7 @@ related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
+  - "[[ADR-009-server-verified-email-password-authentication]]"
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
@@ -27,6 +28,7 @@ related:
   - "[[parked-ideas-backlog]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
   - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
+  - "[[sals3-session-2026-08-07-part14-email-password-auth]]"
 ---
 
 # Sals3 - Current State Cache
@@ -61,8 +63,12 @@ related:
 
 - Marketplace landing page, header, footer, promo carousel, category row, deals/For You grids, and numbered pagination.
 - Product route `/p/[id]` backed by the current `sals3-portal` single-product API contract.
-- Guest header strip and a `noindex` signup placeholder. Real buyer account pages, protected checkout, and role-aware account UI do not exist yet.
-- `/login` is a built, `noindex` split-hero sign-in UI implementing the approved `Sals3 Login.dc.html` design (Instrument Sans, auth palette tokens, Zod-validated fields, Show/Hide reveal). Email/password remains a local placeholder: no credential endpoint is called, the password never leaves React state, and Continue reports that accounts are not switched on yet. Continue with Google now uses Firebase Authentication for a Google popup, exchanges the fresh Firebase ID token for a server-verified 24-hour `httpOnly` `sals3_session` cookie through `/api/auth/session`, clears client Firebase persistence, then redirects home without a success banner. The header verifies that server session before showing a sanitized first-name account dropdown, hides the account shortcut from signed-out visitors, hides top `Log In`/`Sign Up` links while signed in, and signs out through a CSRF-protected session delete. `next.config.ts` sends baseline security headers on document routes plus `Cache-Control: no-store` on `/login`.
+- Guest header strip. Real buyer account pages, protected checkout, and role-aware account UI do not exist yet.
+- `/login` is a built, `noindex` split-hero sign-in UI implementing the approved `Sals3 Login.dc.html` design (Instrument Sans, auth palette tokens, Zod-validated fields, Show/Hide reveal). Continue with Google uses Firebase Authentication for a Google popup, exchanges the fresh Firebase ID token for a server-verified 24-hour `httpOnly` `sals3_session` cookie through `/api/auth/session`, clears client Firebase persistence, then redirects home without a success banner. The header verifies that server session before showing a sanitized first-name account dropdown, hides the account shortcut from signed-out visitors, hides top `Log In`/`Sign Up` links while signed in, and signs out through a CSRF-protected session delete. `next.config.ts` sends baseline security headers on document routes plus `Cache-Control: no-store` on `/login` and `/signup`.
+- Email/password sign-in is built and server-verified. `POST /api/auth/login` checks same origin, throttles per address, re-validates with `src/lib/auth/login-schema.ts`, checks the CSRF double submit, calls the Firebase Identity Toolkit `accounts:signInWithPassword` REST endpoint, throttles per account, verifies the returned ID token, and mints the same 24-hour session cookie. Every credential failure — unknown address, wrong password, disabled account — returns one byte-identical `401 {"error":"invalid_credentials"}`. See [[sals3-session-2026-08-07-part14-email-password-auth]].
+- `/signup` is a real, `noindex` registration form on the same split-hero layout (full name, email, password, confirm password). `POST /api/auth/signup` creates the account through `accounts:signUp`, records the display name, mints the same session cookie, and the form redirects to `/`. The new account is usable immediately.
+- **Email address verification is deliberately out of scope**, by owner decision on 2026-08-07. No verification mail is sent, and sign-in does not inspect the `email_verified` claim. The consequence to accept: an address can be registered by someone who does not own it.
+- Signup is the one place that does **not** mirror sign-in's generic posture. An already-registered address returns `409 {"error":"email_unavailable"}` and the form says so. This discloses membership, and it is forced: success now means "you are signed in", which cannot be faked for an account somebody else owns. Sign-in stays indistinguishable. The signup throttle caps how fast the disclosure can be harvested.
 - Client-only `localStorage` cart with Add to Cart/Buy Now and cart toast; no server cart or checkout exists.
 - Route-independent SEO/GEO/AEO foundations: `robots.txt`, `llms.txt`, Organization/WebSite JSON-LD, home metadata, and sitemap wiring where real data permits it.
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
@@ -78,7 +84,11 @@ related:
 - `/c/[category]` does not exist.
 - The cart is browser-local only; `/checkout` does not exist.
 - Real inventory/variant data is not present in the storefront contract, so the intended out-of-stock purchase guard is not yet complete.
-- Google buyer sign-in now creates a Firebase-backed server session cookie, but no protected buyer account, server cart, checkout, profile, or authorization workflow exists yet. Email/password is still unavailable; when it lands it must re-validate with `src/lib/auth/login-schema.ts` on the server and add password-specific rate limiting and CSRF protection. `/login/reset` is referenced by the form but not built.
+- Google and email/password buyer sign-in both create a Firebase-backed server session cookie, but no protected buyer account, server cart, checkout, profile, or authorization workflow exists yet. Nothing is gated behind being signed in.
+- Auth attempt throttling is **per-process best effort, not a rate-limit control**. `src/lib/auth/rate-limit.ts` holds an in-memory Map with per-IP and per-account buckets; on a scale-out host the real ceiling is `instances x limit`, and every cold start resets it. Firebase's own `TOO_MANY_ATTEMPTS_TRY_LATER` is the durable backstop underneath. A shared store is the eventual fix and needs owner cost approval.
+- `/login/reset` is referenced by `PasswordField` but still not built. This is now a live gap rather than a cosmetic one: real password accounts exist, so a buyer who forgets a password has no in-app recovery. The `sendOobCode {requestType:'PASSWORD_RESET'}` call the signup route already uses makes this a small follow-up, and it is the recommended next unit.
+- Email/password requires one Firebase Console setting that is **not** code: Authentication > Sign-in method > Email/Password must be enabled. Verified 2026-08-07: it is still off, and both routes correctly report `PASSWORD_LOGIN_DISABLED` as a generic service error. If the browser API key is restricted by HTTP referrer, also set `FIREBASE_WEB_API_KEY` to a key restricted by API instead — server-to-server calls send no `Referer`, so a referrer-restricted key 403s in production while working locally.
+- Firebase's Email enumeration protection setting no longer changes what a visitor sees: the login route collapses every credential failure itself, and signup discloses a taken address by design. Leave it on regardless.
 
 ## Approved catalog and commerce decisions - 2026-08-07
 
@@ -92,6 +102,7 @@ The original all-in-one ADR and later seller/supplier decisions are now split in
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] - the workbook is adopted as **Sals3 Taxonomy v0** for pilot use, not declared fully production-ready. It contains 1,345 data rows and 29 L1 departments; the 13-row matrix is only a partial summary. Real-product mapping, category-form QA, and provenance/license review remain required.
 - [[ADR-003-international-availability-shipping-and-pricing]] - Sals3 supports explicitly enabled countries rather than making an unverified worldwide claim. Geo-IP is a hint, regional zones are browse estimates, and checkout requires a fresh destination/postal quote. Phase 1 is USD. Pricing uses landed cost and contribution economics, not a flat markup.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment]] - a verified server-side payment event queues an idempotent direct CJ order flow. CJ wallet balance, retries, outbox/reconciliation, signed webhook verification, `messageId` deduplication, and tracking-source conflict rules are required. CJ documents Delivered and other logistics statuses; an aggregator is optional only after evaluation.
+- [[ADR-009-server-verified-email-password-authentication]] - the password is verified server-side through the Firebase Identity Toolkit so the credential can be re-validated with `login-schema.ts`, throttled per account, and rejected with one indistinguishable response. Unverified addresses cannot sign in.
 - [[ADR-005-payment-settlement-refunds-and-cod]] - customer payment, gateway settlement, supplier spend, refunds, and delivery are separate states. COD is disabled/out of phase 1 until courier, remittance, refusal/return, fraud, accounting, and market controls are approved and verified.
 - [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] - Retailer and Dropshipper use separate registrations, accounts, and logins; one account has one immutable business model. Dropshippers source through healthy connections they own. CJ is the first provider adapter, and Sals3's current CJ credential belongs to a separate Sals3 Official Dropshipper Account. Shopify is not a supplier connection.
 - [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] - supplier delist, zero stock, cost spike, freight loss, connection failure, and material source changes protect new checkout automatically and open one actionable seller attention case with severity-based in-app, push, and email delivery. Accepted orders remain active and render immutable product/variant/price/terms/media/supplier snapshots; no later listing change or silent substitution rewrites history.
@@ -172,6 +183,7 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 - [[sals3-session-2026-08-06-part12-category-row-tile-band-and-related-products-dedup]]
 - [[sals3-session-2026-08-06-part13-seller-center-first-build]]
 - [[sals3-session-2026-08-07-part14-automated-candidate-evaluation-pipeline]]
+- [[sals3-session-2026-08-07-part14-email-password-auth]]
 - [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]]
 
 ## Reusable lessons

@@ -28,20 +28,26 @@ export const SECURITY_HEADERS = [
  */
 const DOCUMENT_PATHS = '/((?!_next/).*)';
 
+/*
+ * Credential screens. A signed-in variant of one of these must never be served
+ * from a shared or browser cache, and the back button must not restore a
+ * filled credential form. `next dev` overrides this with its own
+ * `no-cache, must-revalidate`; the rule is what production serves.
+ *
+ * API responses are not listed: `/api/auth/*` sends `no-store` from
+ * `noStoreJson`, and duplicating it here would leave two places to keep in
+ * step.
+ */
+export const NO_STORE_ROUTES = ['/login', '/signup'];
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: DOCUMENT_PATHS, headers: SECURITY_HEADERS },
-      {
-        /*
-         * A signed-in variant of this page must never be served from a shared
-         * or browser cache, and the back button must not restore a filled
-         * credential form. `next dev` overrides this with its own
-         * `no-cache, must-revalidate`; the rule is what production serves.
-         */
-        source: '/login',
+      ...NO_STORE_ROUTES.map((source) => ({
+        source,
         headers: [{ key: 'Cache-Control', value: 'no-store' }],
-      },
+      })),
     ];
   },
   images: {
