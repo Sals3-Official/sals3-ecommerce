@@ -125,6 +125,12 @@ As verified against current official CJ documentation on 2026-08-06:
 - `GET /product/productComments` provides a total and individual review scores/comments, but the documentation does not expose a direct units-sold field or documented aggregate product-rating field. Treat derived review metrics as CJ supplier-platform evidence, never as Sals3 buyer reviews.
 - A CJ freight result proves neither import legality nor product eligibility. Country/category policy, permits, certifications, and IP rights require separate evidence and review.
 
+Verified 2026-08-07 (fourth session), relevant to how Sals3 pays CJ:
+
+- CJ supports nine payment methods (PayPal, wire transfer, card, CJ Wallet, Payoneer, WeChat Pay, Klarna, iDEAL, Pix), but **only Payoneer and wire transfer can top up the CJ Wallet**, and CJ pays a **2–3% top-up bonus** for doing so. Wallet withdrawals are charged 3%. Paying per order by card or PayPal instead spends an FX spread every time that a wallet top-up would largely offset.
+- Cost above mid-market by rail: PH credit card **~1.85%** (1% Visa/Mastercard assessment + ~0.85% issuer FX conversion — BPI and BDO Elite both publish 1.85%), PayPal **3–4%** above its wholesale rate.
+- `POST /authentication/getAccessToken` is rate-limited, and **misreports the reason when the limit is hit**: the same request that succeeded minutes earlier returned `code 1600300 "email must be not empty"`. See [[sals3-skills]] lesson 65 — do not debug the payload when this appears; wait.
+
 References:
 
 - <https://developers.cjdropshipping.com/en/api/api2/api/product.html>
@@ -139,6 +145,16 @@ References:
 ### ~~Fabricated comparison price~~ - fixed 2026-08-07 (fourth session)
 
 ~~`sals3-portal` currently derives `oldPriceMinor` by applying an uplift to the current price for deals. That is not evidence of a genuine prior price. Remove the comparison price or back it with real price history before selling.~~ **Fixed**: the 15% deals uplift is deleted; `oldPriceMinor` now always equals `priceMinor`, and because every `sals3-ecommerce` card renders the strikethrough/percent-off badge only when the old price is strictly greater, the fabricated claim disappeared with no contract change and no consumer edit. Verified live: the home page went from `₱549.67 ₱632.12 -13%` to `₱549.67`, with zero `.line-through` elements and zero percent-off badges while all 19 real prices still render. A test now asserts the opposite of the old behaviour, so reintroducing an uplift fails CI, and `feed.ts` carries a comment saying the field must never be derived from the current price again. [[ADR-003-international-availability-shipping-and-pricing]] prohibits fabricated was/now pricing.
+
+### ~~Hard-coded exchange rate~~ - fixed 2026-08-07 (fourth session)
+
+`CJ_USD_TO_PHP_RATE` was a hand-typed `58` while the real rate had moved to ~`61`. Because the markup sits on top of a fixed conversion, the drift came straight out of margin: an intended 30% was really earning **~23.7%**, about ₱28 per unit on a ₱550 item, with nothing reporting it. **Fixed**: `src/lib/storefront/fx.ts` fetches the European Central Bank's published reference rate (Frankfurter, falling back to `open.er-api.com`) and adds `CJ_FX_BUFFER_PERCENT` on top — money-changer logic, because a mid-market rate is a wholesale number nobody can transact at. ECB publishes once per business day on purpose, so shopper prices move at most daily. Fails safe: 4s timeout, second source, rejects a rate outside 30–120 or >10% from last known good, then last-good, then the configured fallback, logging `[storefront-fx]` when it degrades. `CJ_USD_TO_PHP_RATE` is now only the fallback.
+
+The buffer is **2.5%**, sized from real published rail costs rather than guessed: a PH credit card runs ~1.85% (1% card-network assessment + ~0.85% issuer FX), PayPal 3–4%. Still under the 2–3% a money changer quotes. **Open**: which CJ payment route is actually in use — only Payoneer and wire transfer can top up the CJ Wallet, and CJ pays a 2–3% top-up bonus for doing so, so paying per order by card or PayPal spends that spread every time. Confirming the route is worth more than tuning the buffer, and would justify lowering it.
+
+**This fixes one input, not the pricing.** The 30% markup still excludes freight, payment fees, returns, and duties, so it remains a flat markup where [[ADR-003-international-availability-shipping-and-pricing]] calls for landed cost and contribution economics — still blocked on approving a destination market, because freight is destination-specific.
+
+### Deals band no longer carries a discount
 
 Consequence still open for a product decision: with no discounts anywhere, the "Deals" band is a ranked selection (by CJ `listedCount`) rather than a savings claim, while `sals3-ecommerce`'s surrounding copy still reads "Sals3 mid year sale / Ends 4 August, 23:59" — placeholder marketing text, now also stale. Relabel it or wait for real promotions; not decided.
 

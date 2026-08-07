@@ -14,7 +14,7 @@ related:
   - "[[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]]"
 ---
 
-# Session: storefront feed moved off the global CJ key, and the fabricated compare price removed
+# Session: storefront feed moved off the global CJ key, the fabricated compare price removed, and the FX rate made self-updating
 
 Historical record of what happened. Current verified state lives in
 [[hot]] - read that for "what's true now," this note for "how it got
@@ -148,6 +148,86 @@ reads "Sals3 mid year sale / Ends 4 August, 23:59" — placeholder marketing tex
 in `sals3-ecommerce`, now also stale. Relabelling it is a product decision, not
 one this work should assume.
 
+## Third unit: the USD/PHP rate stopped being a hard-coded guess
+
+Bogs asked whether the margin was hard-coded and whether the CJ price was
+really being tracked. The honest answer split in two: the **CJ price is live**
+(fetched per request behind a 5-minute cache), but the **conversion and the
+markup were frozen**. `CJ_USD_TO_PHP_RATE` was a hand-typed `58` while the real
+rate had moved to about `61`.
+
+That gap was not cosmetic. Because the markup sits on top of a fixed
+conversion, the drift came straight out of margin:
+
+| | |
+|---|---|
+| Intended margin | 30% |
+| Actual margin | ~23.7% |
+
+Roughly ₱28 per unit on a ₱550 item, with nothing reporting it.
+
+### What was built
+
+`src/lib/storefront/fx.ts` fetches the **European Central Bank's** published
+reference rate (via Frankfurter, falling back to `open.er-api.com`) and adds
+`CJ_FX_BUFFER_PERCENT` on top — Bogs's own framing: *money-changer logic, but
+a narrower spread*.
+
+The buffer is the load-bearing idea, and it is worth restating because it is
+easy to mistake for padding. A mid-market rate — what Google (sourced from
+**Morningstar**), ECB, or any converter quotes — is a *wholesale* number nobody
+can transact at. Paying CJ in dollars costs more than mid once the card or
+wallet takes its own spread. Without the buffer, pricing is anchored to a rate
+that does not exist for us.
+
+ECB publishing **once per business day is a feature**: shopper prices move at
+most daily instead of drifting all afternoon, which would be poor UX and a
+displayed-vs-charged risk.
+
+It fails safe, because pricing must never depend on a third party being up: a
+4-second timeout per source, a second source, rejection of any rate outside
+30–120 or more than 10% from the last known good, then last-good, then the
+configured fallback — logging `[storefront-fx]` when it degrades, because a
+stale rate silently costs margin. The mapping functions stayed pure and
+synchronous; the rate resolves once at the route boundary, in parallel with the
+CJ fetch, so it adds no latency.
+
+### The buffer number was researched, not guessed
+
+It shipped at 1.5% first, on Bogs's "babaan mo lang" direction. He then asked
+for the actual evidence, which changed the answer:
+
+| Payment rail | Cost above mid |
+|---|---|
+| PH credit card (BPI / BDO Elite) | **~1.85%** (1% card-network assessment + ~0.85% issuer FX) |
+| PayPal | **3–4%** above wholesale |
+| Wire transfer / Payoneer → CJ Wallet | bank rate + $10–20, **but CJ pays a 2–3% top-up bonus** |
+
+So 1.5% was thin for a card and badly short for PayPal. Raised to **2.5%** on
+Bogs's approval: it covers the card case plus room for movement between daily
+ECB publications, and still sits under the 2–3% a money changer quotes. The
+risk is asymmetric — under-buffering bleeds margin on every order, while
+over-buffering costs the shopper ₱5.76 on a ₱585 item.
+
+**The more valuable finding is not the buffer at all**: only Payoneer and wire
+transfer can top up the CJ Wallet, and CJ pays a 2–3% bonus for doing so. If
+orders are being paid per-transaction by card or PayPal, that spread is being
+spent every time for no reason. Changing the payment route is worth more than
+tuning the buffer, and it is recorded in the code comment and README so the
+next person meets it.
+
+Verified live end to end: the same product went ₱549.67 → ₱585.49 (1.5%) →
+₱591.26 (2.5%), an implied rate of 62.389 = ECB spot 60.867 × 1.025, with
+`sals3-ecommerce` parsing and rendering every price and no fx errors logged.
+
+### Still not the real fix
+
+This corrects **one input**. The 30% markup still excludes freight, payment
+fees, returns, and duties, so it remains a flat markup where ADR-003 calls for
+landed cost and contribution economics. That work is blocked on approving a
+destination market, because freight is destination-specific. Getting FX right
+makes a broken formula less broken; it does not make it right.
+
 ## Still open after this session
 
 - The five remaining inline copies of the workable-status predicate.
@@ -161,3 +241,13 @@ one this work should assume.
   question for Bogs.
 - Everything ADR-008 still lists as unbuilt: a second provider, the commission
   ledger, payout statements, funding-hold recovery.
+- **Which CJ payment route is actually in use.** The buffer is sized for a
+  credit card; if it is really wire/Payoneer into the wallet, 2.5% is too fat
+  and should come down. One CJ statement answers it.
+- **The FX rate is not persisted.** It lives in an in-process cache, so each
+  instance fetches its own and there is no record of which rate priced which
+  order. Fine while nothing sells; needed for accounting once orders exist,
+  and the natural pairing with ADR-007's immutable order snapshots.
+- Whether **BSP** should replace ECB as the source. More defensible for PH
+  accounting and BIR, but no clean public JSON endpoint was found to verify
+  against, so ECB was chosen on evidence rather than preference.

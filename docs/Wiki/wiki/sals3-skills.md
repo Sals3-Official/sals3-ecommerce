@@ -640,3 +640,13 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** Use the `Edit`/`Write` tools for text files, never a PowerShell read-modify-write round trip - they preserve encoding and line endings. If PowerShell is genuinely required, pass `-Encoding utf8` to **`Get-Content` as well as** `Set-Content`, and check `git diff --stat` afterwards: a line count far larger than the edit is the tell that encoding or line endings moved. Recovery without discarding the good edits in the same tree is `git show HEAD:<path> > <path>` per file, then redo the content changes with a tool that respects encoding.
 
 **Where applied:** All three notes were restored from `HEAD` and every content edit redone with the `Edit` tool; `git diff --stat` was re-checked to confirm the diff had shrunk to only the intended lines.
+
+### 65. A rate-limited API can report a wrong reason - when an unchanged request suddenly complains about its payload, suspect the limit before debugging the payload
+
+**Confirmed:** 2026-08-07, trying to read the Sals3 CJ wallet balance via `GET /shopping/pay/getBalance`.
+
+**Incident:** `POST /authentication/getAccessToken` with `{apiKey}` had succeeded twenty minutes earlier in the same session. The identical call then returned HTTP 200 with `code 1600300`, `"email must be not empty."` - an error about a field the request had never sent and had never needed. The obvious reading is that CJ changed its contract to require an email, which would have sent the next hour into rewriting a working auth path. The actual cause was the documented rate limit on the token endpoint: the session had already spent its allowance across `npm run bootstrap:cj`, a direct probe, and several dev-server restarts, each of which authenticates on a cold token cache.
+
+**Lesson:** When a request that demonstrably worked minutes ago starts failing with a *validation* error, count how many times that endpoint has been called recently before touching the payload. Rate limiters frequently surface as misleading 4xx/validation messages rather than an honest 429, especially on auth endpoints. Stop calling it - retrying to "confirm" burns the same budget and can lock the account that production depends on. This is also a concrete argument for in-flight deduplication and a shared token cache: every cold process start is another auth call against a limit measured in single digits per five minutes.
+
+**Where applied:** Balance probing was abandoned rather than retried, and the finding recorded in [[hot]]'s corrected-external-facts section so the next agent does not rewrite `cj-auth.ts` chasing a phantom `email` field. It also upgrades the `CjTokenManager` in-flight-dedupe follow-up from a theoretical cost concern to a real one.
