@@ -30,6 +30,7 @@ related:
   - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
   - "[[sals3-session-2026-08-07-part14-email-password-auth]]"
   - "[[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]"
+  - "[[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]"
 ---
 
 # Sals3 - Current State Cache
@@ -74,6 +75,7 @@ related:
 - Route-independent SEO/GEO/AEO foundations: `robots.txt`, `llms.txt`, Organization/WebSite JSON-LD, home metadata, and sitemap wiring where real data permits it.
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
 - `sals3-portal` renamed to "Seller Center" with 7 new permission-gated screens (Overview, Orders, Inventory, a new-listing wizard, Finances, Payouts, Market rules) built against its own real design system - illustrative data throughout, no order/inventory/finance/payout backend. See [[sals3-session-2026-08-06-part13-seller-center-first-build]].
+- **Product Editor built 2026-08-08 as a second Add Product mode.** The nav label is now "Add Product" (`/listings/new`, Catalogue - *not* Product Sourcing, which only supplies the candidate). No query keeps the existing blank wizard; `?fixture=<key>` opens the Product Editor across seven sections with a readiness panel, draft storefront preview, supplier source drawer and sticky action bar. Both modes are reachable from the rail's sub-items. **It is a design preview on fictional fixtures** - no persistence, no supplier call, no server action, no publication backend, and a reload discards every change. `?supplierCandidateId=` is parsed and acknowledged but never answered with fixture data. Same session: `/products` gained a `?view=` grid toggle, peso estimate popover and rating check, plus the `/design-preview/all-supplier-products` multi-supplier preview. See [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]].
 
 ### Incomplete or placeholder
 
@@ -152,6 +154,8 @@ References:
 
 The buffer is **2.5%**, sized from real published rail costs rather than guessed: a PH credit card runs ~1.85% (1% card-network assessment + ~0.85% issuer FX), PayPal 3–4%. Still under the 2–3% a money changer quotes. **Open**: which CJ payment route is actually in use — only Payoneer and wire transfer can top up the CJ Wallet, and CJ pays a 2–3% top-up bonus for doing so, so paying per order by card or PayPal spends that spread every time. Confirming the route is worth more than tuning the buffer, and would justify lowering it.
 
+**Rate source settled 2026-08-07**: ECB stays, and the earlier "should this be BSP instead?" question is closed. Bogs stated that the stakeholders handling money are Australian, so a Philippine central-bank rate is not the natural anchor for the books — an internationally recognised reference rate is. Note this also means a **second FX exposure exists that this code does not touch**: shopper pricing converts USD → PHP, while the company's books would sit in AUD, so supplier cost in USD and revenue in PHP both have to land somewhere in AUD. That is an accounting question for whoever owns the ledger, not a storefront-pricing one, and it connects to the unresolved jurisdiction item under Active risks.
+
 **This fixes one input, not the pricing.** The 30% markup still excludes freight, payment fees, returns, and duties, so it remains a flat markup where [[ADR-003-international-availability-shipping-and-pricing]] calls for landed cost and contribution economics — still blocked on approving a destination market, because freight is destination-specific.
 
 ### Deals band no longer carries a discount
@@ -205,6 +209,7 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 - [[sals3-session-2026-08-07-part14-email-password-auth]]
 - [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]]
 - [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]
+- [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]
 
 ## Reusable lessons
 
