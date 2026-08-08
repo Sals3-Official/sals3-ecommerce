@@ -32,6 +32,7 @@ related:
   - "[[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]"
   - "[[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]"
   - "[[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]"
+  - "[[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]]"
 ---
 
 # Sals3 - Current State Cache
@@ -153,7 +154,7 @@ References:
 
 `CJ_USD_TO_PHP_RATE` was a hand-typed `58` while the real rate had moved to ~`61`. Because the markup sits on top of a fixed conversion, the drift came straight out of margin: an intended 30% was really earning **~23.7%**, about ₱28 per unit on a ₱550 item, with nothing reporting it. **Fixed**: `src/lib/storefront/fx.ts` fetches the European Central Bank's published reference rate (Frankfurter, falling back to `open.er-api.com`) and adds `CJ_FX_BUFFER_PERCENT` on top — money-changer logic, because a mid-market rate is a wholesale number nobody can transact at. ECB publishes once per business day on purpose, so shopper prices move at most daily. Fails safe: 4s timeout, second source, rejects a rate outside 30–120 or >10% from last known good, then last-good, then the configured fallback, logging `[storefront-fx]` when it degrades. `CJ_USD_TO_PHP_RATE` is now only the fallback.
 
-The buffer is **2.5%**, sized from real published rail costs rather than guessed: a PH credit card runs ~1.85% (1% card-network assessment + ~0.85% issuer FX), PayPal 3–4%. Still under the 2–3% a money changer quotes. **Open**: which CJ payment route is actually in use — only Payoneer and wire transfer can top up the CJ Wallet, and CJ pays a 2–3% top-up bonus for doing so, so paying per order by card or PayPal spends that spread every time. Confirming the route is worth more than tuning the buffer, and would justify lowering it.
+The buffer shipped at **2.5%**, sized from card/PayPal rail costs (PH credit card ~1.85%, PayPal 3–4%) because the actual payment route was unconfirmed. **Settled 2026-08-08 (owner decision)**: Bogs confirmed CJ Wallet, topped up by wire/Payoneer, is the real payment method — not per-order card or PayPal. That number is now stale evidence for the wrong rail and needs re-deriving from a real wallet top-up statement (transfer fee + FX movement headroom), not the card/PayPal comment still in `src/lib/storefront/fx.ts`. Code not yet updated — see [[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]].
 
 **Rate source settled 2026-08-07**: ECB stays, and the earlier "should this be BSP instead?" question is closed. Bogs stated that the stakeholders handling money are Australian, so a Philippine central-bank rate is not the natural anchor for the books — an internationally recognised reference rate is. Note this also means a **second FX exposure exists that this code does not touch**: shopper pricing converts USD → PHP, while the company's books would sit in AUD, so supplier cost in USD and revenue in PHP both have to land somewhere in AUD. That is an accounting question for whoever owns the ledger, not a storefront-pricing one, and it connects to the unresolved jurisdiction item under Active risks.
 
@@ -216,6 +217,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]
 - [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]
 - [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]
+- [[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]]
 
 ## Reusable lessons
 
