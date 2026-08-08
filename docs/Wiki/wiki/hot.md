@@ -32,6 +32,7 @@ related:
   - "[[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]"
   - "[[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]"
   - "[[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]"
+  - "[[sals3-session-2026-08-08-part19-product-editor-ui-declutter]]"
 ---
 
 # Sals3 - Current State Cache
@@ -76,7 +77,7 @@ related:
 - Route-independent SEO/GEO/AEO foundations: `robots.txt`, `llms.txt`, Organization/WebSite JSON-LD, home metadata, and sitemap wiring where real data permits it.
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
 - `sals3-portal` renamed to "Seller Center" with 7 new permission-gated screens (Overview, Orders, Inventory, a new-listing wizard, Finances, Payouts, Market rules) built against its own real design system - illustrative data throughout, no order/inventory/finance/payout backend. See [[sals3-session-2026-08-06-part13-seller-center-first-build]].
-- **Product Editor built 2026-08-08 as a second Add Product mode.** The nav label is now "Add Product" (`/listings/new`, Catalogue - *not* Product Sourcing, which only supplies the candidate). No query keeps the existing blank wizard; `?fixture=<key>` opens the Product Editor across seven sections with a readiness panel, draft storefront preview, supplier source drawer and sticky action bar. Both modes are reachable from the rail's sub-items. **It is a design preview on fictional fixtures** - no persistence, no supplier call, no server action, no publication backend, and a reload discards every change. `?supplierCandidateId=` is parsed and acknowledged but never answered with fixture data. Same session: `/products` gained a `?view=` grid toggle, peso estimate popover and rating check, plus the `/design-preview/all-supplier-products` multi-supplier preview. See [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]].
+- **Product Editor built 2026-08-08 as a second Add Product mode.** The nav label is now "Add Product" (`/listings/new`, Catalogue - *not* Product Sourcing, which only supplies the candidate). No query keeps the existing blank wizard; `?fixture=<key>` opens the Product Editor across seven sections with a readiness panel, draft storefront preview, supplier source drawer and sticky action bar. Both modes are reachable from the rail's sub-items. **It is a design preview on fictional fixtures** - no persistence, no supplier call, no server action, no publication backend, and a reload discards every change. `?supplierCandidateId=` is parsed and acknowledged but never answered with fixture data. Same session: `/products` gained a `?view=` grid toggle, peso estimate popover and rating check, plus the `/design-preview/all-supplier-products` multi-supplier preview. See [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]. **Follow-on the same day**: a `ui-ux-pro` decluttering pass retuned the three-column grid to a guaranteed 760px main-column floor (or drops to sheets, never squeezed), replaced the section nav's horizontal scrollbar with a wrapping row / native "Jump to section" select, collapsed the readiness panel's empty-blocker state and capped its issue list behind a "View all issues" sheet link, and trimmed the always-expanded supplier evidence card from 6 fields to 4. No fixture, evaluation, or persistence behavior changed. See [[sals3-session-2026-08-08-part19-product-editor-ui-declutter]].
 
 ### Incomplete or placeholder
 
@@ -216,6 +217,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]
 - [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]
 - [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]
+- [[sals3-session-2026-08-08-part19-product-editor-ui-declutter]]
 
 ## Reusable lessons
 
