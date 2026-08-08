@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-08
+updated: 2026-08-09
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -33,6 +33,7 @@ related:
   - "[[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]"
   - "[[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]"
   - "[[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]]"
+  - "[[sals3-session-2026-08-09-part20-portal-shell-redesign]]"
 ---
 
 # Sals3 - Current State Cache
@@ -78,6 +79,7 @@ related:
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
 - `sals3-portal` renamed to "Seller Center" with 7 new permission-gated screens (Overview, Orders, Inventory, a new-listing wizard, Finances, Payouts, Market rules) built against its own real design system - illustrative data throughout, no order/inventory/finance/payout backend. See [[sals3-session-2026-08-06-part13-seller-center-first-build]].
 - **Product Editor built 2026-08-08 as a second Add Product mode.** The nav label is now "Add Product" (`/listings/new`, Catalogue - *not* Product Sourcing, which only supplies the candidate). No query keeps the existing blank wizard; `?fixture=<key>` opens the Product Editor across seven sections with a readiness panel, draft storefront preview, supplier source drawer and sticky action bar. Both modes are reachable from the rail's sub-items. **It is a design preview on fictional fixtures** - no persistence, no supplier call, no server action, no publication backend, and a reload discards every change. `?supplierCandidateId=` is parsed and acknowledged but never answered with fixture data. Same session: `/products` gained a `?view=` grid toggle, peso estimate popover and rating check, plus the `/design-preview/all-supplier-products` multi-supplier preview. See [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]].
+- **Portal shell rebuilt 2026-08-09 against an approved design handoff, real data only.** Nav rail: two-level tree, 60px/268px states, a portal-based hover-intent flyout (fixed both bugs the handoff named), badges wired to `countCandidateStatusSummary()` where a backend exists (Product Sourcing) and silently omitted where it doesn't (Catalogue/Orders/Money). Supplier Apps: per-connection cards from real `supplier_providers`/`supplier_connections` reads, disconnect kept on the existing real verification-code gate rather than the design's weaker typed-text confirmation. Overview: Product Sourcing queues and Supplier Apps health are real; Needs You Now, Money Position, and Recent Supplier Changes now state plainly that their backends don't exist yet, replacing the old fully-fictional `mock-data/overview.ts` content (deleted). The Add Product tab-warning badges and Listing Readiness panel alignment were also redesigned, and a Browser/Phone preview-device toggle added next to (not replacing) the Product Editor's market selector. See [[sals3-session-2026-08-09-part20-portal-shell-redesign]] - topbar rework is the next approved work order.
 
 ### Incomplete or placeholder
 
@@ -218,6 +220,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]
 - [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]
 - [[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]]
+- [[sals3-session-2026-08-09-part20-portal-shell-redesign]]
 
 ## Reusable lessons
 
