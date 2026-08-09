@@ -2,7 +2,7 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-08
+updated: 2026-08-10
 status: canonical
 authority: navigation
 owner_approved: true
@@ -39,6 +39,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] — approved separate business-model registrations/accounts, tenant-owned supplier connections, CJ adapter migration, and controlled multi-provider architecture.
 - [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] — approved supplier delist/stock/price anomaly handling, multi-channel seller attention, active-order continuity, and immutable ordered-item/media snapshots.
 - [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] — approved curated installable Supplier Apps, tenant-owned provider accounts/wallets, separate payout/supplier-payment rails, commission mechanism, and insufficient-funding controls.
+- [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] — approved evidence-first catalog decision governance, golden pilot catalogue, shadow/canary enforcement, near-duplicate clustering, policy-source records, connection-scoped resilience, and future-technology activation triggers; not implemented.
 - [[index]] — main map of content.
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
@@ -86,6 +87,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — Taxonomy v0 and category/attribute mapping decision.
 - [[ADR-003-international-availability-shipping-and-pricing]] — market, freight, and contribution-pricing decision used by publish validation.
+- [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] — governing catalog evidence-to-action layers, pre-publication review boundaries, shadow promotion gates, and measurable automation controls.
 - [[sals3-session-2026-08-07-part14-automated-candidate-evaluation-pipeline]] — turnover correction (a prior agent's turnover prompt was stale), a reopened-and-confirmed decision to build the preflight engine with labelled placeholders instead of an ADR-002 approval, and the automated ingest/screen/evaluate/decide pipeline itself. 5 new engineering lessons recorded ([[sals3-skills]] entries 53–57).
 - [[sals3-session-2026-08-07-part15-multi-tenant-supplier-connections-and-ui-overhaul]] — ADR-006/ADR-008 implemented for real: seller accounts, encrypted per-seller supplier connections, and a tenant-scoped CJ adapter replacing the global `CJ_API_KEY`, plus three feedback-driven follow-up rounds (disconnect step-up verification, a guided Supplier Apps connect dialog, a collapsible/hover-flyout sidebar redesign). 5 new engineering lessons recorded ([[sals3-skills]] entries 58–62). `sals3-portal` PR #8 open, updated, all checks (Vercel + GitHub Actions verify) passing.
 - [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]] — the storefront feed (`/api/storefront/*`), the last runtime consumer of the global `CJ_API_KEY`, moved onto the Sals3 Official Dropshipper's own supplier connection, and the fabricated deals comparison price ([[hot]]'s number-one active risk) removed. Legacy `src/services/cj/{token,products,enrichment}.ts` deleted. Then the hard-coded USD/PHP rate replaced with a self-updating ECB rate plus a money-changer buffer sized from real payment-rail costs. The `sals3-ecommerce` contract is unchanged throughout; all three verified live end to end. 3 new engineering lessons recorded ([[sals3-skills]] entries 63–65). `sals3-portal` PRs #9, #10, and #11 open.

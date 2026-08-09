@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-08
+updated: 2026-08-10
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -23,6 +23,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
@@ -33,6 +34,8 @@ related:
   - "[[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]"
   - "[[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]"
   - "[[sals3-session-2026-08-08-part19-product-editor-ui-declutter]]"
+  - "[[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]]"
+  - "[[sals3-session-2026-08-09-part20-portal-shell-redesign]]"
 ---
 
 # Sals3 - Current State Cache
@@ -78,6 +81,7 @@ related:
 - PWA icon/manifest work and responsive cart/PDP fixes from the 2026-08-05/06 sessions.
 - `sals3-portal` renamed to "Seller Center" with 7 new permission-gated screens (Overview, Orders, Inventory, a new-listing wizard, Finances, Payouts, Market rules) built against its own real design system - illustrative data throughout, no order/inventory/finance/payout backend. See [[sals3-session-2026-08-06-part13-seller-center-first-build]].
 - **Product Editor built 2026-08-08 as a second Add Product mode.** The nav label is now "Add Product" (`/listings/new`, Catalogue - *not* Product Sourcing, which only supplies the candidate). No query keeps the existing blank wizard; `?fixture=<key>` opens the Product Editor across seven sections with a readiness panel, draft storefront preview, supplier source drawer and sticky action bar. Both modes are reachable from the rail's sub-items. **It is a design preview on fictional fixtures** - no persistence, no supplier call, no server action, no publication backend, and a reload discards every change. `?supplierCandidateId=` is parsed and acknowledged but never answered with fixture data. Same session: `/products` gained a `?view=` grid toggle, peso estimate popover and rating check, plus the `/design-preview/all-supplier-products` multi-supplier preview. See [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]. **Follow-on the same day**: a `ui-ux-pro` decluttering pass retuned the three-column grid to a guaranteed 760px main-column floor (or drops to sheets, never squeezed), replaced the section nav's horizontal scrollbar with a wrapping row / native "Jump to section" select, collapsed the readiness panel's empty-blocker state and capped its issue list behind a "View all issues" sheet link, and trimmed the always-expanded supplier evidence card from 6 fields to 4. No fixture, evaluation, or persistence behavior changed. See [[sals3-session-2026-08-08-part19-product-editor-ui-declutter]].
+- **Portal shell rebuilt 2026-08-09 against an approved design handoff, real data only.** Nav rail: two-level tree, 60px/268px states, a portal-based hover-intent flyout (fixed both bugs the handoff named), badges wired to `countCandidateStatusSummary()` where a backend exists (Product Sourcing) and silently omitted where it doesn't (Catalogue/Orders/Money). Supplier Apps: per-connection cards from real `supplier_providers`/`supplier_connections` reads, disconnect kept on the existing real verification-code gate rather than the design's weaker typed-text confirmation. Overview: Product Sourcing queues and Supplier Apps health are real; Needs You Now, Money Position, and Recent Supplier Changes now state plainly that their backends don't exist yet, replacing the old fully-fictional `mock-data/overview.ts` content (deleted). The Add Product tab-warning badges and Listing Readiness panel alignment were also redesigned (a separate, later pass from the `ui-ux-pro` decluttering above), and a Browser/Phone preview-device toggle added next to (not replacing) the Product Editor's market selector. See [[sals3-session-2026-08-09-part20-portal-shell-redesign]] - topbar rework is the next approved work order.
 
 ### Incomplete or placeholder
 
@@ -95,9 +99,14 @@ related:
 - Email/password requires one Firebase Console setting that is **not** code: Authentication > Sign-in method > Email/Password must be enabled. Verified 2026-08-07: it is still off, and both routes correctly report `PASSWORD_LOGIN_DISABLED` as a generic service error. If the browser API key is restricted by HTTP referrer, also set `FIREBASE_WEB_API_KEY` to a key restricted by API instead — server-to-server calls send no `Referer`, so a referrer-restricted key 403s in production while working locally.
 - Firebase's Email enumeration protection setting no longer changes what a visitor sees: the login route collapses every credential failure itself, and signup discloses a taken address by design. Leave it on regardless.
 
-## Approved catalog and commerce decisions - 2026-08-07
+### Approved decision governance, not implemented
 
-The original all-in-one ADR and later seller/supplier decisions are now split into eight approved, independently auditable ADRs. They are approved direction, not implemented behavior.
+- **Catalog decision governance approved 2026-08-10.** [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] formalizes zero silent/untraceable automated decisions, the evidence -> signal -> policy -> decision -> audited action boundary, a representative 200-500-case golden pilot catalogue when the source pool permits it, shadow/canary promotion gates, near-duplicate clustering without auto-merge/rejection, confidence-aware future supplier metrics, connection-scoped circuit breaking, primary-source policy records, and explicit future-technology triggers.
+- The current evaluation engine has none of the new golden-set, shadow-decision, promotion-measurement, canary, duplicate-cluster, or policy-source records. Its existing `PASS_WITH_ATTENTION` behavior must not be read as permission to publish unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty; those cases remain pre-publication review under the existing implementation specification and ADR-010.
+
+## Approved catalog and commerce decisions - 2026-08-07/10
+
+The original all-in-one ADR and later decisions are recorded in independently auditable ADRs. They are approved direction, not implemented behavior.
 
 > [!IMPORTANT] Persistence stack and placement - decided 2026-08-07 by Bogs
 > Approved stack: **PostgreSQL + Drizzle ORM + Drizzle Kit + `postgres.js` + Zod**. Prisma was evaluated and rejected; do not reintroduce it.
@@ -112,7 +121,8 @@ The original all-in-one ADR and later seller/supplier decisions are now split in
 - [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] - Retailer and Dropshipper use separate registrations, accounts, and logins; one account has one immutable business model. Dropshippers source through healthy connections they own. CJ is the first provider adapter, and Sals3's current CJ credential belongs to a separate Sals3 Official Dropshipper Account. Shopify is not a supplier connection.
 - [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] - supplier delist, zero stock, cost spike, freight loss, connection failure, and material source changes protect new checkout automatically and open one actionable seller attention case with severity-based in-app, push, and email delivery. Accepted orders remain active and render immutable product/variant/price/terms/media/supplier snapshots; no later listing change or silent substitution rewrites history.
 - [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] - Dropshippers install curated Supplier Apps and connect their own provider accounts/API credentials. Customer payment/Sals3 commission/seller payout are separate from seller-to-supplier payment. CJ does not pay the Sals3 seller; it charges the seller's own CJ account/wallet. Zero balance permits catalog access but not automatic balance fulfillment; affected offers funding-hold and accepted orders become actionable `AWAITING_SUPPLIER_FUNDS` exceptions. Exact commercial rates/providers remain pending.
-- [[cj-candidate-to-sals3-product-draft-implementation-spec]] - approved implementation contract connecting Aj's existing **CJ Candidate Explorer** (`sals3-portal` `/products`) to the Sals3 Catalog Admin API. Phase 1 is human-on-exception: selected green items auto-publish, yellow items auto-publish as **Live · Needs Attention**, and red items block or auto-pause. It defines persistent status surfaces, deduplicated in-app attention, shortlist/preflight gates, country/permit/IP controls, identity, editor, API, sync, and rollback. No implementation is claimed.
+- [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] - catalog automation preserves evidence and policy provenance, routes uncertain legal/compliance/duplicate cases to pre-publication review, promotes new enforcement rules only after shadow measurement and owner approval, treats perceptual hashes as clustering signals rather than rejection proof, and defers heavier infrastructure until named evidence-based triggers are met.
+- [[cj-candidate-to-sals3-product-draft-implementation-spec]] - approved implementation contract connecting Aj's existing **CJ Candidate Explorer** (`sals3-portal` `/products`) to the Sals3 Catalog Admin API. Phase 1 is human-on-exception: selected green items auto-publish, non-blocking quality/operational yellow items auto-publish as **Live · Needs Attention**, uncertain legal/IP/safety/permit/mapping/media-rights/evidence/near-duplicate cases stop at pre-publication review, and objective red items block or auto-pause. It defines persistent status surfaces, deduplicated in-app attention, shortlist/preflight gates, country/permit/IP controls, identity, editor, API, sync, and rollback. No publication implementation is claimed.
 - Shopify is not part of the active Sals3 plan or CJ import path. Earlier Shopify pop-up-store material is historical/sample context only and must not create implementation tasks.
 
 ## Corrected external facts
@@ -154,7 +164,7 @@ References:
 
 `CJ_USD_TO_PHP_RATE` was a hand-typed `58` while the real rate had moved to ~`61`. Because the markup sits on top of a fixed conversion, the drift came straight out of margin: an intended 30% was really earning **~23.7%**, about ₱28 per unit on a ₱550 item, with nothing reporting it. **Fixed**: `src/lib/storefront/fx.ts` fetches the European Central Bank's published reference rate (Frankfurter, falling back to `open.er-api.com`) and adds `CJ_FX_BUFFER_PERCENT` on top — money-changer logic, because a mid-market rate is a wholesale number nobody can transact at. ECB publishes once per business day on purpose, so shopper prices move at most daily. Fails safe: 4s timeout, second source, rejects a rate outside 30–120 or >10% from last known good, then last-good, then the configured fallback, logging `[storefront-fx]` when it degrades. `CJ_USD_TO_PHP_RATE` is now only the fallback.
 
-The buffer is **2.5%**, sized from real published rail costs rather than guessed: a PH credit card runs ~1.85% (1% card-network assessment + ~0.85% issuer FX), PayPal 3–4%. Still under the 2–3% a money changer quotes. **Open**: which CJ payment route is actually in use — only Payoneer and wire transfer can top up the CJ Wallet, and CJ pays a 2–3% top-up bonus for doing so, so paying per order by card or PayPal spends that spread every time. Confirming the route is worth more than tuning the buffer, and would justify lowering it.
+The buffer shipped at **2.5%**, sized from card/PayPal rail costs (PH credit card ~1.85%, PayPal 3–4%) because the actual payment route was unconfirmed. **Settled 2026-08-08 (owner decision)**: Bogs confirmed CJ Wallet, topped up by wire/Payoneer, is the real payment method — not per-order card or PayPal. That number is now stale evidence for the wrong rail and needs re-deriving from a real wallet top-up statement (transfer fee + FX movement headroom), not the card/PayPal comment still in `src/lib/storefront/fx.ts`. Code not yet updated — see [[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]].
 
 **Rate source settled 2026-08-07**: ECB stays, and the earlier "should this be BSP instead?" question is closed. Bogs stated that the stakeholders handling money are Australian, so a Philippine central-bank rate is not the natural anchor for the books — an internationally recognised reference rate is. Note this also means a **second FX exposure exists that this code does not touch**: shopper pricing converts USD → PHP, while the company's books would sit in AUD, so supplier cost in USD and revenue in PHP both have to land somewhere in AUD. That is an accounting question for whoever owns the ledger, not a storefront-pricing one, and it connects to the unresolved jurisdiction item under Active risks.
 
@@ -184,7 +194,9 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 2. Implement real authentication plus separate Retailer/Dropshipper registration, immutable business-model entitlements, and tenant isolation.
 3. ~~Implement `SellerAccount`, `SupplierProvider`, `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding`; migrate the current CJ key to the Sals3 Official Dropshipper Account using encrypted secret storage.~~ **`SellerAccount`/`SupplierProvider`/`SupplierConnection` and the encrypted-secret migration are done (2026-08-07, third session)** — see the verified state above. `ProviderProductReference`/`ProviderVariantReference`/`OfferSupplierBinding` are not built; there is still no curated Sals3 product/offer to bind a provider reference to.
 4. **Approve one low-risk category-and-market pilot rule pack** with official-source anchors and named compliance/review owners. **This is now the single highest-leverage open item** — not because the engine is blocked on it (Bogs directed building it with labelled placeholders on 2026-08-07), but because every decision that engine currently produces is provisional until this approval replaces the placeholders. See [[parked-ideas-backlog]]'s unparked-with-placeholders entry.
+   - Under ADR-010, assemble and version a representative 200-500-case golden catalogue when the approved source pool permits it. Run new publication/block/pause rules in shadow mode, measure false-block, sampled false-clear, overturn, insufficient-evidence, latency, and CJ-points cost, then require owner-approved canary promotion gates.
 5. ~~Implement preflight hard gates, versioned scoring, near-duplicate detection, attention/exception queues, and WIP limits.~~ **Hard gates, the decision, and the queues are done** (2026-08-07, second session) — see the verified state above. Still open: a real versioned quality score (reserved, unwritten), near-duplicate detection beyond exact `pid` uniqueness, and active-job WIP limits.
+   - Near-duplicate work must create reviewable candidate clusters from versioned signals, including perceptual hashes; it must never auto-merge or auto-reject different provider product identities.
 6. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
 7. Implement Product, Variant, Offer, Media, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
 8. Pilot and validate selected Taxonomy v0 branches against representative CJ products.
@@ -218,6 +230,8 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-08-part17-product-editor-and-supplier-catalogue]]
 - [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]]
 - [[sals3-session-2026-08-08-part19-product-editor-ui-declutter]]
+- [[sals3-session-2026-08-08-part19-owner-decision-cj-wallet-and-multi-supplier-roadmap]]
+- [[sals3-session-2026-08-09-part20-portal-shell-redesign]]
 
 ## Reusable lessons
 

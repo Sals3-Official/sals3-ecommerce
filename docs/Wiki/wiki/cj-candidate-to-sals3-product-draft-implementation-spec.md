@@ -2,7 +2,7 @@
 tags: [sals3, cj-dropshipping, catalog, product-editor, seller-center, implementation-spec]
 aliases: [CJ Candidate Explorer to Sals3, CJ Candidate to Sals3 Draft, CJ Product Customization Handoff, Product Editor Handoff Spec]
 created: 2026-08-06
-updated: 2026-08-07
+updated: 2026-08-10
 status: approved
 authority: implementation-spec
 owner_approved: true
@@ -14,6 +14,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
   - "[[sals3-end-to-end-process-flow]]"
   - "[[sals3-implementation-phases]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
@@ -26,6 +27,9 @@ related:
 > Bogs approved resolving the CJ-to-product-editor design blockers and the phase-1 exception-based auto-publication model on 2026-08-06. This note defines the implementation contract. It does not claim that the database, APIs, editor, worker, notification system, or publish flow exists.
 >
 > [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] adds the approved seller-account and provider boundary: this flow is available only to a Dropshipper account through a healthy supplier connection it owns. Its registration, tenancy, connection, and provider-identity rules override older single-tenant assumptions in this note.
+
+> [!IMPORTANT] Approved decision-governance amendment, 2026-08-10
+> [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] strengthens this contract without replacing its existing `REVIEW` boundary. `PASS_WITH_ATTENTION` remains limited to non-blocking quality or operational warnings. Unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty remains pre-publication `REVIEW`. New automatic publish/block/pause rules require a labelled golden pilot set, shadow measurement, owner-approved promotion gates, and a bounded canary. Near-duplicate perceptual hashes create reviewable clusters; they never auto-merge or auto-reject different provider identities.
 
 ## 1. Problem
 
@@ -1277,6 +1281,8 @@ Do not log CJ tokens, API keys, webhook secrets, full raw payloads, or customer 
 - Route non-blocking quality weaknesses to `PASS_WITH_ATTENTION` and unresolved rights, IP, required mapping, duplicate, or compliance uncertainty to `REVIEW`.
 - Route temporary stock, freight, cost, freshness, and supplier failures to `HOLD`.
 - Block exact duplicate creation and flag near duplicates without automatic merge.
+- Prove perceptual-hash and other similarity signals create versioned reviewable clusters without automatic rejection or canonical-product merge.
+- Re-evaluate one evidence snapshot under two policy versions without repeating a supplier call solely because decision logic changed.
 - Enforce phase-1 no-batch rule and pilot active-job WIP limit.
 - Preserve stable reason codes, evidence, rule version, score version, and next action.
 
@@ -1336,6 +1342,7 @@ Do not log CJ tokens, API keys, webhook secrets, full raw payloads, or customer 
 - Auto-resolve a transient issue only after fresh evidence passes current policy.
 - Prove a client cannot forge green status, suppress attention, approve a blocker, or publish directly.
 - Keep manual approval available only for resolvable exceptions with permission, reason, evidence, and audit.
+- Prove shadow decisions create no publish, pause, block, merge, or notification side effect; promote only after recorded owner-approved metrics and a bounded canary.
 
 ### 20.9 Country compliance and counterfeit controls
 
@@ -1366,8 +1373,8 @@ Build one vertical slice before widening category coverage:
 Prerequisites from ADR-006 come before the candidate-import slice: real authentication; separate Retailer and Dropshipper registrations; immutable seller-account business model; tenant authorization; provider registry; encrypted supplier-connection secrets; disconnect behavior; and Aj's existing CJ code moved behind `CjSupplierAdapter`. Bootstrap the current environment credential once into the Sals3 Official Dropshipper Account; it must not remain the multi-tenant runtime credential.
 
 1. Define database schema, migrations, typed contracts, permissions, and audit model.
-2. Approve one low-risk category-and-market pilot rule pack, its official-source anchors, and accountable policy/review owners.
-3. Implement candidate shortlist, full preflight, hard gates, `PASS`/`PASS_WITH_ATTENTION`/exception decisions, versioned score, attention/exception queues, near-duplicate detection, and WIP limits without creating catalog records.
+2. Approve one low-risk category-and-market pilot rule pack, its official-source anchors, accountable policy/review owners, and a representative versioned golden catalogue under ADR-010.
+3. Implement candidate shortlist, full preflight, hard gates, `PASS`/`PASS_WITH_ATTENTION`/exception decisions, versioned score, attention/exception queues, near-duplicate clustering, WIP limits, and shadow-decision/promotion records without creating catalog records.
 4. Implement one idempotent CJ import job that accepts only a current `PASS` or `PASS_WITH_ATTENTION` preflight for a representative simple product.
 5. Build Basic Information and Description with real draft persistence.
 6. Add category-driven Specifications and mapping review.
@@ -1581,6 +1588,9 @@ one of these three checks is provisional, not policy-approved.
   candidate states this honestly rather than faking success.
 - The versioned HTTP admin API surface in section 18. Internal writes use
   Server Actions instead; see the revised section 3.2.
+- ADR-010's golden pilot catalogue, shadow-decision records, promotion metrics,
+  canary enforcement, versioned near-duplicate clusters, policy-source registry,
+  and connection-scoped circuit breaker.
 - ~~Any per-seller CJ connection, Shopify-style Supplier App, or AliExpress
   integration — still one global `CJ_API_KEY` and one dev/official seller
   context (`seller-001`). Explicitly deferred to a separate task.~~ **Done

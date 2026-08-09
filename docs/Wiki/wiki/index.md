@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-10
 status: canonical
 authority: navigation
 owner_approved: true
@@ -42,6 +42,7 @@ related:
 - [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections|ADR-006 — Seller Registration and Supplier Connections]] — approved separate Retailer/Dropshipper accounts, immutable business model, tenant-owned supplier connections, CJ adapter migration, and future-provider boundary; not implemented.
 - [[ADR-007-supplier-change-attention-and-immutable-order-snapshots|ADR-007 — Supplier Changes and Immutable Orders]] — approved anomaly auto-protection, actionable in-app/push/email attention, active-order continuity, controlled media locking, and immutable ordered-item snapshots; not implemented.
 - [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders|ADR-008 — Supplier Apps, Commission, and Seller-Funded Orders]] — approved Shopify-like curated Supplier Apps, seller-owned provider accounts/wallets, separate customer/supplier money rails, Sals3 commission mechanism, and CJ funding-hold behavior; exact rates/providers pending.
+- [[ADR-010-catalog-decision-governance-and-shadow-enforcement|ADR-010 — Catalog Decision Governance and Shadow Enforcement]] — approved evidence-to-action boundary, risk-aware decision states, golden pilot catalogue, shadow/canary enforcement, near-duplicate clustering, source governance, and explicit future-technology triggers; not implemented.
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
