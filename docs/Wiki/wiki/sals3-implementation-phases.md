@@ -2,7 +2,7 @@
 tags: [sals3, roadmap, implementation-plan, task-tracker, canonical]
 aliases: [Sals3 Implementation Phases, Sals3 Task Phases, Sals3 Build Register]
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-10
 status: canonical
 authority: execution-plan
 owner_approved: false
@@ -14,6 +14,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
 ---
 
 # Sals3 Implementation Phases
@@ -98,6 +99,9 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
 
 - [ ] Define entities: product, variant, offer, `SellerAccount`, category, attribute, media, `SupplierProvider`, `SupplierConnection`, provider product/variant references, `OfferSupplierBinding`, buyer, and address per ADR-001/002/006.
 - [x] Approve the CJ-Candidate-Explorer-to-Sals3 contract: candidate-only shortlist, full preflight, hard gates, green/yellow/red human-on-exception operation, auto-publication, Live · Needs Attention, red block/auto-pause, no phase-1 batch import, WIP limits, identity, country/permit/IP controls, editor, API, sync, security, rollback, and tests. See [[cj-candidate-to-sals3-product-draft-implementation-spec]]. This is a specification milestone, not an implementation claim.
+- [x] Approve ADR-010's decision-governance amendment: zero silent/untraceable automated decisions, evidence-to-action provenance, risk-aware attention/review boundaries, golden pilot catalogue, shadow/canary promotion, review-only near-duplicate clustering, policy-source records, and explicit future-technology triggers. This is an approved specification milestone, not an implementation claim.
+- [ ] Assemble and version the representative 200-500-case golden pilot catalogue when the approved category/market source pool permits it; record expected decisions, reason codes, reviewer, evidence date, and disputed/uncertain cases.
+- [ ] Define shadow-decision storage, measured promotion gates, bounded canary activation, enforcement feature flags, and policy-source/applicability records under ADR-010.
 - [ ] Define the `Money` and `PriceLine` types (build spec section 16.3).
 - [ ] Write API schemas. Generate typed clients.
 - [ ] Write the 5 golden scenarios (build spec section 20.5).
@@ -166,6 +170,7 @@ As of 2026-08-06, the repository and local verification pipeline exist, a verifi
   - **Done (2026-08-07, `sals3-portal#6`/`#7`):** shortlist persistence in Postgres/Drizzle, `(supplier, external_product_id)` uniqueness so a re-shortlist reuses the row, idempotency replay/conflict, append-only audit, and a real CJ evidence fetch (detail + variants, per-warehouse and per-variant inventory, review counts) stored as one checksummed snapshot per candidate.
   - **Done (2026-08-07, second session, unpublished `sals3-portal` PR pending review):** the automated evaluation pipeline itself — CJ feed ingestion (replacing the manual "Check for Sals3" click), cheap pre-evidence screening, hard gates, and a real `PASS`/`PASS_WITH_ATTENTION`/`TEMPORARILY_INELIGIBLE`/`BLOCKED`/`EVALUATION_FAILED` decision with reason codes, persisted and displayed automatically across new Qualified Products/Evaluating/Blocked-Rejected/Exception-Queue screens. Lease-based job claiming (Postgres `FOR UPDATE SKIP LOCKED`), exponential-backoff retry, and dead-lettering are real and tested. See [[cj-candidate-to-sals3-product-draft-implementation-spec#26. Verified implementation status — updated 2026-08-07 (automated evaluation pipeline)]].
   - **Not done / provisional:** no versioned quality score exists (`candidate_evaluations.score` is reserved and always null). Near-duplicate detection beyond the existing exact `(supplier, external_product_id)` uniqueness is not built. The category/counterfeit denylist, destination market, and price/margin thresholds the decision engine uses are **labelled placeholders**, not an approved ADR-002/ADR-003 pilot rule pack — see [[parked-ideas-backlog]]'s unparked-with-placeholders entry. Freight evidence is also absent because ADR-003 has approved no market. Per-seller CJ connections, Supplier Apps, and AliExpress remain a separate, explicitly deferred task.
+  - **ADR-010 open work:** no golden catalogue, shadow-decision/promotion record, canary enforcement gate, versioned near-duplicate cluster, policy-source registry, or connection-scoped circuit breaker exists. A different provider product ID may be flagged for `REVIEW`; perceptual similarity must never auto-merge or auto-reject it.
 - [~] Build CJ-row badges, screening drawer, Product Sourcing queue, My Products Live/Needs Attention/Auto-Paused filters, Issues & Tasks, immediate red in-app attention, and grouped/deduplicated yellow attention.
   - **Done:** the `Check for Sals3` row action and its status pill, a shortlist drawer showing the stored candidate and live CJ evidence, and the Product Sourcing nav group (CJ Candidate Explorer / Shortlisted / Exception Queue) with a Shortlisted queue reading real seller-scoped rows.
   - **Not done:** My Products and its filters, Issues & Tasks, and all attention state and notification behaviour. The drawer shows no score or decision because none exists, and the Exception Queue is empty by construction rather than by missing data.

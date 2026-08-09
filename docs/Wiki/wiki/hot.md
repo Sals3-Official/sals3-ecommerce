@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-09
+updated: 2026-08-10
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -23,6 +23,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
@@ -98,9 +99,14 @@ related:
 - Email/password requires one Firebase Console setting that is **not** code: Authentication > Sign-in method > Email/Password must be enabled. Verified 2026-08-07: it is still off, and both routes correctly report `PASSWORD_LOGIN_DISABLED` as a generic service error. If the browser API key is restricted by HTTP referrer, also set `FIREBASE_WEB_API_KEY` to a key restricted by API instead — server-to-server calls send no `Referer`, so a referrer-restricted key 403s in production while working locally.
 - Firebase's Email enumeration protection setting no longer changes what a visitor sees: the login route collapses every credential failure itself, and signup discloses a taken address by design. Leave it on regardless.
 
-## Approved catalog and commerce decisions - 2026-08-07
+### Approved decision governance, not implemented
 
-The original all-in-one ADR and later seller/supplier decisions are now split into eight approved, independently auditable ADRs. They are approved direction, not implemented behavior.
+- **Catalog decision governance approved 2026-08-10.** [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] formalizes zero silent/untraceable automated decisions, the evidence -> signal -> policy -> decision -> audited action boundary, a representative 200-500-case golden pilot catalogue when the source pool permits it, shadow/canary promotion gates, near-duplicate clustering without auto-merge/rejection, confidence-aware future supplier metrics, connection-scoped circuit breaking, primary-source policy records, and explicit future-technology triggers.
+- The current evaluation engine has none of the new golden-set, shadow-decision, promotion-measurement, canary, duplicate-cluster, or policy-source records. Its existing `PASS_WITH_ATTENTION` behavior must not be read as permission to publish unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty; those cases remain pre-publication review under the existing implementation specification and ADR-010.
+
+## Approved catalog and commerce decisions - 2026-08-07/10
+
+The original all-in-one ADR and later decisions are recorded in independently auditable ADRs. They are approved direction, not implemented behavior.
 
 > [!IMPORTANT] Persistence stack and placement - decided 2026-08-07 by Bogs
 > Approved stack: **PostgreSQL + Drizzle ORM + Drizzle Kit + `postgres.js` + Zod**. Prisma was evaluated and rejected; do not reintroduce it.
@@ -115,7 +121,8 @@ The original all-in-one ADR and later seller/supplier decisions are now split in
 - [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] - Retailer and Dropshipper use separate registrations, accounts, and logins; one account has one immutable business model. Dropshippers source through healthy connections they own. CJ is the first provider adapter, and Sals3's current CJ credential belongs to a separate Sals3 Official Dropshipper Account. Shopify is not a supplier connection.
 - [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] - supplier delist, zero stock, cost spike, freight loss, connection failure, and material source changes protect new checkout automatically and open one actionable seller attention case with severity-based in-app, push, and email delivery. Accepted orders remain active and render immutable product/variant/price/terms/media/supplier snapshots; no later listing change or silent substitution rewrites history.
 - [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] - Dropshippers install curated Supplier Apps and connect their own provider accounts/API credentials. Customer payment/Sals3 commission/seller payout are separate from seller-to-supplier payment. CJ does not pay the Sals3 seller; it charges the seller's own CJ account/wallet. Zero balance permits catalog access but not automatic balance fulfillment; affected offers funding-hold and accepted orders become actionable `AWAITING_SUPPLIER_FUNDS` exceptions. Exact commercial rates/providers remain pending.
-- [[cj-candidate-to-sals3-product-draft-implementation-spec]] - approved implementation contract connecting Aj's existing **CJ Candidate Explorer** (`sals3-portal` `/products`) to the Sals3 Catalog Admin API. Phase 1 is human-on-exception: selected green items auto-publish, yellow items auto-publish as **Live · Needs Attention**, and red items block or auto-pause. It defines persistent status surfaces, deduplicated in-app attention, shortlist/preflight gates, country/permit/IP controls, identity, editor, API, sync, and rollback. No implementation is claimed.
+- [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] - catalog automation preserves evidence and policy provenance, routes uncertain legal/compliance/duplicate cases to pre-publication review, promotes new enforcement rules only after shadow measurement and owner approval, treats perceptual hashes as clustering signals rather than rejection proof, and defers heavier infrastructure until named evidence-based triggers are met.
+- [[cj-candidate-to-sals3-product-draft-implementation-spec]] - approved implementation contract connecting Aj's existing **CJ Candidate Explorer** (`sals3-portal` `/products`) to the Sals3 Catalog Admin API. Phase 1 is human-on-exception: selected green items auto-publish, non-blocking quality/operational yellow items auto-publish as **Live · Needs Attention**, uncertain legal/IP/safety/permit/mapping/media-rights/evidence/near-duplicate cases stop at pre-publication review, and objective red items block or auto-pause. It defines persistent status surfaces, deduplicated in-app attention, shortlist/preflight gates, country/permit/IP controls, identity, editor, API, sync, and rollback. No publication implementation is claimed.
 - Shopify is not part of the active Sals3 plan or CJ import path. Earlier Shopify pop-up-store material is historical/sample context only and must not create implementation tasks.
 
 ## Corrected external facts
@@ -187,7 +194,9 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 2. Implement real authentication plus separate Retailer/Dropshipper registration, immutable business-model entitlements, and tenant isolation.
 3. ~~Implement `SellerAccount`, `SupplierProvider`, `SupplierConnection`, `ProviderProductReference`, `ProviderVariantReference`, and `OfferSupplierBinding`; migrate the current CJ key to the Sals3 Official Dropshipper Account using encrypted secret storage.~~ **`SellerAccount`/`SupplierProvider`/`SupplierConnection` and the encrypted-secret migration are done (2026-08-07, third session)** — see the verified state above. `ProviderProductReference`/`ProviderVariantReference`/`OfferSupplierBinding` are not built; there is still no curated Sals3 product/offer to bind a provider reference to.
 4. **Approve one low-risk category-and-market pilot rule pack** with official-source anchors and named compliance/review owners. **This is now the single highest-leverage open item** — not because the engine is blocked on it (Bogs directed building it with labelled placeholders on 2026-08-07), but because every decision that engine currently produces is provisional until this approval replaces the placeholders. See [[parked-ideas-backlog]]'s unparked-with-placeholders entry.
+   - Under ADR-010, assemble and version a representative 200-500-case golden catalogue when the approved source pool permits it. Run new publication/block/pause rules in shadow mode, measure false-block, sampled false-clear, overturn, insufficient-evidence, latency, and CJ-points cost, then require owner-approved canary promotion gates.
 5. ~~Implement preflight hard gates, versioned scoring, near-duplicate detection, attention/exception queues, and WIP limits.~~ **Hard gates, the decision, and the queues are done** (2026-08-07, second session) — see the verified state above. Still open: a real versioned quality score (reserved, unwritten), near-duplicate detection beyond exact `pid` uniqueness, and active-job WIP limits.
+   - Near-duplicate work must create reviewable candidate clusters from versioned signals, including perceptual hashes; it must never auto-merge or auto-reject different provider product identities.
 6. Implement the approved server-side catalog/BFF boundary and contracts in [[cj-candidate-to-sals3-product-draft-implementation-spec]].
 7. Implement Product, Variant, Offer, Media, candidate, compliance, evidence, mapping, revision, workflow, and audit entities from that specification.
 8. Pilot and validate selected Taxonomy v0 branches against representative CJ products.

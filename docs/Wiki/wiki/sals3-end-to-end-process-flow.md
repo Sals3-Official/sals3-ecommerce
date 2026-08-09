@@ -2,7 +2,7 @@
 tags: [sals3, process-flow, flowchart, lifecycle]
 aliases: [Sals3 End-to-End Flow, Sals3 Process Flowchart]
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-10
 status: canonical
 authority: product-alignment
 maintenance: required-after-every-sals3-workflow-change
@@ -20,6 +20,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
 ---
 
 # Sals3 — End-to-End Process Flow
@@ -85,6 +86,8 @@ graph TD
 The exact CJ-listing-to-editor handoff, status surfaces, field ownership, synchronization, attention, and publish gates are defined in [[cj-candidate-to-sals3-product-draft-implementation-spec]]. [[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]] governs the prerequisite: a separately registered Dropshipper account must own a healthy approved supplier connection. Aj's existing work is named **CJ Candidate Explorer** and becomes the CJ provider adapter's discovery surface. Browsing creates no catalog record. Only an explicitly selected candidate with a fresh `PASS` or `PASS_WITH_ATTENTION` preflight may import; phase 1 has no batch import. Green auto-publishes, yellow auto-publishes with attention, and red blocks or auto-pauses. Country eligibility, permits, and counterfeit/IP evidence remain separate from freight availability. The customer storefront reads only the Sals3 published record.
 
 [[ADR-007-supplier-change-attention-and-immutable-order-snapshots]] governs changes after publication and purchase. Supplier delist, stock loss, price spike, freight loss, or source edits protect future checkout and open actionable seller attention. An accepted order remains active and renders its immutable ordered-item/media snapshot; later product changes never rewrite it. Existing fulfillment continues through its exact committed supplier binding unless the order enters an explicit exception.
+
+[[ADR-010-catalog-decision-governance-and-shadow-enforcement]] governs how a candidate decision becomes an action. Yellow auto-publication is limited to non-blocking quality or operational warnings. Unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty stops at pre-publication `REVIEW`; objective red blockers do not publish or auto-pause an affected live offer. New automatic publish/block/pause rules require a versioned golden pilot set, shadow measurement, owner-approved promotion gates, and a bounded canary. Perceptual similarity creates a reviewable duplicate cluster, never an automatic merge or rejection.
 
 [[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]] separates installable provider access and money movement. A Dropshipper connects and funds its own CJ/approved-provider account. The Sals3 customer-payment rail records commission and seller payable; the supplier rail charges the seller's own provider wallet/payment method. No ready funding path blocks new automatic-fulfillment checkout, while an accepted order remains active in `AWAITING_SUPPLIER_FUNDS` with actionable recovery.
 

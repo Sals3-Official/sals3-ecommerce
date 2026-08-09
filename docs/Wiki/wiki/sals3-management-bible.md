@@ -2,7 +2,7 @@
 tags: [project/sals3, canonical, domain-spec]
 aliases: [Sals3 Management Bible, Sals3 Master Plan, Sals3 Product Bible]
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-10
 status: canonical
 authority: domain-spec
 owner_approved: false
@@ -21,6 +21,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
 ---
 
 # Sals3 Management Bible
@@ -63,6 +64,7 @@ The current lifecycle (supplier discovery → automated evidence-based screening
 - **Separate seller business models:** Retailer and Dropshipper use separate registrations, accounts, and logins. One account has one immutable business model. Dropshippers source only through healthy approved supplier connections they own; Retailers do not receive supplier-sourcing capabilities by default. See ADR-006.
 - **Immutable accepted orders:** supplier or seller changes may protect/pause future sales but never rewrite an accepted order. Preserve the exact purchased revision, variant, price, terms, controlled media, and supplier binding; route anomalies through actionable in-app/push/email attention and explicit fulfillment exceptions. See ADR-007.
 - **Separate supplier and marketplace money:** each Dropshipper owns and funds its installed supplier accounts. CJ/AliExpress charge the seller for fulfillment; they do not pay Sals3 seller proceeds. Sals3 commission and seller payout come from the customer-sale payment/ledger rail. Zero supplier funding blocks automatic new fulfillment without blocking catalog access. See ADR-008.
+- **Evidence before automated catalog action:** every publish, block, pause, merge-affecting decision, or other catalog side effect must be reproducible from preserved evidence, a policy/algorithm version, stable reason codes, and audit. Non-blocking quality/operational warnings may publish with attention; unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty requires pre-publication review. New enforcement rules pass golden-set, shadow, measured promotion, and bounded-canary gates under ADR-010.
 - **Forbidden patterns:** no false urgency/scarcity, fabricated comparisons, dark patterns, forced account before purchase, pre-selected extras, or silent increase after a confirmed quote. Apply the consumer law for Sals3 and each enabled market; RA 11967 is one market-specific example.
 - **Idempotency and money safety:** checkout and refund require an idempotency key; money is stored as an integer in minor units, never a decimal (section 16.3, 16.4).
 - **Team-size reality:** confirmed team is AJ + Bogs (2 full-stack developers) — build spec section 21.2 puts this at **9 to 14 months to first launch, only with a reduced first release** (section 21.3). Do not plan against a faster timeline without changing the team size first.
