@@ -7,6 +7,7 @@ import getLoginErrorNotice, {
   SIGNED_IN_ANNOUNCEMENT,
 } from '@/lib/auth/login-status';
 import signUpWithPasswordAccount from '@/lib/auth/password-signup';
+import { syncKlaviyoProfile } from '@/lib/klaviyo/client';
 import {
   SIGNUP_FIELD_ORDER,
   getSignupFieldErrors,
@@ -88,6 +89,7 @@ export default function SignupForm() {
         email: fields.email,
         password: fields.password,
       });
+      await syncKlaviyoProfile();
 
       // Both passwords go the moment they can no longer be used.
       setFields((current) => ({
