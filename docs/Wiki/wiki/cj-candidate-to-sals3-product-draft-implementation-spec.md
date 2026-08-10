@@ -1581,10 +1581,12 @@ evidence that it works.
   `TEMPORARILY_INELIGIBLE`, `BLOCKED`, `EVALUATION_FAILED`. `BLOCKED` is
   reserved for permanent reasons (policy/counterfeit match, duplicate) with no
   override; `TEMPORARILY_INELIGIBLE` covers structurally transient failures
-  (no stock, no shipping route, invalid price) and is auto-retried with
-  exponential backoff and jitter, dead-lettering to the Exception Queue only
-  after 5 exhausted attempts. Malformed or unreachable CJ data routes to
-  `EVALUATION_FAILED`, never a fabricated pass.
+  (no stock, no shipping route, invalid price). **Known defect (2026-08-10):**
+  these decisions persist `nextRetryAt = null`, so the automatic retry the
+  portal promises never runs — see the approved correction below. Exponential
+  backoff with jitter and 5-attempt dead-lettering to the Exception Queue
+  apply only to technical `EVALUATION_FAILED` rows. Malformed or unreachable
+  CJ data routes to `EVALUATION_FAILED`, never a fabricated pass.
 - `Product Sourcing` navigation rebuilt: **Qualified Products** (Ready /
   Needs Attention, nested), **Evaluating**, **Blocked / Rejected**,
   **Exception Queue** (now reads real dead-lettered rows, not a permanent

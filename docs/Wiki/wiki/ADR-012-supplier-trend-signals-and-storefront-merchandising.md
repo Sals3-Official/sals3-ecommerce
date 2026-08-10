@@ -32,7 +32,7 @@ The ranking must not bypass catalogue filters. Raw CJ candidates, blocked produc
 
 ## Evidence
 
-- CJ's official Product API documents `searchType=2` for Trending Products, `searchType=21` for the expanded trending view, `orderBy=listedNum`, `sort`, and min/max listed-number filters: <https://developers.cjdropshipping.com/en/api/api2/api/product.html>.
+- CJ's official Product API documents `searchType=2` for Trending Products, `searchType=21` for the expanded trending view, `orderBy=1` (listing count — a numeric enum, not a field-name string), `sort`, and min/max listed-number filters: <https://developers.cjdropshipping.com/en/api/api2/api/product.html>.
 - CJ defines `listedNum` as the number of times/listings for a product. It is not documented as units sold or buyer orders.
 - `sals3-portal` already normalizes `listedNum` to `listedCount`. The current ecommerce `deals` section sorts only the fetched page by this value, so it is neither catalogue-wide trend analysis nor proof of a discount.
 - ADR-010 already requires popularity data to be separated from qualification fingerprints and treats new ranking/enforcement logic as versioned, measured policy.

@@ -46,7 +46,7 @@ This ADR separates three things that must not be blurred:
 
 ### Verified current Sals3 behavior
 
-- `sals3-portal/src/lib/cj/enrichment-schemas.ts` parses the split inventory fields, but `src/lib/cj/evidence.ts` reduces each stock row to `totalInventory`. The qualification rules then use that total for stock and stocked-origin findings. The resulting decision cannot explain whether stock was CJ-warehouse or factory-backed.
+- `sals3-portal/src/lib/cj/enrichment-schemas.ts` parses the split inventory quantity fields (`totalInventory`, `cjInventory`, `factoryInventory`); `verifiedWarehouse` is not parsed at all today — the Zod schema strips it at the supplier boundary. `src/lib/cj/evidence.ts` then reduces each stock row to `totalInventory`. The qualification rules then use that total for stock and stocked-origin findings. The resulting decision cannot explain whether stock was CJ-warehouse or factory-backed.
 - The current `checkShippingRoute()` only proves that at least one observed warehouse row has stock. It does not call destination freight and therefore does not prove a usable route; its name overstates its evidence.
 - The current discovery tick starts from the first bounded CJ pages rather than maintaining a completed category/time scan. ADR-010 already approves persistent hot/backfill coverage and recovery, but the documented CJ 6,000-result cap requires an adaptive partition rule before Sals3 can claim full coverage.
 
