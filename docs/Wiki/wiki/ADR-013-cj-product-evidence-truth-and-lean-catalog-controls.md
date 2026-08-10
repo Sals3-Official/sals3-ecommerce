@@ -17,6 +17,7 @@ related:
   - "[[parked-ideas-backlog]]"
   - "[[sals3-session-2026-08-10-part21-aj-product-filtering-automation-and-stock-sync]]"
   - "[[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]"
+  - "[[ADR-016-google-merchant-center-product-feed-compliance]]"
   - "[[hot]]"
 ---
 
@@ -130,7 +131,7 @@ Do not share one assumed `productType` enum between CJ endpoints when their docu
 ### 7. Keep phase-1 identity minimal and variant-safe
 
 - Canonical identity remains Sals3 `Product.id` and `Variant.id`; CJ `pid`, `vid`, SKU, and barcode remain provider references/claims.
-- Do not invent GTIN, MPN, manufacturer, or brand values. Those fields become required only when an enabled category, market, manufacturer record, or approved external channel needs them.
+- Do not invent GTIN, MPN, manufacturer, or brand values. Those fields become required only when an enabled category, market, manufacturer record, or approved external channel needs them. [[ADR-016-google-merchant-center-product-feed-compliance]] (2026-08-11) is that approved external channel — it requires the eventual Product/Offer schema to carry nullable `gtin`/`mpn`/`brand`/`identifierExists` columns from the first migration, but does not itself authorize inventing a value for any specific product; this screening rule is unchanged until a real GTIN/MPN/brand source is verified per product.
 - Preserve Sals3 variant IDs when CJ labels or ordering change. New variants enter draft; removed variants become unavailable/tombstoned; ambiguous option changes create `VARIANT_MAPPING_CONFLICT`.
 - Never silently substitute a provider variant on an accepted order. Any future supplier failover applies only to new purchases after fresh validation and an audited binding change.
 

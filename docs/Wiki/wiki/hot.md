@@ -28,6 +28,7 @@ related:
   - "[[ADR-012-supplier-trend-signals-and-storefront-merchandising]]"
   - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
+  - "[[ADR-016-google-merchant-center-product-feed-compliance]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
@@ -204,6 +205,8 @@ The buffer shipped at **2.5%**, sized from card/PayPal rail costs (PH credit car
 **This fixes one input, not the pricing.** The 30% markup still excludes freight, payment fees, returns, and duties, so it remains a flat markup where [[ADR-003-international-availability-shipping-and-pricing]] calls for landed cost and contribution economics — still blocked on approving a destination market, because freight is destination-specific.
 
 **Approved future pricing governance (2026-08-10, multi-seller boundary corrected):** [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]] makes each seller's category margin the normal default while allowing tenant-owned product-specific and exceptional variant overrides as the merchant grows and assigns its own category PICs. Seller Portal owns merchant margins, PIC assignments, and the merchant FX adjustment; Admin Portal owns only platform reference-FX configuration, Sals3 fees/real platform costs, enabled capabilities, and safety/legal guardrails. The reference rate, platform conversion cost, merchant FX adjustment, merchant margin, and landed-cost inputs remain separate. The Sals3 Official Dropshipper follows the same seller-account boundary. None of this is implemented yet, and the current 2.5% buffer/30% prototype markup must not be mistaken for the final model.
+
+**Google Merchant Center compliance approved as a schema constraint on the future Product/Offer build, 2026-08-11.** [[ADR-016-google-merchant-center-product-feed-compliance]] requires the first Product/Offer/Media/Promotion migration to include `googleProductCategory`, `gtin`/`mpn`/`brand`/`identifierExists`, `condition`/`ageGroup`/`gender`, minor-unit price with a lossless path to Merchant API `amountMicros`, and a real promotion/sale-period entity — so a real catalog is never retrofitted for Merchant Center later. Confirmed gaps flagged now: no Google Product Category crosswalk exists on Sals3 Taxonomy v0, no GTIN/MPN/brand evidence pipeline exists (ADR-013 §7 still forbids inventing these values), no genuine promotion/sale-period concept exists (the "Deals" band is a ranking, not a discount), and CJ supplier media is not checked for Merchant-Center-banned watermarks/overlays. Also confirmed: Content API for Shopping sunsets 2026-08-18 — all future integration work targets the Merchant API only. Feed/API connection itself remains gated behind the existing catalog-readiness order; nothing here is implemented or connected today.
 
 ### Deals band no longer carries a discount
 
