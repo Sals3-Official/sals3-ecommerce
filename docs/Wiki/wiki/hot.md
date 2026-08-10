@@ -27,6 +27,7 @@ related:
   - "[[ADR-011-product-media-source-selection-and-supplier-original-preservation]]"
   - "[[ADR-012-supplier-trend-signals-and-storefront-merchandising]]"
   - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
+  - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
@@ -112,6 +113,8 @@ related:
 
 ### Approved decision governance, not implemented
 
+- **Admin Portal direction approved in ADR-014, not implemented.** [[ADR-014-admin-portal-platform-governance-and-global-controls]] names the future separate internal control plane for global market policy, seller-account governance, global marketing, supplier/provider controls, and versioned policy publication. It is not part of a seller account and is deliberately deferred while current work fixes `sals3-portal`; Portal may introduce narrow resolver/provider seams but must not build fake Admin Portal screens or global mutations. Australia is the intended initial selling market, while exact AU pricing, tax, payment, freight, returns, employee roles, and implementation remain separate approvals.
+
 - **Catalog decision governance approved 2026-08-10.** [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] formalizes zero silent/untraceable automated decisions, the evidence -> signal -> policy -> decision -> audited action boundary, a representative 200-500-case golden pilot catalogue when the source pool permits it, shadow/canary promotion gates, near-duplicate clustering without auto-merge/rejection, confidence-aware future supplier metrics, connection-scoped circuit breaking, primary-source policy records, and explicit future-technology triggers.
 - The current evaluation engine has none of the new golden-set, shadow-decision, promotion-measurement, canary, duplicate-cluster, or policy-source records. Its existing `PASS_WITH_ATTENTION` behavior must not be read as permission to publish unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty; those cases remain pre-publication review under the existing implementation specification and ADR-010.
 - **Automatic discovery coverage is approved but not implemented (2026-08-10).** The current five-minute tick restarts at CJ page 1, reads at most five 20-row pages per workable supplier connection, and claims up to eight oldest-created candidates. It has no persistent deep-page checkpoint, tenant-fair priority aging, completed-scan delisting reconciliation, policy-version requeue, or full-evidence freshness schedule. Its fingerprint omits product name and `shipsFrom` but includes popularity-only `listedCount`; one connection ingestion failure aborts the remaining tick; and exhausted `EVALUATION_FAILED` rows do not reopen automatically on source change. ADR-010 section 12 now requires persistent hot/backfill scan cycles, explainable admission, positive pilot scope, material/ranking fingerprint separation, freshness/policy re-evaluation, dead-letter recovery, connection isolation, safe disappearance handling, bounded resumability, and coverage metrics. Until implemented, `Ready` covers only candidates the bounded scanner reached under provisional rules; it does not prove all rows in `All Supplier Products` were evaluated.
@@ -196,7 +199,7 @@ Consequence still open for a product decision: with no discounts anywhere, the "
 
 ### Jurisdiction and market configuration
 
-Sals3 is described as Australian-based while older vault material assumes a Philippine company/home market. This is not a find-and-replace: Australian obligations apply to the business, while each destination market can add consumer, tax, product, and disclosure requirements. Resolve incorporation, target launch markets, governing law, and qualified legal/accounting review before real tax, invoice, payment, or launch-gate work. See [[parked-ideas-backlog]].
+Sals3 is described as Australian-based while older vault material assumes a Philippine company/home market. This is not a find-and-replace. **Seller operating-country eligibility** (where a seller/business may be registered and authorized to sell) and **buyer destination-country eligibility** (where customers may purchase and receive delivery) are independent policies. Australia is the current business/seller operating country; that decision does not automatically approve AU or any other buyer destination. Supplier stock origin, currency, locale, and timezone also cannot grant either permission. A future [[ADR-014-admin-portal-platform-governance-and-global-controls|Admin Portal]] governs both allowlists independently through versioned, audited publication. Even an enabled buyer destination only permits product evaluation; destination-specific freight, restrictions, compliance, and evidence still govern Ready/sellable status. Resolve target buyer destinations, governing law, and qualified legal/accounting review before real tax, invoice, payment, or launch-gate work. See [[parked-ideas-backlog]].
 
 ### Portal findings
 

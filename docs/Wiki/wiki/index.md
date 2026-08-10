@@ -21,6 +21,8 @@ related:
 
 ## Core operating system
 
+- [[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014 — Admin Portal Platform Governance]] — approved future separation of internal platform authority from seller accounts: global market policy, seller-account governance, global marketing, provider controls, versioned publication, and immutable audit; not implemented.
+
 - [[../CLAUDE|Agent Entry Point]] — mandatory reading gate for every agent.
 - [[agent-operating-contract|Agent Operating Contract]] — anti-yesman reasoning, evidence, challenge, and verification rules.
 - [[nextjs-component-security-code-rules|Next.js Component Architecture and Security]] — mandatory code-change gate for every Sals3 code edit, refactor, test change, configuration change, and package change.

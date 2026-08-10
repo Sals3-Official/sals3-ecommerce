@@ -20,6 +20,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 ## Constitutional and navigation notes
 
+- [[ADR-014-admin-portal-platform-governance-and-global-controls]] — approved future Admin Portal boundary for global markets, seller-account governance, global marketing, provider controls, versioned publication, and audited high-impact actions; not implemented.
+
 - [[agent-operating-contract]] — anti-yesman and verification rules.
 - [[nextjs-component-security-code-rules]] — mandatory Next.js component architecture, security, and verification gate for all Sals3 codebase edits.
 - [[project-structure-installation-and-runbook]] — canonical repository structure, package installation rules, run commands, verification commands, and README update rule.
@@ -85,6 +87,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-global-seller-center-ux-blueprint-proposal]] — Pillar 3 Global Seller Center UX blueprint (v2): three funded v1 bets, a binding cut list, a Tier 1/Tier 2 architecture split with a debt register, and a formal Stage 1 research go/no-go gate. Proposed, not yet reviewed by AJ/Bogs as a product strategy — but see its 2026-08-06 addendum: a real, owner-directed 7-screen UI prototype now exists in `sals3-portal` (illustrative data, no backend), described fully in [[sals3-session-2026-08-06-part13-seller-center-first-build]].
 
 ## Catalog and supplier pipeline
+
+- [[ADR-014-admin-portal-platform-governance-and-global-controls]] — future internal control plane separated from seller accounts, with least-privilege employee authority, versioned global policy, rollback, and immutable audit.
 
 - [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract through an owned healthy connection: green auto-publish, yellow attention, red block/auto-pause, anti-junk/country/IP gates, customization, and supplier sync. Shortlist, CJ evidence fetch, and — as of 2026-08-07 — an automated evaluation pipeline with hard gates and a real decision are implemented and verified in `sals3-portal`; see section 26. Import, publication, and attention state remain unimplemented.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
