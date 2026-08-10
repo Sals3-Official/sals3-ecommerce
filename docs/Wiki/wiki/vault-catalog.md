@@ -22,6 +22,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 - [[ADR-014-admin-portal-platform-governance-and-global-controls]] — approved future Admin Portal boundary for global markets, seller-account governance, global marketing, provider controls, versioned publication, and audited high-impact actions; not implemented.
 - [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]] — approved layered multi-seller pricing: tenant-owned Seller Portal margins/PICs/product overrides/merchant FX adjustments, with Admin Portal limited to platform FX inputs, fees, capabilities, and guardrails; not implemented.
+- [[ADR-016-google-merchant-center-product-feed-compliance]] — approved schema constraint requiring the future Product/Offer/Media/Promotion build to carry Merchant Center attributes (GTIN/MPN/brand, Google Product Category, micros-safe price, real promotion entity) from its first migration, targeting the Merchant API only; not implemented.
 
 - [[agent-operating-contract]] — anti-yesman and verification rules.
 - [[nextjs-component-security-code-rules]] — mandatory Next.js component architecture, security, and verification gate for all Sals3 codebase edits.
@@ -90,6 +91,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 ## Catalog and supplier pipeline
 
 - [[ADR-014-admin-portal-platform-governance-and-global-controls]] — future internal control plane separated from seller accounts, with least-privilege employee authority, versioned global policy, rollback, and immutable audit.
+- [[ADR-016-google-merchant-center-product-feed-compliance]] — schema-shape decision so the first Product/Offer/Media/Promotion migration is Merchant-Center-ready (GTIN/MPN/brand, Google Product Category, micros-safe price, real promotion entity); feed/API enablement stays gated behind existing catalog-readiness gates.
 
 - [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract through an owned healthy connection: green auto-publish, yellow attention, red block/auto-pause, anti-junk/country/IP gates, customization, and supplier sync. Shortlist, CJ evidence fetch, and — as of 2026-08-07 — an automated evaluation pipeline with hard gates and a real decision are implemented and verified in `sals3-portal`; see section 26. Import, publication, and attention state remain unimplemented.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
