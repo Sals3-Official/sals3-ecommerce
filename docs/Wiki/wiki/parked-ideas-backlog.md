@@ -6,13 +6,14 @@ tags:
 aliases:
   - Parked Ideas Backlog
 created: 2026-07-31
-updated: 2026-08-07
+updated: 2026-08-10
 status: canonical
 authority: parked-backlog
 owner_approved: true
 related:
   - "[[vault-governance-and-note-lifecycle]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
+  - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
 ---
 
 # Parked Ideas Backlog
@@ -35,6 +36,18 @@ Log each parked idea in the same turn it is parked, under `## Active parked item
 ```
 
 ## Active parked items
+
+### 2026-08-10 — Product-safety incident and recall automation
+- **What:** A dedicated post-sale `ProductSafetyIncident`/`RecallCase` system with affected-product/order tracing, stop-sale/fulfillment actions, customer notification, remedy tracking, regulator-deadline support, and recalled-product watch lists.
+- **Why parked:** Bogs explicitly parked this on 2026-08-10 after the product-gap review. The first catalog remains a low-risk positive-allowlist pilot, and pre-publication safety/compliance review remains active; a full recall case-management subsystem is not required to build the candidate-to-Product-Catalogue slice. Parking the software does not authorize unsafe products or remove any enabled market's legal/operational duty to stop sale and respond to a real incident.
+- **Unblock condition:** Before enabling a category/market that requires batch/lot/serial traceability; when real sales volume makes a manual incident process inadequate; or immediately after a real safety incident/official recall creates an operational requirement.
+- **Related:** [[ADR-010-catalog-decision-governance-and-shadow-enforcement]], [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]], [[cj-candidate-to-sals3-product-draft-implementation-spec]]
+
+### 2026-08-10 — Post-pilot catalogue sophistication
+- **What:** Optional GTIN/MPN/manufacturer/channel-feed integration; automated physical sample-inspection software; external search-index repair/reconciliation; advanced trend velocity/outlier/saturation models; and complex product-specific return-policy rules.
+- **Why parked:** The calibrated review found these useful only after a real trigger. Phase 1 can use Sals3 Product/Variant IDs plus CJ references, a manual sample checklist for selected products, direct Product Catalogue reads, truthful daily CJ trend V0, and one versioned market-wide return/refund/warranty policy. Building the larger systems before the corresponding channel, index, volume, outcome data, or category exception exists would add unverified complexity and cost.
+- **Unblock condition:** Independently per item: an approved external product channel or identifier requirement; measured sample/quality workload; an independently updated search service/cache; sufficient time-series and Sals3 conversion/return data; or an enabled category requiring a return-policy exception.
+- **Related:** [[ADR-011-product-media-source-selection-and-supplier-original-preservation]], [[ADR-012-supplier-trend-signals-and-storefront-merchandising]], [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]], [[ADR-003-international-availability-shipping-and-pricing]]
 
 ### 2026-08-05 — GEO/AEO PDP and cart machine-readable structure
 - **What:** From [[sals3-geo-aeo-seo-strategy-proposal]]: `generateMetadata` per PDP, `Product`/`Offer`/`AggregateRating`/`FAQPage` JSON-LD, `useOptimistic` cart UX, and `sitemap.xml`.
