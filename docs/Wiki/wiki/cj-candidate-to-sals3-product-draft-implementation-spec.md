@@ -1144,6 +1144,16 @@ Checkout performs a fresh server-side stock, variant, cost, and freight validati
 
 Inventory synchronization preserves `cjInventory`, `factoryInventory`, `totalInventory`, and `verifiedWarehouse` per variant/origin. `ZERO_STOCK` and `UNKNOWN_STOCK` are recoverable holds. Factory-backed or unverified stock follows the versioned pilot policy and may be `PASS_WITH_ATTENTION` only when its handling risk is accepted and later order/freight validation succeeds; it is not hard-coded as either clean pass or permanent block. A stocked origin is not `FREIGHT_ROUTE_CONFIRMED`.
 
+The stock-to-listing path is: verify the CJ callback -> deduplicate `messageId` -> resolve the exact tenant-owned Supplier Connection/product/variant -> append an inventory observation -> re-evaluate the affected variant/offer/market -> atomically update the Product Catalogue current availability pointer -> invalidate/update the ecommerce read model. One zero-stock variant disables only that variant; zero stock across every purchasable variant pauses future checkout without deleting the Product. Inventory return re-enables only after every other current publication gate still passes. Accepted orders keep their immutable binding and use an explicit fulfillment exception rather than silent substitution.
+
+Webhook speed is defense in depth, not the only stock guard. Scheduled reconciliation repairs missed/delayed callbacks, and checkout revalidates the exact variant, quantity, current stock/orderability, cost, connection, and applicable freight. Subscribe selected imports, live products, and accepted-order protection subjects—not the raw **All Supplier Products** pool.
+
+### 15.3 Automation hosting boundary
+
+Core filtering stays inside Sals3 code and PostgreSQL. In the development/pilot phase, the protected scheduler route produces bounded work and the existing PostgreSQL lease/retry/current-state model remains authoritative. Do not move decision rules, tenant authorization, evidence, inventory eligibility, or audit truth into n8n.
+
+After the queue/recovery correctness unit passes, the production target may replace the external frequent scheduler with Vercel Pro Cron and deliver evaluation jobs through Vercel Queues, subject to an explicit production review while Queues remains beta. Messages contain IDs, versions, and admission reason only; consumers re-authorize server-side and commit idempotently before acknowledgment. At-least-once delivery cannot replace database uniqueness, leases, evidence history, or the Sals3 **Exception Queue**. n8n is limited to peripheral alerts, reports, reminders, and external back-office integrations.
+
 Every material supplier change opens or updates one deduplicated `AttentionIssue` that shows old/new values, affected variants/offers/markets/active orders, automatic action, evidence time, and recovery actions. Seller delist and supplier changes affect new purchases only; accepted orders render an immutable `OrderLineSnapshot` and continue their committed fulfillment unless the order itself enters an explicit exception. See ADR-007.
 
 ## 16. Concurrency, revisions, and recovery

@@ -15,6 +15,7 @@ related:
   - "[[ADR-012-supplier-trend-signals-and-storefront-merchandising]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[parked-ideas-backlog]]"
+  - "[[sals3-session-2026-08-10-part21-aj-product-filtering-automation-and-stock-sync]]"
   - "[[hot]]"
 ---
 
@@ -159,6 +160,20 @@ The following remain discoverable in [[parked-ideas-backlog]] and are not author
 - external search-index reconciliation before such an index exists;
 - advanced trend statistics;
 - complex per-product return-policy rules.
+
+### 12. Keep core automation inside Sals3; use managed delivery proportionally
+
+- The catalogue decision engine, tenant authorization, supplier evidence, policy version, retry/recovery state, current projection, and audit remain Sals3 TypeScript/PostgreSQL responsibilities. n8n is not an authoritative catalogue runtime.
+- Development/pilot keeps the existing protected scheduled route plus PostgreSQL leases/retry while queue correctness is fixed. This avoids making a new paid service or beta dependency a prerequisite.
+- Vercel Hobby Cron is insufficient for frequent discovery because it is limited to once daily. The production target may use Vercel Pro Cron and Vercel Queues after an explicit beta, reliability, region, and cost review. Queue consumers remain idempotent because Vercel Queues is at-least-once; Sals3 keeps its database Exception Queue because Vercel Queues has no built-in DLQ.
+- Queue messages contain stable Sals3/provider IDs, evidence/policy versions, and admission reason only. They never contain provider tokens, database credentials, raw supplier payloads, or seller personal data.
+- n8n may handle peripheral alerts, reports, reminders, and later CRM/accounting integrations. It never decides qualification, stock/publication eligibility, or tenant ownership.
+
+Current official platform references, verified 2026-08-10:
+
+- Vercel Cron limits: <https://vercel.com/docs/cron-jobs/usage-and-pricing>
+- Vercel Queues delivery/security/retry behavior: <https://vercel.com/docs/queues>
+- n8n execution-based pricing and five-minute schedule estimate: <https://n8n.io/pricing/>
 
 ## Ready-to-code order
 
