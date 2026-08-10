@@ -14,6 +14,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
+  - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-implementation-phases]]"
   - "[[hot]]"
@@ -138,6 +139,8 @@ Immutable supplier evidence
 
 A policy change re-evaluates stored evidence when it is still fresh enough. It must not require another supplier request solely because decision logic changed. An external side effect does not occur inside a long supplier-fetch transaction.
 
+Evidence and decisions are historical records, not mutable “latest only” proof. A new supplier fetch appends a new checksummed evidence version; a new evaluation appends a decision linked to the exact feed/evidence snapshot, complete findings, policy/algorithm version, and affected scope. A separate current-state pointer may be updated for fast portal reads. Replacing the only snapshot or decision row destroys reproducibility and does not satisfy this boundary.
+
 ### 3. Decision taxonomy and publication effect
 
 - `PASS`: all hard gates pass and the approved clean threshold is met; eligible for publication.
@@ -224,9 +227,50 @@ Supplier media, compliance evidence, Digital Product Passport, or other external
 - Saga orchestration: independently committed distributed services actually exist. Until then use a PostgreSQL transaction for database state and an idempotent outbox for external effects.
 - DPP, INFORM Consumers Act, or other jurisdiction-specific automation: approved market/seller/category applicability and qualified legal interpretation.
 
+### 12. Supplier discovery coverage and queue admission
+
+`All Supplier Products` is a raw provider browser, not an approval list and not proof that every visible row has entered evaluation. Candidate admission is automatic, but it must be complete, explainable, bounded, and fair across seller-owned supplier connections.
+
+The current implementation is only a phase-1 scan: every five-minute tick starts again at CJ page 1, reads at most five pages per workable connection, creates or requeues candidates, and claims at most eight evaluations in oldest-created-first order. This has no persistent page checkpoint. Products beyond the first five pages can remain unseen indefinitely, and repeatedly requeued old rows can outrank newly discovered rows because queue order uses the candidate evaluation's original `createdAt`.
+
+The approved target logic is:
+
+1. **Persistent scan progress per connection.** Store a scan cycle/checkpoint (`supplierConnectionId`, provider operation, next page or provider cursor, cycle ID, last successful page/cursor, last full-scan time, and failure state). Each bounded tick resumes instead of restarting from page 1. For CJ, begin with a stable category/listing-time partition, overlap window, and per-cycle seen identities; split a partition only when it reaches the documented 6,000-record result cap. Do not build a speculative full-catalog crawler or claim completed coverage from an over-cap/partial partition.
+2. **Hot lane plus backfill lane.** Revisit the provider's newest/changed surface without abandoning deep catalogue coverage. The hot lane finds recent changes; the backfill lane advances the persistent checkpoint until the full source catalogue has been covered. Neither lane may permanently starve the other.
+3. **Explicit admission reasons.** Queue only a new candidate, a materially changed candidate, a decision whose evidence freshness expired, a candidate affected by a new policy/algorithm version, a retry that became due, or a candidate reopened by a source recovery/change. Store the admission reason and fingerprint version. An unchanged row is not re-fetched merely because it was visible again.
+4. **Positive pilot scope before expensive evidence.** The approved market/category allowlist determines whether a candidate is in the pilot. Out-of-pilot products remain discoverable with an explainable `not in pilot`/hold state; they do not consume full-evidence calls and are never silently treated as passed. Keyword denylists remain defense in depth, not the primary category classifier.
+5. **Separate material-change and ranking signals.** The qualification fingerprint must include every feed field that can change a rule outcome, including normalized name/title, provider category identity, price and currency, and shipping-origin/route hints available from the feed. Popularity data such as CJ `listedCount` belongs in a separate discovery/ranking fingerprint unless a versioned rule actually uses it. Full-evidence fields that the list feed cannot reveal (stock, variants, images, reviews, freight, rights) use policy-defined freshness and scheduled rechecks.
+6. **Policy changes re-evaluate decisions.** A new policy or algorithm version queues affected candidates even when the supplier fingerprint did not change. Re-evaluate the preserved snapshot first when it remains fresh enough; call the supplier only when evidence is missing or stale. A policy update must not leave historical `PASS` or `BLOCKED` rows silently active under an obsolete rule pack.
+7. **Recovery reopens dead letters.** A materially changed source row, restored connection, or applicable policy change may automatically reopen an exhausted `EVALUATION_FAILED` row with a new bounded attempt budget and an audit trail. A dead letter must not become a permanent blind spot.
+   - Every `TEMPORARILY_INELIGIBLE` decision has a real `nextRetryAt` or an explicit recovery trigger. “Temporary” without either is a stranded state.
+   - Connection loss/re-authentication is connection health and a recoverable hold, not an invisible candidate failure. Queued work must use the same workable-status allowlist as ingestion. A reconnect/reauthorization event reopens affected candidates in bounded batches.
+   - No `EVALUATION_FAILED` row may sit below the dead-letter attempt threshold with `nextRetryAt = null` and disappear from every portal queue.
+   - Enforce state invariants at the repository/database boundary: a timed temporary state has `nextRetryAt`; an event-waiting temporary state has an explicit recovery trigger; a pre-dead-letter technical failure has a retry time; and an exhausted technical failure is visible in `Exception Queue`. Every nonterminal candidate must appear in exactly one Product Sourcing queue/projection.
+
+#### Intentional supplier disconnect and reconnect
+
+An owner-requested `Disconnect` in **Supplier Apps** is an expected pause, including during development. It is not a provider outage and must not consume a technical-failure retry attempt.
+
+- On disconnect, stop new ingestion and supplier evidence calls for that connection. Queued or in-flight candidates that cannot finish become `TEMPORARILY_INELIGIBLE` in the current implementation vocabulary, with reason `SUPPLIER_CONNECTION_DISCONNECTED` (or an equivalent stable code) and recovery trigger `ON_CONNECTION_RESTORED`; they appear in **Blocked / Rejected** as **Temporarily unavailable**, not in **Exception Queue**.
+- Preserve the last completed decision and evidence as history, but derive current listing/publication eligibility as false while the source connection is not workable. **Customize & List** and any future publish action stay unavailable.
+- Do not poll the supplier API on every tick while intentionally disconnected. The reconnect event, not a timer, is the normal recovery trigger.
+- The **Supplier Apps** recovery action is **Reconnect and resume evaluation**. It verifies credentials first, marks the connection workable, appends a `CONNECTION_RESTORED` audit/outbox event, and requeues affected candidates in bounded batches. Recovered rows move through **Evaluating** and require fresh-enough evidence before returning to **Ready**.
+- Development uses the same path; an authenticated manual workflow dispatch may nudge the bounded worker, but direct database correction is not an accepted fallback.
+- After publication exists, disconnect pauses future listing/publication/checkout eligibility for affected offers. It never rewrites or cancels an accepted order; ADR-007's immutable order and explicit fulfillment-exception rules continue to apply.
+8. **Connection isolation and fair scheduling.** A failed provider connection must not abort ingestion or evaluation for other connections. Catch and record failures per connection, apply the connection-scoped breaker in section 8, and schedule bounded work fairly across sellers/connections. Within each connection, priority classes and aging prevent protection work, due retries, policy re-evaluation, new pilot candidates, changed candidates, and deep backfill from starving one another.
+9. **Safe disappearance handling.** Record `firstSeenAt`, `lastSeenAt`, scan cycle, and source-presence state. Never mark a product delisted because it was absent from one page or a partial/failed scan. Confirm absence only after a completed reconciliation policy, then hold/pause future publication by affected variant/offer/market and preserve audit/history.
+10. **Bounded resumable workers.** Ingestion and evaluation keep per-run time, supplier-request/points, and row budgets. Work persists a checkpoint before the runtime deadline and resumes on the next tick. Overlapping scheduler calls must be idempotent and must not spend duplicate supplier calls for the same connection/candidate lease. Points exhaustion and CJ's documented zero-transaction inactivity suspension are recoverable connection-health states with retry/reactivation and bounded requeue; they are not permanent product decisions.
+11. **Observable coverage.** Measure pages/cursors covered, source products seen, candidates created/requeued/unchanged, products not yet queued and why, oldest queue age, full-scan duration, evidence age, policy-version lag, retries/dead letters, supplier points, and per-connection errors. Alert on a stalled checkpoint, growing queue age, incomplete full scan, or a decision still active on an obsolete policy version.
+    - Record and monitor scheduler heartbeat separately from a successful HTTP response. Production must not report a healthy tick when the database is absent or the scheduler has silently stopped/auto-disabled.
+    - Audit candidate creation, requeue/admission reason, checkpoint advancement, decision, retry/dead-letter, and source disappearance/recovery without logging supplier secrets or raw sensitive payloads.
+
+`Ready` therefore means only that the candidate passed the current enforced policy using sufficiently fresh evidence. It does not mean that merely appearing in `All Supplier Products` caused a complete or immediate evaluation.
+
 ## System impact
 
 - Data and schema: future policy/source records, golden-case labels, shadow decisions, algorithm versions, duplicate clusters, and promotion measurements. Exact schema remains an implementation ADR/task.
+- Discovery and queue data: future per-connection scan checkpoints/cycles, last-seen/source-presence fields, versioned material fingerprints, admission reasons, evidence-expiry times, priority/aging data, and coverage measurements. Exact schema remains an implementation task.
+- Evidence history: replace latest-only overwrite as the source of truth with append-only/versioned feed snapshots, supplier evidence, rule findings, and decisions linked by IDs/checksums; keep a current-state projection for efficient portal screens.
 - Modules: `sals3-portal` catalog candidate rules, evidence capture, decision engine, publication workflow, supplier adapter resilience, audit, and outbox. `sals3-ecommerce` continues to read only published catalog data.
 - User workflow: qualified operational warnings may publish with visible attention; uncertain legal/compliance/duplicate cases stop before publication and enter a bounded exception workflow.
 - Financial or compliance effect: reduces false publication and false blocking; no legal rule activates without market scope, primary-source evidence, accountable owner, and applicable review.
@@ -242,6 +286,15 @@ Supplier media, compliance evidence, Digital Product Passport, or other external
   - multiple non-blocking operational warnings do not become a hard rejection by count alone;
   - pHash similarity creates a cluster and never auto-merges/rejects;
   - one seller connection's open circuit does not affect another tenant;
+  - a bounded scan resumes beyond page 5 and eventually covers the full provider catalogue without starving the hot lane;
+  - name/category/price/currency/shipping-origin changes trigger the correct material re-evaluation while popularity-only changes do not spend qualification calls;
+  - a policy-version change re-evaluates fresh stored evidence and fetches only when the evidence is stale;
+  - one failed connection does not abort other connections or the evaluation stage;
+  - an exhausted technical failure reopens on a qualifying source/connection/policy change;
+  - every temporary decision receives a retry time or explicit recovery trigger, and no pre-dead-letter failure becomes invisible;
+  - reconnect/reauthorization reopens affected candidates without evaluating through a non-workable connection;
+  - two evaluations preserve both evidence/decision histories and each decision reproduces from its exact linked snapshot and findings;
+  - a partial or failed scan never falsely marks an unseen supplier product as delisted;
   - unsafe external URLs, redirects, address ranges, response types, and oversized responses fail closed.
 - Full or cross-module tests:
   - golden catalogue decisions and reason codes remain stable for the approved policy version;

@@ -9,7 +9,7 @@ aliases:
   - Sals3 Feature Landscape
   - Sals3 Expansion Map
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-10
 status: canonical
 authority: blueprint-map
 owner_approved: false
@@ -18,6 +18,9 @@ related:
   - "[[sals3-management-bible]]"
   - "[[parked-ideas-backlog]]"
   - "[[sals3-master-blueprint]]"
+  - "[[ADR-011-product-media-source-selection-and-supplier-original-preservation]]"
+  - "[[ADR-012-supplier-trend-signals-and-storefront-merchandising]]"
+  - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
 ---
 
 # Sals3 Feature Landscape and Expansion Map
@@ -70,18 +73,23 @@ Rejected as an active Sals3 implementation path by Bogs on 2026-08-06. Historica
 - **Approved** — Show real delivery timing early. Browse estimates must be labelled; after an exact destination quote is confirmed, do not silently increase it. An expired/changed quote requires explicit reconfirmation before payment (ADR-003).
 - **Approved** — Real-time stock guard — build spec section 6.3 makes this concrete, not aspirational.
 - **Approved — evidence-based supplier curation:** human-on-exception operation under ADR-001 and [[cj-candidate-to-sals3-product-draft-implementation-spec]]: green selected imports auto-publish, yellow publishes with attention, and red blocks or auto-pauses. Rating/review signals are labelled proxies, not verified sales facts.
+- **Approved, not implemented — qualified `Trending now`:** Portal-owned CJ trending/listing snapshots and later Sals3 outcomes rank only published, purchasable products under ADR-012. Ecommerce never calls CJ directly; listing count is not sales and cannot support `Best seller` or `Deals` claims.
 
 ## Pillar 3 — Enterprise Seller Center
 
 - **Approved** — Module 1 equivalent: Seller Center dashboard, KPI-driven, per build spec section 20.3 Stage 7.
 - **Approved** — Module 2 equivalent: order management, courier tracking, self-service returns (Stage 6/7).
 - **Approved** — Module 3 equivalent: product upload and approval queue (Stage 7).
+- **Approved, not implemented — seller/supplier media resolver:** Product Editor preserves original supplier pictures, accepts seller uploads, supports seller-first or supplier-only preference, applies rights-aware supplier fallback, and exposes separate Product Catalogue media status under ADR-011.
 - **Approved, values pending** — Module 4 equivalent: commission calculation and payout report (Stage 7) — the *mechanism* is spec'd; the *commission rate itself* is `[?]` blocked on Leadership.
 
 ## Catalog and taxonomy
 
 - **Approved** — evidence-based supplier eligibility and review funnel under ADR-001; fixed rating/sales thresholds are not approved facts.
 - **Approved** — media, rights, and original-content review before publication under ADR-001.
+- **Approved** — controlled seller/supplier media-source resolution, immutable supplier provenance, ProductRevision media, and catalogue media statuses under ADR-011.
+- **Approved** — CJ provider trends/listing velocity as qualification-gated, versioned merchandising signals under ADR-012; not a sales/quality filter.
+- **Approved, not implemented — lean CJ evidence controls:** preserve inventory sources separately; do not label stock origin as a shipping route; validate destination freight independently; adapt scan partitions only after the real 6,000-record cap is reached; subscribe webhooks only for live products with reconciliation; recover from points/inactivity interruptions; and allow only explicitly supported product modes. Factory-backed inventory is policy input, not an automatic rejection. See ADR-013.
 - **Approved for pilot** — [[universal-category-variation-taxonomy-reference]] as Sals3 Taxonomy v0 under ADR-002; category branches still require real-product validation before production-ready status.
 
 ## Branding, trust, and compliance
@@ -91,4 +99,4 @@ Rejected as an active Sals3 implementation path by Bogs on 2026-08-06. Historica
 
 ## Not yet on the map
 
-Learned demand forecasting, automated availability detection, multi-warehouse support, and any POS/CRM/logistics integration remain out of scope until Stage 5+ exists. Vector search/recommendations and 3D/AR media are explicitly **Deferred** (not just unplanned) per the build spec's own decision record above. Do not pre-populate this map with speculative future capabilities beyond what a real document already names — add a section only when a real idea is proposed, per [[vault-governance-and-note-lifecycle]].
+Learned demand forecasting remains out of scope; ADR-012/013's bounded daily provider-trend rank is not an ML forecast. Automated availability detection beyond provider evidence, multi-warehouse routing, and any POS/CRM/logistics integration remain out of scope until Stage 5+ exists. Optional GTIN/channel feeds, automated physical-sample software, external-search repair, advanced trend models, product-specific return policy exceptions, and recall automation are parked in [[parked-ideas-backlog]]. Vector search/recommendations and 3D/AR media are explicitly **Deferred** (not just unplanned) per the build spec's own decision record above. Do not pre-populate this map with speculative future capabilities beyond what a real document already names — add a section only when a real idea is proposed, per [[vault-governance-and-note-lifecycle]].

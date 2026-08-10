@@ -15,6 +15,9 @@ related:
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
   - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
+  - "[[ADR-011-product-media-source-selection-and-supplier-original-preservation]]"
+  - "[[ADR-012-supplier-trend-signals-and-storefront-merchandising]]"
+  - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
   - "[[sals3-end-to-end-process-flow]]"
   - "[[sals3-implementation-phases]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
@@ -31,6 +34,12 @@ related:
 > [!IMPORTANT] Approved decision-governance amendment, 2026-08-10
 > [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] strengthens this contract without replacing its existing `REVIEW` boundary. `PASS_WITH_ATTENTION` remains limited to non-blocking quality or operational warnings. Unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty remains pre-publication `REVIEW`. New automatic publish/block/pause rules require a labelled golden pilot set, shadow measurement, owner-approved promotion gates, and a bounded canary. Near-duplicate perceptual hashes create reviewable clusters; they never auto-merge or auto-reject different provider identities.
 
+> [!IMPORTANT] Approved media and merchandising amendments, 2026-08-10
+> [[ADR-011-product-media-source-selection-and-supplier-original-preservation]] defines seller-first/supplier-only controlled media, always-visible supplier originals, rights-aware fallback, revisions, and catalogue media status. [[ADR-012-supplier-trend-signals-and-storefront-merchandising]] defines CJ trend/listing data as Portal-owned ranking signals only after qualification, with a protected published `Trending now` storefront contract. Neither media fallback nor popularity can bypass this specification's review, hold, block, freshness, freight, contribution, or publication gates.
+
+> [!IMPORTANT] Approved CJ evidence calibration, 2026-08-10
+> [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] preserves split CJ/factory/verification inventory facts without declaring factory-backed stock automatically unusable, separates stocked-origin evidence from a destination freight route, adapts scan partitioning only when a provider cap is reached, and defers unused channel/search/recall/sample/advanced-ranking machinery. Google/channel specifications are optional future integration references, not core Sals3 catalog authority.
+
 ## 1. Problem
 
 `sals3-portal` already provides a protected, paginated view of CJ listings. That feed lets an employee discover a supplier candidate. It does not create a Sals3-owned product, variants, offer, media record, or editable draft.
@@ -40,11 +49,11 @@ Sals3 needs one safe handoff from a CJ listing to a product editor. The editor m
 ## 2. Decision summary
 
 ```text
-CJ listing in Seller Center
-  -> Check for Sals3 / explicit shortlist
+CJ listing in All Supplier Products
+  -> automatic bounded discovery and explainable queue admission
   -> fresh automated preflight
-  -> GREEN | YELLOW | RED operational result
-  -> idempotent import job for GREEN or YELLOW only
+  -> PASS | PASS_WITH_ATTENTION | REVIEW | HOLD | BLOCKED | EVALUATION_FAILED
+  -> idempotent import job for eligible PASS or PASS_WITH_ATTENTION only
   -> CJ detail, variant, inventory, and media snapshot
   -> Sals3 category and attribute mapping
   -> separate Sals3 product revision and seller offer
@@ -249,6 +258,32 @@ ProviderVariantReference
 - lastObservedCost: Money
 - lastObservedInventory
 - lastObservedAt
+
+ProviderVariantInventoryObservation
+- id
+- providerVariantReferenceId
+- countryCode
+- cjInventory
+- factoryInventory
+- totalInventory
+- verifiedWarehouse: VERIFIED | UNVERIFIED | UNKNOWN
+- capturedAt
+- sourceRequestId
+
+SupplierScanPartition
+- id
+- supplierConnectionId
+- categoryId / timeStart / timeEnd / additionalFilters
+- state: PENDING | RUNNING | COMPLETED | FAILED | SUPERSEDED
+- observedCount / firstSourceKey / lastSourceKey
+- startedAt / completedAt / retryAt
+
+SupplierWebhookSubscription
+- id
+- supplierConnectionId
+- externalProductId
+- desiredState / observedState
+- lastVerifiedAt / failureReason / retryAt
 
 SupplierSnapshot
 - id
@@ -856,6 +891,31 @@ Rules:
 - Every attention item states reason, evidence timestamp, affected scope, recommended action, and whether customer purchase is currently allowed.
 - `AttentionIssue` remains the canonical source of truth. Push/email use a reliable notification outbox with delivery audit, retry, cooldown, and dead-letter handling. Channel failure never delays checkout protection. ADR-007 governs severity routing and immutable accepted-order behavior.
 
+### 11.2 Canonical filtering and ranking matrix
+
+The filtering plan is complete only when these layers remain separate. This matrix governs newer implementation work and clarifies older green/yellow/red summaries that grouped several no-publication outcomes together.
+
+| Layer | Canonical outcome | Typical evidence | Publication effect |
+|---|---|---|---|
+| Pilot admission | `NOT_IN_PILOT` / hold | Category or market is outside the approved positive allowlist | Discoverable with reason; do not spend full evidence calls or publish |
+| Objective permanent gate | `BLOCKED` | Explicitly prohibited product; confirmed invalid/unsafe condition; confirmed infringement under approved policy | No publication; normal editor cannot override |
+| Uncertain risk | `REVIEW` | Legal, permit, IP/brand authorization, required mapping, media rights, near duplicate, or material evidence uncertainty | No publication until an authorized review resolves it |
+| Temporary operational gate | `HOLD` / `TEMPORARILY_INELIGIBLE` | Stock, route/freight, contribution, freshness, supplier connection/funding, or recoverable source failure | No publication; timed retry or named recovery trigger |
+| Technical processing failure | `EVALUATION_FAILED` | Supplier/API/schema/storage/worker failure | Never fabricate a product judgment; retry then visible `Exception Queue` |
+| Non-blocking quality | `PASS_WITH_ATTENTION` | Weak copy, low review evidence, low-but-valid stock, long estimate, recommended attribute gap, or approved but limited media set | Eligible for `Live · Needs Attention`; checkout remains allowed only if every hard gate passes |
+| Clean qualification | `PASS` | Approved pilot scope and current valid mapping, variants, media, stock, freight, contribution, source, and policy evidence | Eligible for Product Editor/import/publication gates |
+| Merchandising only | trend/rank state | CJ trending membership, category-normalized listing count/velocity, then Sals3 engagement/order outcomes | Changes ordering/badges only after publication eligibility; never changes qualification |
+
+Rules:
+
+- One uncertain legal/IP/safety/permit/mapping/media-rights/duplicate fact routes to `REVIEW`, not `PASS_WITH_ATTENTION` and not an automatic permanent rejection.
+- One objective permanent blocker is sufficient for `BLOCKED`; warning counts alone never create a hard rejection.
+- Every temporary state has `nextRetryAt` or a named event recovery trigger. Every active candidate appears in exactly one Product Sourcing queue/projection.
+- `PASS` and `PASS_WITH_ATTENTION` require fresh-enough evidence under the current enforced policy version. A stale or obsolete decision is not publication-eligible.
+- ADR-011 resolves seller/supplier media only from approved controlled assets. Automatic supplier fallback cannot bypass media-rights review.
+- ADR-012 applies popularity/trend signals only after this matrix. A high CJ `listedCount` or provider-trending flag cannot rescue a blocked, reviewed, held, paused, stale, unpublished, or unprofitable product.
+- Catalogue publication reruns all applicable server-side gates against the exact proposed `ProductRevision`, market, variants, offer, media set, and current evidence.
+
 ## 12. Media pipeline
 
 1. Accept only allow-listed CJ source hosts for supplier import. Do not accept an arbitrary remote URL from the browser.
@@ -873,6 +933,8 @@ Rules:
 Keyboard-accessible controls must provide every action available through drag reordering. An employee upload never becomes public before content and rights review.
 
 Replacing or reordering published media creates a new product revision. Deleting a source link does not delete audit evidence.
+
+ADR-011 adds the required source-selection contract: **Your pictures**, always-visible **Original supplier pictures**, revision preference `SELLER_FIRST | SUPPLIER_ONLY`, approved supplier fallback when no eligible seller upload exists, and separate Product Catalogue listing/media statuses. The resolved public gallery uses controlled Sals3 assets only.
 
 ## 13. Pricing and market rules
 
@@ -1058,6 +1120,8 @@ These pages are source anchors, not a complete rule database. A rule owner must 
 
 Use signed CJ webhooks where available. Deduplicate by `messageId`. Acknowledge quickly and process through the worker. Use scheduled reconciliation for missed events, stale records, and conflicts.
 
+CJ product/variant/stock webhooks are product-subscription scoped after July 2026. Subscribe selected imports, live products, and accepted-order protection subjects rather than the raw candidate pool. Keep a minimal desired/observed subscription record and scheduled reconciliation. Add priority eviction or a dedicated allocator only when measured live demand approaches the CJ account's subscription limit. Detect an auto-closed topic and surface a real reactivation action.
+
 ### 15.2 Change behavior
 
 | Supplier change | Sals3 action |
@@ -1077,6 +1141,8 @@ Use signed CJ webhooks where available. Deduplicate by `messageId`. Acknowledge 
 | Supplier funding not ready | Funding-hold affected auto-fulfilled offers; catalog remains accessible; accepted orders use `AWAITING_SUPPLIER_FUNDS` recovery |
 
 Checkout performs a fresh server-side stock, variant, cost, and freight validation. Published catalog sync reduces risk but does not replace checkout validation.
+
+Inventory synchronization preserves `cjInventory`, `factoryInventory`, `totalInventory`, and `verifiedWarehouse` per variant/origin. `ZERO_STOCK` and `UNKNOWN_STOCK` are recoverable holds. Factory-backed or unverified stock follows the versioned pilot policy and may be `PASS_WITH_ATTENTION` only when its handling risk is accepted and later order/freight validation succeeds; it is not hard-coded as either clean pass or permanent block. A stocked origin is not `FREIGHT_ROUTE_CONFIRMED`.
 
 Every material supplier change opens or updates one deduplicated `AttentionIssue` that shows old/new values, affected variants/offers/markets/active orders, automatic action, evidence time, and recovery actions. Seller delist and supplier changes affect new purchases only; accepted orders render an immutable `OrderLineSnapshot` and continue their committed fulfillment unless the order itself enters an explicit exception. See ADR-007.
 
@@ -1500,8 +1566,9 @@ evidence that it works.
   the automated pipeline's evaluate step instead of a per-row click.
 - **Automated candidate-evaluation pipeline (§8.4, §8.5, §8.6, §14 — now
   built, see the placeholders caveat below).** A protected internal route
-  (`/api/internal/catalog/evaluate-tick`, `CRON_SECRET`-gated, called by
-  `vercel.json`'s Vercel Cron entry every 5 minutes) runs: ingest the CJ feed
+  (`/api/internal/catalog/evaluate-tick`, `CRON_SECRET`-gated, called on a
+  best-effort five-minute schedule by `.github/workflows/evaluate-tick.yml`)
+  runs: ingest the CJ feed
   into `QUEUED` candidates → lease a bounded batch (Postgres
   `FOR UPDATE SKIP LOCKED`, no new infrastructure) → cheap screening against
   feed-level data only (blocks before spending a CJ evidence-fetch call) →
@@ -1564,6 +1631,170 @@ decision, specifically so these can be swapped for a real ADR-002/ADR-003
 rule pack later without a schema change. Until that approval happens, every
 `BLOCKED`/`TEMPORARILY_INELIGIBLE`/`PASS_WITH_ATTENTION` decision driven by
 one of these three checks is provisional, not policy-approved.
+
+### Automatic discovery and queue-admission logic — approved correction 2026-08-10
+
+The seller does not manually shortlist rows from **All Supplier Products**.
+The scheduled pipeline automatically creates a `QUEUED` candidate for a new
+CJ product and requeues a decided candidate when its feed fingerprint changes.
+The **Evaluating** screen combines `QUEUED` and actively leased `EVALUATING`
+rows. One current tick processes every workable `CONNECTED`/`DEGRADED`
+connection sequentially, fetches pages 1-5 (20 rows per page), requeues due
+retries, and claims at most eight evaluations in original-created-time order.
+
+That current behavior is implemented but is not the complete target design:
+
+- there is no persisted scan cursor/checkpoint, so products after page 5 can
+  remain unseen indefinitely;
+- every tick restarts at page 1, so shallow unchanged rows consume discovery
+  calls while deep pages receive no guaranteed coverage;
+- the material fingerprint contains CJ `pid`, category, price, and
+  `listedCount`, but omits name and `shipsFrom`; a new counterfeit phrase or
+  shipping-origin change can therefore fail to trigger re-evaluation, while a
+  popularity-only `listedCount` change can spend full evidence calls;
+- stock, variants, images, reviews, freight, and rights can change without a
+  list-fingerprint change, and there is no policy-defined evidence-expiry
+  recheck;
+- changing `policyVersion` does not itself queue existing decisions, including
+  old `PASS` and `BLOCKED` rows;
+- source change does not automatically reopen an exhausted
+  `EVALUATION_FAILED` row because fingerprint requeue excludes that state;
+- normal `TEMPORARILY_INELIGIBLE` decisions such as `NO_STOCK` are stored with
+  `nextRetryAt = null`; despite the portal copy, the automatic retry query
+  cannot select them, so they remain stuck until a feed fingerprint change or
+  a manual recheck;
+- a disconnected/revoked queued candidate becomes `EVALUATION_FAILED` with a
+  null retry time before the maximum-attempt threshold; the Exception Queue
+  only shows failures at that threshold, so this row can become invisible in
+  every Product Sourcing queue;
+- a failure while ingesting one connection aborts the whole tick before other
+  connections, due retries, and the evaluation batch can run;
+- evaluation accepts some non-workable connection states left over after
+  queueing instead of requiring the same `CONNECTED`/`DEGRADED` rule used by
+  ingestion;
+- there is no `lastSeenAt`/completed-scan reconciliation, so supplier removal
+  or delisting cannot be distinguished safely from pagination drift, a partial
+  scan, or an upstream failure;
+- oldest-created-first scheduling has no tenant fairness or priority aging;
+  recurrent old candidates can jump ahead of newly discovered candidates;
+- the protected route has a 60-second runtime budget while ingestion and
+  evidence calls share one tick; there is no persistent stage checkpoint or
+  connection-level work lease to prevent overlapping scheduler calls from
+  repeating supplier traffic;
+- no approved positive category-and-market pilot allowlist controls expensive
+  evidence admission; the placeholder keyword denylist can miss synonyms,
+  spelling changes, non-English terms, or unmapped risky categories;
+- coverage, checkpoint lag, full-scan duration, evidence age, policy-version
+  lag, and per-connection points/error budgets are not yet first-class
+  operational measurements.
+- `supplier_snapshots` and `candidate_evaluations` are latest-only rows that
+  are overwritten on re-evaluation. The append-only audit preserves an event
+  and checksum but not the prior full evidence/feed snapshot and complete
+  findings, so an old decision cannot always be reproduced after later data
+  replaces it. A screening-only block can also retain current summary/checksum
+  fields from an older full evaluation unless current pointers are cleared or
+  linked per decision.
+- candidate creation and automatic requeue/checkpoint admission have no
+  dedicated audit event; the system records the eventual decision but not the
+  complete reason and scan context that admitted the work.
+- the GitHub Actions schedule is best-effort, can lag, and can auto-disable
+  after repository inactivity. The production route returns a successful
+  no-op when no database is configured, so an external scheduler can remain
+  green while catalogue work has stopped unless a separate heartbeat and
+  coverage alarm exists.
+
+ADR-013 adds four provider-contract constraints to that replacement:
+
+- Product List V2 reports at most 6,000 matching records. Begin with a
+  persistent category/time partition and split it only when the response hits
+  that cap; do not build a speculative full-catalog crawler or claim completed
+  coverage from an over-cap window.
+- Preserve `cjInventory`, `factoryInventory`, `totalInventory`, and
+  `verifiedWarehouse`. The current `totalInventory` reduction loses evidence;
+  factory-backed/unverified stock is policy-driven attention or hold, not an
+  automatic permanent block.
+- A warehouse row with stock proves a stocked origin only. Rename the current
+  `NO_SHIPPING_ROUTE` check/finding so it cannot imply destination freight;
+  only a fresh ADR-003 quote can set `FREIGHT_ROUTE_CONFIRMED`.
+- CJ points exhaustion and the documented zero-transaction inactivity
+  suspension are recoverable connection-health conditions. They must schedule
+  retry/reactivation and bounded requeue rather than strand or permanently
+  reject a product.
+
+The required replacement is [[ADR-010-catalog-decision-governance-and-shadow-enforcement#12. Supplier discovery coverage and queue admission]]: persistent per-connection scan cycles, hot and backfill lanes, explicit admission reasons, a positive pilot allowlist, separate material/ranking fingerprints, freshness and policy-triggered re-evaluation, real retry/recovery scheduling, dead-letter reopening, connection-failure isolation, fair priority scheduling with aging, safe completed-cycle disappearance handling, append-only linked evidence/decision history, bounded resumable workers, scheduler heartbeat, and observable coverage.
+
+#### Approved portal fallback for intentional disconnect
+
+The permanent solution does not repeatedly retry an account that its owner
+intentionally disconnected:
+
+1. **Supplier Apps -> Disconnect** stops ingestion/evidence calls for that
+   connection and records the pause.
+2. Affected queued/in-flight candidates become **Blocked / Rejected ->
+   Temporarily unavailable**, reason `SUPPLIER_CONNECTION_DISCONNECTED`, with
+   event trigger `ON_CONNECTION_RESTORED`; the transition does not increment a
+   technical-failure attempt.
+3. The last completed evidence and decision remain historical facts, while the
+   current effective eligibility disables **Customize & List** and publication.
+4. **Supplier Apps -> Reconnect and resume evaluation** verifies credentials,
+   emits an audited `CONNECTION_RESTORED` event, and requeues affected rows in
+   bounded batches.
+5. Recovered rows pass through **Evaluating** and cannot return to **Ready**
+   until their evidence is fresh enough for the current policy.
+
+Repository/database invariants must make stranded states impossible: every
+temporary row has either `nextRetryAt` or a named recovery trigger; every
+pre-dead-letter `EVALUATION_FAILED` row has a retry; every exhausted failure is
+visible in **Exception Queue**; and every active candidate resolves to one
+Product Sourcing queue.
+
+#### Approved implementation order and exit gates
+
+Deliver the correction in independently reviewable units:
+
+1. **Queue state correctness:** timed retry for stock/route holds, event-driven
+   connection hold/recovery, visible technical failures, and state-invariant
+   tests. Exit: no candidate can disappear from all queues.
+2. **Discovery coverage:** persistent per-connection scan cycle/checkpoint with
+   non-starving hot and backfill lanes, starting with category/time partitions
+   and splitting only when the provider's observed result cap is reached. Exit:
+   a bounded scan resumes beyond page 5, handles one at-cap fixture without
+   omissions/duplicate effects, and completes a measured pilot-feed cycle.
+3. **Change and freshness:** qualification fingerprint v2 (name, provider
+   category, price/currency, shipping hints), separate ranking fingerprint,
+   and policy-defined evidence expiry. Exit: material changes/stale evidence
+   requeue; popularity-only changes do not spend qualification calls.
+4. **Policy re-evaluation:** queue candidates affected by a new policy or
+   algorithm version; reuse fresh preserved evidence and fetch only when stale.
+   Exit: no active decision silently remains on an obsolete enforced policy.
+5. **Reproducibility:** append-only feed/evidence/finding/decision versions plus
+   a current-state projection. Exit: any decision reproduces from its exact
+   linked evidence, complete findings, and policy/algorithm version.
+6. **Resilience and operations:** per-connection failure isolation, fair
+   priority scheduling with aging, resumable time/request/CJ-points budgets,
+   explicit points-exhaustion/inactivity recovery, work leases, scheduler
+   heartbeat, queue/coverage alerts, and completed-cycle disappearance
+   reconciliation. Exit: one connection failure, provider suspension, or
+   partial scan cannot stop or falsely delist another connection's work.
+7. **Approved pilot policy:** positive category/market allowlist, taxonomy and
+   required attributes, source-anchored policy, golden catalogue, shadow
+   decisions, measured promotion, and canary. Exit: **Ready** is meaningful only
+   inside the approved pilot scope.
+8. **Final candidate gates:** destination freight/landed contribution, media
+   rights, and review-only near-duplicate clustering; unresolved legal, IP,
+   safety, mapping, media, freight, or evidence uncertainty routes to `REVIEW`.
+9. **Canonical catalogue handoff:** real Product/Revision/Option/Variant/Offer/
+   SupplierBinding/Media/Attention persistence, **Customize & List -> Add
+   Product**, final validation, audited publication/outbox, and storefront reads
+   from published Sals3 revisions only.
+
+Do not treat **Ready** as permission for production catalogue publication until
+units 1-8 pass their exit gates. Unit 9 creates the actual path into **Product
+Catalogue**.
+
+Until that replacement is implemented, **Ready** means “passed the current
+provisional rules among candidates the bounded scanner actually reached.” It
+is not proof that all rows visible in **All Supplier Products** were evaluated.
 
 ### Explicitly NOT implemented
 
