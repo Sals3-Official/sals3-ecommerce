@@ -38,10 +38,15 @@ export const SIGNUP_RULES: CredentialRules = {
   perEmail: { limit: 3, windowMs: 60 * MINUTE_MS },
 };
 
+export const KLAVIYO_PROFILE_SYNC_RULES: AddressRules = {
+  perIp: { limit: 20, windowMs: 5 * MINUTE_MS },
+};
+
 export const RATE_LIMIT_SCOPES = {
   sessionPost: 'session-post',
   login: 'login',
   signup: 'signup',
+  klaviyoProfileSync: 'klaviyo-profile-sync',
 } as const;
 
 export type RateLimitScope =

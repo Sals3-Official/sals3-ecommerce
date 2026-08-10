@@ -13,6 +13,6 @@ describe('/api/auth/csrf', () => {
     expect(setCookie).toContain(`${CSRF_COOKIE_NAME}=${body.csrfToken}`);
     expect(setCookie).toContain('HttpOnly');
     expect(setCookie.toLowerCase()).toContain('samesite=lax');
-    expect(setCookie).toContain('Path=/api/auth');
+    expect(setCookie).toContain('Path=/api');
   });
 });

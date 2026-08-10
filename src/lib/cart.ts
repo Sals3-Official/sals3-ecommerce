@@ -8,6 +8,7 @@ export const CART_STORAGE_KEY = 'sals3-cart-v1';
 export type CartLineItem = {
   productId: string;
   title: string;
+  category?: string;
   imageUrl?: string;
   imageAlt: string;
   tone: PlaceholderTone;
@@ -34,6 +35,7 @@ const MoneySchema = z.object({
 const CartLineItemSchema = z.object({
   productId: z.string().min(1),
   title: z.string().min(1),
+  category: z.string().min(1).optional(),
   imageUrl: z.string().url().optional(),
   imageAlt: z.string(),
   tone: z.enum(['ocean', 'dusk', 'meadow', 'clay']),

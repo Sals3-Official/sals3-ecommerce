@@ -1,12 +1,24 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { formatMoney } from '@/lib/money';
 import { useCart } from '@/components/cart/CartProvider';
 import CartLineItemRow from '@/components/cart/CartLineItemRow';
+import {
+  trackKlaviyoCartItemRemoved,
+  trackKlaviyoCartQuantityChanged,
+  trackKlaviyoCartViewed,
+} from '@/lib/klaviyo/client';
 
 export default function CartPageClient() {
   const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
+
+  useEffect(() => {
+    if (items.length > 0) {
+      trackKlaviyoCartViewed(items);
+    }
+  }, [items]);
 
   if (items.length === 0) {
     return (
@@ -37,9 +49,18 @@ export default function CartPageClient() {
             <CartLineItemRow
               key={line.productId}
               line={line}
-              onDecrease={() => setQuantity(line.productId, line.quantity - 1)}
-              onIncrease={() => setQuantity(line.productId, line.quantity + 1)}
-              onRemove={() => removeItem(line.productId)}
+              onDecrease={() => {
+                trackKlaviyoCartQuantityChanged(line, line.quantity - 1);
+                setQuantity(line.productId, line.quantity - 1);
+              }}
+              onIncrease={() => {
+                trackKlaviyoCartQuantityChanged(line, line.quantity + 1);
+                setQuantity(line.productId, line.quantity + 1);
+              }}
+              onRemove={() => {
+                trackKlaviyoCartItemRemoved(line);
+                removeItem(line.productId);
+              }}
             />
           ))}
         </div>

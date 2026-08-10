@@ -7,6 +7,7 @@ import {
 } from 'next/font/google';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
 import { CartProvider } from '@/components/cart/CartProvider';
+import KlaviyoConsentProvider from '@/components/klaviyo/KlaviyoConsentProvider';
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import './globals.css';
 
@@ -52,7 +53,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
     >
       <body className="flex min-h-full flex-col font-sans">
         <OrganizationSchema />
-        <CartProvider>{children}</CartProvider>
+        <KlaviyoConsentProvider>
+          <CartProvider>{children}</CartProvider>
+        </KlaviyoConsentProvider>
       </body>
     </html>
   );

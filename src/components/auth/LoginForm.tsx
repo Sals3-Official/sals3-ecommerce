@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth/login-schema';
 import getLoginErrorNotice from '@/lib/auth/login-status';
 import signInWithPasswordSession from '@/lib/auth/password-login';
+import { syncKlaviyoProfile } from '@/lib/klaviyo/client';
 import EmailField from './EmailField';
 import LoginFormActions from './LoginFormActions';
 import PasswordField from './PasswordField';
@@ -67,6 +68,7 @@ export default function LoginForm() {
   async function submitCredentials(form: HTMLFormElement) {
     try {
       await signInWithPasswordSession({ email, password });
+      await syncKlaviyoProfile();
 
       setPassword('');
       setStatus({ kind: 'success' });
@@ -135,6 +137,7 @@ export default function LoginForm() {
         onGoogleSuccess={() => {
           setPassword('');
           setStatus({ kind: 'success' });
+          syncKlaviyoProfile().catch(() => undefined);
           router.replace('/');
         }}
       />

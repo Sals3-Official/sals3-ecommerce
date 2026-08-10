@@ -23,6 +23,7 @@ import {
   type CartState,
   type CartToastMessage,
 } from '@/lib/cart';
+import { trackKlaviyoAddedToCart } from '@/lib/klaviyo/client';
 import CartToast from '@/components/cart/CartToast';
 
 type CartContextValue = {
@@ -68,6 +69,7 @@ function createCartStore() {
       state = updater(state);
       persist();
       notify();
+      return state;
     },
   };
 }
@@ -91,7 +93,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       itemCount: getCartItemCount(state),
       subtotal: getCartSubtotal(state),
       addItem: (item, quantity = 1) => {
-        store.update((current) => addCartItem(current, item, quantity));
+        const previousLine = state.items.find(
+          (line) => line.productId === item.productId,
+        );
+        const nextState = store.update((current) =>
+          addCartItem(current, item, quantity),
+        );
+        const nextLine = nextState.items.find(
+          (line) => line.productId === item.productId,
+        );
+        const addedQuantity =
+          (nextLine?.quantity ?? 0) - (previousLine?.quantity ?? 0);
+
+        if (nextLine && addedQuantity > 0) {
+          trackKlaviyoAddedToCart({
+            items: nextState.items,
+            addedItem: { ...nextLine, quantity: addedQuantity },
+            addedItemCategory: item.category,
+          });
+        }
+
         setToast({ id: Date.now(), text: 'Added to your cart.' });
       },
       setQuantity: (productId, quantity) =>
