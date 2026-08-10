@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, cj, inventory, scanning, webhooks, product-evidence]
 aliases: [CJ Product Evidence Truth, Lean Catalog Controls]
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-11
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -16,6 +16,7 @@ related:
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[parked-ideas-backlog]]"
   - "[[sals3-session-2026-08-10-part21-aj-product-filtering-automation-and-stock-sync]]"
+  - "[[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]"
   - "[[hot]]"
 ---
 
@@ -49,7 +50,7 @@ This ADR separates three things that must not be blurred:
 
 - `sals3-portal/src/lib/cj/enrichment-schemas.ts` parses the split inventory quantity fields (`totalInventory`, `cjInventory`, `factoryInventory`); `verifiedWarehouse` is not parsed at all today — the Zod schema strips it at the supplier boundary. `src/lib/cj/evidence.ts` then reduces each stock row to `totalInventory`. The qualification rules then use that total for stock and stocked-origin findings. The resulting decision cannot explain whether stock was CJ-warehouse or factory-backed.
 - The current `checkShippingRoute()` only proves that at least one observed warehouse row has stock. It does not call destination freight and therefore does not prove a usable route; its name overstates its evidence.
-- The current discovery tick starts from the first bounded CJ pages rather than maintaining a completed category/time scan. ADR-010 already approves persistent hot/backfill coverage and recovery, but the documented CJ 6,000-result cap requires an adaptive partition rule before Sals3 can claim full coverage.
+- The current discovery tick starts from the first bounded CJ pages rather than maintaining completed coverage. The active portal adapter uses legacy `GET /api2.0/v1/product/list`, not Product List V2. The documented V2 maximum `totalRecords=6000` therefore cannot be used as a legacy completion, split, or failure rule. Legacy coverage needs adaptive category/time/price partitions and explicit refusal of false completeness.
 
 ### External-channel boundary
 
@@ -57,7 +58,7 @@ Google Merchant/Search specifications are not Sals3 catalog authority. They may 
 
 ## Strongest objection
 
-Adding separate inventory states, scan partitions, webhook bookkeeping, and recovery states can become enterprise architecture before the first catalog exists. The low-risk pilot may have fewer than 100 live products, a category query below 6,000 results, one store-wide return policy, no external search index, and no need for global product identifiers.
+Adding separate inventory states, scan partitions, webhook bookkeeping, and recovery states can become enterprise architecture before the first catalog exists. The low-risk pilot may have fewer than 100 live products, one store-wide return policy, no external search index, and no need for global product identifiers.
 
 The objection is valid. This ADR therefore uses **triggered complexity**: preserve evidence now, add the small correctness guard now, and activate heavier machinery only when the real limit or integration appears.
 
@@ -97,18 +98,19 @@ Rename the current finding to describe what it proves, for example `NO_STOCKED_O
 
 `FREIGHT_ROUTE_CONFIRMED` requires the approved destination, exact variant and quantity, origin, product logistics properties, weight/volume, logistics method, amount, response reference, captured time, and expiry under ADR-003. Candidate evaluation can remain `Ready` only under the explicit meaning **qualified candidate**; publication and checkout remain separate current-evidence gates.
 
-### 3. Use adaptive scan coverage, not a speculative crawler
+### 3. Use legacy adaptive scan coverage with explicit completion proof
 
-- Start with persistent category/time checkpoints, stable create-time ordering, `pid` deduplication, and a small overlap between resumed windows.
-- Record every scan partition's filters, observed count, first/last source keys, started/completed time, and error state.
-- Split a category/time window only when its response reaches the documented 6,000-record cap or another provider limit. Split further by supported filters only when time partitioning is insufficient.
-- **All Supplier Products** may show observed supplier rows, but a completed coverage badge/count requires every required pilot partition to finish. `Ready` never means every supplier row has been evaluated.
+- Use only legacy `GET /api2.0/v1/product/list` for full-catalogue discovery. Do not call/listV2 and do not apply its `6000` maximum to legacy results.
+- Give each cycle an immutable cutoff and persistent leaf-category roots. Record every category/time/price partition's filters, ancestry, observed count, PID checksum, lease, started/completed time, and error state.
+- Fetch at `pageSize=200`; a partition with `total<=200` completes only when valid unique PID count equals total. Split denser partitions adaptively by time and then price with boundary overlap and PID deduplication.
+- If the minimum time-and-price bucket remains dense, reconcile every legacy page twice under fixed ordering. Require two identical complete PID-set checksums and unique count equal to reported total. Otherwise persist `PROVIDER_COVERAGE_UNRESOLVED` and block parent/cycle completion.
+- **All Supplier Products** may show observed supplier rows, but a completed coverage badge/count requires every required partition to prove completion. `Ready` never means every supplier row has been evaluated.
 
 ### 4. Keep webhook handling proportional to the live catalog
 
 - Subscribe a CJ product when it becomes a selected import/live product or has an accepted order needing protection; do not spend subscriptions on the full raw candidate pool.
 - Store a minimal subscription record with provider connection, product ID, desired/observed state, last verification, failure reason, and retry time.
-- A simple scheduled reconciliation covers missed events and verifies subscription/webhook health.
+- Queue-delayed reconciliation covers missed events and verifies subscription/webhook health; it is not a cron schedule.
 - Priority eviction, multiple subscription tiers, or a dedicated subscription allocator is activated only when measured live-product demand approaches the account limit.
 - Monitor auto-closed topics and surface a **Reactivate webhook** action; webhooks never replace reconciliation.
 
@@ -161,11 +163,12 @@ The following remain discoverable in [[parked-ideas-backlog]] and are not author
 - advanced trend statistics;
 - complex per-product return-policy rules.
 
-### 12. Keep core automation inside Sals3; use managed delivery proportionally
+### 12. Keep core automation inside Sals3; use durable managed delivery without cron
 
 - The catalogue decision engine, tenant authorization, supplier evidence, policy version, retry/recovery state, current projection, and audit remain Sals3 TypeScript/PostgreSQL responsibilities. n8n is not an authoritative catalogue runtime.
-- Development/pilot keeps the existing protected scheduled route plus PostgreSQL leases/retry while queue correctness is fixed. This avoids making a new paid service or beta dependency a prerequisite.
-- Vercel Hobby Cron is insufficient for frequent discovery because it is limited to once daily. The production target may use Vercel Pro Cron and Vercel Queues after an explicit beta, reliability, region, and cost review. Queue consumers remain idempotent because Vercel Queues is at-least-once; Sals3 keeps its database Exception Queue because Vercel Queues has no built-in DLQ.
+- The approved implementation target is Neon PostgreSQL plus private Vercel Queues in Sydney. One authenticated idempotent Start/Resume action creates a durable chain; each cycle enqueues its successor with a points/freshness-aware delay. Browser or owner-PC presence is not required after start.
+- No cron or scheduled GitHub Actions tick belongs in the target runtime. The existing protected tick may remain temporarily as break-glass recovery only until queue replacement tests pass.
+- Queue consumers remain idempotent because Vercel Queues is at-least-once. PostgreSQL stores leases, CAS state, outbox intent, failed-work visibility, and the Exception Queue because the transport has no application DLQ.
 - Queue messages contain stable Sals3/provider IDs, evidence/policy versions, and admission reason only. They never contain provider tokens, database credentials, raw supplier payloads, or seller personal data.
 - n8n may handle peripheral alerts, reports, reminders, and later CRM/accounting integrations. It never decides qualification, stock/publication eligibility, or tenant ownership.
 
@@ -179,7 +182,7 @@ Current official platform references, verified 2026-08-10:
 
 1. Preserve split inventory evidence and tests; correct the stocked-origin finding name/meaning.
 2. Implement queue/retry/reconnect correctness already approved by ADR-010.
-3. Add persistent category/time scan checkpoints and split only on an observed provider cap.
+3. Add legacy category/time/price partitions, immutable cycle cutoffs, atomic-bucket reconciliation, and explicit unresolved coverage; remove every V2/6,000 assumption.
 4. Add points/inactivity classifications and bounded recovery.
 5. Add supported product-mode normalization/allowlist.
 6. Implement exact variant identity/drift handling and simple variant-media truth.
@@ -193,7 +196,7 @@ Current official platform references, verified 2026-08-10:
 - Inventory fixtures cover CJ-only, factory-only, mixed, zero, unknown, verified, and unverified rows without losing source fields.
 - Factory-only evidence follows the versioned pilot policy; it is not hard-coded as either clean pass or permanent block.
 - A stocked origin cannot set `FREIGHT_ROUTE_CONFIRMED` without a fresh destination quote.
-- A scan below 6,000 completes without unnecessary partitioning; an at-cap fixture splits deterministically, overlaps safely, and deduplicates `pid`.
+- Legacy totals exactly 6,000 and greater never trigger a V2-cap rule; density-driven time/price splitting, overlap/deduplication, stable atomic reconciliation, and unresolved non-convergence are deterministic.
 - HTTP `429`, inactivity suspension, intentional disconnect, bad credentials, and webhook auto-close produce different audited recovery actions.
 - Unsupported product modes remain visible with `NOT_SUPPORTED_IN_PILOT` and consume no unsupported import/publication path.
 - New/removed/renamed variants preserve Sals3 identity and accepted orders never change binding.
