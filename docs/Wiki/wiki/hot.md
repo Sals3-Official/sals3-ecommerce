@@ -273,6 +273,9 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-10-part24-candidate-pipeline-retry-correctness]]
 - [[sals3-session-2026-08-10-part25-cj-inventory-evidence-truth]]
 - [[sals3-session-2026-08-10-part26-portal-au-market-hardcode-remediation]]
+- [[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]
+- [[sals3-session-2026-08-11-part29-cj-discovery-operations-and-provider-global-architecture]]
+- [[sals3-session-2026-08-11-part30-cj-legacy-continuous-discovery-implementation-review]]
 
 ## Reusable lessons
 
