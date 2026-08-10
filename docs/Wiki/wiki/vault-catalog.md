@@ -21,6 +21,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 ## Constitutional and navigation notes
 
 - [[ADR-014-admin-portal-platform-governance-and-global-controls]] — approved future Admin Portal boundary for global markets, seller-account governance, global marketing, provider controls, versioned publication, and audited high-impact actions; not implemented.
+- [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]] — approved layered multi-seller pricing: tenant-owned Seller Portal margins/PICs/product overrides/merchant FX adjustments, with Admin Portal limited to platform FX inputs, fees, capabilities, and guardrails; not implemented.
 
 - [[agent-operating-contract]] — anti-yesman and verification rules.
 - [[nextjs-component-security-code-rules]] — mandatory Next.js component architecture, security, and verification gate for all Sals3 codebase edits.

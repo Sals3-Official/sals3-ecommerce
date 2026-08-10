@@ -9,6 +9,7 @@ owner_approved: true
 related:
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
+  - "[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]"
   - "[[sals3-geo-aeo-seo-strategy-proposal]]"
 ---
 
@@ -71,6 +72,8 @@ selling_price = max(
 Do not call an absolute dollar amount a margin; call it `desired_contribution_profit` or `minimum_contribution_profit`.
 
 Category targets, price floors, FX buffers, return allowances, and fee assumptions are versioned configuration with an owner, effective date, and review trigger. Initial values are hypotheses until validated against real orders. They are not facts baked into code.
+
+Under [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]], ownership is multi-seller aware: Seller Portal owns each merchant's margins, category PICs, product/variant overrides, and merchant FX adjustment; Admin Portal owns only platform reference-FX configuration, Sals3 fees/real platform costs, enabled capabilities, and safety/legal guardrails. Reference rates, platform costs, merchant adjustments, and margins remain separate inputs.
 
 ### 5. Ban fabricated price comparisons
 

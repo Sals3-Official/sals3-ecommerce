@@ -15,6 +15,7 @@ related:
   - "[[ADR-006-separate-retailer-dropshipper-registration-and-supplier-connections]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
+  - "[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]"
 ---
 
 # ADR-014 — Admin Portal platform governance and global controls
@@ -104,6 +105,11 @@ It will be separate from seller accounts and the Seller Portal. It will become t
    - expose decision/audit/exception visibility appropriate to employee roles;
    - support rollback to the last valid published version without rewriting historical decisions.
 
+6. **Commercial pricing governance**
+   - publish only platform-owned reference-FX configuration, Sals3 commissions/fees and real platform-borne conversion/payment costs, enabled capabilities, and safety/legal guardrails under [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments|ADR-015]];
+   - never set ordinary merchant margins, merchant product prices, merchant category PIC assignments, or merchant FX adjustments; those are tenant-owned Seller Portal concerns;
+   - keep reference FX, platform costs, merchant FX adjustments, merchant margins, and landed-cost inputs distinct and auditable.
+
 ### Authority and enforcement boundary
 
 ```text
@@ -133,6 +139,7 @@ The Admin Portal does not directly trust or mutate browser state in the Seller P
 ### Explicitly deferred
 
 - Admin Portal UI, routes, repository, deployment, or employee-auth implementation;
+- platform commercial-guardrail UI, Seller Portal pricing UI, seller category PIC assignments, production margin values, and merchant FX-adjustment implementation;
 - final role matrix and approval thresholds;
 - seller suspension legal/appeal policy;
 - global marketing attribution/experimentation backend;

@@ -22,6 +22,7 @@ related:
 ## Core operating system
 
 - [[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014 — Admin Portal Platform Governance]] — approved future separation of internal platform authority from seller accounts: global market policy, seller-account governance, global marketing, provider controls, versioned publication, and immutable audit; not implemented.
+- [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments|ADR-015 — Commercial Pricing Governance]] — approved multi-seller boundary: Seller Portal owns tenant margins, category PICs, product/variant overrides, and merchant FX adjustments; Admin Portal owns only platform FX inputs/fees/guardrails; not implemented.
 
 - [[../CLAUDE|Agent Entry Point]] — mandatory reading gate for every agent.
 - [[agent-operating-contract|Agent Operating Contract]] — anti-yesman reasoning, evidence, challenge, and verification rules.
