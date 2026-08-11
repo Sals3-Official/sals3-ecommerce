@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-11
+updated: 2026-08-12
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -50,6 +50,7 @@ related:
   - "[[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]"
   - "[[sals3-session-2026-08-11-part29-cj-discovery-operations-and-provider-global-architecture]]"
   - "[[sals3-session-2026-08-11-part33-admin-portal-gate-0-and-bootstrap]]"
+  - "[[sals3-session-2026-08-12-part35-listing-readiness-panel-repair]]"
   - "[[sals3-session-2026-08-11-part15-cj-three-lane-discovery]]"
 ---
 
@@ -107,6 +108,8 @@ related:
 - **Portal-only country-policy separation and market hardcode correction, 2026-08-10 (ADR-014).** Bogs confirmed Australia as Sals3's business/seller-registration country and explicitly required that seller operating-country eligibility, buyer destination-country eligibility, supplier stock origin, and display currency never collapse into one value. New `src/lib/country-policy/` resolvers replace the old hardcoded `INGESTION_MARKET_CODES = ['PH']`/`PLACEHOLDER_MARKET_CODE`: seller-operating is `AU`/enabled, buyer-destination is empty/**disabled** (no ADR-003 market approved yet), display currency is `AUD`. Because the buyer-destination policy is disabled, every new candidate now fails closed with a recoverable `NO_VALID_MARKET` before any CJ evidence call - **no new candidate can currently reach `Ready`** until a real market is approved; historical `PASS` rows are untouched. The real `/products` seller browser no longer reuses the storefront's real checkout-pricing function for decoration; it shows only an AUD reference estimate. A same-day review found and fixed three merge-blocking gaps: the buyer-destination policy version/source/scope is now resolved once per evaluation and recorded in both the stored policy identity and the audit trail; `getActiveMarket()` now returns `null` in production instead of leaking the `PH` fixture as real configuration, with `/orders`/`/finances`/`/payouts`/`/market-rules`/the blank listing wizard rendering an honest "not configured" notice; and the market rule now checks each candidate's own persisted destination against the enabled allowlist, so a historical `['PH']` candidate cannot silently pass once `['AU']` is approved. See [[sals3-session-2026-08-10-part26-portal-au-market-hardcode-remediation]]. `sals3-portal` branch `codex/portal-au-market-hardcode-remediation`, not yet committed/pushed at the time this note was written.
 
 - **AU buyer destination approved 2026-08-11; runtime update still pending.** This supersedes the earlier statement above that no buyer destination was approved. Bogs independently approved `AU` as the initial buyer destination after the seller/buyer-country separation was designed. The target policies are now seller-operating `['AU']` and buyer-destination `['AU']`, with separate versions and authority. The current uncommitted Portal resolver still returns an empty/disabled buyer allowlist and must be updated through review before runtime behavior changes. AU approval permits evaluation only; exact destination freight, restrictions, compliance, media, landed contribution, and other gates remain required before `Ready` or sale. See [[sals3-session-2026-08-11-part27-au-buyer-destination-approval]].
+
+- **Listing Readiness panel header repaired 2026-08-12 (`sals3-portal`).** The Product Editor's readiness rail rendered `title -> tab strip -> status`, because the status badge, `78% complete`, and the progress bar sat *inside* the `Issues & Tasks` tab panel. That left the tab strip floating between the title and the status as the "dead white block" the owner reported - and, unreported, meant switching to **Source Changes deleted the two numbers that answer "can this publish"** from the DOM. Status/percent/progress moved into a new `ReadinessStatusHeader` above the tabs; `ReadinessSummary` is now just the count chips and timestamp. The clipped `Source Changes (0)` label was a second real defect: the 272px rail gives ~109px per tab and that label needs 133px at 14px and 107px even at 11px, so below `19rem` of panel width the labels shorten to `Issues (4)`/`Changes (0)` via a **container query on the panel, not the `compact` prop** - the prop marks the rail, but the sheet is just as narrow on a 320px phone and still clipped there. Both label variants are real elements toggled with `hidden`, so visible text and accessible name stay identical at every width (WCAG 2.5.3). A contrast check also blocked the intended `text-ink-faint` timestamp at 3.20:1 against the card. Presentation only - no readiness rule, count, fixture, navigation, or publication behaviour changed. See [[sals3-session-2026-08-12-part35-listing-readiness-panel-repair]].
 
 ### Incomplete or placeholder
 
@@ -287,6 +290,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-11-part29-cj-discovery-operations-and-provider-global-architecture]]
 - [[sals3-session-2026-08-11-part30-cj-legacy-continuous-discovery-implementation-review]]
 - [[sals3-session-2026-08-11-part33-admin-portal-gate-0-and-bootstrap]]
+- [[sals3-session-2026-08-12-part35-listing-readiness-panel-repair]]
 
 ## Reusable lessons
 
