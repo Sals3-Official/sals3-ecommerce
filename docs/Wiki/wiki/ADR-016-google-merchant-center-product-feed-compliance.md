@@ -2,11 +2,11 @@
 tags: [sals3, adr, catalog, merchant-center, google-shopping, feed, seo, compliance]
 aliases: [Google Merchant Center Compliance, Merchant API Product Feed]
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-08-12
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: not-started
+implementation_status: schema-columns-shipped-migration-unapplied
 related:
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
@@ -88,6 +88,25 @@ The Product/Offer entity's stored price is the *only* value the PDP renders and 
 ### 4. Media eligibility is part of media selection, not a separate later filter
 
 [[ADR-011-product-media-source-selection-and-supplier-original-preservation]]'s existing seller/supplier media pipeline gains a Merchant-Center-eligibility signal (resolution floor, no watermark/overlay/placeholder) as a first-class check when that pipeline is actually built — not a bolt-on added after ADR-011 ships.
+
+> [!NOTE] Decision §2 implemented 2026-08-12; everything else unchanged
+> The first Product/Offer/Media migration exists and carries the columns §2
+> requires: `google_product_category`, `brand_name`, `condition`,
+> `age_group`, and `gender` on the product; `gtins[]` (capped at ten by a
+> check constraint), `mpn`, and `identifier_exists` on the variant; and
+> integer-minor-unit prices in a `bigint` with a lossless path to
+> `amountMicros`. GTIN/MPN/brand sit on the **variant** because one Sals3
+> variant maps to one Merchant API offer. All are nullable and **never
+> auto-populated** - [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]
+> §7 still forbids inventing a value. A `product_media_sources` provenance
+> table exists with a `merchant_center_eligible` column that stays null
+> because no watermark/overlay/resolution check exists yet, per §4. No
+> `Promotion` table was created: §2 makes it conditional on a genuine discount
+> feature, and Sals3 still has none.
+>
+> See [[sals3-portal-canonical-product-catalog-backend]]. Migration
+> `0013_cold_timeslip.sql` is generated and **not applied**. Decisions §1, §3,
+> §4, and §5 remain not started - no exporter, DataSource, or feed exists.
 
 ### 5. Feed/API enablement itself remains gated behind the existing catalog-readiness order
 
