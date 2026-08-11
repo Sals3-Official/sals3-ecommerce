@@ -47,7 +47,7 @@ Every decision must be reproducible from preserved evidence, a named policy vers
 - No curated Sals3 Product/Variant/Offer publication backend and no completed Sals3 orders exist. Supplier-performance and fulfillment models therefore have no Sals3 outcome sample yet.
 - The current approved implementation specification already separates `PASS_WITH_ATTENTION` from `REVIEW`: non-blocking quality/operational issues may publish with attention, while unresolved legal, IP, duplicate, mapping, media-rights, or evidence risks require pre-publication review.
 - Exact external product identity is implemented. Near-duplicate detection across different provider product IDs is not.
-- The current category/counterfeit list, destination market, and price/margin thresholds are labelled placeholders. A real category-and-market pilot rule pack remains the highest-leverage approval.
+- The current category/counterfeit list and price/margin thresholds remain labelled placeholders. `AU` was independently approved as the initial buyer destination on 2026-08-11, but a complete source-anchored category-and-market pilot rule pack, AU freight/compliance evidence, and promotion gates remain open.
 - ADR-006 and ADR-008 make supplier connections tenant-owned. A connection failure for one seller must not disable another seller's connection to the same provider.
 - The canonical build specification classifies official laws, standards, regulator guidance, and official vendor documentation above blogs or marketing pages for decisions.
 

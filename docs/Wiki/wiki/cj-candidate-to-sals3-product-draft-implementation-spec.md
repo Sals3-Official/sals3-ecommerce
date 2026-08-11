@@ -1640,8 +1640,11 @@ approved, following the same pattern already established by the shortlist's
 - **Category/counterfeit denylist** — §14.1's own "recommended initial
   exclusions" wording, not invented, but no ADR-002 pilot category has
   actually been approved for any market.
-- **Destination market** — still the single placeholder `'PH'`; not an
-  ADR-003 approval.
+- **Destination market (historical implementation status)** — this section
+  originally recorded the single placeholder `'PH'`. The Portal correction
+  removes that authority, and Bogs separately approved `AU` as the initial
+  buyer destination on 2026-08-11. Runtime remains disabled until the pending
+  country-policy implementation is updated, reviewed, and merged.
 - **Price bounds and margin-floor estimate** — env-configured placeholder
   numbers (`src/modules/catalog/candidates/rules/policy.ts`). The margin
   estimate is identical for every candidate today (no per-product landed
@@ -1824,10 +1827,11 @@ is not proof that all rows visible in **All Supplier Products** were evaluated.
   does not exist. Separate, larger task.
 - **Image-dimension/resolution checks.** Not possible from CJ's currently
   modelled API surface — `/product/query` returns no image dimensions.
-- **Freight evidence** (`/logistic/freightCalculate`, part of section 8.3). It
-  needs an approved destination market and ADR-003 has approved none, so it is
-  not called. Destination availability and landed cost therefore cannot be
-  evaluated at all yet.
+- **Freight evidence** (`/logistic/freightCalculate`, part of section 8.3).
+  `AU` is approved as the initial buyer destination as of 2026-08-11, but no
+  AU quote strategy, representative coverage, exact destination/postal inputs,
+  or freight implementation is approved/built yet. Destination availability
+  and landed cost therefore still cannot be evaluated.
 - **Supplier description sanitisation.** The CJ `description` is fetched and
   stored but never rendered, because no sanitiser exists. Section 12's media
   pipeline and section 9.4's source panel both remain unbuilt.
