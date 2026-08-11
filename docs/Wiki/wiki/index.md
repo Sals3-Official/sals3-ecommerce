@@ -66,6 +66,7 @@ related:
 - [[sals3-end-to-end-process-flow|Sals3 End-to-End Process Flow]] — canonical flowchart: 10-step item lifecycle, custom Sals3 platform surfaces, and human-on-exception catalog quality gate.
 - [[sals3-manual-testing-checklist|Sals3 Manual Testing Checklist]] — resumable owner-verified testing queue, ready for when a codebase exists.
 - [[sals3-session-2026-08-10-part21-aj-product-filtering-automation-and-stock-sync|AJ Product Filtering, Automation, and Stock Sync Q&A]] — consolidated questions and approved solutions from All Supplier Products through Ready, filtering settings, technical execution, hosting choice, and CJ-stock-to-listing behavior.
+- [[sals3-session-2026-08-11-part27-au-buyer-destination-approval|AU Buyer Destination Approval]] — owner-approved `AU` buyer destination, separate from AU seller/business registration; runtime policy update and AU freight/compliance evidence remain unimplemented.
 - [[sals3-feature-landscape-and-expansion-map|Sals3 Feature Landscape and Expansion Map]] — full capability map by pillar and status.
 - [[sals3-master-blueprint|Sals3 Master Blueprint]] — earlier business-strategy document (v4.0, sample status). Its Shopify/dual-track plan is retired; use it only as historical context.
 - [[universal-category-variation-taxonomy-reference|Universal Category and Variation Taxonomy]] — adopted as **Sals3 Taxonomy v0** for pilot use via ADR-002; 1,345 data records and 29 L1 departments, with real-product QA and provenance/license review still required.
