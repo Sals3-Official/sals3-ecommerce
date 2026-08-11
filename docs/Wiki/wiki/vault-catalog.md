@@ -94,6 +94,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-016-google-merchant-center-product-feed-compliance]] — schema-shape decision so the first Product/Offer/Media/Promotion migration is Merchant-Center-ready (GTIN/MPN/brand, Google Product Category, micros-safe price, real promotion entity); feed/API enablement stays gated behind existing catalog-readiness gates.
 
 - [[cj-candidate-to-sals3-product-draft-implementation-spec]] — approved Aj-CJ-Explorer-to-Sals3 contract through an owned healthy connection: green auto-publish, yellow attention, red block/auto-pause, anti-junk/country/IP gates, customization, and supplier sync. Shortlist, CJ evidence fetch, and — as of 2026-08-07 — an automated evaluation pipeline with hard gates and a real decision are implemented and verified in `sals3-portal`; see section 26. Import, publication, and attention state remain unimplemented.
+- [[sals3-session-2026-08-11-part15-cj-three-lane-discovery]] — implementation evidence for `sals3-portal` CJ three-lane discovery, webhook subscription priority, points refill governance, and automatic official-CJ start. Migration generated, not applied.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — catalog ownership, curation, media-rights, and server-boundary decision.
 - [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — Taxonomy v0 and category/attribute mapping decision.
 - [[ADR-003-international-availability-shipping-and-pricing]] — market, freight, and contribution-pricing decision used by publish validation.
