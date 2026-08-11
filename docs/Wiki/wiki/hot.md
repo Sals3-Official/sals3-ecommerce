@@ -49,6 +49,7 @@ related:
   - "[[sals3-session-2026-08-10-part26-portal-au-market-hardcode-remediation]]"
   - "[[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]"
   - "[[sals3-session-2026-08-11-part29-cj-discovery-operations-and-provider-global-architecture]]"
+  - "[[sals3-session-2026-08-11-part33-admin-portal-gate-0-and-bootstrap]]"
   - "[[sals3-session-2026-08-11-part15-cj-three-lane-discovery]]"
 ---
 
@@ -125,6 +126,8 @@ related:
 ### Approved decision governance, not implemented
 
 - **Admin Portal direction approved in ADR-014, not implemented.** [[ADR-014-admin-portal-platform-governance-and-global-controls]] names the future separate internal control plane for global market policy, seller-account governance, global marketing, supplier/provider controls, and versioned policy publication. It is not part of a seller account and is deliberately deferred while current work fixes `sals3-portal`; Portal may introduce narrow resolver/provider seams but must not build fake Admin Portal screens or global mutations. Australia is the intended initial selling market, while exact AU pricing, tax, payment, freight, returns, employee roles, and implementation remain separate approvals.
+
+- **Admin Portal Gate 0 completed and repository bootstrapped 2026-08-11.** `sals3-admin-portal` now has a verified Next.js 16.3.0/React 19.2.8/Tailwind v4 scaffold matching `sals3-portal`'s stack and quality gates, on dev port 3002 (local clone `E:\sals3-admin-portal`). Owner-confirmed Gate-0 decisions: Admin Portal owns its **own database** and never reads or writes `sals3-portal` tables — policy travels as versioned published state over a secret-protected endpoint, following the existing `SALS3_STOREFRONT_API_TOKEN`/`DISCOVERY_CONTROL_SECRET` pattern; the first end-to-end domain is **versioned market governance**; the Portal-side consumer ships as a **separate PR**. The audit found exactly three of thirteen capability domains have an authoritative backing service today (country policy, seller-account lifecycle, supplier/provider control) — everything else renders a typed `UnavailableNotice` rather than a fabricated total, enforced by a test asserting the page contains no digits. The Admin theme keeps Portal's radius/spacing/type/focus rules unchanged and diverges only in colour (graphite surfaces, deep indigo nav, restrained electric-violet accent), with all 26 contrast pairs verified against WCAG AA. **Still nothing implemented**: no employee auth, permission model, database, schema, migration, or policy publication, so ADR-014 stays `not-started` for every governed capability. Also found and left open: `sals3-portal`'s `PORTAL_ROLES` still contains `admin`/`catalogue_reviewer` with cross-seller access via `ownsProduct()` — platform authority inside the tenant app, which ADR-014's rejected Option A describes. See [[sals3-session-2026-08-11-part33-admin-portal-gate-0-and-bootstrap]]. `sals3-admin-portal` [PR #1](https://github.com/Sals3-Official/sals3-admin-portal/pull/1).
 
 - **Catalog decision governance approved 2026-08-10.** [[ADR-010-catalog-decision-governance-and-shadow-enforcement]] formalizes zero silent/untraceable automated decisions, the evidence -> signal -> policy -> decision -> audited action boundary, a representative 200-500-case golden pilot catalogue when the source pool permits it, shadow/canary promotion gates, near-duplicate clustering without auto-merge/rejection, confidence-aware future supplier metrics, connection-scoped circuit breaking, primary-source policy records, and explicit future-technology triggers.
 - The current evaluation engine has none of the new golden-set, shadow-decision, promotion-measurement, canary, duplicate-cluster, or policy-source records. Its existing `PASS_WITH_ATTENTION` behavior must not be read as permission to publish unresolved legal, IP, safety, permit, mapping, media-rights, evidence, or near-duplicate uncertainty; those cases remain pre-publication review under the existing implementation specification and ADR-010.
@@ -281,6 +284,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]
 - [[sals3-session-2026-08-11-part29-cj-discovery-operations-and-provider-global-architecture]]
 - [[sals3-session-2026-08-11-part30-cj-legacy-continuous-discovery-implementation-review]]
+- [[sals3-session-2026-08-11-part33-admin-portal-gate-0-and-bootstrap]]
 
 ## Reusable lessons
 
