@@ -2,7 +2,7 @@
 tags: [sals3, adr, admin-portal, governance, platform-controls, audit]
 aliases: [Sals3 Admin Portal, Platform Control Plane, Global Platform Governance]
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-11
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -37,7 +37,7 @@ The Seller Portal is tenant-facing. A seller must never gain the authority to ch
 
 ## Evidence
 
-- Current `sals3-portal` candidate ingestion and evaluation still contain labelled Philippine market placeholders. The owner identified Australia as Sals3's business/seller operating country, but explicitly clarified that countries allowed to sell and countries allowed to buy/receive delivery must be governed separately. No buyer destination-country allowlist is approved merely by the Australian registration decision.
+- Current `sals3-portal` candidate ingestion and evaluation replaced labelled Philippine market placeholders with separate policy resolvers. The owner identified Australia as Sals3's business/seller operating country, explicitly clarified that countries allowed to sell and countries allowed to buy/receive delivery must be governed separately, and independently approved `AU` as the initial buyer destination on 2026-08-11. The buyer approval is not inferred from registration; it is its own versioned owner decision.
 - `sals3-portal` has seller authentication and tenant-owned Supplier Connections, but no secure employee administration system.
 - `hot.md` already lists secure employee administration as unimplemented.
 - ADR-003 requires explicitly enabled markets rather than an unverified worldwide claim.
@@ -77,7 +77,7 @@ It will be separate from seller accounts and the Seller Portal. It will become t
    - independently enable, disable, schedule, and version **buyer destination-country eligibility**: where customers may purchase and receive delivery;
    - publish both through separate typed policies/allowlists with separate versions, effective periods, reasons, and audit trails; never collapse them into one ambiguous `marketCode` or infer one list from the other;
    - preserve the distinction between a platform-level country permission and future seller-specific access, product/offer eligibility, and destination-specific evidence;
-   - Australia (`AU`) is the owner-stated current business/seller operating country. This does not automatically enable AU or any other buyer destination;
+   - Australia (`AU`) is the owner-stated current business/seller operating country. That fact did not automatically enable a buyer destination; Bogs separately approved `AU` as the initial buyer destination on 2026-08-11;
    - globally enabling a buyer destination only permits evaluation for that country. A product/offer still requires destination-specific freight, restrictions, compliance, and other required evidence before becoming Ready or sellable;
    - supplier stock-origin countries such as `CN` or `US` remain evidence only and never grant seller or buyer-country eligibility;
    - currency, locale, and timezone are explicit configuration dimensions and must not be used as proxies for either country policy.
