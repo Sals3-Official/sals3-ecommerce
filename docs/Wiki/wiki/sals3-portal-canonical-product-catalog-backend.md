@@ -246,36 +246,45 @@ concurrent tasks generating migrations will always collide on the next index.
 Generate in isolation, then either rebase onto the other task's migrations or
 keep the migration only on its own branch.
 
-## Documentation delta still required (blocked by collision)
+## Vault updates applied, and the collision they were held behind
 
 `hot.md`, `index.md`, [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]],
-[[ADR-002-sals3-taxonomy-and-cj-category-mapping]],
-`agent-operating-contract.md`, `team-profile-and-collaboration-preferences.md`,
+[[ADR-002-sals3-taxonomy-and-cj-category-mapping]], `agent-operating-contract.md`,
+`team-profile-and-collaboration-preferences.md`,
 `sals3-turnover-prompt-template.md`, and
-`universal-category-variation-taxonomy-reference.md` are all **modified by the
-concurrent lean-catalog task** in the vault working tree and were deliberately
-left untouched. The following edits are still owed once that task lands:
+`universal-category-variation-taxonomy-reference.md` were all **modified by the
+concurrent lean-catalog task in the vault working tree** while this unit was
+being written, so none of them could be edited there without overwriting work
+in flight.
 
-1. **`hot.md` → "Incomplete or placeholder"**: the line _"No product/variant/offer
-   model, supplier import workflow, ... exists"_ is no longer accurate for the
-   product/variant/offer model. Replace with a pointer to this note, stating
-   persistence-only scope, migration `0013_cold_timeslip` unapplied, and PR #40
-   unmerged.
-2. **`hot.md` → "Current build priorities" item 3**: strike
-   `ProviderProductReference` / `ProviderVariantReference` / `OfferSupplierBinding`
-   as built (schema and draft-flow writers), keeping order routing unbuilt.
-3. **`hot.md` → "Current build priorities" item 7**: mark Product, Variant,
-   Offer, revision, and audit entities as persisted; Media, candidate,
-   compliance, evidence, and mapping entities remain open.
-4. **`hot.md` → `related` frontmatter and "Recent session notes"**: add
-   `[[sals3-portal-canonical-product-catalog-backend]]`.
-5. **`index.md`**: add this note under the `sals3-portal` implementation notes.
-6. **[[ADR-016-google-merchant-center-product-feed-compliance]]**: its
-   `implementation_status: not-started` is now `schema-shipped-unapplied` for
-   Decision §2; §1, §3, §4, and §5 remain not started. (ADR-016 is *not*
-   currently modified in the vault, so this edit is safe to make now — it was
-   left out only to keep this unit's vault change to one new note plus the
-   implementation spec.)
+The two that this unit genuinely owed were instead applied to `develop`'s
+**committed** versions on the documentation branch, which touches no other
+task's working copy at all:
+
+- **`hot.md`** — the "Incomplete or placeholder" line that read _"No
+  product/variant/offer model ... exists"_ is struck through and replaced with
+  the persistence-only scope, the unapplied migration, and a pointer here;
+  build priority 3 now records `ProviderProductReference`,
+  `ProviderVariantReference`, and `OfferSupplierBinding` as built while keeping
+  order routing open; build priority 7 is marked partially done with the exact
+  entities still missing; and this note is added to `related` and the recent
+  session-note list.
+- **`index.md`** — this note is listed under _Catalog and supplier pipeline_.
+
+Merging that branch will conflict with the concurrent task's own `hot.md` and
+`index.md` changes. That is the ordinary two-branch case and resolves by taking
+both sides: the edits sit in different bullets and different sections.
+
+Still genuinely untouched, because this unit changes nothing in them: ADR-002,
+ADR-013, `agent-operating-contract.md`,
+`team-profile-and-collaboration-preferences.md`,
+`sals3-turnover-prompt-template.md`, and
+`universal-category-variation-taxonomy-reference.md`.
+
+[[ADR-016-google-merchant-center-product-feed-compliance]] was not held by the
+concurrent task and is updated directly: `implementation_status` moves to
+`schema-columns-shipped-migration-unapplied` for Decision §2 only, with §1, §3,
+§4, and §5 explicitly still not started.
 
 ## Owner decisions this unit surfaces
 
