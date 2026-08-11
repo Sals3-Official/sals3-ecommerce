@@ -1508,6 +1508,15 @@ The following are external business or infrastructure inputs, not missing produc
 
 These inputs block production activation where relevant. They do not require redesigning the handoff contract.
 
+### Additional implementation verified 2026-08-11
+
+- `sals3-portal` now persists explicit CJ discovery lanes: one-time `BOOTSTRAP`, continuous creation-time `INCREMENTAL`, and bounded `AUDIT`. This fixes the prior repeated-full-cycle defect where a completed discovery cycle could enqueue a fresh historical epoch-to-current cycle.
+- Incremental discovery stores a separate watermark/cursor, immutable window-from/window-to bounds, safety overlap, and durable unresolved range obligations. A newer window can continue while older unresolved coverage remains visible; the proven watermark does not advance across unproven ranges.
+- Bootstrap partition proofs, sorted-PID checksums, audit due fields, audit units, and candidate provider freshness/removal timestamps now exist for bounded historical audit. This is audit infrastructure, not proof that the live CJ catalogue has been completely scanned.
+- Webhook subscription state now records priority class, desired/observed state, desired reason, provider result, failures, and capacity visibility. Reconciliation keeps the 100-ID request limit and never uses `subscribeAll`.
+- Points governance now uses current `pointsInfo`, endpoint cost, and documented per-minute refill (`total / 1440`) instead of parking all background work until UTC midnight when `remaining` is temporarily low.
+- Migration `0010_wise_typhoid_mary.sql` was generated but not applied. No live CJ mutation or remote database migration occurred.
+
 ## 24. External interface references
 
 Recheck these official CJ pages against the actual account and response shapes before implementation:

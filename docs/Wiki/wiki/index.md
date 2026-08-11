@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-10
+updated: 2026-08-11
 status: canonical
 authority: navigation
 owner_approved: true
@@ -97,6 +97,7 @@ related:
 ## Catalog and supplier pipeline
 
 - [[cj-candidate-to-sals3-product-draft-implementation-spec|CJ Candidate to Sals3 Product Draft Implementation Specification]] — approved handoff from Aj's CJ Candidate Explorer through a tenant-owned healthy CJ connection to Sals3. Defines anti-junk gates, auto-publication/attention, customization, identity, API, sync, recovery, and tests; not yet implemented.
+- [[sals3-session-2026-08-11-part15-cj-three-lane-discovery|CJ Three-Lane Discovery Session]] — `sals3-portal` implementation evidence for one-time bootstrap, incremental windows, bounded audit, webhook subscription priority, points refill governance, and automatic official-CJ start. Migration generated, not applied; no live completeness claim.
 
 ## Domains not started yet
 
