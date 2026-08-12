@@ -8,13 +8,14 @@ aliases:
   - Sals3 Agent Operating Contract
   - Anti-Yesman Rule
 created: 2026-07-31
-updated: 2026-08-06
+updated: 2026-08-12
 status: canonical
 authority: constitutional
 owner_approved: true
 related:
   - "[[sals3-master-blueprint]]"
   - "[[vault-governance-and-note-lifecycle]]"
+  - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
 ---
 
 # Sals3 Agent Operating Contract
@@ -131,7 +132,27 @@ Verification needed:
 Decision status:
 ```
 
-## 9. `sals3-portal` is the strict reference whenever work touches it (confirmed 2026-08-06, Bogs)
+## 9. CJ supplier calls are a constrained shared budget (owner decision 2026-08-12, Bogs)
+
+> [!IMPORTANT] Check this before planning or coding any Sals3/CJ-connected change
+> CJ API points and QPS are a finite shared operational resource, not free background capacity. They are reserved **first** for real customer- and order-critical operations: checkout, order acceptance, the necessary final freight/inventory/order-confirmation actions, selected/live-product operations, and owner-approved recovery work.
+
+Every proposed CJ call must be justified before it is written. Ask, in this order, whether the same user outcome can come from:
+
+1. persisted Sals3 data;
+2. an existing webhook or event;
+3. a bounded cached result;
+4. a human manual review.
+
+If any of those answers the need, use it instead of a fresh CJ call.
+
+A UI render, typing/search/filter action, pagination action, source-drawer open, routine poll, broad-catalogue review, or passive freshness timer must **never** create a CJ request by default. New supplier calls must be server-side only, bounded, idempotent where applicable, rate-limited through the shared limiter, and observable with purpose, count, and points impact. Do not add hidden background polling or per-row/per-render calls.
+
+Persist and honour CJ `pointsInfo`, account for the documented endpoint cost before fan-out work, and visibly defer noncritical work rather than consuming the operational reserve. A call with no listed point deduction can still have QPS and rate-limit impact.
+
+This is a durable project decision, not a temporary optimization. The detailed product rule — the lean **All Supplier Products** intake, the approved new-PID intake ceiling, the one-time existing-backlog drain, and manual stock review — lives in [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1a and its `CJ call-budget principle` section. Do not weaken any of them by adding a convenience supplier call.
+
+## 10. `sals3-portal` is the strict reference whenever work touches it (confirmed 2026-08-06, Bogs)
 
 > [!IMPORTANT] Strict adherence rule
 > When the topic is `github.com/Sals3-Official/sals3-portal` (the storefront/backend API repo, local clone `E:\sals3-portal`) — its own build, or any `sals3-ecommerce` code that calls it (see [[hot]]'s `src/services/products.ts` entries) — treat that repository's **actual, current code, schemas, and API contracts** as the bible reference for how to build against it. Read the real repo before assuming its shape; do not infer or invent a `sals3-portal` contract from memory, an older session note, or how a similar platform typically works.
