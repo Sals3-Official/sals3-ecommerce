@@ -13,11 +13,13 @@ related:
   - "[[hot]]"
 ---
 
-# A candidate detail drawer for Product Sourcing — `sals3-portal` PR #61
+# A candidate detail drawer for Product Sourcing — `sals3-portal` PR #61, #62
 
 `sals3-portal` [PR #61](https://github.com/Sals3-Official/sals3-portal/pull/61),
 opened and merged by `aj-garrigues` (AJ). 46 files, +3,204/−163. Two commits:
 `c980020` (data/interaction foundation) and `9aa9d11` (the drawer itself).
+[PR #62](https://github.com/Sals3-Official/sals3-portal/pull/62), same author,
+merged the same day — see the follow-up section at the end of this note.
 
 ## The gap this closes
 
@@ -151,6 +153,103 @@ before calling this done:**
   failure on plain `develop` with none of this PR's code applied, and
   back-to-back full runs are green on both branches — flagged as worth a
   separate investigation, not something this PR caused or fixed.
+
+## Follow-up, same day (PR #62): the product photo, a real security fix, and 19→11 statements
+
+Two follow-ups to the drawer above, both from `aj-garrigues`. **No migration**
+— neither touches a schema file, `drizzle/`, or an index.
+
+### The product photo, and one real security fix
+
+Supplier evidence now shows one 320px photo from
+`candidate_evaluations.feed_snapshot.imageUrl` — the *only* image address this
+database currently holds. `supplier_snapshots.evidence` keeps a
+`usableImageCount` but `countUsableImages()` discards CJ's `productImageSet`
+itself, and `product_media_sources` exists but is empty and keyed to
+`products.id`, not a candidate — so there is no gallery, and cannot be one
+until someone funds a re-fetch. The on-screen copy says exactly that rather
+than an empty box implying "no photo".
+
+Three implementation details are flagged as easy to "improve" into a
+regression, each backed by a test that fails if you do: no `sizes` prop
+(adding one flips Next's `getWidths` from the `x` branch, `384w`/`640w` for a
+320px box, to the `w` branch, whose smallest candidate is `640w` — fetching
+double the needed resolution); no `priority` (base-ui's `Tabs.Panel` defaults
+`keepMounted = false`, so the image isn't in the DOM until its tab opens —
+nothing to preload, never the LCP element); `aspect-square` (reserves height
+before any byte arrives, so a late image never shifts already-read text under
+a scrolled reader).
+
+**The real fix:** `imageUrl()` now re-checks the host on the **read** path.
+Its own comment previously asserted the address "was allow-listed at intake"
+— a claim about a different code path entirely. Three facts made that gap
+real: `feedSnapshotSchema.imageUrl` is a plain `z.string().nullish()` with no
+host check of its own; `cjImageUrl` only guards the discovery **write** path;
+and `images.loader: 'custom'` bypasses `/_next/image` entirely, so
+`remotePatterns` enforces nothing at request time, and `cjImageLoader` returns
+a non-CJ address **unchanged**, by design. So any value that ever reached that
+column outside the normal write path — a manual `UPDATE`, a backfill script,
+a future ingest path that skips `toFeedSnapshot` — became a browser `GET`
+issued from the seller's own session the moment the drawer or a pipeline
+thumbnail rendered it. Three lines close it for both call sites, tested
+against lookalike hosts, plain `http`, and relative paths.
+
+### Cutting one drawer open from 19 statements to 11
+
+Measured with a new `SALS3_DB_LOG=1` flag (left in, default off) — this repo
+had **no query instrumentation at all** before this. One render of
+`/products/pipeline`: 19 statements open / 12 close before, 10 after
+`React.cache` deduplication, **4** after the count cache warms. What was
+being wasted, per render: the same `seller_accounts` row read three times
+(the layout's `getSession()`, `requireDropshipperAccount`'s own `getSession()`,
+and its own explicit lookup), and `countCandidateStatusSummary` — three
+statements — run twice (once for the nav-rail badges, once for the tab bar).
+With one seller account, `sellerAccountId` narrows nothing, so each of those
+scans reads the whole table — on *every* navigation, including every drawer
+open and close. Opening a drawer for an unknown uuid still costs exactly one
+statement, confirming #61's authorization gate stops there as designed.
+
+Four changes: `React.cache` on `getRawAuthSession`, `getSession`, and a new
+`src/lib/auth/seller-account.ts` reader (deliberately **not** wrapped on
+`findSellerAccountByIdentityId` itself, since it takes an executor and is
+called inside a transaction — memoizing it would risk serving a pre-insert
+value to a read that must see its own write, guarded by a source-scan test
+that keeps the call graph collapsed to one entry point); `status-counts-cache.ts`
+via `unstable_cache` at a 30-second TTL, tagged, with the seller id passed as
+an **argument** so tenant isolation is structural rather than conventional
+(`resolveCandidateDetail` must never use this cache — its `Date` fields would
+silently round-trip as strings through `JSON.stringify` with a green
+typecheck); invalidation that deliberately differs by caller — route handlers
+use `revalidateTag(tag, 'max')` so a queue message can't stall the next
+render, while the `recheckCandidateNow` **Server Action** uses `updateTag` for
+read-your-own-writes, because the person who just clicked must see the result
+on the response they're already waiting for (that action had **no**
+revalidation of any kind before this); and a `useTransition` + `aria-busy` +
+row tint affordance adjusted during render rather than in an effect, so the
+panel never paints a frame in the wrong state.
+
+**Known, accepted consequence:** the same cached counts feed the pipeline's
+`total`, so for up to 30 seconds a tab can read "412" above 413 real rows, and
+a seller can occasionally be clamped back one page at a boundary. Both
+self-heal within the TTL — the documented argument for keeping it short
+rather than `revalidate: false`. The PR itself flags that the pagination
+total arguably shouldn't come from a cached count at all, but calls that a
+separate change from this one.
+
+**Not verified, flagged by the PR itself:** the photo was never seen rendered
+against real data (the local database is empty, so no real candidate row was
+ever opened — "worth one look on the preview deploy before merging"); the
+absolute query time at ~90k rows is unmeasured (statement counts are, wall
+time isn't); and `unstable_cache` is already deprecated in Next 16 in favour
+of `'use cache'`, which needs `cacheComponents: true` — recorded as a larger
+future migration, not attempted here.
+
+**Verification:** `npm run verify` clean — lint, `format:check`,
+`typecheck:clean`, build, **1,303 unit tests**, **78 E2E**, 0 failed. `npm
+audit --audit-level=high` — no high/critical (the same 4 pre-existing
+moderate `esbuild` findings via `drizzle-kit`). Cost impact: lower — six
+whole-table count scans per navigation drop to zero on a warm cache, two
+duplicate seller reads disappear, no new dependency or service.
 
 ## Cost impact
 
