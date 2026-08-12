@@ -6,7 +6,7 @@ aliases:
   - Freshness Sweep Revival
   - Historical Pipeline Freeze
 created: 2026-08-12
-updated: 2026-08-12
+updated: 2026-08-13
 status: implemented
 authority: implementation-state
 owner_approved: true
@@ -19,12 +19,14 @@ related:
 
 # Rolling PID waves, and five discovery deadlocks found running them in production
 
-> [!IMPORTANT] Cross-reference owed, not yet applied
-> This directly changes the owner-approved intake ceiling
-> [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b documents
-> (`CATALOG_NEW_DISCOVERY_PID_LIMIT`, a 5,000 lifetime cap). That ADR was held
-> uncommitted by a concurrent vault task at the time this note was written and
-> was left untouched — see the end of this note for the exact amendment owed.
+> [!IMPORTANT] Cross-reference resolved 2026-08-13
+> [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b now
+> carries the struck-through correction this callout used to owe, plus a
+> pointer back to this note. Applied via `sals3-ecommerce`
+> [PR #74](https://github.com/Sals3-Official/sals3-ecommerce/pull/74). The
+> concurrent vault task that held the file uncommitted when this note was
+> first written had still not committed its own copy as of this update — see
+> the bottom of this note for how that was handled without touching it.
 
 Six `sals3-portal` commits, 2026-08-12, all co-authored by Claude Opus 5, all
 against the live production database. `AJ NOCOLAI GARRIGUES` merged each as its
@@ -274,12 +276,65 @@ commits claim. Treat commit-message verification claims with the same caution
 this vault applies to any other unverified statement until re-checked against
 the actual test run.
 
-## Cross-reference owed
+## Addendum, 2026-08-13: a sixth deadlock, found overnight (PR #59)
 
-[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b currently
-documents the **lifetime 5,000-PID cap** as the active owner intake policy. It
-needs a struck-through correction recording that the owner replaced it with the
-600-PID rolling wave described here, plus a pointer to this note. Not applied
-here because a concurrent vault task held that file uncommitted at the time of
-writing — see [[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]'s
-own "Cross-references still owed" section for the parallel situation.
+Not part of the "same day" five above — this surfaced the *next* day, from
+watching the wave rollout run overnight, and is a distinct root cause from
+§4/§4a/§4b even though it lands in the same subsystem.
+
+**Observed overnight, 2026-08-12 into 2026-08-13: `CJ_TRENDING` re-walked its
+entire result set at every one of five wave edges (600 → 1,170 → 1,690 → 2,229
+→ 2,734) to contribute zero new products after wave 1**, stalling each wave
+transition for minutes while the coverage-partition scanner — ranked below it
+— sat yielding the whole time.
+
+Root cause: §4's eligibility check compared a lane's stored
+`exhausted_at_wave_limit` against the *current* wave edge, so a lane that had
+already exhausted itself for good re-qualified as eligible at every new edge
+and had to walk its whole set again just to reconfirm it had nothing left.
+The stored value was being read as "exhausted as of the wave I last checked",
+when the owner's actual model — confirmed on request — was "exhausted,
+period": a curated lane's provider pages either genuinely run out, or it hits
+its lifetime page budget (`CURATED_MAX_PAGES`, 25 pages per lane by design —
+beyond that boundary is the coverage scanner's job, not a curated lane's).
+`CJ_NEW_ARRIVALS` is narrower still: one fixed 14-day window, once, ever.
+
+**Owner decision, 2026-08-13: strict one-way lane progression.** Trending
+until it can give no more, then Most listed, then New arrivals, then the
+partition scanner, forever — no lane re-opens on its own. Fix is read-side
+only: `listEligibleCuratedLanes` now treats any non-null
+`exhausted_at_wave_limit` as permanently done, full stop, and its now-unused
+`waveLimit` comparison input was dropped. The write side (the exhaustion CAS,
+`assessIntakeGate`'s arbitration, cycle-start seeding, the versioned revival
+key from §4a) is untouched — a finished lane simply stops being reseeded or
+blocking anyone, rather than the underlying machinery changing. Re-opening a
+lane someday is a documented manual `UPDATE ... SET
+exhausted_at_wave_limit = NULL`, not a code path — there is no re-arm
+mechanism.
+
+No migration: production's marks already fit the one-way model without a
+backfill (`TRENDING=2734`, `MOST_LISTED=2734`, both done forever;
+`NEW_ARRIVALS=null`, cursor at page 7, resumes and finishes; the scanner takes
+over from there). `npm run verify` green: 1,251 unit tests passed (4
+skipped), 76 E2E passed (2 skipped) — the flipped regression test pins marks
+at three *different* old wave edges, all counting as done, to prove the
+current-edge comparison is actually gone and not just renamed.
+
+This is the same lesson §2/§3/§4a/§4b already taught, recurring a fifth time:
+"exhausted" and "exhausted as of when I last looked" are different claims, and
+conflating them is exactly the shape of bug this whole rollout keeps finding.
+`sals3-portal` [PR #59](https://github.com/Sals3-Official/sals3-portal/pull/59),
+merged.
+
+## Cross-reference owed, resolved
+
+[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b previously
+documented the **lifetime 5,000-PID cap** as the active owner intake policy
+with no correction applied. It now carries a struck-through correction
+recording that the owner replaced it with the 600-PID rolling wave described
+here, plus a pointer to this note — applied via `sals3-ecommerce`
+[PR #74](https://github.com/Sals3-Official/sals3-ecommerce/pull/74), the same
+way [[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]'s own
+parallel "Cross-references still owed" situation was resolved: a fresh branch
+off `develop`, touching only the files this specific correction needed,
+leaving the concurrent vault task's own uncommitted files untouched.
