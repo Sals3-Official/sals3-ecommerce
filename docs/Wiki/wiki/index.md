@@ -72,6 +72,7 @@ related:
 - [[universal-category-variation-taxonomy-reference|Universal Category and Variation Taxonomy]] — adopted as **Sals3 Taxonomy v0** for pilot use via ADR-002; 1,345 data records and 29 L1 departments, with real-product QA and provenance/license review still required.
 - [[sals3-cj-dropshipping-integration-plan|CJ Dropshipping Integration Plan]] — superseded historical proposal; ADR-001 and ADR-002 now govern catalog import and category/attribute mapping.
 - [[sals3-portal-code-review-2026-08-06|sals3-portal Code Review]] — seven read-only findings from the validated local portal checkout; findings only, not fixed.
+- [[sals3-portal-seller-market-configuration|Seller Market Configuration]] — real per-seller `/market-rules` profile replacing the PH/ID/SG fixture: AU+PH bounded-pilot capability boundary, `DRAFT/ACTIVE/SUSPENDED` lifecycle with compare-and-set, session-derived tenant isolation, and the four country/currency concepts kept separate. Code complete; migration `0012` **not applied**.
 - [[sals3-marketing-banner-integration-proposal|Marketing Banner Integration Proposal]] — 4 proposed banner placements (home, in-feed ads, PDP, cart). Proposed, not approved; flags a colour-token mismatch against the shipped code and a target-artifact mismatch against the real Next.js app.
 - [[sals3-geo-aeo-seo-strategy-proposal|GEO/AEO/SEO Strategy Proposal]] — proposed Next.js RSC + JSON-LD architecture for search/generative-AI/answer-engine visibility, plus truthful neuromarketing patterns. Route-independent pieces (`robots.txt`, `llms.txt`, global `Organization` JSON-LD) implemented 2026-08-05; the rest needs PDP/cart routes that don't exist yet, see [[parked-ideas-backlog]].
 - `Raw/` — UI mockups, presentation deck, the build spec PDF, and the category taxonomy workbook.
@@ -94,6 +95,8 @@ related:
 ## Seller Center
 
 - [[sals3-global-seller-center-ux-blueprint-proposal|Global Seller Center UX Blueprint (v2) Proposal]] — Pillar 3 product-strategy/UX pitch. Proposal status remains unapproved, but its addendum records the owner-directed 7-screen Seller Center UI prototype in `sals3-portal`. Data and product-editor backend remain unimplemented.
+- [[sals3-portal-orders-parcel-workspace-design|Orders Parcel Workspace Design]] — approved `/orders` redesign and the canonical spec for it: parcel (fulfillment group) as the row primitive, ADR-004 lane mapping with a `Needs attention` lane Shopee lacks, CJ `orderStatus` translated rather than surfaced, three never-netted money cards, and masked-by-default buyer contact. Carries live Shopee and Lazada reference walkthroughs. **Shell shipped 2026-08-13, fixtures only** — no database, no CJ call, no webhook.
+- [[sals3-session-2026-08-13-part37-orders-parcel-workspace-build|Orders Parcel Workspace Build Session]] — the build record for that design: list and detail shells, the repository seam, pluggable supplier adapters, and two defects found by measuring the rendered page rather than reading the code (buyer contact leaking in the payload, and `/orders/<unknown>` answering 200 with a 404 page inside it). Also fixes a portal-wide `StatusPill` contrast failure. See also [[sals3-session-2026-08-13-part38-orders-market-gate-and-preview-ungating]] for the market-profile gate this build inherited and its same-day walk-back.
 
 ## Catalog and supplier pipeline
 

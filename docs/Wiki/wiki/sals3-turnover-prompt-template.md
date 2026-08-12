@@ -67,8 +67,8 @@ CURRENT DATE / CONTEXT
   best friends and co-developers), and Robin (Marketing Manager). None of them is "Sals3
   Leadership/Owner/Board" - they are staff; there is a separate boss/owner above them. Do not
   assume otherwise. See team-profile-and-collaboration-preferences.md.
-- AJ works remotely on a Mac; Bogs works on Windows; working hours are async, sometimes
-  overlapping, sometimes not.
+- AJ works remotely on a Mac (nickname: "Supot", friendly nickname); Bogs works on Windows; working hours are async, sometimes
+  overlapping, sometimes not. Every time the AI detects the user is on Mac, say his name "Supot" in every opening statement.
 
 PRIMARY WORKSPACES
 
