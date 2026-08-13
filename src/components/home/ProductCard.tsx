@@ -9,10 +9,15 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const hasDiscount = product.oldPrice.amountMinor > product.price.amountMinor;
-  const off = hasDiscount
-    ? percentOff(product.oldPrice.amountMinor, product.price.amountMinor)
-    : null;
+  // `oldPrice` is absent unless a genuine, evidence-backed comparison price
+  // exists, so the strikethrough and the badge are absent with it. Sals3
+  // publishes none today (ADR-003), and this must never be derived from the
+  // current price.
+  const { oldPrice } = product;
+  const off =
+    oldPrice !== undefined && oldPrice.amountMinor > product.price.amountMinor
+      ? percentOff(oldPrice.amountMinor, product.price.amountMinor)
+      : null;
 
   return (
     <Link
@@ -37,10 +42,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           {formatMoney(product.price)}
         </div>
         <div className="flex min-h-[16px] items-center gap-1.5">
-          {off === null ? null : (
+          {off === null || oldPrice === undefined ? null : (
             <>
               <span className="text-xs text-ink-faint line-through">
-                {formatMoney(product.oldPrice)}
+                {formatMoney(oldPrice)}
               </span>
               <span className="text-xs font-bold text-deal">{off}</span>
             </>

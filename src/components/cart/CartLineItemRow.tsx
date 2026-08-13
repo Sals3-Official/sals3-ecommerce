@@ -37,6 +37,16 @@ export default function CartLineItemRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm text-pretty text-ink">{line.title}</p>
+        {/*
+          Without this, two variants of one product render as two visually
+          identical rows — the identity change would be invisible, which is a
+          real bug rather than a cosmetic one.
+        */}
+        {line.variant?.optionSummary === undefined ? null : (
+          <p className="mt-0.5 text-xs text-ink-muted">
+            {line.variant.optionSummary}
+          </p>
+        )}
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <button
             type="button"

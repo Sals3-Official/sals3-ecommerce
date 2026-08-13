@@ -33,6 +33,7 @@ function productFixture(id: number) {
     id: `live-product-${id}`,
     slug: `live-product-${id}`,
     title: `Live product ${id}`,
+    currency: 'USD',
     priceMinor: 99900 + id,
     oldPriceMinor: 129900 + id,
     imageUrl: null,
@@ -231,8 +232,10 @@ describe('Home page', () => {
       }),
     );
 
+    // A string, not a `URL` instance: every read now goes through one request
+    // helper that serialises the URL.
     expect(fetchMock).toHaveBeenCalledWith(
-      new URL('http://localhost:3001/api/storefront/categories'),
+      'http://localhost:3001/api/storefront/categories',
       expect.objectContaining({
         cache: 'no-store',
       }),
@@ -258,6 +261,49 @@ describe('Home page', () => {
     expect(
       screen.getByRole('link', { name: /go to next product page/i }),
     ).toHaveAttribute('href', '/?page=3#for-you');
+  });
+
+  /**
+   * A successful feed with zero published products is a real, reachable state
+   * now that the upstream reads the Sals3 catalogue — and it must NOT fall back
+   * to placeholder products, because a working upstream is not an outage.
+   * Rendering a blank grid is the one case where showing nothing is worse than
+   * saying the true thing.
+   */
+  it('says the catalogue is empty rather than rendering a blank grid', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(async (url) => {
+        const requestUrl = new URL(String(url));
+
+        if (requestUrl.pathname === '/api/storefront/products') {
+          return new Response(
+            JSON.stringify({
+              products: [],
+              total: 0,
+              page: 1,
+              limit: 14,
+              totalPages: 1,
+            }),
+            { headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+
+        return new Response(JSON.stringify([]), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    renderWithCart(await Home());
+
+    expect(screen.getByText(/no products are listed yet/i)).toBeInTheDocument();
+    // Not the placeholder fallback: those only appear when the feed throws.
+    expect(screen.queryByText('Live product 1')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /^deals$/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps live deals when only the for-you page fails', async () => {

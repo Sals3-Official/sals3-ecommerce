@@ -33,7 +33,13 @@ homeViewports.forEach((viewport) => {
       )
       .toBe(true);
     await expect(page.getByText(/free shipping this weekend/i)).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /deals/i })).toBeVisible();
+    /*
+     * "For you" is always present — it carries either products or an honest
+     * "no products are listed yet". "Deals" is not: a Deals heading with an
+     * empty grid under it is worse than no section, so it renders only when
+     * there is something to put in it. An empty published catalogue is a real
+     * state, not a failure.
+     */
     await expect(page.getByRole('heading', { name: /for you/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /^log in$/i })).toBeVisible();
     await expect(page).toHaveTitle(/Sals3/);
