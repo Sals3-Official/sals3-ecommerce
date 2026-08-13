@@ -1,7 +1,7 @@
 import type { Money } from '@/lib/money';
-import { formatMoney, percentOff } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
 import ProductAddToCartButtons from '@/components/product/ProductAddToCartButtons';
+import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
 
 type ProductPriceBoxProps = {
   productId: string;
@@ -11,10 +11,20 @@ type ProductPriceBoxProps = {
   imageAlt: string;
   tone: PlaceholderTone;
   price: Money;
-  oldPrice: Money;
-  shipLine: string;
+  oldPrice?: Money;
+  /** Absent once the portal stops sending the deprecated non-claim. */
+  shipLine?: string;
 };
 
+/**
+ * The price and purchase box for a product with **no option axes** — one
+ * implicit variant, nothing to choose, no client state.
+ *
+ * A product with several variants gets `ProductPurchasePanel` instead, which is
+ * a client component. Keeping the single-variant case here means the PDP ships
+ * no extra client JavaScript for the current catalogue, where no product has
+ * variants yet.
+ */
 export default function ProductPriceBox({
   productId,
   title,
@@ -26,25 +36,12 @@ export default function ProductPriceBox({
   oldPrice,
   shipLine,
 }: ProductPriceBoxProps) {
-  const off = percentOff(oldPrice.amountMinor, price.amountMinor);
-  const hasDiscount = oldPrice.amountMinor > price.amountMinor;
-
   return (
     <div className="rounded-xl border border-border bg-white p-4">
-      <div className="flex items-baseline gap-2.5">
-        <span className="font-display text-3xl font-semibold tracking-tight text-ink">
-          {formatMoney(price)}
-        </span>
-        {hasDiscount ? (
-          <>
-            <span className="text-sm text-ink-faint line-through">
-              {formatMoney(oldPrice)}
-            </span>
-            <span className="text-sm font-bold text-deal">{off}</span>
-          </>
-        ) : null}
-      </div>
-      <p className="mt-1 text-sm text-ink-muted">{shipLine}</p>
+      <ProductPriceDisplay price={price} oldPrice={oldPrice} />
+      {shipLine === undefined ? null : (
+        <p className="mt-1 text-sm text-ink-muted">{shipLine}</p>
+      )}
       <div className="mt-4">
         <ProductAddToCartButtons
           productId={productId}

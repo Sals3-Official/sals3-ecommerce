@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { peso } from '@/lib/money';
+import { usd } from '@/lib/money';
 import ProductCard, { type CatalogProductCardProduct } from './ProductCard';
 
 const baseProduct: CatalogProductCardProduct = {
   id: 'tactical-pants',
   cardTitle: 'SALS3 Tactical Pants – Ripstop, 10 Pockets',
-  price: peso(85000),
+  price: usd(85000),
   rating: 4.5,
   reviewCount: 128,
   shipLine: 'Free shipping to Metro Manila',
@@ -21,7 +21,7 @@ describe('ProductCard', () => {
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '/p/tactical-pants');
 
-    const price = screen.getByText('₱850');
+    const price = screen.getByText('US$850');
     expect(price).toHaveClass('font-semibold', 'text-[22px]');
   });
 
@@ -34,11 +34,9 @@ describe('ProductCard', () => {
   });
 
   it('shows the old price struck through and the percent off only on a real discount', () => {
-    render(
-      <ProductCard product={{ ...baseProduct, oldPrice: peso(120000) }} />,
-    );
+    render(<ProductCard product={{ ...baseProduct, oldPrice: usd(120000) }} />);
 
-    expect(screen.getByText('₱1,200')).toHaveClass('line-through');
+    expect(screen.getByText('US$1,200')).toHaveClass('line-through');
     expect(screen.getByText('-29%')).toBeInTheDocument();
   });
 

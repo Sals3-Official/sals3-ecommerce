@@ -20,13 +20,12 @@ function productFixture(overrides: Partial<Record<string, unknown>> = {}) {
     id: 'air-cooler',
     slug: 'air-cooler',
     title: 'Quiet tower air cooler',
+    currency: 'USD',
     priceMinor: 199900,
-    oldPriceMinor: 249900,
     imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
     imageAlt: 'Quiet tower air cooler',
-    ratingLine: 'Rating 4.5, 2 reviews',
-    shipLine: 'Bulky, ships in 3-5 business days',
     category: 'home-living',
+    categoryName: 'Home and living',
     ...overrides,
   };
 }
@@ -43,9 +42,12 @@ function productsPage(products: unknown[] = []) {
 
 function mockFetch({
   found = true,
+  status,
   productOverrides = {},
 }: {
   found?: boolean;
+  /** A non-404 failure, to exercise the error path. */
+  status?: number;
   productOverrides?: Partial<Record<string, unknown>>;
 } = {}) {
   const product = productFixture(productOverrides);
@@ -53,6 +55,10 @@ function mockFetch({
     const requestUrl = new URL(String(url));
 
     if (requestUrl.pathname.startsWith(`${STOREFRONT_PRODUCTS_PATH}/`)) {
+      if (status !== undefined) {
+        return new Response('Upstream failure', { status });
+      }
+
       if (found) {
         return new Response(JSON.stringify({ product }), {
           headers: { 'Content-Type': 'application/json' },
@@ -94,7 +100,7 @@ describe('Product page', () => {
     );
   }
 
-  it('renders the product title, price, and rating line', async () => {
+  it('renders the product title and price', async () => {
     mockFetch();
 
     renderWithCart(
@@ -107,8 +113,86 @@ describe('Product page', () => {
         name: /quiet tower air cooler/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/rating 4\.5, 2 reviews/i)).toBeInTheDocument();
+    expect(screen.getByText('US$1,999')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+  });
+
+  /**
+   * Absent means absent: with no description, no specs, and no comparison
+   * price, the page shows no headings for them rather than empty sections.
+   */
+  it('renders no section for data the portal did not send', async () => {
+    mockFetch();
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(
+      screen.queryByRole('heading', { name: /about this product/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /specifications/i }),
+    ).not.toBeInTheDocument();
+    // No rating line at all — the portal no longer sends one, and inventing one
+    // would be a Sals3 rating that does not exist.
+    expect(screen.queryByText(/rating/i)).not.toBeInTheDocument();
+  });
+
+  it('renders description, specs, and a stock notice when the portal sends them', async () => {
+    mockFetch({
+      productOverrides: {
+        availability: 'AVAILABLE',
+        description: {
+          blocks: [{ type: 'paragraph', text: 'A quiet tower cooler.' }],
+        },
+        specs: { sku: 'SALS3-AC-1', weightGrams: 4200, condition: 'NEW' },
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(screen.getByText('A quiet tower cooler.')).toBeInTheDocument();
+    expect(screen.getByText('SALS3-AC-1')).toBeInTheDocument();
+    expect(screen.getByText('4,200 g')).toBeInTheDocument();
+    expect(screen.getByText(/in stock with the supplier/i)).toBeInTheDocument();
+  });
+
+  it('renders a variant selector only when there is a choice to make', async () => {
+    mockFetch({
+      productOverrides: {
+        variants: [
+          {
+            id: 'v1',
+            sku: 'AC-BLACK',
+            currency: 'USD',
+            priceMinor: 199900,
+            availability: 'AVAILABLE',
+            options: [{ name: 'Colour', value: 'Black' }],
+          },
+          {
+            id: 'v2',
+            sku: 'AC-WHITE',
+            currency: 'USD',
+            priceMinor: 209900,
+            availability: 'UNAVAILABLE',
+            options: [{ name: 'Colour', value: 'White' }],
+          },
+        ],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(screen.getByRole('radiogroup', { name: /colour/i })).toBeVisible();
+    // Nothing chosen yet, so purchase is blocked with a reason a buyer can act
+    // on rather than a silently grey button.
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(screen.getByText(/choose a colour/i)).toBeInTheDocument();
   });
 
   it('adds the product to the cart when Add to Cart is clicked', async () => {
@@ -131,7 +215,20 @@ describe('Product page', () => {
     ).rejects.toThrow();
   });
 
-  it('builds metadata from the product title and rating', async () => {
+  /**
+   * The fix this replaces: every failure used to become `notFound()`, so an
+   * unreachable catalogue looked like a deleted product. An upstream failure
+   * must now propagate to `error.tsx`.
+   */
+  it('propagates an upstream failure instead of reporting not-found', async () => {
+    mockFetch({ status: 503 });
+
+    await expect(
+      ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    ).rejects.toMatchObject({ name: 'ProductsApiError' });
+  });
+
+  it('builds metadata from the product title and category', async () => {
     mockFetch();
 
     const metadata = await generateMetadata({
@@ -139,7 +236,30 @@ describe('Product page', () => {
     });
 
     expect(metadata.title).toMatch(/quiet tower air cooler/i);
-    expect(metadata.description).toMatch(/rating 4\.5, 2 reviews/i);
+    expect(metadata.description).toMatch(/home and living/i);
+  });
+
+  /**
+   * One product read per page render.
+   *
+   * The cross-call half of this — `generateMetadata` and the page sharing one
+   * read — is what `cache()` provides, and it cannot be asserted here: React's
+   * cache scope is per render, and these two run outside one in Vitest. What
+   * this does catch is the regression that is testable: a future edit that
+   * fetches the product twice while building the page.
+   */
+  it('reads the product once while rendering the page', async () => {
+    const fetchMock = mockFetch();
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    const productReads = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes(`${STOREFRONT_PRODUCTS_PATH}/air-cooler`),
+    );
+
+    expect(productReads).toHaveLength(1);
   });
 
   it('tracks a viewed product only after analytics consent', async () => {
