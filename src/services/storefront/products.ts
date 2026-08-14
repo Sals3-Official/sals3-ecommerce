@@ -139,7 +139,7 @@ export async function fetchProductBySlug(
       subject: 'product API',
       notFoundStatuses: [404],
     },
-    { fetcher, signal, cachePolicy: productCachePolicy(parsedSlug.data) },
+    { fetcher, signal, cachePolicy: productCachePolicy() },
   );
 
   return payload?.product;

@@ -43,29 +43,14 @@ export function getAuthorizationHeader(): string {
 }
 
 /**
- * Cache policy per call site, because the two upstream reads are not alike.
- *
- * The single-product read is a database read behind a slug and is cached; the
- * list feed is not. That asymmetry is deliberate: `src/app/page.tsx` falls back
- * to placeholder products when the feed throws, so making the home feed
- * cacheable would let `next build` — which runs with no portal token — bake
- * placeholders into a static home page and serve them to every visitor.
+ * Product reads are live storefront data. Keep them `no-store` so a portal
+ * publish is visible immediately and a token-less build cannot bake placeholder
+ * fallback data into static output.
  */
-export type StorefrontCachePolicy =
-  { cache: 'no-store' } | { next: { revalidate: number; tags: string[] } };
+export type StorefrontCachePolicy = { cache: 'no-store' };
 
-export const STOREFRONT_PRODUCT_REVALIDATE_SECONDS = 300;
-
-export function productCachePolicy(slug: string): StorefrontCachePolicy {
-  return {
-    next: {
-      revalidate: STOREFRONT_PRODUCT_REVALIDATE_SECONDS,
-      // Shipped now so an invalidation webhook is a one-line follow-up. Nothing
-      // in this app calls `revalidateTag` yet, and adding a public endpoint that
-      // does needs a shared secret, rate limiting, and owner approval.
-      tags: ['storefront-product', `storefront-product:${slug}`],
-    },
-  };
+export function productCachePolicy(): StorefrontCachePolicy {
+  return { cache: 'no-store' };
 }
 
 type RequestOptions = {
