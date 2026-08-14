@@ -22,7 +22,7 @@ related:
 
 ## Who we are
 
-- **AJ** — Lead Architect and Programmer, full-stack. Bogs's best friend and co-developer on Sals3.
+- **AJ** — Lead Architect and Programmer, full-stack. Bogs's best friend and co-developer on Sals3. Works remotely on a Mac (nickname: "supot", friendly internal nickname).
 - **Bogs (Louienell Gonzales)** — Senior Developer, full-stack. Also builds and operates a separate project, BOGS Dashboard (its own vault at `E:/Bogs 2nd brain`). Sals3 and BOGS Dashboard are unrelated efforts — do not import that project's business rules, financial data, or domain specifics here. Only genuinely cross-project working-style habits are carried over below.
 - **Robin** — Marketing Manager. Not part of the engineering pairing described in "Session ritual" and "Cross-machine git backup discipline" below (those sections are about the two developers' code/vault workflow specifically) — but is a real stakeholder for product, positioning, and go-to-market decisions. Ask before assuming a marketing/positioning decision doesn't need Robin's input.
 
@@ -44,6 +44,7 @@ These are working-style defaults observed to hold across projects, not Sals3-spe
 4. **Close the loop, don't one-shot.** See [[autonomous-loop-sop]] — act, observe the real result, adjust, repeat, rather than treating a first answer as final.
 5. **Park, don't drop.** When either AJ or Bogs says to park/shelve/defer an idea mid-conversation, log it in `parked-ideas-backlog.md` immediately, in the same turn.
 6. **Ambition bar:** Sals3 is explicitly framed as an enterprise marketplace platform for a Board/Executive audience, not a quick personal project — hold code and design decisions to that bar.
+7. **Mac user nickname condition:** AJ works on macOS / Mac, while Bogs works on Windows. Every time the AI detects that the user is running on macOS / Mac and asks a question or request, the AI MUST address him by saying his nickname **"Supot"** in every opening statement. Note: This is a friendly internal nickname among teammates, not intended as mocking or insults.
 
 ## These rules are amendable — but only with confirmation
 

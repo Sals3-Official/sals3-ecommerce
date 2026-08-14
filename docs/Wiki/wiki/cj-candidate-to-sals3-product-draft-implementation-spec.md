@@ -2,11 +2,11 @@
 tags: [sals3, cj-dropshipping, catalog, product-editor, seller-center, implementation-spec]
 aliases: [CJ Candidate Explorer to Sals3, CJ Candidate to Sals3 Draft, CJ Product Customization Handoff, Product Editor Handoff Spec]
 created: 2026-08-06
-updated: 2026-08-10
+updated: 2026-08-12
 status: approved
 authority: implementation-spec
 owner_approved: true
-implementation_status: shortlist-step-implemented
+implementation_status: candidate-pipeline-and-canonical-catalogue-persistence-implemented
 related:
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
@@ -22,6 +22,8 @@ related:
   - "[[sals3-implementation-phases]]"
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
+  - "[[sals3-portal-canonical-product-catalog-backend]]"
+  - "[[ADR-016-google-merchant-center-product-feed-compliance]]"
 ---
 
 # CJ candidate to Sals3 product draft implementation specification
@@ -1817,6 +1819,66 @@ Until that replacement is implemented, **Ready** means “passed the current
 provisional rules among candidates the bounded scanner actually reached.” It
 is not proof that all rows visible in **All Supplier Products** were evaluated.
 
+### Canonical catalogue persistence implemented 2026-08-12 (unit 9, persistence only)
+
+`sals3-portal` branch `feat/canonical-catalog-backend`,
+[PR #40](https://github.com/Sals3-Official/sals3-portal/pull/40), based on
+`develop`. Migration `0013_cold_timeslip.sql` is **generated and not applied to
+any database**. See [[sals3-portal-canonical-product-catalog-backend]] for the
+full record.
+
+This is the *persistence* half of the approved implementation order's unit 9.
+It is not permission to publish: units 1-8 still gate production publication,
+and nothing in it publishes, prices, sells, or confirms stock.
+
+Implemented and verified:
+
+- Eleven tables covering §5.1's `Product`, `ProductOption`,
+  `ProductOptionValue`, `Variant`, and `Offer`, §5.2's
+  `ProviderProductReference`, `ProviderVariantReference`, and
+  `OfferSupplierBinding`, §5.3's `ProductRevision`, plus a variant-option join
+  table and a media-provenance table required by
+  [[ADR-016-google-merchant-center-product-feed-compliance]] §2.
+- §4.1-§4.3 identity and duplicate rules as database constraints:
+  `(supplierProviderId, externalProductId)` unique, provider variant unique on
+  its product reference plus external id, globally unique Sals3 SKU, the
+  `(sellerAccountId, variantId, marketCode, fulfillmentMode)` offer tuple, one
+  option per variant, and no duplicate normalized option combination among
+  active variants.
+- §6.2's revision workflow states with immutability enforced structurally: an
+  `APPROVED`/`SUPERSEDED` revision cannot exist without its frozen snapshot,
+  only one open `DRAFT` per product, and every draft save is a compare-and-set
+  on revision id, product id, `DRAFT`, and expected version.
+- §8.11's protected boundary for steps 1-4 in a persistence-only form: an
+  authorized Dropshipper turns a candidate they own into an `UNPUBLISHED`
+  Product, a `DRAFT` Revision, `DRAFT` Variants, provider references,
+  seller-scoped unpublished Offers, and an `UNVERIFIED` supplier binding.
+  Idempotent per §4.2, transactional, and audited.
+- §5.1's `descriptionDocument` as a structured allow-listed block format. CJ's
+  `description` is still not rendered or copied in; a CJ-sourced draft starts
+  empty.
+
+Deliberate boundaries recorded so they are not mistaken for gaps:
+
+- **Zero supplier calls** anywhere in create, read, or edit, proven by a test
+  that walks the static import graph rather than spying on one code path.
+- A candidate blocked before its evidence fetch has no `vid`, so it receives a
+  real Product and Revision and an explicit `NO_PERSISTED_SUPPLIER_EVIDENCE` —
+  no variant, provider variant, or binding is fabricated from a summary.
+- CJ's combined variant label is preserved verbatim on the provider variant
+  reference and never split into Sals3 option axes by guesswork, so no variant
+  can reach `ACTIVE`.
+- Pricing calls the existing ADR-015 resolver rather than reimplementing it.
+  It declines today because no CJ-to-Sals3 category crosswalk exists, and the
+  refusal is stored with its exact reason instead of a placeholder price.
+- Offers require an `ACTIVE` seller market profile whose destination the
+  platform capability module still authorizes. No market code is hardcoded.
+
+Section 4.2's canonical-product rule was implemented as ADR-006 describes it:
+the provider product reference is global, the editorial revision belongs to one
+steward seller account, and offers and bindings are per seller. That reading is
+flagged for explicit owner confirmation in the implementation note.
+
 ### Explicitly NOT implemented
 
 - **Category-required-attribute validation** (part of §8.5). Needs the
@@ -1831,9 +1893,17 @@ is not proof that all rows visible in **All Supplier Products** were evaluated.
 - **Supplier description sanitisation.** The CJ `description` is fetched and
   stored but never rendered, because no sanitiser exists. Section 12's media
   pipeline and section 9.4's source panel both remain unbuilt.
-- Product, ProductOption, Variant, Offer, MediaAsset, ProductRevision,
+- ~~Product, ProductOption, Variant, Offer, MediaAsset, ProductRevision,
   AttentionIssue, ComplianceEvaluation, CostSnapshot, OutboxEvent, and every
-  other entity in section 5 beyond the five tables above.
+  other entity in section 5 beyond the five tables above.~~ **Partially done
+  2026-08-12** — Product, ProductOption, ProductOptionValue, Variant, Offer,
+  ProductRevision, ProviderProductReference, ProviderVariantReference, and
+  OfferSupplierBinding are persisted; see the canonical-catalogue subsection
+  above. Still absent: `MediaAsset` (only a provenance table exists, with no
+  writer — stored CJ evidence records a usable-image count, never the URLs),
+  `AttentionIssue`, `ComplianceEvaluation`, `CostSnapshot`, `OutboxEvent`,
+  `ProviderVariantInventoryObservation`, `CandidatePreflight`, and the
+  compliance/mapping/review entities.
 - Import job (section 8.11 steps 5-12), publication, attention state,
   auto-publish/auto-pause, media pipeline, supplier synchronization, webhooks,
   preview tokens, and the Product Editor. "Customize & List" on a qualified

@@ -18,6 +18,24 @@ related:
 > [!IMPORTANT] What this note is for
 > This is the **exact format** for the copy-paste turnover prompt handed to the next AI agent session on Sals3 — mirroring the format Bogs already uses on BOGS Dashboard (a monolithic, ALL-CAPS-sectioned context dump written in "you are taking over" voice, meant to be pasted whole into a fresh agent with zero prior context). Do not invent a different structure. When asked to write a turnover prompt, fill in the template below with real, current, verified facts — never fabricate a section just to keep the shape complete. A section with nothing real to report should say so plainly (e.g. "No Sals3 codebase exists yet") rather than be padded out.
 
+> [!WARNING] Path correction — 2026-08-14
+> This note was written 2026-07-31, when no Sals3 codebase existed and the vault lived on its own.
+> Two things in the template below were stale and have been corrected in place:
+> 1. **Vault root.** `E:\SALS3 2nd brain` is now the **frozen mirror** (23 files, superseded). The
+>    live vault is `E:\sals3-ecommerce\docs`, canonical notes in `E:\sals3-ecommerce\docs\Wiki\wiki`.
+> 2. **Codebase paths.** Three repositories now exist — `E:\sals3-ecommerce` (storefront + vault),
+>    `E:\sals3-portal` (seller portal / catalogue producer), `E:\sals3-admin-portal` (platform
+>    control plane), all under `github.com/Sals3-Official`.
+>
+> **Still stale, left for a deliberate pass rather than corrected blind:** the `Read these first`
+> list names `sals3-management-bible`, `sals3-implementation-phases`,
+> `sals3-end-to-end-process-flow`, `sals3-feature-landscape-and-expansion-map`, and
+> `sals3-manual-testing-checklist`. Those were **not confirmed present** in the live vault on
+> 2026-08-14. Verify each before instructing an agent to read it, and prune the ones that no longer
+> exist. Several bracketed `as of 2026-07-31` placeholders in the body are also now historical.
+> First real instance of this template written against the live layout:
+> [[sals3-turnover-2026-08-14-pdp-redesign-design-handoff]].
+
 ## Quick trigger — copy-paste this when queuing out
 
 Paste this to the agent whenever AJ or Bogs is wrapping up and handing off:
@@ -67,36 +85,40 @@ CURRENT DATE / CONTEXT
   best friends and co-developers), and Robin (Marketing Manager). None of them is "Sals3
   Leadership/Owner/Board" - they are staff; there is a separate boss/owner above them. Do not
   assume otherwise. See team-profile-and-collaboration-preferences.md.
-- AJ works remotely on a Mac; Bogs works on Windows; working hours are async, sometimes
-  overlapping, sometimes not.
+- AJ works remotely on a Mac (nickname: "Supot", friendly nickname); Bogs works on Windows; working hours are async, sometimes
+  overlapping, sometimes not. Every time the AI detects the user is on Mac, say his name "Supot" in every opening statement.
 
 PRIMARY WORKSPACES
 
 Obsidian vault (second brain):
-E:\SALS3 2nd brain
+E:\sals3-ecommerce\docs   <- lives inside the storefront repo. The standalone
+                             E:\SALS3 2nd brain is the FROZEN MIRROR - do not edit it.
 
-Vault remote:
-origin = https://github.com/louieboi09/sals3-2nd-brain.git
+Vault remote (same remote as the storefront, the vault is a directory in it):
+origin = https://github.com/Sals3-Official/sals3-ecommerce.git
 
 Vault branch:
-main
+[git branch --show-current output]
 
 Current vault commit:
 [git log -1 --oneline output]
 
-Sals3 codebase (once one exists):
-[path] - NOT YET CREATED as of 2026-07-31. Confirmed stack: Next.js + TypeScript.
-Confirmed pairing convention once created: root CLAUDE.md + .agents/skills/obsidian-vault/SKILL.md
-pointing back to this vault's hot.md, mirroring BOGS Dashboard's
-E:\Documents\BOGS_Dashboard - Antigravity\CLAUDE.md exactly.
+Sals3 codebases (all under github.com/Sals3-Official):
+E:\sals3-ecommerce    - buyer-facing storefront (Next.js + TypeScript), and the vault under docs/
+E:\sals3-portal       - seller portal; owns the catalogue and produces the storefront feed
+E:\sals3-admin-portal - platform control plane; owns its own separate database
+Each repo pairs a root CLAUDE.md -> AGENTS.md, which points at the wiki notes under
+E:\sals3-ecommerce\docs\Wiki\wiki.
+[state the branch, working-tree status, and head commit of whichever repos the task touches -
+ never assume they are all clean or all current]
 
 OBSIDIAN VAULT
 
 Vault root:
-E:\SALS3 2nd brain
+E:\sals3-ecommerce\docs
 
 Canonical notes directory:
-E:\SALS3 2nd brain\Wiki\wiki
+E:\sals3-ecommerce\docs\Wiki\wiki
 
 Read these first, in this order:
 1. hot.md
@@ -111,7 +133,7 @@ Read these first, in this order:
 10. [most recent sals3-session-YYYY-MM-DD-partNN-*.md, once any exist]
 
 Reusable engineering lessons are in:
-E:\SALS3 2nd brain\Wiki\wiki\sals3-skills.md
+E:\sals3-ecommerce\docs\Wiki\wiki\sals3-skills.md
 [most recent lesson number and title, once any exist - "None yet" is correct today]
 
 CURRENT VERIFIED STATE
@@ -161,9 +183,10 @@ DESIGN AND UX RULES
  Raw/ mockups as an approved component library.]
 
 GIT AND FILE-SAFETY RULES
-- Vault (E:\SALS3 2nd brain): auto-commit/push during vault setup/scaffolding; switches to
-  user-paced (ask/wait for signal) once the real Sals3 project is actually underway - confirm
-  which phase applies before assuming.
+- Vault (E:\sals3-ecommerce\docs): the "auto-commit/push during vault scaffolding" phase is OVER -
+  the real Sals3 project is underway, so the vault is user-paced too. Ask and wait for a signal.
+  The vault now lives inside the storefront repo, so a vault commit and a code commit can touch the
+  same working tree - never sweep code changes into a vault commit, or the reverse.
 - Sals3 codebase, in every phase: never auto-commit. Every commit needs the user's explicit
   go-ahead, every single time - no standing blanket approval carries forward.
 - Ask whether to write/update a turnover prompt right after any commit to the user's git,

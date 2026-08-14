@@ -2,11 +2,11 @@
 tags: [sals3, adr, catalog, cj, inventory, scanning, webhooks, product-evidence]
 aliases: [CJ Product Evidence Truth, Lean Catalog Controls]
 created: 2026-08-10
-updated: 2026-08-11
+updated: 2026-08-12
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: not-started
+implementation_status: partially-implemented
 related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
@@ -19,6 +19,7 @@ related:
   - "[[sals3-session-2026-08-11-part28-cj-legacy-continuous-full-catalogue-plan]]"
   - "[[ADR-016-google-merchant-center-product-feed-compliance]]"
   - "[[hot]]"
+  - "[[agent-operating-contract]]"
 ---
 
 # ADR-013 — CJ product evidence truth and lean catalog controls
@@ -92,6 +93,69 @@ ZERO_STOCK | UNKNOWN_STOCK
 - Factory-backed or unverified stock is not automatically blocked. It may produce `PASS_WITH_ATTENTION` when the pilot policy accepts its handling risk and later freight/order confirmation succeeds; otherwise it is a policy-defined `HOLD`.
 - A customer-facing availability claim never comes from `totalInventory` alone. Publication and checkout re-confirm the exact variant, current orderability, cost, stock, and destination freight.
 - Preserve raw components even when a derived total is convenient. A future policy change must be able to re-evaluate old evidence without another supplier call solely because Sals3 previously discarded fields.
+
+### 1a. Keep All Supplier Products inventory review manual and intentionally sparse
+
+**Owner decision, 2026-08-12 — implemented in `sals3-portal` (migration `0013_lean_supplier_intake` generated, NOT applied).** The raw **All Supplier Products** catalogue is a discovery and local-screening surface, not a mandate to call CJ inventory for every observed PID. It starts with `INVENTORY_NOT_CHECKED` / `STOCK_NOT_CHECKED`; Sals3 does not automatically call a CJ inventory endpoint during discovery, routine review, drawer opening, or background polling merely to replace that state.
+
+- The catalogue uses legacy Product List summaries plus Sals3-local hard rules only. No Gemini or other AI service is part of this path.
+- A staff member may inspect the matching product manually in CJ/MyCJ and record a **manual stock attestation** in Sals3: `IN_STOCK`, `NO_INVENTORY`, or `COULD_NOT_VERIFY`, with actor, timestamp, optional observed quantity/origin, and a short note. This is not labelled CJ API-verified evidence and does not spend CJ API points.
+- A manual finding of no stock/no stocked origin becomes `NEEDS_ATTENTION`; it is recoverable, never a permanent product block. An uninspected row remains `STOCK_NOT_CHECKED`, not falsely `IN_STOCK` or `NEEDS_ATTENTION`.
+- "View Supplier Source Details" is read-only and must render the saved Sals3 snapshot/attestation with its timestamp. Opening it must never make a supplier request. Any future explicit API refresh control requires a separate owner decision, a visible point-cost disclosure, server-side authorization, and idempotency.
+- When a product is deliberately converted to a real Sals3 draft, the product-detail fetch needed to obtain variants/media/attributes remains a separately budgeted action. It is not an excuse to poll inventory on every raw supplier row.
+
+This preserves the existing requirement to retain truthful stock evidence whenever Sals3 actually obtains it, while making the mass-catalogue intake cheap and honest about what it has not checked.
+
+#### CJ call-budget principle (owner decision, 2026-08-12)
+
+CJ points and QPS are a finite shared operational resource, reserved first for real customer- and order-critical operations: checkout, order acceptance, the necessary final freight/inventory/order-confirmation actions, selected/live-product operations, and owner-approved recovery. Discovery, browsing, review, and refresh work are all lower priority than any of those and must visibly defer rather than consume the reserve.
+
+Concretely:
+
+- Before adding or retaining any CJ call, establish that the same user outcome cannot come from persisted Sals3 data, an existing webhook/event, a bounded cached result, or a human manual review. If it can, use that route.
+- A UI render, typing/search/filter action, pagination action, source-drawer open, routine poll, broad-catalogue review, or passive freshness timer must never create a CJ request by default.
+- New supplier calls are server-side only, bounded, idempotent where applicable, rate-limited through the shared limiter, and observable with purpose, count, and points impact. No hidden background polling and no per-row or per-render calls.
+- Persist and honour `pointsInfo`, and account for the documented endpoint cost before any fan-out.
+
+The four concrete applications of this principle are the new-PID intake ceiling, the one-time existing-backlog drain, the local-only All Supplier Products search/category/signal views, and manual stock review. None of them may be weakened by adding a convenience supplier call. [[agent-operating-contract]] §9 carries the short form every agent must read before planning a CJ-connected change.
+
+#### 1b. New-PID intake ceiling and one-time existing-backlog drain (owner decision, 2026-08-12)
+
+**Intake ceiling.** A hard ceiling of **5,000 NEW CJ product PIDs admitted from broad discovery per supplier connection** — a ceiling on unique products, not on HTTP requests. This is the active intake policy until the owner explicitly changes it; it does not expire, reset, or raise itself, and no ordinary seller/admin UI control may move it. Configuration name: `CATALOG_NEW_DISCOVERY_PID_LIMIT`, default `5000`, validated strictly.
+
+- Every CJ product-list discovery lane shares one durable capacity ledger, including the curated Trending / Most listed / New arrivals lanes. Re-observing an already persisted PID never consumes capacity.
+- The ceiling is never overshot. Capacity is taken by a conditional database update inside the same transaction that inserts the candidate, so concurrent workers and at-least-once redelivery cannot race past it. A lane that cannot fully ingest the page it is about to request does not request it: it defers the unit, persists `NEW_PID_CAP_REACHED`, and leaves its checkpoint resumable. The result is exact or safely underfilled by less than one page — never exceeded, never partially ingested, never silently truncated.
+- A later owner-approved increase resumes from the durable ledger without restarting, duplicating, or losing coverage.
+
+**One-time existing-backlog drain.** Candidate Pipeline work that existed when the lean policy activated must be reconciled to it before broad discovery makes any new `product/list` request. The gate is per connection, database-backed, and stamps an immutable activation cutoff plus a `DRAIN_COMPLETE` equivalent, so retries, restarts, and future products cannot re-arm it.
+
+- "Backlog" means only pre-cutoff work that is still in-flight or retryable under the lean policy. Permanent terminal screening decisions are already resolved and never deadlock the gate; nor does an exhausted dead letter, which belongs to the Exception Queue and a person.
+- Draining is local: it re-admits bounded batches to the screening evaluator, which spends no CJ points. It never drains the backlog with mass `product/query` or inventory calls, and it deletes no candidate, snapshot, evaluation, or audit event.
+- While backlog is nonzero, no lane advances a checkpoint, marks coverage complete, or discards a pending partition. A cap or backlog pause is a pause, never a completed catalogue cycle.
+
+**Curated CJ lanes.** `CJ Trending` (`searchType=2`), `Most listed on CJ` (`orderBy=listedNum`, fixed `sort=desc`), and `New arrivals` (`orderBy=createAt`, fixed deterministic sort, bounded `createTimeFrom`/`createTimeTo`) use only legacy `GET /api2.0/v1/product/list`. They wait behind the drain gate, share the same PID ledger, deduplicate PID admission, and are structurally incapable of marking a partition, cycle, or catalogue complete — they live outside the coverage machinery entirely. A signal observation (`CJ_TRENDING`, `CJ_HIGH_LISTED`, `CJ_NEW_ARRIVAL`) never changes a product's lifecycle status, market eligibility, or manual stock-review state. `listedNum` remains platform listings, never units sold.
+
+A second `CJ Trending — more` (`searchType=21`) lane is **deliberately not implemented**: the decision authorized it only if CJ's real response contract provides a distinct continuation/result set, and no primary source verifies that. Creating it anyway would double-report the same products as a second signal.
+
+> [!IMPORTANT] Superseded 2026-08-12 — owner decision
+> The **5,000-PID lifetime ceiling** above is replaced by a **600-PID rolling
+> wave**: `CATALOG_NEW_DISCOVERY_WAVE_SIZE` replaces
+> `CATALOG_NEW_DISCOVERY_PID_LIMIT`. Discovery now admits up to 600 new unique
+> PIDs per wave, then waits for that wave's queued/evaluating/retryable work to
+> settle before the next wave opens — not a lifetime cap, so the catalogue can
+> exceed 5,000 total PIDs across successive waves. Migration
+> `0016_rolling_pid_waves.sql` backfills existing capacity rows (`limit_value`
+> becomes each connection's current `admitted_count`, or 600 if zero) so no
+> connection's history is silently reinterpreted as under- or over-cap.
+>
+> Running this change against production the same day surfaced two discovery
+> deadlocks this section's design did not anticipate — a Resume that could not
+> revive a freshness-sweep chain a Pause had killed, and 82,679 historical rows
+> re-filling the intake gate faster than evaluation could drain it — plus a
+> curated-lane starvation issue (the coverage-partition scanner winning every
+> wave by raw request rate rather than by priority). All three were fixed the
+> same day. Full detail, production counters, and the exact fixes:
+> [[sals3-session-2026-08-12-part36-rolling-pid-waves-and-discovery-deadlocks]].
 
 ### 2. Separate stocked origin from freight route
 

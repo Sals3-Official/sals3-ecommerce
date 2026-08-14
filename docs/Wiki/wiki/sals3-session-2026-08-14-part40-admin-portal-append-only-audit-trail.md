@@ -5,22 +5,32 @@ aliases:
   - Admin Portal Audit Events
   - Part 40
 created: 2026-08-14
-updated: 2026-08-14
-status: implemented
+updated: 2026-08-15
+status: implemented-merged-locally-verified
 authority: session-record
 owner_approved: true
 related:
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
   - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
   - "[[sals3-session-2026-08-14-part39-admin-portal-employee-auth-and-shell-fork]]"
+  - "[[sals3-session-2026-08-14-part42-admin-portal-audit-trail-pr-status-correction]]"
+  - "[[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]]"
   - "[[hot]]"
 ---
 
 # 2026-08-14 - part 40 - Admin Portal gets an append-only audit trail
 
-`sals3-admin-portal` branch `chore/admin-portal-bootstrap`, commit `75eefb2`,
-pushed to PR [#2](https://github.com/Sals3-Official/sals3-admin-portal/pull/2).
-Local and verified; still no deployment target.
+> [!WARNING] Correction — 2026-08-14, found while absorbing current git state
+> This note originally cited the wrong branch/PR and implied the work was already merged. Corrected: `sals3-admin-portal` branch **`feat/admin-portal-audit-trail`**, commit `75eefb2`, was open as PR [#3](https://github.com/Sals3-Official/sals3-admin-portal/pull/3) — **not merged** as of this correction. `chore/admin-portal-bootstrap`/PR #2 is the separate, already-merged auth/shell-fork work covered in [[sals3-session-2026-08-14-part39-admin-portal-employee-auth-and-shell-fork]] — this note's original text conflated the two.
+
+> [!NOTE] Update — 2026-08-15: PR #3 is now merged
+> Merged into `develop` as commit `a9383ae`, and the local `sals3-admin-portal` checkout on this machine has been fast-forwarded to match, migrations applied against local Postgres, and the full local `npm run verify` chain (lint, typecheck, build, 74 unit, 12 e2e) re-run and green. See [[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]] for the full record. The "still OPEN" language below the original correction box is now historical — read it as "true as of 2026-08-14," not current.
+
+`sals3-admin-portal` branch `feat/admin-portal-audit-trail`, commit `75eefb2`,
+merged into `develop` via PR [#3](https://github.com/Sals3-Official/sals3-admin-portal/pull/3)
+(merge commit `a9383ae`, 2026-08-15). Locally verified via the full `npm run
+verify` chain against real local Postgres; still no deployment target, and
+this repo has no CI.
 
 ## The exchange that changed the plan
 
@@ -169,7 +179,10 @@ genuine backing service.
 ## Verification
 
 `npm run verify` passes: lint, format, typecheck, build, **74 unit tests**,
-**12 e2e**. Pre-commit and pre-push hooks both passed.
+**12 e2e**. Pre-commit and pre-push hooks both passed. This repository has
+**no CI**, so PR #3 itself reported zero automated checks at review time —
+only these local hooks and this note's own later independent re-run (see the
+2026-08-15 update box above) enforced anything.
 
 The e2e suite proves the guarantee rather than describing it: it inserts a probe
 row, then attempts `UPDATE`, `DELETE`, and `TRUNCATE` against the real database
@@ -190,4 +203,9 @@ database.
 4. **Nothing else is consequential yet.** The trail currently records
    authentication and provisioning because those are the only real actions this
    application has. The six governance domains remain notices.
-5. **No deployment target**; migrations have run against local Postgres only.
+5. **No deployment target**; migrations have run against local Postgres only
+   (confirmed again 2026-08-15 on this machine specifically - see
+   [[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]]).
+6. ~~The PR itself is still open, unmerged, unreviewed by anyone other than
+   local hooks.~~ **Merged 2026-08-15** with Bogs's explicit go-ahead - see the
+   update box above.
