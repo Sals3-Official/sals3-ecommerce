@@ -2,16 +2,19 @@
 tags: [sals3, adr, pricing, margin, forex, admin-portal, governance, audit]
 aliases: [ADR-015, Commercial Pricing Governance, Category and Product Pricing Policy]
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-14
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: not-started
+implementation_status: phase-1-merged-not-launched
 related:
   - "[[hot]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
+  - "[[sals3-session-2026-08-11-part34-category-margin-and-fx-policy]]"
+  - "[[sals3-session-2026-08-13-part41-market-rules-profile-fix-and-pricing-rework]]"
+  - "[[sals3-portal-seller-market-configuration]]"
 ---
 
 # ADR-015 — Commercial pricing governance, category/product margins, and FX adjustments
@@ -22,6 +25,9 @@ related:
 
 > [!IMPORTANT] Approved direction; not implemented
 > Bogs approved the future ability to manage category pricing, product-specific margins, and customizable foreign-exchange adjustments on 2026-08-10, then clarified the multi-seller authority boundary the same day. Merchant commercial policy belongs to each seller account in Seller Portal; Admin Portal governs only platform-owned inputs, fees, permissions, and safety/legal guardrails. This ADR does not authorize implementing either pricing surface or replacing the current storefront pricing contract in the active country-policy cleanup.
+
+> [!DANGER] Amendment — 2026-08-14: code exists now; this ADR's own text never authorized building it
+> Read this box before trusting the "not implemented" callout above — it is now stale. See the amendment section at the end of this note for the full, verified picture.
 
 ## Problem
 
@@ -161,3 +167,22 @@ Price publication or sale must fail when required cost evidence is absent, the r
 ## Supersession
 
 None. This ADR elaborates ADR-003's requirement that category targets, price floors, FX buffers, return allowances, and fee assumptions be versioned configuration, while assigning merchant-specific commercial authority to Seller Portal. ADR-003 remains controlling for destination availability, freight, currencies, landed cost, checkout quotes, and contribution economics. ADR-014 remains controlling only for Admin Portal's platform-owned security and publication boundaries.
+
+---
+
+## Amendment — 2026-08-14: Phase 1 has been built and merged; this ADR's own "not implemented" framing is now stale
+
+> [!WARNING] What actually happened
+> This ADR approved a **decision framework** on 2026-08-10 and its own `[!IMPORTANT]` callout explicitly says it "does not authorize implementing either pricing surface." Despite that, real code implementing this framework has since been written, reviewed, and merged to `develop` across three commits — not by anyone silently ignoring the ADR's authorization boundary, but because the underlying design being owner-approved was treated as sufficient basis to proceed to a Phase 1 build. Whether that was the right call is an owner judgment, not a fact this amendment can resolve — it is recorded here so the next agent doesn't repeat the original `implementation_status: not-started` claim as if it were still true.
+
+**What shipped, in order:**
+
+1. **`973fa0e`** (2026-08-11, PR #37) — the Phase 1 schema, resolver, money-math module, seller Taxonomy v0 seed data, server actions, and initial dialog-based UI. Documented in [[sals3-session-2026-08-11-part34-category-margin-and-fx-policy]]. Migration originally `0010_regular_scarecrow.sql`, since renumbered to `drizzle/0011_curious_falcon.sql`.
+2. **`6e5b244`** (2026-08-12, PR #39) — real per-seller market profile (`seller_market_profiles`, `src/modules/market-config/`), replacing the illustrative PH/ID/SG fixture. Documented in [[sals3-portal-seller-market-configuration]]. Migration `0012_flashy_penance.sql`.
+3. **`166d0ec`** (2026-08-13, PR #63) — reworked the Phase 1 pricing UI into an inline, dialog-free flow; renamed "FX adjustment" to "Funding buffer" throughout the UI and the resolver's typed unavailable-reasons; dropped the now-unused `source_currency`/`target_currency`/`funding_rail` columns via migration `0018_rare_william_stryker.sql`. Documented in [[sals3-session-2026-08-13-part41-market-rules-profile-fix-and-pricing-rework]].
+
+**Still true, unchanged by any of the above** (verified 2026-08-14 by reading the current code and the resolver directly): the FX-adjustment/funding-buffer branch remains reachable only for a same-currency identity rate — no real cross-currency reference-FX provider has been approved for the Portal's own pricing surface, so the branch this ADR's §4 describes is still real, tested, and still not exercised by any live non-identity currency pair. Product/variant overrides are still keyed to `supplier_candidates.id` rather than a real Product/Variant table, even though a real canonical Product/Revision/Variant/Offer model has since landed in this codebase via an unrelated migration (`0013_cold_timeslip.sql`) — nobody has revisited that keying decision (open gap, see [[sals3-session-2026-08-13-part41-market-rules-profile-fix-and-pricing-rework]] §4). Per the portal's own `README.md` (2026-08-14 production-verification note), `seller_market_profiles` and `pricing_category_policies` are both empty in production — no seller has actually used Market Rules pricing yet, so "merged to `develop`" is not the same claim as "launched" or "in commercial use."
+
+**Verification status as of 2026-08-14**: `npm run typecheck` clean; the Market Rules/pricing-scoped test suite (15 files, 190 tests) passes. The full `npm run verify` (lint, format, build, full unit+e2e suite, `npm audit`) was not re-run for this amendment — the last full green run on record for this area is part34's, against `973fa0e`'s content specifically, not the two later commits.
+
+**Frontmatter `implementation_status`** updated from `not-started` to `phase-1-merged-not-launched` to reflect this. The `[!IMPORTANT]` callout above the Decision section is left as originally written (it correctly states what this ADR *authorizes*, which has not changed) — this amendment exists precisely because that authorization boundary and the code's actual existence have diverged, and both facts need to stay visible side by side rather than one silently overwriting the other.
