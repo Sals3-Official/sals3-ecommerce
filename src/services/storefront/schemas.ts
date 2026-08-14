@@ -173,6 +173,19 @@ const ProductVariantSchema = z.object({
     z.object({ name: truncatedText(40), value: truncatedText(60) }),
     6,
   ).optional(),
+  /**
+   * The supplier's own variant label, verbatim — e.g. `Black-1XL`.
+   *
+   * Optional, like every field added after 2026-08-13, so the portal can ship it
+   * before this app reads it and vice versa. `truncatedText` rather than a bare
+   * `max` so one overlong supplier string costs that label and not the whole
+   * product page — the producer already truncates at the same 60, making this a
+   * backstop rather than the authority.
+   *
+   * **Never parsed into option axes.** Splitting `Black-1XL` means guessing which
+   * token is a colour, and a wrong guess becomes a customer-facing attribute.
+   */
+  label: truncatedText(60).optional(),
 });
 
 /**

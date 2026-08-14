@@ -128,6 +128,66 @@ export function defaultVariantFor(
   );
 }
 
+/**
+ * The variant a `?variant=` search param identifies, or `undefined`.
+ *
+ * Matched against real ids from the payload, which makes the payload itself the
+ * allow-list: an unrecognised, malformed, or hostile value can only ever miss.
+ * Callers fall back to `defaultVariantFor` — a bad id must never 404 or throw,
+ * because a stale or hand-edited link is a normal thing for a buyer to arrive
+ * with, and this is the crawlable surface of every product page.
+ */
+export function variantById(
+  variants: ProductVariant[],
+  id: string | undefined,
+): ProductVariant | undefined {
+  if (id === undefined || id === '') return undefined;
+
+  return variants.find((variant) => variant.id === id);
+}
+
+const COUNT_WORDS = [
+  'Zero',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Eleven',
+  'Twelve',
+  'Thirteen',
+  'Fourteen',
+  'Fifteen',
+  'Sixteen',
+  'Seventeen',
+  'Eighteen',
+  'Nineteen',
+  'Twenty',
+] as const;
+
+/**
+ * The option count as a word — "Ten supplier options", not "10".
+ *
+ * The rule exists so the price block carries exactly one prominent numeric
+ * token: the price. A bare digit next to a currency-formatted price is the kind
+ * of thing Google's price extractor can pick up, and a mismatch between the
+ * rendered price and the feed price is a Merchant Center disapproval for the
+ * whole domain (ADR-016).
+ *
+ * Above twenty this returns digits. The contract caps variants at 200, so words
+ * would stop reading as prose long before that, and a bare count is not a
+ * currency-formatted token — the exposure the rule guards against is a second
+ * *money* string, which this never produces either way.
+ */
+export function variantCountInWords(count: number): string {
+  return COUNT_WORDS[count] ?? String(count);
+}
+
 /** The first axis with nothing chosen, for the "choose a colour" hint. */
 export function firstUnchosenAxis(
   axes: ProductOptionAxis[],

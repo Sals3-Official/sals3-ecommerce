@@ -34,19 +34,26 @@ type ProductPurchasePanelProps = {
   baseAvailability?: ProductAvailability;
   axes: ProductOptionAxis[];
   variants: ProductVariant[];
-  shipLine?: string;
 };
 
 /**
  * Price, options, stock, and purchase for a product with **several** variants.
  *
- * Mounted only in that case: a single-variant product keeps the server-rendered
- * `ProductPriceBox`, so the current catalogue — where no product has variants —
- * ships no additional client JavaScript for this.
+ * Mounted **only** when the payload carries real option axes, which no product
+ * does today. Everything else — one variant, many variants with no axes, or none
+ * at all — is served by the server-rendered `ProductRecordPanel`, whose selection
+ * lives in the URL rather than in client state.
+ *
+ * That split is deliberate: a client selector that repaints the price is
+ * client-side price mutation after paint, which ADR-016 prohibits. This component
+ * still does that, and is kept only because the axis-based path has never mounted
+ * in production. **When the portal starts publishing option axes, this needs the
+ * same URL-addressable treatment `ProductOptionList` already has** — do not ship
+ * axes to buyers on top of this as it stands.
  *
  * ## Gating, in precedence order
  *
- * 1. No axes → nothing to choose, enabled. (Handled by `ProductPriceBox`, but
+ * 1. No axes → nothing to choose, enabled. (Handled by `ProductRecordPanel`, but
  *    the same rule holds here.)
  * 2. Exactly one variant → preselected, enabled.
  * 3. Selection incomplete → **disabled**, naming the missing axis
@@ -69,7 +76,6 @@ export default function ProductPurchasePanel({
   baseAvailability,
   axes,
   variants,
-  shipLine,
 }: ProductPurchasePanelProps) {
   const hasOptionAxes = axes.length > 0;
   const [selection, setSelection] = useState<VariantSelection>(() =>
@@ -128,9 +134,14 @@ export default function ProductPurchasePanel({
         price={price}
         oldPrice={selected === undefined ? baseOldPrice : undefined}
       />
-      {shipLine === undefined ? null : (
-        <p className="-mt-3 text-sm text-ink-muted">{shipLine}</p>
-      )}
+      {/*
+        `shipLine` used to render here. It is the portal's deprecated
+        "Delivery quoted at checkout" non-claim, and it is false — nothing is
+        quoted and nothing is added at checkout. The truthful version now lives in
+        the evidence ledger's Delivery row. The field stays on the wire (the
+        contract is additive-only) and the home card still renders it; the PDP
+        simply stops repeating it.
+      */}
       {hasOptionAxes ? (
         <ProductVariantSelector
           axes={axes}

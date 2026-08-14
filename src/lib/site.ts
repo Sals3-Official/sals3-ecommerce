@@ -10,8 +10,11 @@ export const SITE_NAME = 'Sals3';
  * registration is Australian (ADR-014), and both AU and PH are approved buyer
  * destinations — no single country is the right one to name until incorporation
  * and launch markets are settled. "No surprises at checkout" contradicted the
- * shipping the PDP now states honestly: freight is destination-specific and is
- * quoted at checkout, so it genuinely is not known before then.
+ * shipping reality the PDP now states honestly: no freight is added at checkout
+ * and no delivery estimate exists, because Sals3 has neither a rate table nor a
+ * carrier integration (ADR-003). An earlier version of this comment said freight
+ * "is quoted at checkout" — corrected 2026-08-14: nothing quotes it, and the PDP
+ * no longer claims otherwise.
  */
 export const SITE_DESCRIPTION =
   'Sals3 is an online marketplace. Browse products with one clear price per item, in USD.';

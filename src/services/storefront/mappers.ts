@@ -107,6 +107,7 @@ function toProductVariant(variant: ProductVariantPayload): ProductVariant {
     ...(variant.options === undefined || variant.options.length === 0
       ? {}
       : { options: variant.options }),
+    ...(variant.label === undefined ? {} : { label: variant.label }),
   };
 }
 
@@ -191,6 +192,9 @@ export function toProductDetail(
     imageAlt: product.imageAlt ?? product.title,
     tone: toneFor(index),
     images,
+    ...(product.publishedAt === undefined
+      ? {}
+      : { publishedAt: product.publishedAt }),
     ...(product.availability === undefined
       ? {}
       : { availability: product.availability }),

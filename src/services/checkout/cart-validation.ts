@@ -29,10 +29,19 @@ export class CheckoutValidationError extends Error {
   }
 }
 
+/**
+ * How a variant is named in the order summary.
+ *
+ * Named options first, then the supplier's own label. **Never the SKU** — it is a
+ * SHA-256 digest, so an order line reading `S3V-2268B366F762` identifies nothing
+ * to the person paying. This fell back to the SKU because it was the only
+ * per-variant string that existed; `label` is now on the payload, and where even
+ * that is absent, no sub-label is more honest than a hash.
+ */
 function variantLabel(variant: ProductVariantPayload): string | undefined {
   const options = variant.options ?? [];
 
-  if (options.length === 0) return variant.sku;
+  if (options.length === 0) return variant.label;
 
   return options.map((option) => option.value).join(' · ');
 }

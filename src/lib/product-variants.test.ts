@@ -8,6 +8,8 @@ import {
   isValueSelectable,
   optionSummary,
   resolveVariant,
+  variantById,
+  variantCountInWords,
 } from './product-variants';
 
 function variant(
@@ -145,5 +147,43 @@ describe('firstUnchosenAxis', () => {
     expect(firstUnchosenAxis(AXES, { Colour: 'Black', Size: 'L' })).toBe(
       undefined,
     );
+  });
+});
+
+describe('variantById', () => {
+  it('matches a real id', () => {
+    expect(variantById(VARIANTS, 'black-m')?.id).toBe('black-m');
+  });
+
+  it('returns undefined for anything it does not recognise', () => {
+    // The payload is the allow-list, so a stale, malformed, or hostile value can
+    // only miss. Callers fall back rather than throwing — a bad `?variant=` on a
+    // crawlable URL must not become a 500.
+    [
+      undefined,
+      '',
+      'nope',
+      '../../etc/passwd',
+      '<script>alert(1)</script>',
+    ].forEach((value) => {
+      expect(variantById(VARIANTS, value)).toBe(undefined);
+    });
+  });
+});
+
+describe('variantCountInWords', () => {
+  it('spells out the counts a product page actually shows', () => {
+    expect(variantCountInWords(1)).toBe('One');
+    expect(variantCountInWords(2)).toBe('Two');
+    expect(variantCountInWords(10)).toBe('Ten');
+    expect(variantCountInWords(20)).toBe('Twenty');
+  });
+
+  it('falls back to digits past twenty', () => {
+    // Words stop reading as prose long before the contract's 200-variant cap. A
+    // bare count is not a currency-formatted token, so it does not reintroduce
+    // the second-money-string exposure the words rule exists to avoid.
+    expect(variantCountInWords(21)).toBe('21');
+    expect(variantCountInWords(200)).toBe('200');
   });
 });

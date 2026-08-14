@@ -117,7 +117,41 @@ describe('validateCheckoutCart', () => {
     ).rejects.toThrow(/remove it and add it again/i);
   });
 
-  it('shows the selected SKU for variants without option labels', async () => {
+  /**
+   * This asserted the opposite until 2026-08-15: the order line read
+   * `Jacket - S3V-2268B366F762`. A SHA-256 digest tells the person paying nothing
+   * about what they are buying, so the SKU fallback is gone. With a supplier label
+   * the line names the variant; without one it names the product and stops.
+   */
+  it('names an optionless variant by its supplier label, never by the SKU', async () => {
+    mockedFetchProductBySlug.mockResolvedValue(
+      product({
+        variants: [
+          {
+            id: 'v1',
+            sku: 'S3V-2268B366F762',
+            priceMinor: 451,
+            currency: 'USD',
+            availability: 'AVAILABLE',
+            label: 'Army Green-XL',
+          },
+        ],
+      }),
+    );
+
+    const result = await validateCheckoutCart([
+      { productId: 'jacket', variantId: 'v1', quantity: 1 },
+    ]);
+
+    expect(result.lines[0]?.title).toBe('Jacket - Army Green-XL');
+    expect(result.lines[0]?.title).not.toMatch(/S3V-/);
+    expect(result.lines[0]?.unitPrice).toEqual({
+      amountMinor: 451,
+      currency: 'USD',
+    });
+  });
+
+  it('falls back to the product title alone when no label exists', async () => {
     mockedFetchProductBySlug.mockResolvedValue(
       product({
         variants: [
@@ -136,10 +170,7 @@ describe('validateCheckoutCart', () => {
       { productId: 'jacket', variantId: 'v1', quantity: 1 },
     ]);
 
-    expect(result.lines[0]?.title).toBe('Jacket - S3V-2268B366F762');
-    expect(result.lines[0]?.unitPrice).toEqual({
-      amountMinor: 451,
-      currency: 'USD',
-    });
+    expect(result.lines[0]?.title).toBe('Jacket');
+    expect(result.lines[0]?.title).not.toMatch(/S3V-/);
   });
 });
