@@ -38,7 +38,7 @@ const DOCUMENT_PATHS = '/((?!_next/).*)';
  * `noStoreJson`, and duplicating it here would leave two places to keep in
  * step.
  */
-export const NO_STORE_ROUTES = ['/login', '/signup'];
+export const NO_STORE_ROUTES = ['/login', '/signup', '/checkout/:path*'];
 
 const nextConfig: NextConfig = {
   async headers() {

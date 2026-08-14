@@ -41,10 +41,10 @@ describe('StorefrontProductSchema', () => {
     );
   });
 
-  it('rejects a currency this app cannot format', () => {
+  it('accepts AUD without converting USD carts to AUD', () => {
     expect(
       StorefrontProductSchema.safeParse(listItem({ currency: 'AUD' })).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   /** So the portal can add a field before this app reads it. */

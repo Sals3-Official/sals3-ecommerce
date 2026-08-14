@@ -81,16 +81,15 @@ export default function CartPageClient() {
             <span>Subtotal</span>
             <span>{formatMoney(subtotal)}</span>
           </div>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            className="bg-brand-gradient mt-3.5 min-h-11 w-full cursor-not-allowed rounded-lg text-sm font-bold text-white opacity-50"
+          <Link
+            href="/checkout"
+            className="bg-brand-gradient mt-3.5 flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
           >
             Proceed to Checkout
-          </button>
+          </Link>
           <p className="mt-2 text-xs text-ink-faint">
-            Checkout is not built yet. This button does not work.
+            Payment opens in Stripe. Cards and eligible bank debit are
+            supported.
           </p>
         </div>
       </div>

@@ -22,6 +22,7 @@ describe('formatMoney', () => {
   it('keeps whole amounts whole and shows cents only when they exist', () => {
     expect(formatMoney(usd(85000))).toBe('US$850');
     expect(formatMoney(usd(199850))).toBe('US$1,998.50');
+    expect(formatMoney(money(12000, 'AUD'))).toBe('A$120');
   });
 });
 
@@ -79,7 +80,7 @@ describe('percentOff', () => {
 describe('isSupportedCurrency', () => {
   it.each([
     ['USD', true],
-    ['AUD', false],
+    ['AUD', true],
     ['PHP', false],
     ['usd', false],
   ])('%j -> %s', (code, expected) => {
