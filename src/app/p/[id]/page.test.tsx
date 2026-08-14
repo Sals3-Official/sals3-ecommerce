@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
 import renderWithCart from '../../../../test/render-with-cart';
@@ -20,13 +21,12 @@ function productFixture(overrides: Partial<Record<string, unknown>> = {}) {
     id: 'air-cooler',
     slug: 'air-cooler',
     title: 'Quiet tower air cooler',
+    currency: 'USD',
     priceMinor: 199900,
-    oldPriceMinor: 249900,
     imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
     imageAlt: 'Quiet tower air cooler',
-    ratingLine: 'Rating 4.5, 2 reviews',
-    shipLine: 'Bulky, ships in 3-5 business days',
     category: 'home-living',
+    categoryName: 'Home and living',
     ...overrides,
   };
 }
@@ -43,9 +43,12 @@ function productsPage(products: unknown[] = []) {
 
 function mockFetch({
   found = true,
+  status,
   productOverrides = {},
 }: {
   found?: boolean;
+  /** A non-404 failure, to exercise the error path. */
+  status?: number;
   productOverrides?: Partial<Record<string, unknown>>;
 } = {}) {
   const product = productFixture(productOverrides);
@@ -53,6 +56,10 @@ function mockFetch({
     const requestUrl = new URL(String(url));
 
     if (requestUrl.pathname.startsWith(`${STOREFRONT_PRODUCTS_PATH}/`)) {
+      if (status !== undefined) {
+        return new Response('Upstream failure', { status });
+      }
+
       if (found) {
         return new Response(JSON.stringify({ product }), {
           headers: { 'Content-Type': 'application/json' },
@@ -94,7 +101,7 @@ describe('Product page', () => {
     );
   }
 
-  it('renders the product title, price, and rating line', async () => {
+  it('renders the product title and price', async () => {
     mockFetch();
 
     renderWithCart(
@@ -107,8 +114,387 @@ describe('Product page', () => {
         name: /quiet tower air cooler/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/rating 4\.5, 2 reviews/i)).toBeInTheDocument();
+    expect(screen.getByText('US$1,999')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+  });
+
+  /**
+   * Absent means absent: with no description, no specs, and no comparison
+   * price, the page shows no headings for them rather than empty sections.
+   */
+  it('renders no section for data the portal did not send', async () => {
+    mockFetch();
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(
+      screen.queryByRole('heading', { name: /about this product/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /specifications/i }),
+    ).not.toBeInTheDocument();
+    // No rating line at all — the portal no longer sends one, and inventing one
+    // would be a Sals3 rating that does not exist.
+    expect(screen.queryByText(/rating/i)).not.toBeInTheDocument();
+  });
+
+  it("renders description, specs, and the ledger's stock row when the portal sends them", async () => {
+    mockFetch({
+      productOverrides: {
+        availability: 'AVAILABLE',
+        description: {
+          blocks: [{ type: 'paragraph', text: 'A quiet tower cooler.' }],
+        },
+        specs: { sku: 'SALS3-AC-1', weightGrams: 4200, condition: 'NEW' },
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(screen.getByText('A quiet tower cooler.')).toBeInTheDocument();
+    expect(screen.getByText('SALS3-AC-1')).toBeInTheDocument();
+    expect(screen.getByText('4,200 g')).toBeInTheDocument();
+    // The stock claim now lives in the evidence ledger rather than in a separate
+    // notice, and a filled mark there means "the payload supports this".
+    expect(
+      screen.getByText(/reported available by the supplier/i),
+    ).toBeInTheDocument();
+    // The lead paragraph is promoted out of the description, so it appears
+    // exactly once on the page.
+    expect(screen.getAllByText('A quiet tower cooler.')).toHaveLength(1);
+  });
+
+  it('renders a variant selector only when there is a choice to make', async () => {
+    mockFetch({
+      productOverrides: {
+        variants: [
+          {
+            id: 'v1',
+            sku: 'AC-BLACK',
+            currency: 'USD',
+            priceMinor: 199900,
+            availability: 'AVAILABLE',
+            options: [{ name: 'Colour', value: 'Black' }],
+          },
+          {
+            id: 'v2',
+            sku: 'AC-WHITE',
+            currency: 'USD',
+            priceMinor: 209900,
+            availability: 'UNAVAILABLE',
+            options: [{ name: 'Colour', value: 'White' }],
+          },
+        ],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    // Named axes are the one case where a row may carry its name, because the
+    // name comes from the database rather than from parsing a supplier string.
+    // Links, not radios: selection lives in the URL so the price stays
+    // server-rendered (ADR-016).
+    const colour = screen.getByRole('list', { name: /colour/i });
+
+    expect(colour).toBeVisible();
+    // Black is available and links; White is UNAVAILABLE and is rendered
+    // unpickable rather than removed from the DOM.
+    expect(screen.getByRole('link', { name: 'Black' })).toBeVisible();
+    expect(
+      screen.queryByRole('link', { name: 'White' }),
+    ).not.toBeInTheDocument();
+    expect(colour.textContent).toContain('White');
+    // Nothing chosen yet, so purchase is blocked with a reason a buyer can act
+    // on rather than a silently grey button.
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(screen.getByText(/choose a colour/i)).toBeInTheDocument();
+  });
+
+  it('renders option links and preselects the variant matching the base price', async () => {
+    mockFetch({
+      productOverrides: {
+        priceMinor: 451,
+        variants: [
+          {
+            id: 'v-expensive',
+            sku: 'S3V-12D76F1B5376',
+            currency: 'USD',
+            priceMinor: 780,
+            availability: 'AVAILABLE',
+          },
+          {
+            id: 'v-base',
+            sku: 'S3V-2268B366F762',
+            currency: 'USD',
+            priceMinor: 451,
+            availability: 'AVAILABLE',
+          },
+        ],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    // Options are links, not radios: selection lives in the URL so the price is
+    // server-rendered, which is what keeps the page clear of client-side price
+    // mutation after paint (ADR-016). `aria-current` replaces `aria-checked`.
+    expect(
+      screen.getByRole('list', { name: /choose an option/i }),
+    ).toBeVisible();
+
+    // These variants carry no supplier label, so chips are positional. A SKU
+    // hash is never a chip label, a fallback, or a title attribute.
+    const selected = screen.getByRole('link', { name: /option 2/i });
+
+    expect(selected).toHaveAttribute('aria-current', 'page');
+    expect(selected.getAttribute('href')).toContain('?variant=v-base');
+    expect(
+      screen.getByRole('list', { name: /choose an option/i }).textContent,
+    ).not.toMatch(/S3V-/);
+    // The floor price is qualified rather than presented as the product's price.
+    // `US$4.51` itself appears twice on purpose — once in the price block and
+    // once on its own chip — so this asserts the qualifier and the count instead.
+    expect(screen.getByText('From')).toBeVisible();
+    expect(screen.getByText(/two supplier options/i)).toBeVisible();
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+  });
+
+  /**
+   * The shape **every** real published product has, and which no fixture in this
+   * file modelled before: many variants, zero option axes. The portal has no
+   * writer for `product_options`, so the axis-based fixtures below exercise a
+   * path production never takes. That gap is why the floor-price defect shipped.
+   */
+  function manyVariants() {
+    return [451, 530, 610, 690, 780, 900, 1100, 1400, 1700, 2000].map(
+      (priceMinor, index) => ({
+        id: `v-${index}`,
+        sku: `S3V-${String(index).padStart(12, '0')}`,
+        currency: 'USD',
+        priceMinor,
+        availability: 'AVAILABLE',
+      }),
+    );
+  }
+
+  it('qualifies the floor price and keeps the high price out of the price block', async () => {
+    mockFetch({
+      productOverrides: {
+        priceMinor: 451,
+        availability: 'AVAILABLE',
+        publishedAt: '2026-08-14T13:49:37.000Z',
+        variants: manyVariants(),
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(screen.getByText('From')).toBeVisible();
+    expect(screen.getByText(/ten supplier options/i)).toBeVisible();
+    // The floor appears twice on purpose: the price block, and its own chip.
+    expect(screen.getAllByText('US$4.51')).toHaveLength(2);
+    // The high price exists only as a chip. If it ever appears twice, it has
+    // reached the price block and a price extractor can pick it over the floor
+    // the feed reports — the ADR-016 mismatch this design exists to prevent.
+    expect(screen.getAllByText('US$20')).toHaveLength(1);
+    // Purchase stays enabled. Disabling it would break a page that completes a
+    // sale; the buyer already has an honestly-priced default selection.
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+    expect(
+      screen.getByText(/fixed when published, 14 august 2026/i),
+    ).toBeVisible();
+  });
+
+  it('server-renders the exact price for a ?variant= selection', async () => {
+    mockFetch({
+      productOverrides: { priceMinor: 451, variants: manyVariants() },
+    });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+        searchParams: Promise.resolve({ variant: 'v-9' }),
+      }),
+    );
+
+    // No "From": the figure is now a chosen variant's exact price, so the
+    // qualifier would be false.
+    expect(screen.queryByText('From')).not.toBeInTheDocument();
+    expect(screen.getAllByText('US$20')).toHaveLength(2);
+    expect(screen.getByText(/one of ten/i)).toBeVisible();
+  });
+
+  it('falls back to the default variant when ?variant= is unrecognised', async () => {
+    mockFetch({
+      productOverrides: { priceMinor: 451, variants: manyVariants() },
+    });
+
+    // A stale or hand-edited link is a normal way to arrive at a crawlable URL.
+    // It must not 404 and must not throw.
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+        searchParams: Promise.resolve({ variant: 'no-such-variant' }),
+      }),
+    );
+
+    expect(screen.getByText('From')).toBeVisible();
+    expect(screen.getByText(/ten supplier options/i)).toBeVisible();
+  });
+
+  /**
+   * The real corduroy jacket: two colours by five sizes, labels straight from the
+   * supplier. Ten variants collapse to seven chips in two unnamed rows.
+   */
+  function griddedVariants() {
+    const labels = ['Black', 'Army Green'].flatMap((colour) =>
+      ['S', 'M', 'L', 'XL', 'XXL'].map((size) => `${colour}-${size}`),
+    );
+
+    return labels.map((label, index) => ({
+      id: `v-${index}`,
+      sku: `S3V-${String(index).padStart(12, '0')}`,
+      currency: 'USD',
+      // Black-S is the floor, so `defaultVariantFor` preselects it.
+      priceMinor: label === 'Black-S' ? 451 : 780,
+      availability: 'AVAILABLE',
+      label,
+    }));
+  }
+
+  it('renders supplier labels as two unnamed token rows, with no prices and no hashes', async () => {
+    mockFetch({
+      productOverrides: { priceMinor: 451, variants: griddedVariants() },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    const rows = screen.getAllByRole('list', { name: /choose an option/i });
+
+    expect(rows).toHaveLength(2);
+
+    const optionArea = rows.map((row) => row.textContent ?? '').join(' ');
+
+    // Seven chips for ten variants: 2 colours + 5 sizes.
+    expect(
+      rows.flatMap((row) => [...row.querySelectorAll('a,span.line-through')]),
+    ).toHaveLength(7);
+    // A token spans several variants, so it carries no price — which also empties
+    // the option area of currency tokens entirely.
+    expect(optionArea).not.toMatch(/US\$/);
+    // And never a digest.
+    expect(optionArea).not.toMatch(/S3V-/);
+
+    expect(screen.getByRole('link', { name: 'Black' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: 'S' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    // Swapping one token keeps the other: Army Green + S is v-5.
+    expect(
+      screen.getByRole('link', { name: 'Army Green' }).getAttribute('href'),
+    ).toContain('?variant=v-5');
+  });
+
+  it('names the chosen variant by its supplier label, not its SKU', async () => {
+    mockFetch({
+      productOverrides: { priceMinor: 451, variants: griddedVariants() },
+    });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+        searchParams: Promise.resolve({ variant: 'v-8' }),
+      }),
+    );
+
+    expect(screen.getByText(/army green-xl · one of ten/i)).toBeVisible();
+  });
+
+  it('links only Home in the breadcrumb and never guesses a BreadcrumbList URL', async () => {
+    mockFetch({
+      productOverrides: {
+        categoryPath: "Apparel > Outerwear > Men's Jackets",
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    const nav = screen.getByRole('navigation', { name: /breadcrumb/i });
+
+    // `/c/[category]` does not exist and `categoryPath` carries no ancestor
+    // slug, so every level except Home is text rather than a dead link.
+    expect(nav.querySelectorAll('a')).toHaveLength(1);
+    expect(nav.querySelector('a')).toHaveAttribute('href', '/');
+    expect(screen.getByText('Outerwear')).toBeVisible();
+
+    const breadcrumb = [
+      ...document.querySelectorAll('script[type="application/ld+json"]'),
+    ]
+      .map((script) => JSON.parse(script.textContent ?? '{}'))
+      .find((entry) => entry['@type'] === 'BreadcrumbList');
+
+    expect(breadcrumb.itemListElement).toHaveLength(5);
+    // No NEXT_PUBLIC_SITE_URL in tests, so no absolute URL can be built and no
+    // `item` is emitted at all — rather than pointing one at a guess.
+    expect(
+      breadcrumb.itemListElement.every(
+        (item: { item?: string }) => item.item === undefined,
+      ),
+    ).toBe(true);
+  });
+
+  it('adds the selected no-option variant id to the cart', async () => {
+    mockFetch({
+      productOverrides: {
+        priceMinor: 451,
+        variants: [
+          {
+            id: 'v-base',
+            sku: 'S3V-2268B366F762',
+            currency: 'USD',
+            priceMinor: 451,
+            availability: 'AVAILABLE',
+          },
+        ],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(CART_STORAGE_KEY)).toContain('v-base');
+    });
+    // The SKU is still stored — it is the fulfilment identifier and downstream
+    // needs it. What must not exist is a buyer-facing label built from it: with no
+    // supplier label there is no `optionSummary` at all, rather than a digest
+    // shown in the cart row.
+    const stored = window.localStorage.getItem(CART_STORAGE_KEY) ?? '';
+
+    expect(stored).toContain('v-base');
+    expect(stored).not.toContain('optionSummary');
   });
 
   it('adds the product to the cart when Add to Cart is clicked', async () => {
@@ -131,7 +517,20 @@ describe('Product page', () => {
     ).rejects.toThrow();
   });
 
-  it('builds metadata from the product title and rating', async () => {
+  /**
+   * The fix this replaces: every failure used to become `notFound()`, so an
+   * unreachable catalogue looked like a deleted product. An upstream failure
+   * must now propagate to `error.tsx`.
+   */
+  it('propagates an upstream failure instead of reporting not-found', async () => {
+    mockFetch({ status: 503 });
+
+    await expect(
+      ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    ).rejects.toMatchObject({ name: 'ProductsApiError' });
+  });
+
+  it('builds metadata from the product title and category', async () => {
     mockFetch();
 
     const metadata = await generateMetadata({
@@ -139,7 +538,30 @@ describe('Product page', () => {
     });
 
     expect(metadata.title).toMatch(/quiet tower air cooler/i);
-    expect(metadata.description).toMatch(/rating 4\.5, 2 reviews/i);
+    expect(metadata.description).toMatch(/home and living/i);
+  });
+
+  /**
+   * One product read per page render.
+   *
+   * The cross-call half of this — `generateMetadata` and the page sharing one
+   * read — is what `cache()` provides, and it cannot be asserted here: React's
+   * cache scope is per render, and these two run outside one in Vitest. What
+   * this does catch is the regression that is testable: a future edit that
+   * fetches the product twice while building the page.
+   */
+  it('reads the product once while rendering the page', async () => {
+    const fetchMock = mockFetch();
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    const productReads = fetchMock.mock.calls.filter((call) =>
+      String(call[0]).includes(`${STOREFRONT_PRODUCTS_PATH}/air-cooler`),
+    );
+
+    expect(productReads).toHaveLength(1);
   });
 
   it('tracks a viewed product only after analytics consent', async () => {

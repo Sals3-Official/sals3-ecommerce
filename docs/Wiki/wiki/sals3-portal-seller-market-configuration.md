@@ -1,4 +1,4 @@
----
+﻿---
 tags:
   [
     sals3,
@@ -16,6 +16,13 @@ status: implemented-pending-migration
 authority: implementation-note
 owner_approved: false
 implementation_status: superseded-see-2026-08-14-update
+aliases:
+  [Seller Market Configuration, Market Rules Profile, Seller Market Profile]
+created: 2026-08-12
+status: implemented-pending-migration
+authority: implementation-note
+owner_approved: false
+implementation_status: code-complete-migration-unapplied
 related:
   - '[[hot]]'
   - '[[ADR-003-international-availability-shipping-and-pricing]]'
@@ -58,6 +65,7 @@ versioned, and the screen states them separately.
 
 | Concept                            | Source                                              | Current value                           | What it does **not** mean                                                          |
 | ----------------------------------- | ---------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| ---------------------------------- | --------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
 | Global catalogue buyer destination | `lib/country-policy/buyer-destination-country.ts`     | `AU`, `PH` (`...-v2-au-ph`), ENABLED    | Not a seller preference, operating country, checkout currency, tax rule, or freight promise. Not seller-editable. |
 | Sals3 business/seller operating    | `lib/country-policy/seller-operating-country.ts`      | `AU` (`seller-operating-country-v1`)    | Never implies a buyer destination. AU appearing in both lists is a coincidence of two separate owner decisions, never a derivation. |
 | Portal reference/display currency  | `lib/country-policy/currency.ts`                      | `AUD`                                   | Not a checkout, settlement, or FX-conversion contract; not a browser-side rate calculation. |

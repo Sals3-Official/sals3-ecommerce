@@ -1,4 +1,4 @@
----
+﻿---
 tags:
   [
     sals3,
@@ -276,6 +276,45 @@ left untouched. The following edits are still owed once that task lands:
    currently modified in the vault, so this edit is safe to make now — it was
    left out only to keep this unit's vault change to one new note plus the
    implementation spec.)
+## Vault updates applied, and the collision they were held behind
+
+`hot.md`, `index.md`, [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]],
+[[ADR-002-sals3-taxonomy-and-cj-category-mapping]], `agent-operating-contract.md`,
+`team-profile-and-collaboration-preferences.md`,
+`sals3-turnover-prompt-template.md`, and
+`universal-category-variation-taxonomy-reference.md` were all **modified by the
+concurrent lean-catalog task in the vault working tree** while this unit was
+being written, so none of them could be edited there without overwriting work
+in flight.
+
+The two that this unit genuinely owed were instead applied to `develop`'s
+**committed** versions on the documentation branch, which touches no other
+task's working copy at all:
+
+- **`hot.md`** — the "Incomplete or placeholder" line that read _"No
+  product/variant/offer model ... exists"_ is struck through and replaced with
+  the persistence-only scope, the unapplied migration, and a pointer here;
+  build priority 3 now records `ProviderProductReference`,
+  `ProviderVariantReference`, and `OfferSupplierBinding` as built while keeping
+  order routing open; build priority 7 is marked partially done with the exact
+  entities still missing; and this note is added to `related` and the recent
+  session-note list.
+- **`index.md`** — this note is listed under _Catalog and supplier pipeline_.
+
+Merging that branch will conflict with the concurrent task's own `hot.md` and
+`index.md` changes. That is the ordinary two-branch case and resolves by taking
+both sides: the edits sit in different bullets and different sections.
+
+Still genuinely untouched, because this unit changes nothing in them: ADR-002,
+ADR-013, `agent-operating-contract.md`,
+`team-profile-and-collaboration-preferences.md`,
+`sals3-turnover-prompt-template.md`, and
+`universal-category-variation-taxonomy-reference.md`.
+
+[[ADR-016-google-merchant-center-product-feed-compliance]] was not held by the
+concurrent task and is updated directly: `implementation_status` moves to
+`schema-columns-shipped-migration-unapplied` for Decision §2 only, with §1, §3,
+§4, and §5 explicitly still not started.
 
 ## Owner decisions this unit surfaces
 

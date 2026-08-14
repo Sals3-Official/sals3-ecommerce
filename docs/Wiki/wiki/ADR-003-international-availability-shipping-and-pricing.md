@@ -2,7 +2,7 @@
 tags: [sals3, adr, shipping, pricing, international, seo, currency]
 aliases: [ADR-003, International Availability and Pricing, Destination Pricing]
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-11
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -15,14 +15,16 @@ related:
 
 # ADR-003 - International availability, shipping, currency, and pricing
 
-> [!IMPORTANT] Approved direction; launch markets still require configuration
-> Sals3 will support explicitly enabled countries rather than claim universal worldwide delivery. Regional estimates may improve browsing, but only a destination-specific quote can authorize checkout.
+> [!IMPORTANT] Australia approved as the initial buyer destination; operational evidence still required
+> Bogs approved `AU` as the initial buyer destination country on 2026-08-11. This enables AU-scoped product evaluation only. It does not prove nationwide delivery, freight, compliance, landed cost, checkout currency, or Ready/sellable status. Regional estimates may improve browsing, but only a destination-specific quote can authorize checkout.
 
 ## Decision
 
 ### 1. Use explicit launch markets
 
 Maintain a versioned allow-list of enabled destination countries and product/category restrictions. Customer copy should say "ships to supported countries" rather than "ships worldwide" until every claimed country is operationally verified.
+
+The initial buyer destination-country allowlist is `['AU']`, independently approved on 2026-08-11. It is separate from Sals3's Australian business/seller registration, even though both initial values are `AU`. Adding another seller-operating country must not add a buyer destination, and adding another buyer destination must not change seller-registration eligibility.
 
 Geo-IP is only a default suggestion. The user's selected shipping country is the browsing source of truth. Exact country and, where required, postal code are the checkout source of truth.
 

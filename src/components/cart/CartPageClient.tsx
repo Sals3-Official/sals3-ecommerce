@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { formatMoney } from '@/lib/money';
+import { lineIdOf } from '@/lib/cart';
 import { useCart } from '@/components/cart/CartProvider';
 import CartLineItemRow from '@/components/cart/CartLineItemRow';
 import {
@@ -45,24 +46,31 @@ export default function CartPageClient() {
       </h1>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_336px]">
         <div className="rounded-xl border border-border bg-white">
-          {items.map((line) => (
-            <CartLineItemRow
-              key={line.productId}
-              line={line}
-              onDecrease={() => {
-                trackKlaviyoCartQuantityChanged(line, line.quantity - 1);
-                setQuantity(line.productId, line.quantity - 1);
-              }}
-              onIncrease={() => {
-                trackKlaviyoCartQuantityChanged(line, line.quantity + 1);
-                setQuantity(line.productId, line.quantity + 1);
-              }}
-              onRemove={() => {
-                trackKlaviyoCartItemRemoved(line);
-                removeItem(line.productId);
-              }}
-            />
-          ))}
+          {items.map((line) => {
+            // The composite line id, not the product id: two variants of one
+            // product are two rows, and a product-keyed handler would change
+            // the quantity of whichever row sorted first.
+            const id = lineIdOf(line);
+
+            return (
+              <CartLineItemRow
+                key={id}
+                line={line}
+                onDecrease={() => {
+                  trackKlaviyoCartQuantityChanged(line, line.quantity - 1);
+                  setQuantity(id, line.quantity - 1);
+                }}
+                onIncrease={() => {
+                  trackKlaviyoCartQuantityChanged(line, line.quantity + 1);
+                  setQuantity(id, line.quantity + 1);
+                }}
+                onRemove={() => {
+                  trackKlaviyoCartItemRemoved(line);
+                  removeItem(id);
+                }}
+              />
+            );
+          })}
         </div>
         <div className="h-fit rounded-xl border border-border bg-white p-4">
           <div className="flex justify-between text-sm">
@@ -73,16 +81,15 @@ export default function CartPageClient() {
             <span>Subtotal</span>
             <span>{formatMoney(subtotal)}</span>
           </div>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            className="bg-brand-gradient mt-3.5 min-h-11 w-full cursor-not-allowed rounded-lg text-sm font-bold text-white opacity-50"
+          <Link
+            href="/checkout"
+            className="bg-brand-gradient mt-3.5 flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
           >
             Proceed to Checkout
-          </button>
+          </Link>
           <p className="mt-2 text-xs text-ink-faint">
-            Checkout is not built yet. This button does not work.
+            Payment opens in Stripe. Cards and eligible bank debit are
+            supported.
           </p>
         </div>
       </div>

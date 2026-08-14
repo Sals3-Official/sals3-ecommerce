@@ -38,7 +38,7 @@ const DOCUMENT_PATHS = '/((?!_next/).*)';
  * `noStoreJson`, and duplicating it here would leave two places to keep in
  * step.
  */
-export const NO_STORE_ROUTES = ['/login', '/signup'];
+export const NO_STORE_ROUTES = ['/login', '/signup', '/checkout/:path*'];
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -51,12 +51,33 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    /*
+     * Every image goes through `src/lib/images/cj-image-loader.ts` instead of
+     * Vercel's metered `/_next/image` optimizer, which answered `402
+     * OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED` to every request once the
+     * account's Image Optimization allowance ran out (verified against
+     * production 2026-08-14) and broke every image in the storefront. The
+     * loader hands resizing to CJ's own CDN for free; read its header comment
+     * for the measurements and for what it deliberately does not do.
+     */
+    loader: 'custom',
+    loaderFile: './src/lib/images/cj-image-loader.ts',
+    /*
+     * Allow-listed on purpose: only these CJdropshipping hosts may serve
+     * product images. `getAllowedProductImageUrl` in
+     * `src/services/storefront/mappers.ts` drops any image address from another
+     * host as the portal payload is mapped, so the two lists must stay in step
+     * — both now read `src/lib/cj-image-hosts.ts`.
+     *
+     * This list no longer gates anything at request time: a custom loader
+     * bypasses the optimizer that enforces it. It is kept because it documents
+     * the same allow-list the code enforces, and because removing it would
+     * silently re-open the whole internet the moment anyone drops `loader:
+     * 'custom'`. `cdn.dummyjson.com` used to be listed here for the first
+     * landing page's placeholder catalogue; no code path renders that host any
+     * more, so it is gone.
+     */
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'cdn.dummyjson.com',
-        pathname: '/product-images/**',
-      },
       {
         protocol: 'https',
         hostname: 'cf.cjdropshipping.com',

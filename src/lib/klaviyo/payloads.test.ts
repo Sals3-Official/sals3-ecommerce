@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CartLineItem } from '@/lib/cart';
-import { peso } from '@/lib/money';
+import { usd } from '@/lib/money';
 import {
   toKlaviyoCartPayload,
   toKlaviyoProductPayload,
@@ -14,7 +14,7 @@ const cartLine: CartLineItem = {
   imageAlt: 'Quiet tower air cooler',
   imageUrl: 'https://example.com/air-cooler.webp',
   tone: 'ocean',
-  unitPrice: peso(199900),
+  unitPrice: usd(199900),
   quantity: 2,
 };
 
@@ -25,7 +25,7 @@ describe('Klaviyo payload mappers', () => {
         productId: 'air-cooler',
         title: 'Quiet tower air cooler',
         imageUrl: 'https://example.com/air-cooler.webp',
-        unitPrice: peso(199900),
+        unitPrice: usd(199900),
         category: 'home-living',
         url: 'https://sals3.example/p/air-cooler',
       }),
@@ -44,7 +44,7 @@ describe('Klaviyo payload mappers', () => {
       toKlaviyoViewedItemPayload({
         productId: 'air-cooler',
         title: 'Quiet tower air cooler',
-        unitPrice: peso(199900),
+        unitPrice: usd(199900),
         category: 'home-living',
       }),
     ).toMatchObject({

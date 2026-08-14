@@ -37,39 +37,62 @@ Do not put application code in `docs/`. Do not put vault notes in `src/`.
 
 ## API Services
 
-Product API calls live in `src/services/products.ts`. `fetchProducts()` reads
-from the protected `sals3-portal` storefront API, sends validated `section`,
-`page`, and `limit` parameters, validates external JSON with Zod, and maps API
-products into home page cards. The portal feed is backed by the same
-CJdropshipping supplier tab at `/products?source=cj`. `fetchProductCategories()`
-reads CJ categories through the protected portal category feed and maps
-categories into internal `/c/<slug>` navigation links. Invalid `page` and
-`limit` input falls back to safe defaults. Real CJ product `title`s and
-`imageAlt`s routinely exceed 120/160 characters — confirmed live, this failed
-validation for an entire 14-item page over one overlong row. Both fields are
-truncated to their display length instead of rejected, so one long real title
-can't take a whole page down.
+The storefront service layer lives in `src/services/storefront/` and is
+re-exported from `src/services/products.ts`, so every existing
+`@/services/products` import keeps working:
 
-`fetchProductBySlug()` calls `sals3-portal`'s real single-product endpoint,
-`GET /api/storefront/products/<slug>` — one upstream call, `undefined` on a
-404 or an invalid slug, so the PDP route can render `notFound()` without a
-separate error path.
+- `schemas.ts` — the Zod contract for the list feed and the richer product
+  detail.
+- `client.ts` — URL building, the shared bearer token, one request helper, and
+  the per-call-site cache policy.
+- `products.ts` — `fetchProducts`, `fetchProductCategories`,
+  `fetchProductBySlug`, `fetchProductsByCategory`.
+- `mappers.ts` — payload → view model, including the image host allow-list it
+  reads from `src/lib/cj-image-hosts.ts`.
+
+**The upstream is now the Sals3 catalogue database, not a live supplier feed.**
+`sals3-portal` used to answer these endpoints by calling CJdropshipping's
+`/product/list` on every uncached request; as of 2026-08-13 it reads published
+`products` / `product_offers` / `product_media_sources` rows and nothing else.
+Two consequences here: prices are **USD** (ADR-003 phase 1), and the storefront
+shows only what a seller has actually published in the Seller Center.
+
+`currency` is the one **required** new field. Every other field added with the
+richer contract is optional, so the portal can ship a field before this app
+reads it — but a missing currency would render a number with the wrong symbol,
+which is the only failure mode here that misrepresents money, so the parse
+fails instead.
+
+Bad rows are salvaged, not fatal. Real CJ `title`s and `imageAlt`s routinely
+exceed 120/160 characters — confirmed live, this failed validation for an
+entire 14-item page over one overlong row — so both are truncated to their
+display length. The same idea applies one level up: a malformed variant, image,
+spec, or description block is dropped without failing the product, and a
+product does not fail the page.
+
+`fetchProductBySlug()` calls `GET /api/storefront/products/<slug>` and returns
+`undefined` **only** for a genuine absence (invalid slug shape, or a 404).
+Everything else throws, which is what lets the PDP tell "no such product" from
+"the catalogue is unreachable". That read is cached
+(`next: { revalidate: 300, tags: [...] }`); the list feed deliberately stays
+`no-store`, because the home page falls back to placeholder products and a
+cacheable feed would let a token-less `next build` bake those placeholders into
+static output.
+
+`test/fixtures/storefront-product-detail.json` is the committed cross-repository
+contract fixture: one maximal payload, parsed by
+`src/services/storefront/schemas.test.ts`. `sals3-portal` commits the same file
+and asserts its serializer produces it, so contract drift fails a test in
+whichever repository moved.
 
 The storefront API still has no category-filter route. `fetchProductsByCategory()`
-(used by the PDP's related-products section) pages through `for-you` and
-`deals` results and matches by `category` client-side as a stopgap, **hard-capped
-at 2 pages per section** (`MAX_CLIENT_SIDE_SEARCH_PAGES` in `src/services/products.ts`):
-`sals3-portal` proxies CJdropshipping, which allows only one request per
-second and caps its own pagination at 500 pages, so scanning a whole
-section for every PDP view would hammer that rate limit for a related-products
-section that degrades gracefully to empty anyway. Replace with a direct
-category-filter endpoint once `sals3-portal` adds one.
-
-The same real product can appear in both the `for-you` and `deals` sections at
-once (e.g. a recommended item that's also on deal). `fetchProductsByCategory()`
-de-duplicates by product `id` before filtering, so a duplicate can't reach the
-related-products grid and collide with React's `key` (confirmed live: a
-duplicate `id` there throws "Encountered two children with the same key").
+(used by the PDP's related-products section) pages through `for-you` and `deals`
+and matches by `category` client-side as a stopgap, hard-capped at 2 pages per
+section (`MAX_CLIENT_SIDE_SEARCH_PAGES`). Replace it with a direct
+category-filter endpoint once the portal adds one. It also de-duplicates by
+product `id` first, because the same product can legitimately appear in both
+sections and a duplicate `id` in the related grid throws React's
+"Encountered two children with the same key".
 
 Required `.env.local` values:
 
@@ -77,6 +100,36 @@ Required `.env.local` values:
 SALS3_PORTAL_API_URL=http://localhost:3001
 SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 ```
+
+## Checkout and Stripe
+
+`/cart` now sends buyers to `/checkout`. Checkout reads the browser-local cart
+for display, asks for contact and delivery address, then the server re-fetches
+each product from the Sals3 Portal storefront API before creating a Stripe
+Hosted Checkout Session. Browser cart prices are never trusted for payment.
+
+Required Stripe values in `.env.local` or host secrets:
+
+```text
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+STRIPE_SECRET_KEY=<test or restricted secret key>
+STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
+STRIPE_PAYMENT_METHOD_CONFIGURATION_ID=<pmc_... config for card + eligible bank debit>
+```
+
+Use a Stripe restricted key (`rk_...`) instead of `sk_...` when possible. Never
+commit Stripe keys. The checkout integration uses dynamic payment methods and
+passes `STRIPE_PAYMENT_METHOD_CONFIGURATION_ID`; it deliberately does not pass
+`payment_method_types`. Cards work in the current USD flow. Bank debit appears
+only when Stripe says the session currency, buyer details, account, and payment
+method configuration are eligible. AU BECS requires an AUD cart; this app does
+not convert USD to AUD.
+
+`/checkout/success` verifies the Stripe Session server-side before showing the
+payment status. `/api/stripe/webhook` verifies Stripe signatures and accepts
+checkout completion, async-payment-failed, and expired events. This is still a
+Stripe-only v1: no Sals3 order database, supplier fulfillment, refunds ledger,
+or tax automation is created here.
 
 ## Authentication
 
@@ -212,8 +265,8 @@ analytics.
 Tracked v1 events are limited to behavior the app really supports today:
 `Viewed Product`, Klaviyo's recently viewed item payload, `Added to Cart`,
 `Buy Now Clicked`, `Cart Viewed`, `Cart Quantity Changed`, and
-`Cart Item Removed`. Purchase, checkout, fulfilled, canceled, and refunded
-events are intentionally deferred because `/checkout`, orders, and payment
+`Cart Item Removed`. Purchase, paid order, fulfilled, canceled, and refunded
+events are intentionally deferred because Sals3 order persistence and payment
 reconciliation do not exist yet.
 
 Profile enrichment sends verified Firebase profile fields when available
@@ -360,7 +413,10 @@ delivery region, cart/orders/account links), a full-bleed category band, an
 Embla promo carousel, a portal-fed deals grid, and a paginated "For you" grid.
 Promo carousel images live in `public/home-promos/` and slide metadata lives
 in `src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
-assets, `next/image`, manual controls, dot buttons, and no autoplay.
+assets, `next/image`, manual controls, dot buttons, and no autoplay. Those
+slides are served at their committed size — see [Image loading](#image-loading)
+— and the seven PNGs total 8.15 MB; re-encoding them to WebP (measured: 569 KB)
+is deferred by owner decision, not an oversight.
 
 The category band (`src/components/home/CategoryRow.tsx`) sits directly under
 `SiteHeader`, outside `<main>`, so its white `border-y` band spans the full
@@ -401,51 +457,123 @@ the other section's already-successful, unrelated result.
 A visually-hidden `<h1>` (`sr-only`) provides a correct heading hierarchy for
 crawlers and screen readers without altering the visual design.
 Product images are rendered with `next/image` and limited to the allow-listed
-CJ image hosts from the portal feed. Money values follow the build spec's
-minor-unit convention (`src/lib/money.ts`).
+CJ image hosts from the portal feed (see [Image loading](#image-loading)).
+Money values follow the build spec's minor-unit convention
+(`src/lib/money.ts`).
+
+## Image loading
+
+Nothing in this app goes through Vercel's `/_next/image` optimizer. `next.config.ts`
+sets `images.loader: 'custom'` with `src/lib/images/cj-image-loader.ts`.
+
+Why: the optimizer is metered, and once the account's Image Optimization
+allowance ran out it answered every request with `402
+OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED` — including `?url=%2Fsals3-logo.webp`,
+a file this app serves itself — so every image in production broke at once
+(2026-08-14). The portal hit the same failure a day earlier and fixed it the
+same way.
+
+The loader asks CJ's own CDN to do the resizing, which it does for free. For an
+allow-listed CJ address it sets an Alibaba-OSS instruction,
+`?x-oss-process=image/resize,w_<width>/format,webp/quality,q_<quality>`; the
+requested `width` is the one `next/image` derived from the component's `sizes`,
+so the whole responsive `srcSet` survives — the gallery's 80px thumbnails fetch
+80px WebP files. Measured on a real product photo: 491,243 bytes original,
+30,006 at `w_640`, 2,156 at `w_128`.
+
+Any other address — a local `/public` path, any non-CJ host, plain `http:` — is
+returned untouched. The loader never proxies and never invents a host, so it
+cannot become an open image proxy. Local assets are therefore served at their
+committed size; `public/home-promos/*.png` is 8.15 MB in total and is a known
+outstanding item.
+
+The allow-list itself lives in `src/lib/cj-image-hosts.ts`, a dependency-free
+module because the loader is serialized into the client bundle. `next.config.ts`
+`remotePatterns` and `getAllowedProductImageUrl` in
+`src/services/storefront/mappers.ts` must stay in step with it; the enforcing
+gate is the mapper, which drops an off-list address before a component sees it.
 
 ## Product Page (PDP)
 
 `src/app/p/[id]/page.tsx` renders a product detail page at `/p/<slug>`. Every
-product card on the home page (`src/components/home/ProductCard.tsx`) already
-links here using the real backend's `slug` as the `[id]` route param — the
-folder is still named `[id]` but the value it receives is a slug string, not
-a numeric id. The route fetches the product through `fetchProductBySlug()`
-and calls Next's `notFound()` — a real 404, not a soft redirect — when no
-product matches. A storefront API failure (missing/invalid token, unreachable
-`sals3-portal`) currently resolves to the same `notFound()`, since there's no
-site-wide error boundary yet to tell "doesn't exist" apart from "couldn't be
-reached" (see the pre-existing `error.tsx`/`not-found.tsx` gap noted below).
+product card links here using the backend's `slug` as the `[id]` route param —
+the folder is still named `[id]`, but the value it receives is a slug.
 
-The page composes small, single-purpose components under
-`src/components/product/`: `ProductGallery` (client component, thumbnail
-click-to-swap when there's more than one image), `ProductPriceBox`, and
-`RelatedProducts` (same-category products via `fetchProductsByCategory()`,
-reusing the home page's `ProductGrid`/`ProductCard`).
+**A 404 and an outage are now different pages.** `/p/[id]/not-found.tsx` is the
+real "we couldn't find that product" page (still HTTP 404), and
+`/p/[id]/error.tsx` is what an unreachable catalogue produces. Before this, every
+failure became `notFound()`, so a portal outage looked like a deleted product —
+a buyer would stop looking for something still for sale, and nobody would learn
+the storefront was down. The error page renders nothing from the error itself:
+no `message`, no `digest`.
 
-**Rebuilt against the real `sals3-portal` schema (`StorefrontProductSchema`)
-after PR #22 merged** — that schema only carries `id`, `slug`, `title`,
-`priceMinor`, `oldPriceMinor`, a single `imageUrl`, `imageAlt`, `ratingLine`,
-`shipLine`, and `category`. It has no `images[]` gallery, `reviews[]`,
-`description`, `brand`, `stock`, `returnPolicy`, or `warrantyInformation` —
-those existed only on the old DummyJSON shape. Rather than show fabricated
-placeholder content for fields the real backend doesn't provide, this pass
-**removed** the reviews section, the shipping/returns/warranty card, the
-description paragraph, and stock-based Add to Cart/Buy Now disabling
-entirely. Restore them once `sals3-portal` actually returns that data — do
-not re-add with invented values in the meantime.
+The product is read once per request via React `cache()`, shared by
+`generateMetadata` and the page. They used to fetch independently, and
+`cache: 'no-store'` defeats Next's own fetch memoisation, so every PDP made two
+identical upstream calls.
 
-- **No in-stock/out-of-stock gating right now.** The real backend has no
-  stock field at all, so Add to Cart/Buy Now are always enabled — this is a
-  regression from the DummyJSON-backed build and from the "never sell an
-  out-of-stock item" rule in the management bible; it must come back once
-  `sals3-portal` exposes real inventory data.
-- **No seller/verified-badge card.** Sals3 has no real seller data yet
-  (Stage 7).
-- **No colour/size variant selectors.** The real backend carries no variant
-  data, so none is shown or invented.
-- **No image zoom lightbox.** The gallery swaps the main image on thumbnail
-  click; a full zoom modal was left out to keep the change small.
+Composed from small single-purpose components under `src/components/product/`:
+
+| Component                         | Renders                                                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ProductGallery` (client)         | Every approved photo, lead image first, with per-image alt text; thumbnails appear from the second image |
+| `ProductPriceBox` (server)        | Price and purchase for a product with **no** option axes                                                 |
+| `ProductPurchasePanel` (client)   | Price, variant selector, stock, and purchase for a product with **several** variants                     |
+| `ProductVariantSelector` (client) | One `radiogroup` per axis; unavailable values stay visible and `aria-disabled`                           |
+| `ProductAvailabilityNotice`       | Stock as an evidence statement — never a count                                                           |
+| `ProductDescription`              | The seller-authored allow-listed blocks                                                                  |
+| `ProductSpecsTable`               | Physical and identifier facts, labelled supplier-reported                                                |
+| `ProductShippingCard`             | That shipping is quoted at checkout, because no estimate exists                                          |
+| `RelatedProducts`                 | Same-category products, reusing the home grid                                                            |
+| `ProductSchema`                   | `Product`/`Offer` JSON-LD                                                                                |
+
+`ProductPurchasePanel` mounts **only** when there is a real choice to make, so a
+catalogue with no variants ships no extra client JavaScript.
+
+### Every section is absent, not empty, when the data is
+
+The portal omits a field rather than defaulting it, and the PDP renders a
+section only when it has something real to put in it. No "N/A", no "—", no
+reserved boxes. What that means in practice today:
+
+- **No rating anywhere.** Sals3 has no buyer reviews, and CJ's
+  supplier-platform review counts are not Sals3 ratings. The deprecated
+  `ratingLine` is optional and carries a non-claim; nothing renders a star.
+- **No delivery estimate.** Freight is destination-specific and quoted at
+  checkout (ADR-003).
+- **No was/now price.** `oldPrice` is absent unless the portal sends a genuinely
+  higher, evidence-backed comparison price. It never has.
+- **Description and variants render nothing yet**, because no published product
+  carries them: a CJ-sourced draft starts from an honestly empty description
+  document, and variants exist only after the portal captures supplier evidence.
+- **Stock gating is fail-open.** `UNKNOWN` is the common availability state and
+  purchase stays enabled for it — failing closed would take the whole catalogue
+  offline over evidence nobody refreshed. Purchase **is** blocked for an
+  explicit `UNAVAILABLE` variant and while a selection is incomplete, each with
+  a visible, announced reason rather than a silently grey button.
+- **No image zoom lightbox and no seller card.**
+
+### Product JSON-LD
+
+`src/components/schema/ProductSchema.tsx` emits only fields the portal actually
+sent, and escapes `<` because the payload contains supplier-originated text.
+Deliberately omitted: `aggregateRating`/`review` (no buyer reviews),
+`offers.availability` when availability is `UNKNOWN`, `weight` (the supplier
+reports a range, not a number), `shippingDetails`,
+`hasMerchantReturnPolicy`, and `priceValidUntil`. Fabricated structured data can
+cost the whole domain its rich results.
+
+## Cart Storage Format
+
+`src/lib/cart.ts` stores the cart in `localStorage` under **`sals3-cart-v2`**.
+Two format changes landed together: the currency moved from PHP to USD, and a
+line's identity became variant-aware (`cartLineId(productId, variantId)`), so
+two variants of one product are two lines instead of silently merging.
+
+A `sals3-cart-v1` blob is **discarded, not converted** — converting a saved
+price invents a price that was never quoted to that buyer — and the stale key is
+removed on first hydrate rather than left holding purchase intent nothing reads.
+Nothing is lost: `/checkout` does not exist and no order has ever been placed.
 
 ## Stage-2 catalogue groundwork (not wired to the live app)
 

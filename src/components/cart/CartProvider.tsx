@@ -12,10 +12,13 @@ import {
 import type { Money } from '@/lib/money';
 import {
   addCartItem,
+  cartLineId,
   CART_STORAGE_KEY,
   EMPTY_CART,
   getCartItemCount,
   getCartSubtotal,
+  LEGACY_CART_STORAGE_KEYS,
+  lineIdOf,
   parseCartState,
   removeCartItem,
   setCartItemQuantity,
@@ -31,8 +34,9 @@ type CartContextValue = {
   itemCount: number;
   subtotal: Money;
   addItem: (item: Omit<CartLineItem, 'quantity'>, quantity?: number) => void;
-  setQuantity: (productId: string, quantity: number) => void;
-  removeItem: (productId: string) => void;
+  /** `lineId`, not a product id: two variants of one product are two lines. */
+  setQuantity: (lineId: string, quantity: number) => void;
+  removeItem: (lineId: string) => void;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -63,6 +67,12 @@ function createCartStore() {
     getServerSnapshot: () => EMPTY_CART,
     hydrate() {
       state = parseCartState(window.localStorage.getItem(CART_STORAGE_KEY));
+      // A v1 blob is PHP-priced and product-keyed; the schema already rejects
+      // it, so this only removes what is left behind. Purchase intent should
+      // not sit in storage under a key nothing reads.
+      LEGACY_CART_STORAGE_KEYS.forEach((key) => {
+        window.localStorage.removeItem(key);
+      });
       notify();
     },
     update(updater: (current: CartState) => CartState) {
@@ -93,15 +103,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       itemCount: getCartItemCount(state),
       subtotal: getCartSubtotal(state),
       addItem: (item, quantity = 1) => {
-        const previousLine = state.items.find(
-          (line) => line.productId === item.productId,
-        );
+        const id = cartLineId(item.productId, item.variant?.id);
+        const previousLine = state.items.find((line) => lineIdOf(line) === id);
         const nextState = store.update((current) =>
           addCartItem(current, item, quantity),
         );
-        const nextLine = nextState.items.find(
-          (line) => line.productId === item.productId,
-        );
+        const nextLine = nextState.items.find((line) => lineIdOf(line) === id);
         const addedQuantity =
           (nextLine?.quantity ?? 0) - (previousLine?.quantity ?? 0);
 
@@ -115,12 +122,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         setToast({ id: Date.now(), text: 'Added to your cart.' });
       },
-      setQuantity: (productId, quantity) =>
+      setQuantity: (lineId, quantity) =>
         store.update((current) =>
-          setCartItemQuantity(current, productId, quantity),
+          setCartItemQuantity(current, lineId, quantity),
         ),
-      removeItem: (productId) =>
-        store.update((current) => removeCartItem(current, productId)),
+      removeItem: (lineId) =>
+        store.update((current) => removeCartItem(current, lineId)),
     }),
     [state, store],
   );

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-const CART_STORAGE_KEY = 'sals3-cart-v1';
+const CART_STORAGE_KEY = 'sals3-cart-v2';
+const LEGACY_CART_STORAGE_KEY = 'sals3-cart-v1';
 
 function seedCartItem(page: import('@playwright/test').Page) {
   return page.addInitScript(
@@ -16,7 +17,7 @@ function seedCartItem(page: import('@playwright/test').Page) {
             title: 'Quiet tower air cooler',
             imageAlt: 'Quiet tower air cooler',
             tone: 'ocean',
-            unitPrice: { amountMinor: 199900, currency: 'PHP' },
+            unitPrice: { amountMinor: 199900, currency: 'USD' },
             quantity: 1,
           },
         ],
@@ -54,3 +55,44 @@ test('adjust quantity and remove an item from the cart', async ({ page }) => {
 // render without a reachable sals3-portal instance/token (see
 // product.spec.ts). Unwired once that backend is configured locally/in CI.
 test.skip('Buy Now adds the item and goes straight to the cart', async () => {});
+
+/**
+ * A v1 blob is PHP-priced and product-keyed. It must not be converted — a
+ * converted price is one that was never quoted to that buyer — so the cart
+ * starts empty and the stale key is removed rather than left holding purchase
+ * intent nothing reads.
+ */
+test('a legacy v1 cart is discarded, not converted', async ({ page }) => {
+  await page.addInitScript(
+    ({ key, value }) => {
+      window.localStorage.setItem(key, value);
+    },
+    {
+      key: LEGACY_CART_STORAGE_KEY,
+      value: JSON.stringify({
+        items: [
+          {
+            productId: 'air-cooler',
+            title: 'Quiet tower air cooler',
+            imageAlt: 'Quiet tower air cooler',
+            tone: 'ocean',
+            unitPrice: { amountMinor: 199900, currency: 'PHP' },
+            quantity: 1,
+          },
+        ],
+      }),
+    },
+  );
+
+  await page.goto('/cart');
+
+  await expect(page.getByText(/your cart is empty/i)).toBeVisible();
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        (key) => window.localStorage.getItem(key),
+        LEGACY_CART_STORAGE_KEY,
+      ),
+    )
+    .toBeNull();
+});

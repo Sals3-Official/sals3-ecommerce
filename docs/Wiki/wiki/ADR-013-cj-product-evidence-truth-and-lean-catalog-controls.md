@@ -106,6 +106,33 @@ ZERO_STOCK | UNKNOWN_STOCK
 
 This preserves the existing requirement to retain truthful stock evidence whenever Sals3 actually obtains it, while making the mass-catalogue intake cheap and honest about what it has not checked.
 
+> [!IMPORTANT] Narrow exception carved out 2026-08-13 — owner decision
+> **All Supplier Products** may now also browse CJ's **live** catalogue on
+> demand, superseding the "no CJ calls" rule above **for this page only**.
+> Each render makes exactly one live `GET /product/list` request through the
+> signed-in seller's own CJ connection (200 products per page, the documented
+> legacy maximum), throttled to 30 CJ calls/minute per user, plus an
+> hourly-cached category tree read. Cost is higher **by design** — roughly 50
+> points per page view, accepted by the owner in exchange for lower database
+> load — and every fast-paging seller is capped by the per-user throttle
+> before it can drain the shared discovery budget.
+>
+> This still spends **zero writes**: browsing never creates, refreshes, or
+> evaluates a candidate, and discovery's own workers remain the only writers.
+> `listBrowsePage` on the adapter contract is a new, separate entry point from
+> discovery's `listCatalogPage`/`listCuratedPage`, whose deterministic
+> `orderBy=createAt&sort=asc` ordering is untouched. A seller-scoped
+> `findPipelineMatchesByPid` lookup (`LEFT JOIN` on `candidate_evaluations`,
+> deliberately, so a discovered-but-unevaluated candidate still matches) shows
+> whether a live row has already entered the pipeline, without making that
+> answer authoritative for anything else.
+>
+> The saved-data read this section originally described is fully replaced for
+> this one page, not layered on top of it — the old model is deleted. §1a's
+> manual-review rule for stock attestation is unchanged: browsing shows CJ's
+> own live numbers as CJ's numbers, and does not become a stock attestation.
+> `sals3-portal` [PR #57](https://github.com/Sals3-Official/sals3-portal/pull/57), merged.
+
 #### CJ call-budget principle (owner decision, 2026-08-12)
 
 CJ points and QPS are a finite shared operational resource, reserved first for real customer- and order-critical operations: checkout, order acceptance, the necessary final freight/inventory/order-confirmation actions, selected/live-product operations, and owner-approved recovery. Discovery, browsing, review, and refresh work are all lower priority than any of those and must visibly defer rather than consume the reserve.

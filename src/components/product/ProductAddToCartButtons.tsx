@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation';
 import type { Money } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
+import type { CartLineVariant } from '@/lib/cart';
 import { useCart } from '@/components/cart/CartProvider';
+import Button from '@/components/ui/Button';
 import { trackKlaviyoBuyNowClicked } from '@/lib/klaviyo/client';
 
 type ProductAddToCartButtonsProps = {
@@ -14,6 +16,14 @@ type ProductAddToCartButtonsProps = {
   imageAlt: string;
   tone: PlaceholderTone;
   unitPrice: Money;
+  /** Absent for a product with no option axes — one implicit variant. */
+  variant?: CartLineVariant;
+  /**
+   * Why purchase is blocked, in words a buyer can act on. Present means both
+   * buttons are disabled and this sentence is announced — never a silently grey
+   * button, and never colour as the only signal.
+   */
+  disabledReason?: string;
 };
 
 export default function ProductAddToCartButtons({
@@ -24,23 +34,35 @@ export default function ProductAddToCartButtons({
   imageAlt,
   tone,
   unitPrice,
+  variant,
+  disabledReason,
 }: ProductAddToCartButtonsProps) {
   const { addItem } = useCart();
   const router = useRouter();
+  const disabled = disabledReason !== undefined;
 
-  function handleAddToCart() {
-    addItem({
+  function line() {
+    return {
       productId,
+      ...(variant === undefined ? {} : { variant }),
       title,
       category,
       imageUrl,
       imageAlt,
       tone,
       unitPrice,
-    });
+    };
+  }
+
+  function handleAddToCart() {
+    if (disabled) return;
+
+    addItem(line());
   }
 
   function handleBuyNow() {
+    if (disabled) return;
+
     trackKlaviyoBuyNowClicked({
       productId,
       title,
@@ -48,34 +70,35 @@ export default function ProductAddToCartButtons({
       imageUrl,
       unitPrice,
     });
-    addItem({
-      productId,
-      title,
-      category,
-      imageUrl,
-      imageAlt,
-      tone,
-      unitPrice,
-    });
+    addItem(line());
     router.push('/cart');
   }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row">
-      <button
-        type="button"
-        onClick={handleAddToCart}
-        className="min-h-11 flex-1 cursor-pointer rounded-lg border border-brand-600 px-6 text-sm font-bold text-brand-600 transition-all duration-200 hover:bg-brand-600/10 active:scale-[0.98]"
-      >
-        Add to Cart
-      </button>
-      <button
-        type="button"
-        onClick={handleBuyNow}
-        className="bg-brand-gradient min-h-11 flex-1 cursor-pointer rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
-      >
-        Buy Now
-      </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button
+          variant="outline"
+          onClick={() => handleAddToCart()}
+          disabled={disabled}
+        >
+          Add to Cart
+        </Button>
+        <Button
+          variant="solid"
+          onClick={() => handleBuyNow()}
+          disabled={disabled}
+        >
+          Buy Now
+        </Button>
+      </div>
+      {/*
+        Always in the DOM so the reason is announced when it appears, rather
+        than the live region itself being inserted at the same moment.
+      */}
+      <p aria-live="polite" className="min-h-0 text-sm text-ink-muted">
+        {disabledReason ?? ''}
+      </p>
     </div>
   );
 }

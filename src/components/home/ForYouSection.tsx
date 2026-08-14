@@ -39,7 +39,20 @@ export default function ForYouSection({
         </h2>
         <span className="text-xs text-ink-subtle">{regionNote}</span>
       </div>
-      <ProductGrid items={items} />
+      {/*
+        An empty catalogue is a real, reachable state now that the feed reads
+        the Sals3 catalogue: a successful response with zero published products
+        is not a failure, so it does not fall back to placeholders. Without this
+        the shopper gets a blank grid and no explanation — the one case where
+        rendering nothing is worse than saying the true thing.
+      */}
+      {items.length === 0 ? (
+        <p className="rounded-xl border border-border bg-white px-4 py-8 text-center text-sm text-ink-muted">
+          No products are listed yet. Check back soon.
+        </p>
+      ) : (
+        <ProductGrid items={items} />
+      )}
       {pagination && pagination.totalPages > 1 ? (
         <ProductPagination
           currentPage={pagination.currentPage}

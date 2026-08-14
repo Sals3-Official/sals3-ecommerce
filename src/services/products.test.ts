@@ -22,6 +22,7 @@ const validProductsResponse = {
       id: 'air-cooler',
       slug: 'air-cooler',
       title: 'Quiet tower air cooler',
+      currency: 'USD' as const,
       priceMinor: 199900,
       oldPriceMinor: 249900,
       imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
@@ -141,8 +142,13 @@ describe('fetchProducts', () => {
 
     const response = await fetchProductCategories({ fetcher });
 
-    expect(requestedUrl).toEqual(
-      new URL(STOREFRONT_CATEGORIES_PATH, DEFAULT_STOREFRONT_API_URL),
+    // A string, not a `URL` instance: every call site now goes through one
+    // request helper that serialises the URL, so the assertion follows.
+    expect(requestedUrl).toBe(
+      new URL(
+        STOREFRONT_CATEGORIES_PATH,
+        DEFAULT_STOREFRONT_API_URL,
+      ).toString(),
     );
     expect(requestedInit).toMatchObject({
       cache: 'no-store',
@@ -273,6 +279,7 @@ describe('fetchProductBySlug', () => {
     expect(requestedUrl).toBe(
       `${DEFAULT_STOREFRONT_API_URL}${STOREFRONT_PRODUCTS_PATH}/air-cooler`,
     );
+    // Single-product reads stay live so portal publication appears immediately.
     expect(requestedInit).toMatchObject({
       cache: 'no-store',
       headers: {
@@ -388,13 +395,19 @@ describe('toProductDetail', () => {
       id: 'air-cooler',
       title: 'Quiet tower air cooler',
       category: 'home-living',
-      price: { amountMinor: 199900, currency: 'PHP' },
-      oldPrice: { amountMinor: 249900, currency: 'PHP' },
+      price: { amountMinor: 199900, currency: 'USD' },
+      oldPrice: { amountMinor: 249900, currency: 'USD' },
       ratingLine: 'Rating 4.5, 2 reviews',
       shipLine: 'Bulky',
       imageUrl: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
       imageAlt: 'Quiet tower air cooler',
       tone: 'ocean',
+      images: [
+        {
+          url: 'https://cf.cjdropshipping.com/product-images/air-cooler.webp',
+          alt: 'Quiet tower air cooler',
+        },
+      ],
     });
   });
 
