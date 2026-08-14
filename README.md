@@ -47,7 +47,8 @@ re-exported from `src/services/products.ts`, so every existing
   the per-call-site cache policy.
 - `products.ts` — `fetchProducts`, `fetchProductCategories`,
   `fetchProductBySlug`, `fetchProductsByCategory`.
-- `mappers.ts` — payload → view model, including the image host allow-list.
+- `mappers.ts` — payload → view model, including the image host allow-list it
+  reads from `src/lib/cj-image-hosts.ts`.
 
 **The upstream is now the Sals3 catalogue database, not a live supplier feed.**
 `sals3-portal` used to answer these endpoints by calling CJdropshipping's
@@ -382,7 +383,10 @@ delivery region, cart/orders/account links), a full-bleed category band, an
 Embla promo carousel, a portal-fed deals grid, and a paginated "For you" grid.
 Promo carousel images live in `public/home-promos/` and slide metadata lives
 in `src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
-assets, `next/image`, manual controls, dot buttons, and no autoplay.
+assets, `next/image`, manual controls, dot buttons, and no autoplay. Those
+slides are served at their committed size — see [Image loading](#image-loading)
+— and the seven PNGs total 8.15 MB; re-encoding them to WebP (measured: 569 KB)
+is deferred by owner decision, not an oversight.
 
 The category band (`src/components/home/CategoryRow.tsx`) sits directly under
 `SiteHeader`, outside `<main>`, so its white `border-y` band spans the full
@@ -423,8 +427,41 @@ the other section's already-successful, unrelated result.
 A visually-hidden `<h1>` (`sr-only`) provides a correct heading hierarchy for
 crawlers and screen readers without altering the visual design.
 Product images are rendered with `next/image` and limited to the allow-listed
-CJ image hosts from the portal feed. Money values follow the build spec's
-minor-unit convention (`src/lib/money.ts`).
+CJ image hosts from the portal feed (see [Image loading](#image-loading)).
+Money values follow the build spec's minor-unit convention
+(`src/lib/money.ts`).
+
+## Image loading
+
+Nothing in this app goes through Vercel's `/_next/image` optimizer. `next.config.ts`
+sets `images.loader: 'custom'` with `src/lib/images/cj-image-loader.ts`.
+
+Why: the optimizer is metered, and once the account's Image Optimization
+allowance ran out it answered every request with `402
+OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED` — including `?url=%2Fsals3-logo.webp`,
+a file this app serves itself — so every image in production broke at once
+(2026-08-14). The portal hit the same failure a day earlier and fixed it the
+same way.
+
+The loader asks CJ's own CDN to do the resizing, which it does for free. For an
+allow-listed CJ address it sets an Alibaba-OSS instruction,
+`?x-oss-process=image/resize,w_<width>/format,webp/quality,q_<quality>`; the
+requested `width` is the one `next/image` derived from the component's `sizes`,
+so the whole responsive `srcSet` survives — the gallery's 80px thumbnails fetch
+80px WebP files. Measured on a real product photo: 491,243 bytes original,
+30,006 at `w_640`, 2,156 at `w_128`.
+
+Any other address — a local `/public` path, any non-CJ host, plain `http:` — is
+returned untouched. The loader never proxies and never invents a host, so it
+cannot become an open image proxy. Local assets are therefore served at their
+committed size; `public/home-promos/*.png` is 8.15 MB in total and is a known
+outstanding item.
+
+The allow-list itself lives in `src/lib/cj-image-hosts.ts`, a dependency-free
+module because the loader is serialized into the client bundle. `next.config.ts`
+`remotePatterns` and `getAllowedProductImageUrl` in
+`src/services/storefront/mappers.ts` must stay in step with it; the enforcing
+gate is the mapper, which drops an off-list address before a component sees it.
 
 ## Product Page (PDP)
 

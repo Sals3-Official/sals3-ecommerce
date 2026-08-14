@@ -1,3 +1,4 @@
+import CJ_IMAGE_HOSTS from '@/lib/cj-image-hosts';
 import { money } from '@/lib/money';
 import type {
   Category as HomeCategory,
@@ -33,23 +34,19 @@ import type {
  * the product.
  */
 
-/**
- * Hosts whose images this app will render. Mirrors `next.config.ts`'s
- * `images.remotePatterns` and the portal's own `lib/cj/image-hosts.ts` — all
- * three must agree, and a URL that reaches here is still re-checked because a
- * payload is data, not a promise.
- */
-const PRODUCT_IMAGE_HOSTS = [
-  'cf.cjdropshipping.com',
-  'oss-cf.cjdropshipping.com',
-];
-
 const PRODUCT_TONES: PlaceholderTone[] = ['ocean', 'dusk', 'meadow', 'clay'];
 
 function toneFor(index: number): PlaceholderTone {
   return PRODUCT_TONES[index % PRODUCT_TONES.length]!;
 }
 
+/**
+ * Hosts whose images this app will render, from the one dependency-free module
+ * `src/lib/images/cj-image-loader.ts` also reads. `next.config.ts`'s
+ * `images.remotePatterns` and the portal's own `lib/cj/image-hosts.ts` must
+ * agree with it, and a URL that reaches here is still re-checked because a
+ * payload is data, not a promise.
+ */
 export function getAllowedProductImageUrl(
   url: string | null | undefined,
 ): string | undefined {
@@ -62,7 +59,7 @@ export function getAllowedProductImageUrl(
 
     if (
       parsedUrl.protocol === 'https:' &&
-      PRODUCT_IMAGE_HOSTS.includes(parsedUrl.hostname)
+      CJ_IMAGE_HOSTS.includes(parsedUrl.hostname)
     ) {
       return parsedUrl.toString();
     }
