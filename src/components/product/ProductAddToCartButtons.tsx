@@ -5,6 +5,7 @@ import type { Money } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
 import type { CartLineVariant } from '@/lib/cart';
 import { useCart } from '@/components/cart/CartProvider';
+import Button from '@/components/ui/Button';
 import { trackKlaviyoBuyNowClicked } from '@/lib/klaviyo/client';
 
 type ProductAddToCartButtonsProps = {
@@ -76,24 +77,20 @@ export default function ProductAddToCartButtons({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={handleAddToCart}
+        <Button
+          variant="outline"
+          onClick={() => handleAddToCart()}
           disabled={disabled}
-          aria-disabled={disabled}
-          className="min-h-11 flex-1 cursor-pointer rounded-lg border border-brand-600 px-6 text-sm font-bold text-brand-600 transition-all duration-200 hover:bg-brand-600/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-border-strong disabled:text-ink-faint disabled:hover:bg-transparent disabled:active:scale-100"
         >
           Add to Cart
-        </button>
-        <button
-          type="button"
-          onClick={handleBuyNow}
+        </Button>
+        <Button
+          variant="solid"
+          onClick={() => handleBuyNow()}
           disabled={disabled}
-          aria-disabled={disabled}
-          className="bg-brand-gradient min-h-11 flex-1 cursor-pointer rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-none disabled:bg-surface-sunken disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
         >
           Buy Now
-        </button>
+        </Button>
       </div>
       {/*
         Always in the DOM so the reason is announced when it appears, rather

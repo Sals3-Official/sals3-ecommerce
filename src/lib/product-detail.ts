@@ -36,6 +36,17 @@ export type ProductVariant = {
   availability: ProductAvailability;
   /** Absent for a product with no option axes — one implicit variant. */
   options?: ProductOptionSelection[];
+  /**
+   * The supplier's own label for this variant, verbatim — e.g. `Black-1XL`.
+   *
+   * Absent when the supplier reported none, which is every product until the
+   * portal ships the field. It is the only human-readable per-variant string that
+   * exists: `sku` is an `S3V-<hex>` digest and must never be shown to a buyer.
+   *
+   * Supplier-authored and unreviewed — expect `default`, CJK, and junk. Display
+   * it verbatim and **never parse it into option axes**.
+   */
+  label?: string;
 };
 
 /**
@@ -83,6 +94,20 @@ export type ProductDetail = {
   imageAlt: string;
   tone: PlaceholderTone;
   images: ProductImage[];
+  /**
+   * When the portal froze this product's published state, ISO-8601.
+   *
+   * Surfaced for the evidence ledger's Price row, because the price is resolved
+   * once at publish time and frozen onto the offer with its policy layers — so
+   * "fixed when published" is a claim the payload can actually support. It
+   * already arrives on the wire; adding it here is a view-model change, not a
+   * contract change.
+   *
+   * There is deliberately no companion stock-observation date: no such field
+   * exists anywhere in the contract, and the ledger states "not confirmed
+   * recently" rather than inventing one.
+   */
+  publishedAt?: string;
   availability?: ProductAvailability;
   description?: ProductDescriptionBlock[];
   variants?: ProductVariant[];
