@@ -14,7 +14,6 @@ import {
   toHomeCategory,
   toHomeProduct,
   toProductDetail,
-  STOREFRONT_PRODUCT_REVALIDATE_SECONDS,
 } from './products';
 
 const validProductsResponse = {
@@ -280,14 +279,9 @@ describe('fetchProductBySlug', () => {
     expect(requestedUrl).toBe(
       `${DEFAULT_STOREFRONT_API_URL}${STOREFRONT_PRODUCTS_PATH}/air-cooler`,
     );
-    // The single-product read is a cached database read upstream, unlike the
-    // list feed, which stays `no-store` so a token-less build cannot bake the
-    // home page's placeholder fallback into static output.
+    // Single-product reads stay live so portal publication appears immediately.
     expect(requestedInit).toMatchObject({
-      next: {
-        revalidate: STOREFRONT_PRODUCT_REVALIDATE_SECONDS,
-        tags: ['storefront-product', 'storefront-product:air-cooler'],
-      },
+      cache: 'no-store',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer secret',
