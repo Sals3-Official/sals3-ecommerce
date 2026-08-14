@@ -32,7 +32,7 @@ export class CheckoutValidationError extends Error {
 function variantLabel(variant: ProductVariantPayload): string | undefined {
   const options = variant.options ?? [];
 
-  if (options.length === 0) return undefined;
+  if (options.length === 0) return variant.sku;
 
   return options.map((option) => option.value).join(' · ');
 }
@@ -48,7 +48,7 @@ function selectVariant(
   if (line.variantId === undefined) {
     if (variants.length === 1) return variants[0];
     throw new CheckoutValidationError(
-      `${product.title} needs an option selection before checkout.`,
+      `${product.title} needs a variant before checkout. Remove it and add it again.`,
     );
   }
 

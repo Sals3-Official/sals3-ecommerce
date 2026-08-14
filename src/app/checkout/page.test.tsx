@@ -42,7 +42,7 @@ describe('Checkout page', () => {
     expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/address line 1/i)).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /pay with stripe/i }),
+      screen.getByRole('button', { name: /^payment$/i }),
     ).toBeInTheDocument();
   });
 
@@ -62,9 +62,7 @@ describe('Checkout page', () => {
 
     renderWithCart(<CheckoutPage />);
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: /pay with stripe/i }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: /^payment$/i }));
 
     expect(
       screen.getByText(/check the highlighted address fields/i),

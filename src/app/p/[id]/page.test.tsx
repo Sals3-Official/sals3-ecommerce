@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
 import renderWithCart from '../../../../test/render-with-cart';
@@ -193,6 +194,72 @@ describe('Product page', () => {
     // on rather than a silently grey button.
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
     expect(screen.getByText(/choose a colour/i)).toBeInTheDocument();
+  });
+
+  it('renders a fallback Variant selector and preselects a no-option variant', async () => {
+    mockFetch({
+      productOverrides: {
+        priceMinor: 451,
+        variants: [
+          {
+            id: 'v-expensive',
+            sku: 'S3V-12D76F1B5376',
+            currency: 'USD',
+            priceMinor: 780,
+            availability: 'AVAILABLE',
+          },
+          {
+            id: 'v-base',
+            sku: 'S3V-2268B366F762',
+            currency: 'USD',
+            priceMinor: 451,
+            availability: 'AVAILABLE',
+          },
+        ],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(
+      screen.getByRole('radiogroup', { name: /^variant$/i }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('radio', { name: /s3v-2268b366f762 · us\$4\.51/i }),
+    ).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+  });
+
+  it('adds the selected no-option variant id to the cart', async () => {
+    mockFetch({
+      productOverrides: {
+        priceMinor: 451,
+        variants: [
+          {
+            id: 'v-base',
+            sku: 'S3V-2268B366F762',
+            currency: 'USD',
+            priceMinor: 451,
+            availability: 'AVAILABLE',
+          },
+        ],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem(CART_STORAGE_KEY)).toContain('v-base');
+    });
+    expect(window.localStorage.getItem(CART_STORAGE_KEY)).toContain(
+      'S3V-2268B366F762 · US$4.51',
+    );
   });
 
   it('adds the product to the cart when Add to Cart is clicked', async () => {

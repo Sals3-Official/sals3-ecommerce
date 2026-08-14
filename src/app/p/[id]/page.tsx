@@ -133,14 +133,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const relatedProducts = await getRelatedProducts(detail.category, detail.id);
-  // A selector only makes sense with something to choose between. With one
-  // variant — or none — the server-rendered price box is used instead, so the
-  // page ships no variant JavaScript it cannot use.
-  const hasChoices =
-    detail.variants !== undefined &&
-    detail.variants.length > 1 &&
-    detail.options !== undefined &&
-    detail.options.length > 0;
+  const hasVariants =
+    detail.variants !== undefined && detail.variants.length > 0;
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
@@ -161,7 +155,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <ProductGallery images={detail.images} tone={detail.tone} />
           <div className="flex flex-col gap-4">
             <h1 className="text-xl font-bold text-pretty">{detail.title}</h1>
-            {hasChoices ? (
+            {hasVariants ? (
               <ProductPurchasePanel
                 productId={detail.id}
                 title={detail.title}
