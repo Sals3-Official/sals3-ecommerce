@@ -22,7 +22,7 @@
  * failure mode here that misrepresents a price.
  */
 
-export const SUPPORTED_CURRENCIES = ['USD'] as const;
+export const SUPPORTED_CURRENCIES = ['USD', 'AUD'] as const;
 
 export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number];
 
@@ -43,6 +43,7 @@ const CURRENCY_FORMATS: Record<
   { locale: string; symbol: string }
 > = {
   USD: { locale: 'en-US', symbol: 'US$' },
+  AUD: { locale: 'en-AU', symbol: 'A$' },
 };
 
 export function money(

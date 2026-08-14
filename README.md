@@ -101,6 +101,36 @@ SALS3_PORTAL_API_URL=http://localhost:3001
 SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 ```
 
+## Checkout and Stripe
+
+`/cart` now sends buyers to `/checkout`. Checkout reads the browser-local cart
+for display, asks for contact and delivery address, then the server re-fetches
+each product from the Sals3 Portal storefront API before creating a Stripe
+Hosted Checkout Session. Browser cart prices are never trusted for payment.
+
+Required Stripe values in `.env.local` or host secrets:
+
+```text
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+STRIPE_SECRET_KEY=<test or restricted secret key>
+STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
+STRIPE_PAYMENT_METHOD_CONFIGURATION_ID=<pmc_... config for card + eligible bank debit>
+```
+
+Use a Stripe restricted key (`rk_...`) instead of `sk_...` when possible. Never
+commit Stripe keys. The checkout integration uses dynamic payment methods and
+passes `STRIPE_PAYMENT_METHOD_CONFIGURATION_ID`; it deliberately does not pass
+`payment_method_types`. Cards work in the current USD flow. Bank debit appears
+only when Stripe says the session currency, buyer details, account, and payment
+method configuration are eligible. AU BECS requires an AUD cart; this app does
+not convert USD to AUD.
+
+`/checkout/success` verifies the Stripe Session server-side before showing the
+payment status. `/api/stripe/webhook` verifies Stripe signatures and accepts
+checkout completion, async-payment-failed, and expired events. This is still a
+Stripe-only v1: no Sals3 order database, supplier fulfillment, refunds ledger,
+or tax automation is created here.
+
 ## Authentication
 
 Two ways in: Google, and email with a password. Both end at the same 24-hour
@@ -235,8 +265,8 @@ analytics.
 Tracked v1 events are limited to behavior the app really supports today:
 `Viewed Product`, Klaviyo's recently viewed item payload, `Added to Cart`,
 `Buy Now Clicked`, `Cart Viewed`, `Cart Quantity Changed`, and
-`Cart Item Removed`. Purchase, checkout, fulfilled, canceled, and refunded
-events are intentionally deferred because `/checkout`, orders, and payment
+`Cart Item Removed`. Purchase, paid order, fulfilled, canceled, and refunded
+events are intentionally deferred because Sals3 order persistence and payment
 reconciliation do not exist yet.
 
 Profile enrichment sends verified Firebase profile fields when available

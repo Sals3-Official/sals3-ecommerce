@@ -50,6 +50,9 @@ describe('Cart page', () => {
     ).toBeInTheDocument();
     // One line at qty 2, so the line total and the cart subtotal match.
     expect(screen.getAllByText('US$1,998')).toHaveLength(2);
+    expect(
+      screen.getByRole('link', { name: /proceed to checkout/i }),
+    ).toHaveAttribute('href', '/checkout');
   });
 
   it('is not indexed', () => {

@@ -43,7 +43,7 @@ describe('next.config header rules', () => {
     expect(SECURITY_HEADERS).toContainEqual({ key, value });
   });
 
-  it.each(['/login', '/signup'])(
+  it.each(['/login', '/signup', '/checkout/:path*'])(
     'marks %s as never cacheable',
     async (source) => {
       const rules = await getHeaderRules();
@@ -54,10 +54,10 @@ describe('next.config header rules', () => {
     },
   );
 
-  it('covers every credential screen and nothing else', async () => {
+  it('covers every sensitive browser screen and no API route', async () => {
     // API routes send `no-store` from `noStoreJson`, so listing them here too
     // would create a second place to keep in step.
-    expect(NO_STORE_ROUTES).toEqual(['/login', '/signup']);
+    expect(NO_STORE_ROUTES).toEqual(['/login', '/signup', '/checkout/:path*']);
     expect(NO_STORE_ROUTES.some((route) => route.startsWith('/api'))).toBe(
       false,
     );
