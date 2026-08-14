@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-11
+updated: 2026-08-15
 status: canonical
 authority: navigation
 owner_approved: true
@@ -105,6 +105,7 @@ related:
 - [[sals3-session-2026-08-11-part15-cj-three-lane-discovery|CJ Three-Lane Discovery Session]] — `sals3-portal` implementation evidence for one-time bootstrap, incremental windows, bounded audit, webhook subscription priority, points refill governance, and automatic official-CJ start. Migration generated, not applied; no live completeness claim.
 - [[sals3-portal-canonical-product-catalog-backend|Canonical Product Catalog Backend]] — `sals3-portal` persistence for Product, ProductRevision, options, variants, seller-scoped Offers, the exact provider references, and the supplier binding. Persistence only: nothing publishes, prices, sells, or confirms stock, no UI is wired, and migration `0013_cold_timeslip` is generated and not applied.
 - [[sals3-portal-cj-to-sals3-category-mapping-pilot|CJ to Sals3 Category Mapping Pilot]] — `sals3-portal` persistence and resolver turning a CJ category id into a Sals3 Taxonomy v0 code through approved, versioned mappings, plus the taxonomy form presets. Foundation only: no mapping rule is seeded, no category branch is approved, there is no UI because no platform category-governance permission exists, and migration `0014_red_swordsman` is generated and not applied.
+- [[sals3-session-2026-08-15-part46-cj-evidence-field-capture-and-points-ledger|CJ Evidence Field Capture and Points Ledger]] — three CJ evidence fields already paid for and discarded (product description, variant dimensions, per-country stock origin/"which warehouse"), a zero-new-call fix for all three, and a corrected CJ points journey from All Supplier Products through a published storefront listing (evidence capture is 20 points per candidate, not 30, per [[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]). The warehouse fix is display-only and can ship independently of the other two. Designed, not built.
 
 ## Domains not started yet
 
