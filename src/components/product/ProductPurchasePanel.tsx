@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Money } from '@/lib/money';
+import { formatMoney, type Money } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
 import type {
   ProductAvailability,
@@ -9,6 +9,7 @@ import type {
   ProductVariant,
 } from '@/lib/product-detail';
 import {
+  defaultVariantFor,
   firstUnchosenAxis,
   initialSelection,
   optionSummary,
@@ -18,6 +19,7 @@ import {
 import ProductAddToCartButtons from '@/components/product/ProductAddToCartButtons';
 import ProductAvailabilityNotice from '@/components/product/ProductAvailabilityNotice';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
+import ProductVariantFallbackSelector from '@/components/product/ProductVariantFallbackSelector';
 import ProductVariantSelector from '@/components/product/ProductVariantSelector';
 
 type ProductPurchasePanelProps = {
@@ -69,10 +71,21 @@ export default function ProductPurchasePanel({
   variants,
   shipLine,
 }: ProductPurchasePanelProps) {
+  const hasOptionAxes = axes.length > 0;
   const [selection, setSelection] = useState<VariantSelection>(() =>
     initialSelection(variants, axes),
   );
-  const selected = resolveVariant(variants, axes, selection);
+  const [fallbackVariantId, setFallbackVariantId] = useState<string>(() => {
+    if (hasOptionAxes) return '';
+
+    return defaultVariantFor(variants, basePrice)?.id ?? '';
+  });
+  const fallbackSelected =
+    variants.find((variant) => variant.id === fallbackVariantId) ??
+    defaultVariantFor(variants, basePrice);
+  const selected = hasOptionAxes
+    ? resolveVariant(variants, axes, selection)
+    : fallbackSelected;
   const missingAxis = firstUnchosenAxis(axes, selection);
 
   const price = selected?.price ?? basePrice;
@@ -84,18 +97,26 @@ export default function ProductPurchasePanel({
     }
 
     if (selected === undefined) {
-      return 'That combination is not available.';
+      return hasOptionAxes
+        ? 'That combination is not available.'
+        : 'Choose a variant.';
     }
 
     if (selected.availability === 'UNAVAILABLE') {
-      return 'This option is currently unavailable.';
+      return hasOptionAxes
+        ? 'This option is currently unavailable.'
+        : 'This variant is currently unavailable.';
     }
 
     return undefined;
   }
 
   const reason = reasonFor();
-  const summary = selected === undefined ? undefined : optionSummary(selected);
+  const summary =
+    selected === undefined
+      ? undefined
+      : (optionSummary(selected) ??
+        `${selected.sku} · ${formatMoney(selected.price)}`);
   const cartVariant =
     selected === undefined
       ? undefined
@@ -110,14 +131,22 @@ export default function ProductPurchasePanel({
       {shipLine === undefined ? null : (
         <p className="-mt-3 text-sm text-ink-muted">{shipLine}</p>
       )}
-      <ProductVariantSelector
-        axes={axes}
-        variants={variants}
-        selection={selection}
-        onChange={(axisName, value) =>
-          setSelection((current) => ({ ...current, [axisName]: value }))
-        }
-      />
+      {hasOptionAxes ? (
+        <ProductVariantSelector
+          axes={axes}
+          variants={variants}
+          selection={selection}
+          onChange={(axisName, value) =>
+            setSelection((current) => ({ ...current, [axisName]: value }))
+          }
+        />
+      ) : (
+        <ProductVariantFallbackSelector
+          variants={variants}
+          selectedVariantId={selected?.id}
+          onChange={setFallbackVariantId}
+        />
+      )}
       <ProductAvailabilityNotice availability={availability} />
       <ProductAddToCartButtons
         productId={productId}

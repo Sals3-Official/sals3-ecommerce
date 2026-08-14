@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { usd } from './money';
 import type { ProductOptionAxis, ProductVariant } from './product-detail';
 import {
+  defaultVariantFor,
   firstUnchosenAxis,
   initialSelection,
   isValueSelectable,
@@ -112,6 +113,29 @@ describe('optionSummary', () => {
 
   it('returns nothing for a variant with no axes', () => {
     expect(optionSummary(variant('plain', []))).toBeUndefined();
+  });
+});
+
+describe('defaultVariantFor', () => {
+  it('chooses the available variant matching the base price', () => {
+    const variants = [
+      { ...variant('expensive', []), price: usd(780) },
+      { ...variant('base', []), price: usd(451) },
+    ];
+
+    expect(defaultVariantFor(variants, usd(451))?.id).toBe('base');
+  });
+
+  it('falls back to the first available variant', () => {
+    const variants = [
+      {
+        ...variant('unavailable-match', [], 'UNAVAILABLE'),
+        price: usd(451),
+      },
+      { ...variant('available', []), price: usd(780) },
+    ];
+
+    expect(defaultVariantFor(variants, usd(451))?.id).toBe('available');
   });
 });
 

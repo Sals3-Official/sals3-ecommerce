@@ -155,7 +155,7 @@ export default function CheckoutPageClient() {
                 onClick={submit}
                 className="bg-brand-gradient min-h-11 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-none disabled:bg-surface-sunken disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
               >
-                {isPending ? 'Opening Stripe...' : 'Pay with Stripe'}
+                {isPending ? 'Opening payment...' : 'Payment'}
               </button>
             </div>
             <p className="mt-3 text-xs text-ink-faint">

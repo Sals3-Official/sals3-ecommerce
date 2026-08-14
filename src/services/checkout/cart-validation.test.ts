@@ -89,4 +89,57 @@ describe('validateCheckoutCart', () => {
       ]),
     ).rejects.toThrow(/no longer available/i);
   });
+
+  it('rejects old multi-variant carts without a variant id clearly', async () => {
+    mockedFetchProductBySlug.mockResolvedValue(
+      product({
+        variants: [
+          {
+            id: 'v1',
+            sku: 'SKU-1',
+            priceMinor: 2000,
+            currency: 'USD',
+            availability: 'AVAILABLE',
+          },
+          {
+            id: 'v2',
+            sku: 'SKU-2',
+            priceMinor: 2500,
+            currency: 'USD',
+            availability: 'AVAILABLE',
+          },
+        ],
+      }),
+    );
+
+    await expect(
+      validateCheckoutCart([{ productId: 'jacket', quantity: 1 }]),
+    ).rejects.toThrow(/remove it and add it again/i);
+  });
+
+  it('shows the selected SKU for variants without option labels', async () => {
+    mockedFetchProductBySlug.mockResolvedValue(
+      product({
+        variants: [
+          {
+            id: 'v1',
+            sku: 'S3V-2268B366F762',
+            priceMinor: 451,
+            currency: 'USD',
+            availability: 'AVAILABLE',
+          },
+        ],
+      }),
+    );
+
+    const result = await validateCheckoutCart([
+      { productId: 'jacket', variantId: 'v1', quantity: 1 },
+    ]);
+
+    expect(result.lines[0]?.title).toBe('Jacket - S3V-2268B366F762');
+    expect(result.lines[0]?.unitPrice).toEqual({
+      amountMinor: 451,
+      currency: 'USD',
+    });
+  });
 });

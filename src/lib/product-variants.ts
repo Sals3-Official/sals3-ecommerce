@@ -1,3 +1,4 @@
+import type { Money } from '@/lib/money';
 import type { ProductOptionAxis, ProductVariant } from '@/lib/product-detail';
 
 /**
@@ -99,6 +100,32 @@ export function optionSummary(variant: ProductVariant): string | undefined {
   if (options.length === 0) return undefined;
 
   return options.map((option) => option.value).join(' · ');
+}
+
+function sameMoney(left: Money, right: Money): boolean {
+  return (
+    left.amountMinor === right.amountMinor && left.currency === right.currency
+  );
+}
+
+/**
+ * Fallback variant for products whose variants have no buyer-facing option
+ * axes. Prefer the available variant matching the product's displayed base
+ * price, because that keeps the initial PDP price honest.
+ */
+export function defaultVariantFor(
+  variants: ProductVariant[],
+  basePrice: Money,
+): ProductVariant | undefined {
+  const available = variants.filter(
+    (variant) => variant.availability !== 'UNAVAILABLE',
+  );
+  const candidates = available.length > 0 ? available : variants;
+
+  return (
+    candidates.find((variant) => sameMoney(variant.price, basePrice)) ??
+    candidates[0]
+  );
 }
 
 /** The first axis with nothing chosen, for the "choose a colour" hint. */
