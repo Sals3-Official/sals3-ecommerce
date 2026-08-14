@@ -297,6 +297,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[sals3-session-2026-08-15-part45-variant-axes-design-and-free-change-detection]] — supplier change detection needs **zero CJ points** (`supplier_snapshots` is current, `provider_variant_references` is frozen at draft, so the diff is a `SELECT`); why variant axes cannot be derived but their *structure* can; the mapping design settled against Lazada/Shopee; and the full work list.
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]]
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]]
 - [[sals3-session-2026-08-05-part02-footer-and-pagination]]
