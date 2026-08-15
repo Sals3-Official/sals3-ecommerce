@@ -335,6 +335,49 @@ describe('Product page', () => {
     expect(screen.getByText(/one of ten/i)).toBeVisible();
   });
 
+  it('switches same-page variants without another product read', async () => {
+    const fetchMock = mockFetch({
+      productOverrides: { priceMinor: 451, variants: manyVariants() },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    fetchMock.mockClear();
+    fireEvent.click(screen.getByRole('link', { name: /option 10/i }));
+
+    expect(window.location.pathname).toBe('/p/air-cooler');
+    expect(window.location.search).toBe('?variant=v-9');
+    expect(screen.queryByText('From')).not.toBeInTheDocument();
+    expect(screen.getAllByText('US$20')).toHaveLength(2);
+    expect(screen.getByText(/one of ten/i)).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('syncs the selected variant when browser history changes', async () => {
+    mockFetch({
+      productOverrides: { priceMinor: 451, variants: manyVariants() },
+    });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+        searchParams: Promise.resolve({ variant: 'v-9' }),
+      }),
+    );
+
+    expect(screen.queryByText('From')).not.toBeInTheDocument();
+
+    window.history.pushState(null, '', '/p/air-cooler');
+    window.dispatchEvent(new Event('popstate'));
+
+    await waitFor(() => {
+      expect(screen.getByText('From')).toBeVisible();
+    });
+    expect(screen.getByText(/ten supplier options/i)).toBeVisible();
+  });
+
   it('falls back to the default variant when ?variant= is unrecognised', async () => {
     mockFetch({
       productOverrides: { priceMinor: 451, variants: manyVariants() },

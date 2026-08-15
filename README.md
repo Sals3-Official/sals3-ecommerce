@@ -92,7 +92,9 @@ section (`MAX_CLIENT_SIDE_SEARCH_PAGES`). Replace it with a direct
 category-filter endpoint once the portal adds one. It also de-duplicates by
 product `id` first, because the same product can legitimately appear in both
 sections and a duplicate `id` in the related grid throws React's
-"Encountered two children with the same key".
+"Encountered two children with the same key". The PDP wraps this related-products
+read in a 30-second Next cache so variant URLs and nearby product views do not
+repeat the four-list scan; the main product detail read remains live.
 
 Required `.env.local` values:
 
@@ -511,6 +513,12 @@ The product is read once per request via React `cache()`, shared by
 `generateMetadata` and the page. They used to fetch independently, and
 `cache: 'no-store'` defeats Next's own fetch memoisation, so every PDP made two
 identical upstream calls.
+
+Product-card and variant-option links keep their normal `href`s, but disable
+Next prefetch because each PDP URL is server-rendered and reads the storefront.
+After hydration, a normal left-click on a variant option updates
+`?variant=<id>` and the price from the already-loaded payload; direct URL visits,
+reloads, copied links, and modified clicks still use the server-rendered route.
 
 Composed from small single-purpose components under `src/components/product/`:
 

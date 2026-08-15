@@ -38,6 +38,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/p/${product.id}`}
+      prefetch={false}
       className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-white transition hover:-translate-y-1 hover:border-brand-600 hover:no-underline hover:shadow-[0_16px_34px_rgba(11,44,77,0.15)] active:scale-[0.98]"
     >
       <ProductCardImage

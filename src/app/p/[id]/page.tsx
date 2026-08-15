@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
+import { unstable_cache as unstableCache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
@@ -127,23 +128,40 @@ export async function generateMetadata({
   };
 }
 
-/**
- * Related products are best-effort: an empty rail is a smaller loss than a
- * failed page, so this one failure stays caught.
- */
-async function getRelatedProducts(
-  category: string,
-  excludeId: string,
-): Promise<HomeProduct[]> {
-  try {
+const getCachedRelatedProducts = unstableCache(
+  async (
+    category: string,
+    excludeId: string,
+    limit: number,
+  ): Promise<HomeProduct[]> => {
     const products = await fetchProductsByCategory(category, {
-      limit: RELATED_PRODUCT_COUNT + 1,
+      limit: limit + 1,
     });
 
     return products
       .filter((product) => product.slug !== excludeId)
-      .slice(0, RELATED_PRODUCT_COUNT)
+      .slice(0, limit)
       .map(toHomeProduct);
+  },
+  ['pdp-related-products'],
+  { revalidate: 30, tags: ['pdp-related-products'] },
+);
+
+/**
+ * Related products are best-effort and deliberately short-cached: the main PDP
+ * product stays live, while this non-critical rail stops re-scanning the
+ * storefront lists on every variant URL.
+ */
+export async function getRelatedProducts(
+  category: string,
+  excludeId: string,
+): Promise<HomeProduct[]> {
+  try {
+    return await getCachedRelatedProducts(
+      category,
+      excludeId,
+      RELATED_PRODUCT_COUNT,
+    );
   } catch {
     return [];
   }

@@ -36,6 +36,8 @@ const CLIENT_ENTRY_POINTS = [
   'components/klaviyo/KlaviyoViewedProduct.tsx',
   'components/layout/HeaderAuthContext.tsx',
   'components/product/ProductAddToCartButtons.tsx',
+  'components/product/ProductOptionList.tsx',
+  'components/product/ProductRecordPanel.tsx',
   // The variant path and the gallery, added 2026-08-13. `ProductGallery` was
   // already a client component and simply missing from this list.
   'components/product/ProductGallery.tsx',
