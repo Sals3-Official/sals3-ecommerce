@@ -59,7 +59,7 @@ related:
   - "[[sals3-session-2026-08-14-part42-admin-portal-audit-trail-pr-status-correction]]"
   - "[[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]]"
   - "[[sals3-session-2026-08-15-part44-storefront-variant-label-and-retail-price-floor]]"
-  - "[[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]]"
+  - "[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]"
 ---
 
 # Sals3 - Current State Cache
@@ -92,6 +92,7 @@ related:
 
 ### Implemented foundations
 
+- **Option mapping wired end to end, supplier change detection shipped, Sals3 Taxonomy replaced with v1 (Google Product Taxonomy) — 2026-08-15, seven PRs merged to `develop`.** The four owner decisions on variant option mapping (mapping UI in Variants & Pricing, required before publish, changes surfacing in the Changes panel, per-seller mapping) are all delivered: read-model exposes the derived proposal, the mapping component is mounted, a server action reaches the writer, and a conditional publish gate blocks an unmapped-but-derivable product without bricking single-variant or non-grid products already live. The Changes panel (`sourceChanges`) is real — a free diff of the draft-time frozen record against the latest captured supplier snapshot, zero CJ calls, guarded by a repository test that scans the module's own source for anything that could reach CJ. Separately, the owner re-authored the category workbook (2026-08-14 19:26): Sals3 Taxonomy v0 (1,345 rows, 29 departments) was replaced with v1 (5,595 rows, 21 departments — the Google Product Taxonomy top levels verbatim) in the application code and local database; the underlying migration and mirror mechanism were already live in production beforehand (evidenced by the mirror category code `CJ-<externalCategoryId>` rendering on live product pages) and are unaffected by the swap — `ACTIVE_TAXONOMY_VERSION` is a plain string tag with no runtime lookup dependency on the newly-seeded rows. Four live products (of 14, not 12) are refused option-mapping because one axis happens to be one-sided today (`deriveOptionSplit` drops the whole product instead of just the constant position) — the actual explanation for "mapping only works on one product," corrected from an earlier missing-labels hypothesis that turned out wrong when checked against all 14 live products. See [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]]. `sals3-portal` PRs [#81](https://github.com/Sals3-Official/sals3-portal/pull/81)-[#87](https://github.com/Sals3-Official/sals3-portal/pull/87) plus the taxonomy v1 follow-up, all merged.
 - Marketplace landing page, header, footer, promo carousel, category row, deals/For You grids, and numbered pagination.
 - Product route `/p/[id]` backed by the current `sals3-portal` single-product API contract.
 - Guest header strip. Real buyer account pages, protected checkout, and role-aware account UI do not exist yet.
@@ -296,7 +297,7 @@ reworked twice more: it shows a compact, Shopee-style read-only value once a
 category is already decided (rather than an always-open search box), and it
 now sits beside Product Name in the editor's Basic Information grid instead
 of as a separate block below it. See
-[[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]].
+[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]].
 
 **This makes [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] stale.**
 ADR-002 still describes "Sals3 Taxonomy v0" (a 1,345-row internal workbook)
@@ -337,7 +338,8 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
-- [[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]] — the real Sals3 Taxonomy v1 (5,595 rows) confirmed live in production; a CJ-mirror data-pollution bug in the category picker's search fixed; the one-time seed endpoint removed now its job is done; the picker reworked to a compact, Shopee-style read-only view once a category is decided, and repositioned beside Product Name. Flags [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] as stale (see the "Active risks" section above).
+- [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]] — the real Sals3 Taxonomy v1 (5,595 rows) confirmed live in production; a CJ-mirror data-pollution bug in the category picker's search fixed; the one-time seed endpoint removed now its job is done; the picker reworked to a compact, Shopee-style read-only view once a category is decided, and repositioned beside Product Name. Flags [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] as stale (see the "Active risks" section above). Continues from part 47 below.
+- [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]] — the seven-PR session (`sals3-portal` PRs #81-#87): option mapping wired end to end, supplier change detection shipped at zero CJ points, and Sals3 Taxonomy replaced with v1 (Google Product Taxonomy) in application code and the local database. Corrects three stale statuses without rewriting history: [[universal-category-variation-taxonomy-reference]] described v0 as canonical (superseded-banner added, v0 kept as history), part 45's frontmatter said "designed-not-built" for work that shipped this session, and [[sals3-portal-cj-to-sals3-category-mapping-pilot]] said the migration was unapplied anywhere (it's now applied locally, not production).
 - [[sals3-session-2026-08-15-part46-cj-evidence-field-capture-and-points-ledger]] — three CJ evidence fields already paid for and silently discarded (description, variant dimensions, per-country stock origin); a zero-new-call fix for all three; and a corrected, re-verified CJ points ledger (20 points/candidate, not 30).
 - [[sals3-session-2026-08-15-part45-variant-axes-design-and-free-change-detection]] — supplier change detection needs **zero CJ points** (`supplier_snapshots` is current, `provider_variant_references` is frozen at draft, so the diff is a `SELECT`); why variant axes cannot be derived but their *structure* can; the mapping design settled against Lazada/Shopee; and the full work list.
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]]

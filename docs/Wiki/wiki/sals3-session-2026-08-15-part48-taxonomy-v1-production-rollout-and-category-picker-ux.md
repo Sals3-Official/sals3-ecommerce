@@ -3,7 +3,7 @@ tags: [sals3, sals3-portal, taxonomy, category-picker, cj-mirror, production-rol
 aliases:
   - Taxonomy v1 Production Rollout
   - Category Picker Compact View
-  - Part 47
+  - Part 48
 created: 2026-08-15
 updated: 2026-08-16
 status: shipped
@@ -21,7 +21,22 @@ related:
   - "[[sals3-skills]]"
 ---
 
-# Sals3 session 2026-08-15/16, part 47 — Taxonomy v1 goes live, and the category picker gets a Shopee-style compact view
+# Sals3 session 2026-08-15/16, part 48 — Taxonomy v1 goes live, and the category picker gets a Shopee-style compact view
+
+> [!NOTE] Numbering note
+> This was originally drafted as "part 47" and briefly merged to `develop`
+> under that name. A separate, earlier session (#88,
+> `docs/session-part47-and-taxonomy-v1`) had already claimed that number for
+> its own note ([[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]])
+> covering `sals3-portal` PRs #81-87 - the actual Taxonomy v1 build (option
+> mapping wired end to end, supplier change detection shipped, Sals3 Taxonomy
+> replaced with v1/Google Product Taxonomy). Neither session could see the
+> other's number was taken, since neither had merged when each checked. That
+> note is chronologically first and rightfully keeps "part 47"; this one is
+> renumbered to "part 48" while resolving #88's merge conflicts against
+> `develop`. Read #88's note first for the taxonomy v1 build itself - this
+> one continues straight from it, covering what broke in production
+> afterward and how the picker's UX was reworked.
 
 The seller-facing Sals3 category picker (`sals3-portal`) was built, shipped
 to production, hit two real production bugs, got fixed, had its one-time
@@ -191,11 +206,13 @@ standalone vault was marked superseded/frozen on 2026-08-04 (commit
 still pointing a fresh agent at the old standalone vault path is handing them
 a dead end.
 
-This note, the [[hot]] updates, and [[sals3-skills]] lesson 75 are that
-turnover prompt's "still pending" vault-update item, now done. Committed on
-branch `docs/taxonomy-v1-production-rollout-session-note` (off `develop`),
-following this vault's own git-safety rule (feature/chore branch + PR, never
-a direct commit to `develop`/`main`) - opened as its own PR rather than
-folded into the still-open, un-PR'd `docs/cj-evidence-field-capture-points-ledger`
-branch (part 46's note, pushed but never opened as a PR - a separate,
-already-content-complete unit of work, left untouched here).
+This note, the [[hot]] updates, and [[sals3-skills]] lesson 75 were first
+committed on branch `docs/taxonomy-v1-production-rollout-session-note` (off
+`develop`) and opened as PR #89 - which merged (2026-08-15) before a
+follow-up commit renaming this note from "part 47" to "part 48" could be
+included, orphaning that fix (see [[sals3-skills]] lesson 73 for this exact
+failure mode - a merged PR can orphan uncommitted follow-up work from the
+same session). Rather than opening a third PR for a one-file rename, the fix
+landed here instead, folded into resolving #88's own merge conflicts against
+`develop` - both notes needed the same renumbering fix at the same time, and
+#88 was already touching `hot.md` and adjacent notes for unrelated reasons.
