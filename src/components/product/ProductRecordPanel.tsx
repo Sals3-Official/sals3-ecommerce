@@ -1,5 +1,17 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import type { ProductDetail, ProductVariant } from '@/lib/product-detail';
-import { optionSummary, variantCountInWords } from '@/lib/product-variants';
+import {
+  defaultVariantFor,
+  optionSummary,
+  variantById,
+  variantCountInWords,
+} from '@/lib/product-variants';
+import {
+  PRODUCT_VARIANT_CHANGE_EVENT,
+  type ProductVariantChangeDetail,
+} from '@/lib/product-variant-events';
 import Card, { CardSection } from '@/components/ui/Card';
 import ProductAddToCartButtons from '@/components/product/ProductAddToCartButtons';
 import ProductEvidenceLedger from '@/components/product/ProductEvidenceLedger';
@@ -34,9 +46,9 @@ type ProductRecordPanelProps = {
  * it is a single bounded panel divided by hairlines, in the order a buyer needs:
  * what it costs, what to choose, how to buy, and what is actually known.
  *
- * A **server** component. Selection lives in the URL, so no price state and no
- * client JavaScript is involved in rendering money — which is what keeps the page
- * compliant with ADR-016's "no client-only price mutation after paint".
+ * Initial selection still arrives from the server-rendered URL. After hydration,
+ * same-page option clicks reuse the already-loaded variant payload so the buyer
+ * does not pay a fresh PDP request for every chip.
  *
  * `ProductShippingCard` used to sit below this panel claiming shipping is quoted
  * at checkout. It is gone: no quote happens, nothing is added at checkout, and
@@ -47,27 +59,69 @@ export default function ProductRecordPanel({
   selectedVariant,
   selectedFromUrl,
 }: ProductRecordPanelProps) {
-  const variants = detail.variants ?? [];
-  const axes = detail.options ?? [];
+  const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
+  const axes = useMemo(() => detail.options ?? [], [detail.options]);
   const hasOptions = variants.length > 1;
-  const price = selectedVariant?.price ?? detail.price;
-  const availability = selectedVariant?.availability ?? detail.availability;
-  const unavailable = selectedVariant?.availability === 'UNAVAILABLE';
+  const hasOptionAxes = axes.length > 0;
+  const [selectedVariantId, setSelectedVariantId] = useState(
+    selectedVariant?.id,
+  );
+  const [selectionCameFromUrl, setSelectionCameFromUrl] =
+    useState(selectedFromUrl);
+  const selected =
+    variantById(variants, selectedVariantId) ??
+    (hasOptionAxes ? undefined : defaultVariantFor(variants, detail.price));
+  const price = selected?.price ?? detail.price;
+  const availability = selected?.availability ?? detail.availability;
+  const unavailable = selected?.availability === 'UNAVAILABLE';
   // Only reachable on an axes product, where nothing is preselected.
-  const unchosen = axes.length > 0 && selectedVariant === undefined;
+  const unchosen = hasOptionAxes && selected === undefined;
 
   // "From" only while the figure is the floor of a range the buyer has not
   // narrowed. Once a variant is chosen the price is that variant's exact price
   // and the qualifier would be false.
-  const showFrom = hasOptions && !selectedFromUrl;
+  const showFrom = hasOptions && !selectionCameFromUrl;
 
   // Named options first, then the supplier's label. Never the SKU: a cart line
   // reading `S3V-2268B366F762` tells a buyer nothing about what they added, and
   // an absent sub-label is better than a digest.
   const summary =
-    selectedVariant === undefined
+    selected === undefined
       ? undefined
-      : (optionSummary(selectedVariant) ?? selectedVariant.label);
+      : (optionSummary(selected) ?? selected.label);
+
+  useEffect(() => {
+    function selectVariant(variantId: string | undefined) {
+      const next = variantById(variants, variantId);
+
+      setSelectedVariantId(next?.id);
+      setSelectionCameFromUrl(next !== undefined);
+    }
+
+    function handlePopState() {
+      selectVariant(
+        new URLSearchParams(window.location.search).get('variant') ?? undefined,
+      );
+    }
+
+    function handleVariantChange(event: Event) {
+      const { variantId } = (event as CustomEvent<ProductVariantChangeDetail>)
+        .detail;
+
+      selectVariant(variantId);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener(PRODUCT_VARIANT_CHANGE_EVENT, handleVariantChange);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener(
+        PRODUCT_VARIANT_CHANGE_EVENT,
+        handleVariantChange,
+      );
+    };
+  }, [variants]);
 
   /**
    * Context under the price. Never the SKU: it is a SHA-256 digest and means
@@ -81,10 +135,10 @@ export default function ProductRecordPanel({
 
     const total = variantCountInWords(variants.length).toLowerCase();
 
-    if (selectedFromUrl && selectedVariant !== undefined) {
-      return selectedVariant.label === undefined
+    if (selectionCameFromUrl && selected !== undefined) {
+      return selected.label === undefined
         ? `One of ${total} options`
-        : `${selectedVariant.label} · one of ${total}`;
+        : `${selected.label} · one of ${total}`;
     }
 
     return `${variantCountInWords(variants.length)} supplier options`;
@@ -111,7 +165,7 @@ export default function ProductRecordPanel({
       <CardSection>
         <ProductPriceDisplay
           price={price}
-          oldPrice={selectedVariant === undefined ? detail.oldPrice : undefined}
+          oldPrice={selected === undefined ? detail.oldPrice : undefined}
           fromLabel={showFrom ? 'From' : undefined}
         />
         {count === undefined ? null : (
@@ -126,7 +180,7 @@ export default function ProductRecordPanel({
           <ProductOptionList
             productId={detail.id}
             variants={variants}
-            selectedVariantId={selectedVariant?.id}
+            selectedVariantId={selected?.id}
             axes={axes}
           />
         </CardSection>
@@ -142,11 +196,11 @@ export default function ProductRecordPanel({
           tone={detail.tone}
           unitPrice={price}
           variant={
-            selectedVariant === undefined
+            selected === undefined
               ? undefined
               : {
-                  id: selectedVariant.id,
-                  sku: selectedVariant.sku,
+                  id: selected.id,
+                  sku: selected.sku,
                   optionSummary: summary,
                 }
           }

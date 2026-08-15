@@ -1,7 +1,25 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { usd } from '@/lib/money';
 import ProductCard, { type CatalogProductCardProduct } from './ProductCard';
+
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    prefetch,
+    children,
+    className,
+  }: AnchorHTMLAttributes<HTMLAnchorElement> & {
+    href: string;
+    prefetch?: boolean;
+    children: ReactNode;
+  }) => (
+    <a href={href} data-prefetch={String(prefetch)} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 const baseProduct: CatalogProductCardProduct = {
   id: 'tactical-pants',
@@ -20,6 +38,7 @@ describe('ProductCard', () => {
 
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '/p/tactical-pants');
+    expect(link).toHaveAttribute('data-prefetch', 'false');
 
     const price = screen.getByText('US$850');
     expect(price).toHaveClass('font-semibold', 'text-[22px]');
