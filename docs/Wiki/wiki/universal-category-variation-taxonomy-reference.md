@@ -2,19 +2,25 @@
 tags: [sals3, catalog, taxonomy, reference, data]
 aliases: [Category Taxonomy Reference, Universal Taxonomy, SKU Variation Engine]
 created: 2026-08-03
-updated: 2026-08-06
-status: canonical
+updated: 2026-08-15
+status: superseded-by-v1
 authority: catalog-data
 owner_approved: true
 related:
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[sals3-ux-build-specification]]"
+  - "[[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]]"
 ---
 
 # Universal Category and Variation Taxonomy - Reference
 
-> [!IMPORTANT] Current decision
+> [!WARNING] Superseded 2026-08-15 - this page describes v0, which no longer exists in `sals3-portal`
+> The owner re-authored the source workbook on 2026-08-14 19:26. Every count below described the *previous* file. `sals3-portal` replaced v0 with **Sals3 Taxonomy v1** on 2026-08-15 - 1,345 rows became **5,595**, 29 L1 departments became **21**, and the 21 are the **Google Product Taxonomy top levels verbatim**. Zero codes survive from v0 to v1. Full detail: [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]].
+>
+> Kept below for history - this is what v0 was, and what ADR-002 approved on 2026-08-06. It is not what is seeded today.
+
+> [!IMPORTANT] Current decision (superseded - see warning above)
 > Approved on 2026-08-06 as the starting **Sals3 Taxonomy v0** under [[ADR-002-sals3-taxonomy-and-cj-category-mapping]]. It is adopted reference data, not a claim that every category branch, attribute preset, CJ mapping, or provenance/license question is production-ready.
 
 ## Provenance
@@ -76,7 +82,9 @@ These patterns are valuable form presets but are relatively coarse for the size 
 - **Not yet pilot-validated:** representative real CJ product mappings and variation behavior.
 - **Not yet production-ready:** full form binding, licensing/provenance determination, operational ownership, and category-by-category QA.
 
-**Persisted in `sals3-portal` as of 2026-08-12.** The hierarchy/codes live in `sals3_categories` and the preset columns in `sals3_category_presets`, both seeded from frozen JSON extracts rather than by reading this workbook at runtime - the application has no `.xlsx` parser and no dependency on this repository being present. The preset table is versioned by `taxonomy_version`, so a corrected extraction is a new version rather than an overwrite of the row a past decision cited. See [[ADR-002-sals3-taxonomy-and-cj-category-mapping#Implementation status - 2026-08-12 (`sals3-portal`)]]. All 1,345 rows remain `ADOPTED`; no branch has earned `pilot_validated` or `production_ready`.
+**Persisted in `sals3-portal` as of 2026-08-12, then replaced 2026-08-15.** The hierarchy/codes live in `sals3_categories` and the preset columns in `sals3_category_presets`, both seeded from frozen JSON extracts rather than by reading this workbook at runtime - the application has no `.xlsx` parser and no dependency on this repository being present. The preset table is versioned by `taxonomy_version`, so a corrected extraction is a new version rather than an overwrite of the row a past decision cited. See [[ADR-002-sals3-taxonomy-and-cj-category-mapping#Implementation status - 2026-08-12 (`sals3-portal`)]]. All 1,345 rows remained `ADOPTED`; no branch earned `pilot_validated` or `production_ready` before the replacement.
+
+**This paragraph now describes a deleted local state.** On 2026-08-15 the owner re-authored the source workbook and the v0 rows described above were deleted from `sals3_categories` and replaced with Sals3 Taxonomy v1 - locally, in a worktree; nothing has reached production. See [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]] for what changed and why deletion rather than retirement was chosen (`taxonomy_status` has no `RETIRED` value).
 
 Do not use the mostly blank `Product Examples & Guidelines` field as the primary automatic classifier. Mapping must combine stable category-path rules, names, attributes, and reviewable confidence, as defined in ADR-002.
 

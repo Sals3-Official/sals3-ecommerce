@@ -7,12 +7,13 @@ aliases:
   - Part 45
 created: 2026-08-15
 updated: 2026-08-15
-status: designed-not-built
+status: shipped-see-part47
 authority: session-record
 owner_approved: false
-implementation_status: storefront-work-uncommitted-by-owner-instruction
+implementation_status: designed-here-shipped-in-part47-merged-to-develop
 related:
   - "[[hot]]"
+  - "[[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]]"
   - "[[sals3-session-2026-08-15-part44-storefront-variant-label-and-retail-price-floor]]"
   - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
   - "[[ADR-016-google-merchant-center-product-feed-compliance]]"
@@ -25,6 +26,9 @@ related:
 Continues [[sals3-session-2026-08-15-part44-storefront-variant-label-and-retail-price-floor]],
 which recorded the merged work (PR #78). This note is the **design and
 investigation** that followed it. Nothing here is built except where stated.
+
+> [!NOTE] Shipped 2026-08-15 - see [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]]
+> Everything below was design-only when written. The option-mapping wiring (§4), the diff-based change detector (§1), and the four owner decisions (§4) all shipped the same day, across PRs #82-#87 - merged to `develop`. The webhook-vs-diff call in §2 held: the diff shipped, not a `STOCK`/`VARIANT`/`PRODUCT` webhook subscription, which remains unbuilt and is the open item part47 flags for automating the refresh trigger. The `no audit trail of supplier change, ever` caveat in §6/Question F was **not** resolved - `supplier_snapshots.evidence` still overwrites in place.
 
 ## 1. The headline finding: supplier change detection costs nothing
 

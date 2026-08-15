@@ -16,15 +16,16 @@ aliases:
     Sals3 Taxonomy v0 Presets,
   ]
 created: 2026-08-12
-updated: 2026-08-12
-status: implemented-pending-migration
+updated: 2026-08-15
+status: migration-applied-locally-taxonomy-replaced-v1-still-zero-mapping-data
 authority: implementation-note
 owner_approved: false
-implementation_status: code-complete-migration-unapplied-no-approved-mapping-data
+implementation_status: migrated-locally-2026-08-15-not-in-production-zero-mapping-rows
 related:
   - '[[hot]]'
   - '[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]'
   - '[[universal-category-variation-taxonomy-reference]]'
+  - '[[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]]'
   - '[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]'
   - '[[ADR-014-admin-portal-platform-governance-and-global-controls]]'
   - '[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]'
@@ -37,11 +38,14 @@ related:
 
 ## Status
 
-Code-complete foundation. **Not approved, not migrated, not connected to any
-screen, and carrying zero mapping data.** Migration `0014_red_swordsman` is
-generated and has **not** been applied to any database. No CJ API call was
-introduced (exact count: **zero**). Nothing was published, no market was
-approved, and no product became sellable as a result of this work.
+> [!NOTE] Updated 2026-08-15 - migration applied, taxonomy replaced, still zero mapping rows
+> The migration below (it landed as `0015_taxonomy_mapping_pilot` once other migrations shifted the numbering, not `0014_red_swordsman`) was applied **locally, in a worktree — not in production.** The taxonomy it maps *into* was also replaced the same day: see [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]] §6 and the superseded-banner on [[universal-category-variation-taxonomy-reference]]. **Zero CJ→Sals3 mapping rows exist anywhere, in either taxonomy version.** The rest of this page describes the pre-2026-08-15 design and is otherwise still accurate — the tables, boundaries, and governance split below did not change; only "unmigrated" became "migrated locally, still empty."
+
+Code-complete foundation, now migrated in a local worktree only. **Not approved
+in production, not connected to any screen, and still carrying zero mapping
+data** even locally. No CJ API call was introduced (exact count: **zero**).
+Nothing was published, no market was approved, and no product became sellable
+as a result of this work.
 
 The single highest-value thing this unblocks is that
 `modules/pricing/resolver.ts`'s `categoryMappingConfidence` input — which
