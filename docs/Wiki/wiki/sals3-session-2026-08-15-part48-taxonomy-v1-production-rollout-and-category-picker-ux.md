@@ -3,7 +3,7 @@ tags: [sals3, sals3-portal, taxonomy, category-picker, cj-mirror, production-rol
 aliases:
   - Taxonomy v1 Production Rollout
   - Category Picker Compact View
-  - Part 47
+  - Part 48
 created: 2026-08-15
 updated: 2026-08-16
 status: shipped
@@ -21,7 +21,22 @@ related:
   - "[[sals3-skills]]"
 ---
 
-# Sals3 session 2026-08-15/16, part 47 — Taxonomy v1 goes live, and the category picker gets a Shopee-style compact view
+# Sals3 session 2026-08-15/16, part 48 — Taxonomy v1 goes live, and the category picker gets a Shopee-style compact view
+
+> [!NOTE] Numbering note
+> This was originally drafted as "part 47." A separate, earlier session (documented
+> in a still-open, unmerged PR at the time of writing - `sals3-ecommerce`
+> `docs/session-part47-and-taxonomy-v1`, "session part47, Taxonomy v1
+> supersession, and status corrections") had already claimed that number for
+> its own note covering `sals3-portal` PRs #81-87 - the actual Taxonomy v1
+> build (option mapping wired end to end, supplier change detection shipped,
+> Sals3 Taxonomy replaced with v1/Google Product Taxonomy). Neither session
+> could see the other's number was taken, since neither had merged to
+> `develop` yet when each checked. That earlier note is chronologically
+> first and rightfully keeps "part 47"; this one is renumbered to "part 48."
+> Read that note first for the taxonomy v1 build itself - this one continues
+> straight from it, covering what broke in production afterward and how the
+> picker's UX was reworked.
 
 The seller-facing Sals3 category picker (`sals3-portal`) was built, shipped
 to production, hit two real production bugs, got fixed, had its one-time

@@ -59,7 +59,7 @@ related:
   - "[[sals3-session-2026-08-14-part42-admin-portal-audit-trail-pr-status-correction]]"
   - "[[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]]"
   - "[[sals3-session-2026-08-15-part44-storefront-variant-label-and-retail-price-floor]]"
-  - "[[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]]"
+  - "[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]"
 ---
 
 # Sals3 - Current State Cache
@@ -296,7 +296,7 @@ reworked twice more: it shows a compact, Shopee-style read-only value once a
 category is already decided (rather than an always-open search box), and it
 now sits beside Product Name in the editor's Basic Information grid instead
 of as a separate block below it. See
-[[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]].
+[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]].
 
 **This makes [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] stale.**
 ADR-002 still describes "Sals3 Taxonomy v0" (a 1,345-row internal workbook)
@@ -337,7 +337,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
-- [[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]] — the real Sals3 Taxonomy v1 (5,595 rows) confirmed live in production; a CJ-mirror data-pollution bug in the category picker's search fixed; the one-time seed endpoint removed now its job is done; the picker reworked to a compact, Shopee-style read-only view once a category is decided, and repositioned beside Product Name. Flags [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] as stale (see the "Active risks" section above).
+- [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]] — the real Sals3 Taxonomy v1 (5,595 rows) confirmed live in production; a CJ-mirror data-pollution bug in the category picker's search fixed; the one-time seed endpoint removed now its job is done; the picker reworked to a compact, Shopee-style read-only view once a category is decided, and repositioned beside Product Name. Flags [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] as stale (see the "Active risks" section above).
 - [[sals3-session-2026-08-15-part46-cj-evidence-field-capture-and-points-ledger]] — three CJ evidence fields already paid for and silently discarded (description, variant dimensions, per-country stock origin); a zero-new-call fix for all three; and a corrected, re-verified CJ points ledger (20 points/candidate, not 30).
 - [[sals3-session-2026-08-15-part45-variant-axes-design-and-free-change-detection]] — supplier change detection needs **zero CJ points** (`supplier_snapshots` is current, `provider_variant_references` is frozen at draft, so the diff is a `SELECT`); why variant axes cannot be derived but their *structure* can; the mapping design settled against Lazada/Shopee; and the full work list.
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]]
