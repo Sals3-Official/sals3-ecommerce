@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-15
+updated: 2026-08-16
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -59,6 +59,7 @@ related:
   - "[[sals3-session-2026-08-14-part42-admin-portal-audit-trail-pr-status-correction]]"
   - "[[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]]"
   - "[[sals3-session-2026-08-15-part44-storefront-variant-label-and-retail-price-floor]]"
+  - "[[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]]"
 ---
 
 # Sals3 - Current State Cache
@@ -281,6 +282,35 @@ Sals3 is described as Australian-based while older vault material assumes a Phil
 
 ~~The current CJ integration is also single-account prototype infrastructure: global `CJ_API_KEY`, shared in-memory token cache, fixed CJ service/base URL, direct CJ catalogue UI, and development `userId`/`sellerId`. No real registration, tenant, encrypted per-account credential, `SupplierConnection`, or provider selector exists.~~ **Done 2026-08-07, third session**: `CjSupplierAdapter` now sits behind a per-connection token cache; `seller_accounts`/`supplier_providers`/`supplier_connections`/`supplier_connection_secrets` exist with AES-256-GCM encrypted credentials; the catalogue UI and the automation pipeline both resolve the seller's own connection instead of the global key. **Storefront feed done 2026-08-07, fourth session**: `/api/storefront/*` now resolves the Sals3 Official Dropshipper's own connection through `src/lib/storefront/supplier-source.ts` and fetches through the same adapter; `src/services/cj/{token,products,enrichment}.ts` are deleted, and `CJ_API_KEY` is read by nothing but `npm run bootstrap:cj`. See [[sals3-session-2026-08-07-part16-storefront-feed-tenant-connection]]. Still true: `identityId` is still the `dev-user` placeholder (no real registration/login exists yet), and this now has a real, verified consequence - see the connection-ownership risk below.
 
+### Sals3 Taxonomy v1 is live in production; the picker was fixed and reworked - and ADR-002 is now stale
+
+The seller-facing Sals3 category picker (`sals3-portal`) is fully shipped:
+the real Sals3 Taxonomy v1 extraction (Google Product Taxonomy, 5,595 rows,
+`CAT-GGL-` code prefix, `src/lib/db/seed-data/sals3-taxonomy-v1.json`) is
+confirmed seeded in production and working. Two production bugs found and
+fixed along the way: the picker's search had no filter on `sals3_categories`
+and matched `cj-mirror.ts`'s auto-created CJ-mirror rows (`CJ-<id>` prefix)
+instead of only the real v1 rows; and production had genuinely 0 real v1 rows
+until a one-time, now-removed seed endpoint ran. The picker's UI was then
+reworked twice more: it shows a compact, Shopee-style read-only value once a
+category is already decided (rather than an always-open search box), and it
+now sits beside Product Name in the editor's Basic Information grid instead
+of as a separate block below it. See
+[[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]].
+
+**This makes [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] stale.**
+ADR-002 still describes "Sals3 Taxonomy v0" (a 1,345-row internal workbook)
+as the adopted, current taxonomy. The actual codebase has already moved to
+Taxonomy v1 as described above, and nothing in this wiki documents v1's
+existence at all outside part47 above (a full-vault grep for "Taxonomy v1",
+"CAT-GGL", "Google Product Taxonomy" found no other hits). Flagged, not yet
+corrected - Bogs asked for "one entry in the ecommerce wiki" to be fixed
+without naming it, and ADR-002 is the strongest candidate by inspection but
+has not been confirmed. Confirm with Bogs, then add a dated follow-up section
+to ADR-002 (do not silently rewrite it) before treating this as resolved.
+Item 8 under "Current build priorities" below (pilot/validate Taxonomy v0
+branches) is affected by the same staleness.
+
 ### Supplier connection ownership is stranded by identity, with no transfer tool
 
 The first real Better Auth login (2026-08-08) exposed a CJ connection created under the `dev-user` placeholder identity, unreachable and unreconnectable by the real account signing in afterward: `supplier_connections_provider_external_hash_key` is a hard unique index on `(providerId, externalAccountLookupHash)`, so the same real CJ account can have exactly one connection row, ever - soft-disconnecting the stale row does not release it for a different seller to claim, only reassigning `sellerAccountId` does. Fixed this time with a one-off script (data correction, not committed - see [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]], [[sals3-skills]] entry 66). **Open**: no permanent tool exists for this reassignment; it will recur for any connection created before a seller's first real login, and eventually between two real sellers contesting the same CJ account.
@@ -307,6 +337,8 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[sals3-session-2026-08-15-part47-taxonomy-v1-production-rollout-and-category-picker-ux]] — the real Sals3 Taxonomy v1 (5,595 rows) confirmed live in production; a CJ-mirror data-pollution bug in the category picker's search fixed; the one-time seed endpoint removed now its job is done; the picker reworked to a compact, Shopee-style read-only view once a category is decided, and repositioned beside Product Name. Flags [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] as stale (see the "Active risks" section above).
+- [[sals3-session-2026-08-15-part46-cj-evidence-field-capture-and-points-ledger]] — three CJ evidence fields already paid for and silently discarded (description, variant dimensions, per-country stock origin); a zero-new-call fix for all three; and a corrected, re-verified CJ points ledger (20 points/candidate, not 30).
 - [[sals3-session-2026-08-15-part45-variant-axes-design-and-free-change-detection]] — supplier change detection needs **zero CJ points** (`supplier_snapshots` is current, `provider_variant_references` is frozen at draft, so the diff is a `SELECT`); why variant axes cannot be derived but their *structure* can; the mapping design settled against Lazada/Shopee; and the full work list.
 - [[sals3-session-2026-08-05-part01-marketplace-landing-page]]
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]]
