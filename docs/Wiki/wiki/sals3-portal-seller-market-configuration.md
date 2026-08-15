@@ -1,4 +1,4 @@
----
+﻿---
 tags:
   [
     sals3,
@@ -9,10 +9,16 @@ tags:
     tenancy,
     audit,
   ]
+aliases: [Seller Market Configuration, Market Rules Profile, Seller Market Profile]
+created: 2026-08-12
+updated: 2026-08-14
+status: implemented-pending-migration
+authority: implementation-note
+owner_approved: false
+implementation_status: superseded-see-2026-08-14-update
 aliases:
   [Seller Market Configuration, Market Rules Profile, Seller Market Profile]
 created: 2026-08-12
-updated: 2026-08-12
 status: implemented-pending-migration
 authority: implementation-note
 owner_approved: false
@@ -23,9 +29,16 @@ related:
   - '[[ADR-014-admin-portal-platform-governance-and-global-controls]]'
   - '[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]'
   - '[[nextjs-component-security-code-rules]]'
+  - '[[sals3-session-2026-08-13-part41-market-rules-profile-fix-and-pricing-rework]]'
 ---
 
 # Seller market configuration (`sals3-portal` `/market-rules`)
+
+> [!DANGER] Superseded 2026-08-14 — read the "Update" section at the end first
+> Everything below this box was accurate on 2026-08-12. Two more commits have since landed
+> (`91b5265`, `166d0ec`) that this note originally did not cover, and the "migration not applied"
+> claim is now contradicted by the repo's own README. See the dated update at the end before
+> relying on anything in the body below as current fact.
 
 ## Status
 
@@ -51,6 +64,7 @@ work exists to prevent. Each is independently resolved and independently
 versioned, and the screen states them separately.
 
 | Concept                            | Source                                              | Current value                           | What it does **not** mean                                                          |
+| ----------------------------------- | ---------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------ |
 | ---------------------------------- | --------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
 | Global catalogue buyer destination | `lib/country-policy/buyer-destination-country.ts`     | `AU`, `PH` (`...-v2-au-ph`), ENABLED    | Not a seller preference, operating country, checkout currency, tax rule, or freight promise. Not seller-editable. |
 | Sals3 business/seller operating    | `lib/country-policy/seller-operating-country.ts`      | `AU` (`seller-operating-country-v1`)    | Never implies a buyer destination. AU appearing in both lists is a coincidence of two separate owner decisions, never a derivation. |
@@ -160,3 +174,39 @@ reconciling that is open follow-up work.
 build, 862 unit/component tests passing (4 skipped), 56 E2E passing (2
 skipped). `npm audit --audit-level=high` clean; 4 moderate advisories remain
 in the `drizzle-kit` dev dependency chain, pre-existing.
+
+---
+
+## Update — 2026-08-14: two more commits, and the migration claim above is now contradicted
+
+> [!WARNING] Verify before trusting the body above
+> This section corrects the body of this note against the real current state of `develop`
+> (HEAD `9186730` at time of writing). The body above is kept unedited, per this vault's own
+> rule against silently rewriting history — read it as "true as of 2026-08-12," not as current.
+
+**Two more commits landed after this note was written, neither documented until now:**
+
+- **`91b5265`** — `fix(orders): read active market profile`. `/orders` had the same
+  `market-config.ts` fixture dependency this note's Problem section describes for
+  `/market-rules`; this commit wires `/orders` onto the real table instead.
+- **`166d0ec`** — reworked the ADR-015 Phase-1 pricing UI (a separate, adjacent feature —
+  see [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]) into an
+  inline, dialog-free flow and renamed "FX adjustment" to "Funding buffer." Both are documented
+  in [[sals3-session-2026-08-13-part41-market-rules-profile-fix-and-pricing-rework]].
+
+**"Migration 0012 not applied to any database" is no longer a safe claim.** The portal's own
+`README.md` (added 2026-08-14) states production `seller_market_profiles` and
+`pricing_category_policies` were both verified empty-but-queryable on 2026-08-14 — for that to
+be true, migrations through at least 0012 must have been applied to production by then. This was
+**not independently re-verified against a live database**; it rests on the repo's own first-party
+README, not a query this note's author ran. How/when the migration actually got applied (manual
+owner action vs. something else) is undetermined and worth asking the owner directly.
+
+**Capability version has moved on.** `src/modules/market-config/capabilities.ts` is now
+`seller-market-capability-v2-au-ph-usd-publishable` (was `v1-au-ph-bounded-pilot` when this note
+was written), and `authorizedSellingCurrencyCodes` is now `['USD']` for both AU and PH — the
+empty-array behavior documented above no longer matches the code. No note anywhere records why or
+when v1 became v2; flagged as a gap, not resolved, here.
+
+**Everything else in the body above** (the four-concepts table, the tenancy/lifecycle rules, the
+UX states, the pilot limits) was re-checked 2026-08-14 and is still accurate to current code.

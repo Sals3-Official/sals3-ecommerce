@@ -1,8 +1,8 @@
----
+﻿---
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-15
+updated: 2026-08-16
 status: canonical
 authority: navigation
 owner_approved: true
@@ -123,6 +123,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-session-2026-08-14-part40-aj-category-mirror-and-draft-evidence-work]] — **reconstructed** from git history (AJ had not logged this either): the biggest item is a real, README-recorded owner decision (Bogs, 2026-08-14) that **the CJ category IS now the Sals3 category** — absent a reviewed ADR-002 mapping, `cj-mirror.ts` auto-creates a 1:1 category mirror at draft creation and at publish, a real relaxation of ADR-002's original reviewed-mapping-only posture that the ADR itself hasn't been updated to reflect. Also: a draft created from a sourcing candidate now actually carries its category/photo/media instead of arriving empty (four small defects fixed together); CJ evidence capture now runs **automatically** (rate-limited) when a draft is created, worth reconciling against [[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]/[[agent-operating-contract]] §9's "explicit, never automatic" posture; and the editor's Publish button is wired to the real storefront publish action with an overclaimed freight-check no longer shown (freight is not actually called anywhere yet). New migration `0019_certain_shooting_star.sql` (`products.sals3_category_l1`) applied locally.
 
 - [[sals3-session-2026-08-15-part46-cj-evidence-field-capture-and-points-ledger]] — three CJ evidence fields already fetched via `/product/query` and `/product/stock/getInventoryByPid`, discarded before they reach a seller: product description, each variant's length/width/height (both traced to `toCandidateEvidence()` and a hardcoded `null` in `repository.ts`), and each variant's per-country stock origin (traced to a hardcoded `'Not recorded'` literal in `read-model.ts`'s `editorVariants()`, with the real data already sitting unread in the same JSONB snapshot). An eight-file, zero-new-CJ-call fix plan — description stops at the stored snapshot pending a sanitiser; dimensions flow all the way to the existing-but-unused `product_variants` columns; the stock-origin fix is read-model-only and can ship independently, immediately, for every candidate with an existing snapshot. Also a full, ADR-017-corrected CJ points ledger for one item's journey from All Supplier Products through a published storefront listing (20 points per candidate at evidence capture, not 30; everything before and after that one step is either shared/sunk cost or zero, the zero enforced by `no-supplier-calls.test.ts`), independently re-verified against CJ's live documentation the same day. Designed and documented only, by explicit instruction — no code changed.
+
+- [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]] — the seller-facing Sals3 category picker (`sals3-portal`) built (PR #91, reversing ADR-014's platform-wide category-mapping assignment to a per-seller/per-product choice), then hit two real production bugs: its search matched `cj-mirror.ts`'s auto-created CJ-mirror rows instead of only the real Taxonomy v1 rows (PR #92), and production had zero real v1 rows until a one-time, now-removed seed endpoint ran (PR #93/#94/#95). Then reworked twice more for UX (PR #96): a compact, Shopee-style read-only value once a category is decided instead of an always-open search box, and repositioned beside Product Name. Renumbered from "part 47" after finding [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]] had already claimed that number for the earlier, separate session covering the actual Taxonomy v1 build (`sals3-portal` PRs #81-87).
 
 ## Raw reference assets
 

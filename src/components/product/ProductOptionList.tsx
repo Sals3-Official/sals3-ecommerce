@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import { formatMoney } from '@/lib/money';
 import type { ProductOptionAxis, ProductVariant } from '@/lib/product-detail';
 import type { VariantSelection } from '@/lib/product-variants';
@@ -7,6 +10,10 @@ import {
   variantCombinationKey,
   variantLabelTokens,
 } from '@/lib/variant-label-structure';
+import {
+  PRODUCT_VARIANT_CHANGE_EVENT,
+  type ProductVariantChangeDetail,
+} from '@/lib/product-variant-events';
 
 type ProductOptionListProps = {
   /** The product's public slug — `detail.id`. */
@@ -77,6 +84,41 @@ export default function ProductOptionList({
 
   function hrefFor(variantId: string): string {
     return `/p/${productId}?variant=${encodeURIComponent(variantId)}`;
+  }
+
+  function handleVariantClick(
+    event: MouseEvent<HTMLAnchorElement>,
+    variantId: string,
+  ) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      (event.currentTarget.target !== '' &&
+        event.currentTarget.target !== '_self')
+    ) {
+      return;
+    }
+
+    const href = event.currentTarget.getAttribute('href');
+
+    if (href === null) return;
+
+    event.preventDefault();
+
+    if (`${window.location.pathname}${window.location.search}` !== href) {
+      window.history.pushState(null, '', href);
+    }
+
+    window.dispatchEvent(
+      new CustomEvent<ProductVariantChangeDetail>(
+        PRODUCT_VARIANT_CHANGE_EVENT,
+        { detail: { variantId } },
+      ),
+    );
   }
 
   const CHIP =
@@ -179,6 +221,8 @@ export default function ProductOptionList({
                     <Link
                       href={hrefFor(target.id)}
                       scroll={false}
+                      prefetch={false}
+                      onClick={(event) => handleVariantClick(event, target.id)}
                       aria-current={isChosen ? 'page' : undefined}
                       className={`${CHIP} ${isChosen ? CHIP_ON : CHIP_OFF}`}
                     >
@@ -244,6 +288,8 @@ export default function ProductOptionList({
                     <Link
                       href={hrefFor(targetId)}
                       scroll={false}
+                      prefetch={false}
+                      onClick={(event) => handleVariantClick(event, targetId)}
                       aria-current={isChosen ? 'page' : undefined}
                       className={`${CHIP} ${isChosen ? CHIP_ON : CHIP_OFF}`}
                     >
@@ -293,6 +339,8 @@ export default function ProductOptionList({
                 <Link
                   href={hrefFor(variant.id)}
                   scroll={false}
+                  prefetch={false}
+                  onClick={(event) => handleVariantClick(event, variant.id)}
                   aria-current={isChosen ? 'page' : undefined}
                   className={`${CHIP} ${isChosen ? CHIP_ON : CHIP_OFF}`}
                 >

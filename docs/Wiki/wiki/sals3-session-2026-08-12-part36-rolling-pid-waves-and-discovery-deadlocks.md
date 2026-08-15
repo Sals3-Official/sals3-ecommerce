@@ -1,4 +1,4 @@
----
+﻿---
 tags: [sals3, sals3-portal, session-note, cj-dropshipping, discovery, catalog, production-incident, intake-policy]
 aliases:
   - Rolling PID Waves
@@ -19,6 +19,12 @@ related:
 
 # Rolling PID waves, and five discovery deadlocks found running them in production
 
+> [!IMPORTANT] Cross-reference owed, not yet applied
+> This directly changes the owner-approved intake ceiling
+> [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b documents
+> (`CATALOG_NEW_DISCOVERY_PID_LIMIT`, a 5,000 lifetime cap). That ADR was held
+> uncommitted by a concurrent vault task at the time this note was written and
+> was left untouched — see the end of this note for the exact amendment owed.
 > [!IMPORTANT] Cross-reference resolved 2026-08-13
 > [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b now
 > carries the struck-through correction this callout used to owe, plus a
@@ -276,6 +282,15 @@ commits claim. Treat commit-message verification claims with the same caution
 this vault applies to any other unverified statement until re-checked against
 the actual test run.
 
+## Cross-reference owed
+
+[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §1b currently
+documents the **lifetime 5,000-PID cap** as the active owner intake policy. It
+needs a struck-through correction recording that the owner replaced it with the
+600-PID rolling wave described here, plus a pointer to this note. Not applied
+here because a concurrent vault task held that file uncommitted at the time of
+writing — see [[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]'s
+own "Cross-references still owed" section for the parallel situation.
 ## Addendum, 2026-08-13: a sixth deadlock, found overnight (PR #59)
 
 Not part of the "same day" five above — this surfaced the *next* day, from
