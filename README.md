@@ -672,10 +672,11 @@ hero becomes a band above the form.
 | `src/lib/auth/auth-error-codes.ts`           | The auth wire contract (safe on both sides)                |
 | `src/lib/auth/auth-links.ts`                 | Every href the screens point at                            |
 
-Auth palette tokens and the two hero gradient overlays live in
-`src/app/globals.css`. The screens' typeface is Instrument Sans, registered in
-`src/app/layout.tsx` with `preload: false` so no other route pays for the font
-file, and applied through the `font-auth` utility.
+Auth palette tokens, the two hero gradient overlays, and the font-family CSS
+variables live in `src/app/globals.css`. The screens' typeface uses the
+`--font-instrument` stack through the `font-auth` utility; the app does not use
+`next/font/google`, which avoids the Turbopack Google-font resolver during CI
+builds.
 
 `test/client-bundle-boundary.test.ts` walks the import graph from every client
 entry point and fails on a `node:` builtin or a `server-only` marker. It exists
