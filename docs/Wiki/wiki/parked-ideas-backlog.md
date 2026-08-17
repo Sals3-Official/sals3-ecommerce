@@ -6,7 +6,7 @@ tags:
 aliases:
   - Parked Ideas Backlog
 created: 2026-07-31
-updated: 2026-08-10
+updated: 2026-08-17
 status: canonical
 authority: parked-backlog
 owner_approved: true
@@ -36,6 +36,12 @@ Log each parked idea in the same turn it is parked, under `## Active parked item
 ```
 
 ## Active parked items
+
+### 2026-08-17 — PDP structured product data, URL handle/redirect editing, AI listing enrichment, and SEO page title expansion
+- **What:** A small linked note set (`sals3-deferred-product-discovery/00 - Start Here` and four linked notes) holding four pieces of PDP/storefront work out of the current Product Editor pass: automatic `Product` structured data/schema on the PDP, seller-editable URL handles with redirect behavior, Gemini-based AI listing enrichment (title/meta-description/description/attribute suggestions), and full SEO page-title generation beyond the current editable Meta Description and search preview.
+- **Why parked:** None of the four has PDP/storefront routes or a provider/API decision behind it yet; Product Editor deliberately keeps Specification/meta-description editing separate from PDP-owned automatic metadata generation, and AI generation needs its own provider/safety review before any code is written. See [[../../sals3-deferred-product-discovery/00 - Start Here]].
+- **Unblock condition:** PDP/storefront product-page routes exist for the structured-data and URL-handle items; an explicit AI/provider (Gemini) decision and safety review for the enrichment item; an explicit owner approval to expand Product Editor's SEO surface beyond Meta Description for the page-title item.
+- **Related:** [[sals3-geo-aeo-seo-strategy-proposal]], [[hot]]
 
 ### 2026-08-10 — Product-safety incident and recall automation
 - **What:** A dedicated post-sale `ProductSafetyIncident`/`RecallCase` system with affected-product/order tracing, stop-sale/fulfillment actions, customer notification, remedy tracking, regulator-deadline support, and recalled-product watch lists.
