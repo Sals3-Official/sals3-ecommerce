@@ -1,12 +1,20 @@
 'use client';
 
 import type { CheckoutAddress } from '@/lib/checkout/schema';
+import {
+  CHECKOUT_ALLOWED_COUNTRIES,
+  CHECKOUT_COUNTRY_DETAILS,
+  checkoutCityOptions,
+  checkoutRegionOptions,
+} from '@/lib/checkout/locations';
 
 export type CheckoutAddressErrors = Partial<
   Record<keyof CheckoutAddress, string>
 >;
 
 const COUNTRY_ERROR_ID = 'checkout-country-error';
+const FIELD_CLASS =
+  'mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-white px-3 text-sm text-ink transition-colors duration-200 focus:border-brand-600 disabled:bg-surface-sunken disabled:text-ink-faint';
 
 type CheckoutAddressFormProps = {
   value: CheckoutAddress;
@@ -31,6 +39,7 @@ type FieldProps = {
   disabled: boolean;
   autoComplete: string;
   inputMode?: 'email' | 'tel' | 'text' | 'numeric';
+  helperText?: string;
   onChange: (field: keyof CheckoutAddress, value: string) => void;
 };
 
@@ -42,8 +51,18 @@ function Field({
   disabled,
   autoComplete,
   inputMode = 'text',
+  helperText,
   onChange,
 }: FieldProps) {
+  const helperId =
+    helperText === undefined ? undefined : `${fieldId(field)}-hint`;
+  const describedBy = [
+    helperId,
+    error === undefined ? undefined : errorId(field),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div>
       <label
@@ -60,10 +79,81 @@ function Field({
         autoComplete={autoComplete}
         inputMode={inputMode}
         aria-invalid={error === undefined ? undefined : true}
+        aria-describedby={describedBy === '' ? undefined : describedBy}
+        onChange={(event) => onChange(field, event.target.value)}
+        className={FIELD_CLASS}
+      />
+      {helperText === undefined ? null : (
+        <p id={helperId} className="mt-1 text-xs text-ink-faint">
+          {helperText}
+        </p>
+      )}
+      {error === undefined ? null : (
+        <p
+          id={errorId(field)}
+          role="alert"
+          className="mt-1 text-xs text-red-600"
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type SelectFieldProps = {
+  label: string;
+  field: keyof CheckoutAddress;
+  value: string;
+  error?: string;
+  disabled: boolean;
+  autoComplete: string;
+  placeholder?: string;
+  options: readonly string[];
+  onChange: (field: keyof CheckoutAddress, value: string) => void;
+};
+
+function SelectField({
+  label,
+  field,
+  value,
+  error,
+  disabled,
+  autoComplete,
+  placeholder,
+  options,
+  onChange,
+}: SelectFieldProps) {
+  return (
+    <div>
+      <label
+        htmlFor={fieldId(field)}
+        className="text-sm font-semibold text-ink"
+      >
+        {label}
+      </label>
+      <select
+        id={fieldId(field)}
+        name={field}
+        value={value}
+        disabled={disabled}
+        autoComplete={autoComplete}
+        aria-invalid={error === undefined ? undefined : true}
         aria-describedby={error === undefined ? undefined : errorId(field)}
         onChange={(event) => onChange(field, event.target.value)}
-        className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-white px-3 text-sm text-ink transition-colors duration-200 focus:border-brand-600 disabled:bg-surface-sunken disabled:text-ink-faint"
-      />
+        className={FIELD_CLASS}
+      >
+        {placeholder === undefined ? null : (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
       {error === undefined ? null : (
         <p
           id={errorId(field)}
@@ -83,6 +173,12 @@ export default function CheckoutAddressForm({
   disabled,
   onChange,
 }: CheckoutAddressFormProps) {
+  const { country } = value;
+  const countryDetails = CHECKOUT_COUNTRY_DETAILS[country];
+  const regionOptions = checkoutRegionOptions(country);
+  const cityOptions =
+    value.region === '' ? [] : checkoutCityOptions(country, value.region);
+
   return (
     <section
       aria-labelledby="checkout-address-heading"
@@ -122,6 +218,7 @@ export default function CheckoutAddressForm({
           disabled={disabled}
           autoComplete="tel"
           inputMode="tel"
+          helperText={`Use international format starting ${countryDetails.phonePrefix}.`}
           onChange={onChange}
         />
         <div>
@@ -143,10 +240,13 @@ export default function CheckoutAddressForm({
               errors.country === undefined ? undefined : COUNTRY_ERROR_ID
             }
             onChange={(event) => onChange('country', event.target.value)}
-            className="mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-white px-3 text-sm text-ink transition-colors duration-200 focus:border-brand-600 disabled:bg-surface-sunken disabled:text-ink-faint"
+            className={FIELD_CLASS}
           >
-            <option value="AU">Australia</option>
-            <option value="PH">Philippines</option>
+            {CHECKOUT_ALLOWED_COUNTRIES.map((option) => (
+              <option key={option} value={option}>
+                {CHECKOUT_COUNTRY_DETAILS[option].label}
+              </option>
+            ))}
           </select>
           {errors.country === undefined ? null : (
             <p
@@ -180,22 +280,26 @@ export default function CheckoutAddressForm({
             onChange={onChange}
           />
         </div>
-        <Field
-          label="City"
-          field="city"
-          value={value.city}
-          error={errors.city}
-          disabled={disabled}
-          autoComplete="address-level2"
-          onChange={onChange}
-        />
-        <Field
+        <SelectField
           label="State or region"
           field="region"
           value={value.region}
           error={errors.region}
           disabled={disabled}
           autoComplete="address-level1"
+          placeholder="Select state or region"
+          options={regionOptions}
+          onChange={onChange}
+        />
+        <SelectField
+          label="City"
+          field="city"
+          value={value.city}
+          error={errors.city}
+          disabled={disabled || value.region === ''}
+          autoComplete="address-level2"
+          placeholder="Select city"
+          options={cityOptions}
           onChange={onChange}
         />
         <Field

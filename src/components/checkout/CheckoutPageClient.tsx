@@ -8,6 +8,10 @@ import {
   CheckoutAddressSchema,
   type CheckoutAddress,
 } from '@/lib/checkout/schema';
+import {
+  CHECKOUT_COUNTRY_DETAILS,
+  isCheckoutCountry,
+} from '@/lib/checkout/locations';
 import { useCart } from '@/components/cart/CartProvider';
 import CheckoutAddressForm, {
   type CheckoutAddressErrors,
@@ -25,7 +29,7 @@ import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas
 const INITIAL_ADDRESS: CheckoutAddress = {
   email: '',
   fullName: '',
-  phone: '',
+  phone: CHECKOUT_COUNTRY_DETAILS.PH.phonePrefix,
   addressLine1: '',
   addressLine2: '',
   city: '',
@@ -83,8 +87,31 @@ export default function CheckoutPageClient() {
 
   const updateAddress = useCallback(
     (field: keyof CheckoutAddress, nextValue: string) => {
-      setAddress((current) => ({ ...current, [field]: nextValue }));
-      setErrors((current) => ({ ...current, [field]: undefined }));
+      setAddress((current) => {
+        if (field === 'country' && isCheckoutCountry(nextValue)) {
+          return {
+            ...current,
+            country: nextValue,
+            phone: CHECKOUT_COUNTRY_DETAILS[nextValue].phonePrefix,
+            region: '',
+            city: '',
+          };
+        }
+
+        if (field === 'region') {
+          return { ...current, region: nextValue, city: '' };
+        }
+
+        return { ...current, [field]: nextValue };
+      });
+      setErrors((current) => ({
+        ...current,
+        [field]: undefined,
+        ...(field === 'country'
+          ? { phone: undefined, region: undefined, city: undefined }
+          : {}),
+        ...(field === 'region' ? { city: undefined } : {}),
+      }));
       setShippingQuote(null);
       setSelectedShipping([]);
     },

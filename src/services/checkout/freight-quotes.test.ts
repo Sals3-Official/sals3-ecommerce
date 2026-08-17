@@ -7,11 +7,11 @@ vi.mock('server-only', () => ({}));
 const address = {
   email: 'buyer@example.com',
   fullName: 'Buyer Example',
-  phone: '',
+  phone: '+639171234567',
   addressLine1: '123 Main Street',
   addressLine2: '',
   city: 'Manila',
-  region: 'Metro Manila',
+  region: 'National Capital Region (NCR)',
   postalCode: '1000',
   country: 'PH' as const,
 };
@@ -70,7 +70,13 @@ describe('requestCheckoutFreightQuotes', () => {
     );
     expect(JSON.parse(fetcher.mock.calls[0]?.[1].body)).toMatchObject({
       cart: { items: [{ productId: 'jacket', variantId: 'v1', quantity: 1 }] },
-      address: { country: 'PH', postalCode: '1000' },
+      address: {
+        phone: '+639171234567',
+        city: 'Manila',
+        region: 'National Capital Region (NCR)',
+        postalCode: '1000',
+        country: 'PH',
+      },
     });
   });
 

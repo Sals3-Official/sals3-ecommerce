@@ -118,6 +118,15 @@ each product and re-quotes the selected freight from the Sals3 Portal storefront
 API before creating a Stripe Hosted Checkout Session. Browser cart prices and
 browser freight prices are never trusted for payment.
 
+Checkout address entry is country-aware for the currently enabled CJ
+destinations. Philippines starts phone numbers with `+639`; Australia starts
+with `+614`. State/region and city are native dropdowns sourced from
+`src/lib/checkout/locations.ts`, and city options depend on the chosen
+state/region. Changing country resets phone, state/region, city, and any
+previous freight quote so the next Portal quote receives a country-matched
+address (`country`, `postalCode`, `region`, `city`, `phone`) without this app
+calling CJ directly.
+
 Required Stripe values in `.env.local` or host secrets:
 
 ```text
