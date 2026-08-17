@@ -1,7 +1,10 @@
 import 'server-only';
 
 import Stripe from 'stripe';
-import type { CheckoutAddress } from '@/lib/checkout/schema';
+import type {
+  CheckoutAddress,
+  CheckoutShippingSelection,
+} from '@/lib/checkout/schema';
 import { getSiteUrl } from '@/lib/site';
 import type { ValidatedCheckoutCart } from '@/services/checkout/cart-validation';
 import { getStripeClient } from '@/services/stripe/client';
@@ -29,11 +32,41 @@ function stripeCurrency(currency: string): string {
   return currency.toLowerCase();
 }
 
-function metadataFor(address: CheckoutAddress, cart: ValidatedCheckoutCart) {
+function shippingTotal(selection: CheckoutShippingSelection): number {
+  return selection.packageSelections.reduce(
+    (total, selected) => total + selected.amountMinor,
+    0,
+  );
+}
+
+function metadataFor(
+  address: CheckoutAddress,
+  cart: ValidatedCheckoutCart,
+  shippingSelection: CheckoutShippingSelection,
+  shippingQuotedAt: string,
+) {
+  const optionIds = shippingSelection.packageSelections
+    .map((selection) =>
+      [
+        selection.packageId,
+        selection.optionId,
+        selection.channelId,
+        selection.amountMinor,
+        selection.arrivalTime,
+      ].join(':'),
+    )
+    .join(',');
+
   return {
-    sals3_checkout_version: 'stripe_only_v1',
+    sals3_checkout_version: 'cj_freight_v1',
     sals3_line_count: String(cart.lines.length),
+    sals3_shipping_package_count: String(
+      shippingSelection.packageSelections.length,
+    ),
     sals3_shipping_country: address.country,
+    sals3_shipping_total_minor: String(shippingTotal(shippingSelection)),
+    sals3_shipping_quoted_at: shippingQuotedAt,
+    sals3_shipping_options: optionIds.slice(0, 500),
   };
 }
 
@@ -61,12 +94,32 @@ function shippingFor(
 export async function createStripeCheckoutSession(input: {
   cart: ValidatedCheckoutCart;
   address: CheckoutAddress;
+  shippingSelection: CheckoutShippingSelection;
+  shippingQuotedAt: string;
 }): Promise<string> {
   const baseUrl = getBaseUrl();
   const stripe = getStripeClient();
   const paymentMethodConfiguration =
     process.env.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID;
-  const metadata = metadataFor(input.address, input.cart);
+  const metadata = metadataFor(
+    input.address,
+    input.cart,
+    input.shippingSelection,
+    input.shippingQuotedAt,
+  );
+  const shippingAmount = shippingTotal(input.shippingSelection);
+  const shippingCurrency =
+    input.shippingSelection.packageSelections[0]?.currency ??
+    input.cart.subtotal.currency;
+
+  if (shippingCurrency !== input.cart.subtotal.currency) {
+    throw new Error('Shipping currency does not match cart currency.');
+  }
+
+  const shippingName =
+    input.shippingSelection.packageSelections.length === 1
+      ? `Shipping - ${input.shippingSelection.packageSelections[0]!.cjLogisticName}`
+      : 'Shipping - CJ package delivery';
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -84,17 +137,27 @@ export async function createStripeCheckoutSession(input: {
       shipping: shippingFor(input.address),
     },
     metadata,
-    line_items: input.cart.lines.map((line) => ({
-      quantity: line.quantity,
-      price_data: {
-        currency: stripeCurrency(line.unitPrice.currency),
-        unit_amount: line.unitPrice.amountMinor,
-        product_data: {
-          name: line.title.slice(0, 250),
-          ...(line.imageUrl === undefined ? {} : { images: [line.imageUrl] }),
+    line_items: [
+      ...input.cart.lines.map((line) => ({
+        quantity: line.quantity,
+        price_data: {
+          currency: stripeCurrency(line.unitPrice.currency),
+          unit_amount: line.unitPrice.amountMinor,
+          product_data: {
+            name: line.title.slice(0, 250),
+            ...(line.imageUrl === undefined ? {} : { images: [line.imageUrl] }),
+          },
+        },
+      })),
+      {
+        quantity: 1,
+        price_data: {
+          currency: stripeCurrency(input.cart.subtotal.currency),
+          unit_amount: shippingAmount,
+          product_data: { name: shippingName.slice(0, 250) },
         },
       },
-    })),
+    ],
   });
 
   if (session.url === null) {

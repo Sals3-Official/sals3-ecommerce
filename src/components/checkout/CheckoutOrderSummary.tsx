@@ -1,17 +1,31 @@
 import Image from 'next/image';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, money } from '@/lib/money';
 import { getCartLineTotal, type CartLineItem } from '@/lib/cart';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
+import type { SelectedShippingQuote } from './CheckoutShippingOptions';
 
 type CheckoutOrderSummaryProps = {
   items: CartLineItem[];
   itemCount: number;
+  shipping: SelectedShippingQuote[];
 };
 
 export default function CheckoutOrderSummary({
   items,
   itemCount,
+  shipping,
 }: CheckoutOrderSummaryProps) {
+  const shippingTotal = shipping.reduce(
+    (total, selected) => total + selected.amountMinor,
+    0,
+  );
+  const currency =
+    items[0]?.unitPrice.currency ?? shipping[0]?.currency ?? 'USD';
+  const merchandiseTotal = items.reduce(
+    (total, line) => total + getCartLineTotal(line).amountMinor,
+    0,
+  );
+
   return (
     <section
       aria-labelledby="checkout-summary-heading"
@@ -64,6 +78,22 @@ export default function CheckoutOrderSummary({
           </div>
         ))}
       </div>
+      <dl className="mt-4 border-t border-border pt-4 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-ink-muted">Shipping</dt>
+          <dd className="font-semibold text-ink">
+            {shippingTotal === 0
+              ? 'Select delivery'
+              : formatMoney(money(shippingTotal, currency))}
+          </dd>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <dt className="font-semibold text-ink">Total</dt>
+          <dd className="font-display text-lg font-semibold text-ink">
+            {formatMoney(money(merchandiseTotal + shippingTotal, currency))}
+          </dd>
+        </div>
+      </dl>
     </section>
   );
 }

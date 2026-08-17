@@ -14,6 +14,8 @@ import type { z } from 'zod';
 export const DEFAULT_STOREFRONT_API_URL = 'http://localhost:3001';
 export const STOREFRONT_PRODUCTS_PATH = '/api/storefront/products';
 export const STOREFRONT_CATEGORIES_PATH = '/api/storefront/categories';
+export const STOREFRONT_FREIGHT_QUOTES_PATH =
+  '/api/storefront/checkout/freight-quotes';
 
 export class ProductsApiError extends Error {
   readonly status?: number;
@@ -57,6 +59,8 @@ type RequestOptions = {
   fetcher?: typeof fetch;
   signal?: AbortSignal;
   cachePolicy?: StorefrontCachePolicy;
+  method?: 'GET' | 'POST';
+  body?: unknown;
 };
 
 /**
@@ -78,14 +82,19 @@ export async function requestStorefrontJson<Schema extends z.ZodTypeAny>(
     fetcher = fetch,
     signal,
     cachePolicy = { cache: 'no-store' },
+    method = 'GET',
+    body,
   }: RequestOptions = {},
 ): Promise<z.output<Schema> | undefined> {
   const response = await fetcher(input.url, {
+    method,
     ...cachePolicy,
     headers: {
       Accept: 'application/json',
       Authorization: getAuthorizationHeader(),
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal,
   });
 
