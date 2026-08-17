@@ -223,6 +223,37 @@ export const StorefrontProductResponseSchema = z.object({
   product: StorefrontProductDetailSchema,
 });
 
+export const CheckoutFreightQuoteSchema = z.object({
+  quoteId: z.string().min(1).max(120),
+  packageId: z.string().min(1).max(80),
+  label: z.enum(['Economy', 'Standard', 'Express', 'Other']),
+  cjLogisticName: truncatedText(120),
+  optionId: z.string().min(1).max(120),
+  channelId: z.string().min(1).max(120),
+  arrivalTime: truncatedText(80),
+  amountMinor: z.number().int().nonnegative(),
+  currency: z.enum(SUPPORTED_CURRENCIES),
+  originCountry: z.string().min(2).max(20),
+  destinationCountry: z.string().min(2).max(20),
+  ruleTips: z.array(truncatedText(200)).max(20),
+  expiresAt: z.string().datetime(),
+});
+
+export const CheckoutFreightQuoteResponseSchema = z.object({
+  quotes: z.array(CheckoutFreightQuoteSchema).max(100),
+  packages: z
+    .array(
+      z.object({
+        packageId: z.string().min(1).max(80),
+        originCountry: z.string().min(2).max(20),
+        itemCount: z.number().int().positive(),
+      }),
+    )
+    .min(1)
+    .max(20),
+  quotedAt: z.string().datetime(),
+});
+
 const ProductCategorySchema = z.object({
   id: z.string().regex(CATEGORY_SLUG_PATTERN),
   code: z.string().min(1).max(4),
@@ -242,3 +273,7 @@ export type StorefrontSection = z.infer<typeof StorefrontSectionSchema>;
 export type ProductDescriptionBlock = z.infer<typeof DescriptionBlockSchema>;
 export type ProductVariantPayload = z.infer<typeof ProductVariantSchema>;
 export type ProductSpecsPayload = z.infer<typeof ProductSpecsSchema>;
+export type CheckoutFreightQuote = z.infer<typeof CheckoutFreightQuoteSchema>;
+export type CheckoutFreightQuoteResponse = z.infer<
+  typeof CheckoutFreightQuoteResponseSchema
+>;

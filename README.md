@@ -103,12 +103,20 @@ SALS3_PORTAL_API_URL=http://localhost:3001
 SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 ```
 
+The same protected Portal connection also backs checkout freight quotes:
+`POST /api/storefront/checkout/freight-quotes`. `sals3-ecommerce` sends only
+cart lines and the completed delivery address. CJ credentials remain in
+`sals3-portal` supplier secrets/Vercel env; do not add CJ keys to this app.
+
 ## Checkout and Stripe
 
 `/cart` now sends buyers to `/checkout`. Checkout reads the browser-local cart
-for display, asks for contact and delivery address, then the server re-fetches
-each product from the Sals3 Portal storefront API before creating a Stripe
-Hosted Checkout Session. Browser cart prices are never trusted for payment.
+for display, asks for contact and delivery address, then lets the buyer request
+CJ freight options from the protected Portal quote endpoint. The buyer must
+select one option per fulfillment package before payment. The server re-fetches
+each product and re-quotes the selected freight from the Sals3 Portal storefront
+API before creating a Stripe Hosted Checkout Session. Browser cart prices and
+browser freight prices are never trusted for payment.
 
 Required Stripe values in `.env.local` or host secrets:
 
@@ -126,6 +134,12 @@ passes `STRIPE_PAYMENT_METHOD_CONFIGURATION_ID`; it deliberately does not pass
 only when Stripe says the session currency, buyer details, account, and payment
 method configuration are eligible. AU BECS requires an AUD cart; this app does
 not convert USD to AUD.
+
+Selected CJ freight is added to Stripe as a separate line item named
+`Shipping - <CJ logistics name>`. A compact, non-sensitive freight snapshot is
+stored in Stripe Checkout Session and PaymentIntent metadata: selected option
+IDs, channel IDs, price, days, package count, destination country, and quote
+timestamp.
 
 `/checkout/success` verifies the Stripe Session server-side before showing the
 payment status. `/api/stripe/webhook` verifies Stripe signatures and accepts

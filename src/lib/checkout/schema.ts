@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_LINE_QUANTITY } from '@/lib/cart';
+import { SUPPORTED_CURRENCIES } from '@/lib/money';
 
 export const CHECKOUT_ALLOWED_COUNTRIES = ['AU', 'PH'] as const;
 
@@ -26,10 +27,30 @@ export const CreateCheckoutSessionInputSchema = z.object({
     items: z.array(CheckoutCartLineInputSchema).min(1).max(50),
   }),
   address: CheckoutAddressSchema,
+  shippingSelection: z.object({
+    packageSelections: z
+      .array(
+        z.object({
+          packageId: z.string().min(1).max(80),
+          quoteId: z.string().min(1).max(120),
+          optionId: z.string().min(1).max(120),
+          channelId: z.string().min(1).max(120),
+          cjLogisticName: z.string().min(1).max(120),
+          arrivalTime: z.string().min(1).max(80),
+          amountMinor: z.number().int().nonnegative(),
+          currency: z.enum(SUPPORTED_CURRENCIES),
+        }),
+      )
+      .min(1)
+      .max(20),
+  }),
 });
 
 export type CheckoutAddress = z.infer<typeof CheckoutAddressSchema>;
 export type CheckoutCartLineInput = z.infer<typeof CheckoutCartLineInputSchema>;
+export type CheckoutShippingSelection = z.infer<
+  typeof CreateCheckoutSessionInputSchema
+>['shippingSelection'];
 export type CreateCheckoutSessionInput = z.infer<
   typeof CreateCheckoutSessionInputSchema
 >;

@@ -3,7 +3,7 @@
 import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { CartState } from '@/lib/cart';
-import { formatMoney } from '@/lib/money';
+import { formatMoney, money } from '@/lib/money';
 import {
   CheckoutAddressSchema,
   type CheckoutAddress,
@@ -13,7 +13,14 @@ import CheckoutAddressForm, {
   type CheckoutAddressErrors,
 } from '@/components/checkout/CheckoutAddressForm';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
-import { createCheckoutSessionAction } from '@/app/checkout/actions';
+import CheckoutShippingOptions, {
+  type SelectedShippingQuote,
+} from '@/components/checkout/CheckoutShippingOptions';
+import {
+  createCheckoutSessionAction,
+  quoteCheckoutShippingAction,
+} from '@/app/checkout/actions';
+import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
 
 const INITIAL_ADDRESS: CheckoutAddress = {
   email: '',
@@ -58,23 +65,77 @@ export default function CheckoutPageClient() {
   const [address, setAddress] = useState(INITIAL_ADDRESS);
   const [errors, setErrors] = useState<CheckoutAddressErrors>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [shippingQuote, setShippingQuote] =
+    useState<CheckoutFreightQuoteResponse | null>(null);
+  const [selectedShipping, setSelectedShipping] = useState<
+    SelectedShippingQuote[]
+  >([]);
   const [isPending, startTransition] = useTransition();
-  const disabled = isPending || items.length === 0;
+  const allPackagesSelected =
+    shippingQuote !== null &&
+    selectedShipping.length === shippingQuote.packages.length;
+  const disabled = isPending || items.length === 0 || !allPackagesSelected;
+  const shippingTotal = selectedShipping.reduce(
+    (total, selected) => total + selected.amountMinor,
+    0,
+  );
+  const total = money(subtotal.amountMinor + shippingTotal, subtotal.currency);
 
   const updateAddress = useCallback(
     (field: keyof CheckoutAddress, nextValue: string) => {
       setAddress((current) => ({ ...current, [field]: nextValue }));
       setErrors((current) => ({ ...current, [field]: undefined }));
+      setShippingQuote(null);
+      setSelectedShipping([]);
     },
     [],
   );
 
-  function submit() {
+  const validateAddress = useCallback((): boolean => {
     const nextErrors = errorsFor(address);
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       setMessage('Check the highlighted address fields.');
+      return false;
+    }
+
+    return true;
+  }, [address]);
+
+  const quoteShipping = useCallback(() => {
+    if (!validateAddress()) return;
+
+    setMessage(null);
+    startTransition(async () => {
+      const result = await quoteCheckoutShippingAction({
+        cart: toCheckoutCart(items),
+        address,
+      });
+
+      if (result.ok) {
+        setShippingQuote(result.quote);
+        setSelectedShipping([]);
+        return;
+      }
+
+      setMessage(result.message);
+    });
+  }, [address, items, validateAddress]);
+
+  const selectShipping = useCallback((next: SelectedShippingQuote) => {
+    setSelectedShipping((current) => [
+      ...current.filter((item) => item.packageId !== next.packageId),
+      next,
+    ]);
+    setMessage(null);
+  }, []);
+
+  function submit() {
+    if (!validateAddress()) return;
+
+    if (!allPackagesSelected) {
+      setMessage('Choose a delivery option before payment.');
       return;
     }
 
@@ -83,6 +144,7 @@ export default function CheckoutPageClient() {
       const result = await createCheckoutSessionAction({
         cart: toCheckoutCart(items),
         address,
+        shippingSelection: { packageSelections: selectedShipping },
       });
 
       if (result.ok) {
@@ -129,6 +191,13 @@ export default function CheckoutPageClient() {
             disabled={isPending}
             onChange={updateAddress}
           />
+          <CheckoutShippingOptions
+            quote={shippingQuote}
+            selected={selectedShipping}
+            disabled={isPending}
+            onQuote={quoteShipping}
+            onSelect={selectShipping}
+          />
           <section
             aria-labelledby="checkout-payment-heading"
             className="rounded-xl border border-border bg-white p-4"
@@ -146,7 +215,7 @@ export default function CheckoutPageClient() {
               <div>
                 <p className="text-sm text-ink-muted">Total today</p>
                 <p className="font-display text-2xl font-semibold text-ink">
-                  {formatMoney(subtotal)}
+                  {formatMoney(total)}
                 </p>
               </div>
               <button
@@ -167,7 +236,11 @@ export default function CheckoutPageClient() {
             </p>
           </section>
         </div>
-        <CheckoutOrderSummary items={items} itemCount={itemCount} />
+        <CheckoutOrderSummary
+          items={items}
+          itemCount={itemCount}
+          shipping={selectedShipping}
+        />
       </div>
     </div>
   );
