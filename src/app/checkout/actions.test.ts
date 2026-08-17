@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateCheckoutCart } from '@/services/checkout/cart-validation';
 import { createStripeCheckoutSession } from '@/services/stripe/checkout';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
+import { ProductsApiError } from '@/services/storefront/client';
 import {
   createCheckoutSessionAction,
   quoteCheckoutShippingAction,
@@ -141,6 +142,25 @@ describe('createCheckoutSessionAction', () => {
         address,
       }),
     ).resolves.toEqual({ ok: true, quote: freightQuote });
+  });
+
+  it('shows safe portal quote validation messages', async () => {
+    vi.mocked(requestCheckoutFreightQuotes).mockRejectedValue(
+      new ProductsApiError('Storefront checkout freight quote API failed.', {
+        status: 422,
+        safeMessage: 'CJ returned no delivery methods for this address.',
+      }),
+    );
+
+    await expect(
+      quoteCheckoutShippingAction({
+        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+        address,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'CJ returned no delivery methods for this address.',
+    });
   });
 
   it('rejects a stale shipping selection', async () => {

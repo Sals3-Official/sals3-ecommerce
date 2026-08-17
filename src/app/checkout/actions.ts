@@ -116,7 +116,16 @@ export async function quoteCheckoutShippingAction(input: {
     const quote = await requestCheckoutFreightQuotes(parsed.data);
 
     return { ok: true, quote };
-  } catch {
+  } catch (error) {
+    if (error instanceof ProductsApiError && error.status === 422) {
+      return {
+        ok: false,
+        message:
+          error.safeMessage ??
+          'Delivery options are unavailable. Try again in a moment.',
+      };
+    }
+
     return {
       ok: false,
       message: 'Delivery options are unavailable. Try again in a moment.',
@@ -176,7 +185,10 @@ export async function createCheckoutSessionAction(
     if (error instanceof ProductsApiError) {
       return {
         ok: false,
-        message: 'Catalogue check failed. Try again in a moment.',
+        message:
+          error.status === 422 && error.safeMessage !== undefined
+            ? error.safeMessage
+            : 'Catalogue check failed. Try again in a moment.',
       };
     }
 
