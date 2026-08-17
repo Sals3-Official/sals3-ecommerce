@@ -80,6 +80,10 @@ describe('Checkout page', () => {
     expect(screen.getAllByText('US$40')).toHaveLength(3);
     expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/address line 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^phone$/i)).toHaveValue('+639');
+    expect(screen.getByLabelText(/^country$/i)).toHaveValue('PH');
+    expect(screen.getByLabelText(/state or region/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^city$/i)).toBeDisabled();
     expect(screen.getByRole('button', { name: /^payment$/i })).toBeDisabled();
     expect(
       screen.getByRole('button', { name: /get delivery options/i }),
@@ -115,6 +119,77 @@ describe('Checkout page', () => {
     );
   });
 
+  it('resets phone, state, city, and delivery quote state when country changes', async () => {
+    const seeded = addCartItem(
+      EMPTY_CART,
+      {
+        productId: 'corduroy-jacket',
+        title: "Men's Casual Retro Corduroy Jacket Coat",
+        imageAlt: "Men's Casual Retro Corduroy Jacket Coat product image",
+        tone: 'ocean',
+        unitPrice: usd(2000),
+      },
+      1,
+    );
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
+
+    renderWithCart(<CheckoutPage />);
+
+    fireEvent.change(await screen.findByLabelText(/state or region/i), {
+      target: { value: 'National Capital Region (NCR)' },
+    });
+    expect(screen.getByLabelText(/^city$/i)).not.toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/^city$/i), {
+      target: { value: 'Manila' },
+    });
+
+    fireEvent.change(screen.getByLabelText(/^country$/i), {
+      target: { value: 'AU' },
+    });
+
+    expect(screen.getByLabelText(/^phone$/i)).toHaveValue('+614');
+    expect(screen.getByLabelText(/state or region/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^city$/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^city$/i)).toBeDisabled();
+    expect(
+      screen.getByRole('option', { name: 'New South Wales' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', {
+        name: 'National Capital Region (NCR)',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('updates city options from the selected state or region', async () => {
+    const seeded = addCartItem(
+      EMPTY_CART,
+      {
+        productId: 'corduroy-jacket',
+        title: "Men's Casual Retro Corduroy Jacket Coat",
+        imageAlt: "Men's Casual Retro Corduroy Jacket Coat product image",
+        tone: 'ocean',
+        unitPrice: usd(2000),
+      },
+      1,
+    );
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
+
+    renderWithCart(<CheckoutPage />);
+
+    fireEvent.change(await screen.findByLabelText(/state or region/i), {
+      target: { value: 'Central Visayas (Region VII)' },
+    });
+
+    expect(screen.getByLabelText(/^city$/i)).not.toBeDisabled();
+    expect(
+      screen.getByRole('option', { name: 'Cebu City' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'Manila' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('quotes shipping, selects one method, and submits payment', async () => {
     const seeded = addCartItem(
       EMPTY_CART,
@@ -145,14 +220,17 @@ describe('Checkout page', () => {
     fireEvent.change(screen.getByLabelText(/^full name$/i), {
       target: { value: 'Buyer Example' },
     });
+    fireEvent.change(screen.getByLabelText(/^phone$/i), {
+      target: { value: '+639171234567' },
+    });
     fireEvent.change(screen.getByLabelText(/address line 1/i), {
       target: { value: '123 Main Street' },
     });
+    fireEvent.change(screen.getByLabelText(/state or region/i), {
+      target: { value: 'National Capital Region (NCR)' },
+    });
     fireEvent.change(screen.getByLabelText(/^city$/i), {
       target: { value: 'Manila' },
-    });
-    fireEvent.change(screen.getByLabelText(/state or region/i), {
-      target: { value: 'Metro Manila' },
     });
     fireEvent.change(screen.getByLabelText(/postal code/i), {
       target: { value: '1000' },
@@ -177,6 +255,13 @@ describe('Checkout page', () => {
             }),
           ],
         },
+        address: expect.objectContaining({
+          phone: '+639171234567',
+          city: 'Manila',
+          region: 'National Capital Region (NCR)',
+          postalCode: '1000',
+          country: 'PH',
+        }),
       }),
     );
   });

@@ -1,8 +1,14 @@
 import { z } from 'zod';
 import { MAX_LINE_QUANTITY } from '@/lib/cart';
 import { SUPPORTED_CURRENCIES } from '@/lib/money';
+import {
+  CHECKOUT_ALLOWED_COUNTRIES,
+  CHECKOUT_COUNTRY_DETAILS,
+  checkoutCityOptions,
+  checkoutRegionOptions,
+} from '@/lib/checkout/locations';
 
-export const CHECKOUT_ALLOWED_COUNTRIES = ['AU', 'PH'] as const;
+export { CHECKOUT_ALLOWED_COUNTRIES };
 
 export const CheckoutCartLineInputSchema = z.object({
   productId: z.string().min(1).max(160),
@@ -10,17 +16,51 @@ export const CheckoutCartLineInputSchema = z.object({
   quantity: z.number().int().min(1).max(MAX_LINE_QUANTITY),
 });
 
-export const CheckoutAddressSchema = z.object({
-  email: z.string().trim().email().max(254),
-  fullName: z.string().trim().min(2).max(120),
-  phone: z.string().trim().max(40).optional(),
-  addressLine1: z.string().trim().min(4).max(120),
-  addressLine2: z.string().trim().max(120).optional(),
-  city: z.string().trim().min(2).max(80),
-  region: z.string().trim().min(2).max(80),
-  postalCode: z.string().trim().min(3).max(20),
-  country: z.enum(CHECKOUT_ALLOWED_COUNTRIES),
-});
+export const CheckoutAddressSchema = z
+  .object({
+    email: z.string().trim().email().max(254),
+    fullName: z.string().trim().min(2).max(120),
+    phone: z.string().trim().min(4).max(40),
+    addressLine1: z.string().trim().min(4).max(120),
+    addressLine2: z.string().trim().max(120).optional(),
+    city: z.string().trim().min(2).max(80),
+    region: z.string().trim().min(2).max(80),
+    postalCode: z.string().trim().min(3).max(20),
+    country: z.enum(CHECKOUT_ALLOWED_COUNTRIES),
+  })
+  .superRefine((address, context) => {
+    const country = CHECKOUT_COUNTRY_DETAILS[address.country];
+    const prefix = country.phonePrefix;
+
+    if (!address.phone.startsWith(prefix)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['phone'],
+        message: `Phone must start with ${prefix}.`,
+      });
+    }
+
+    if (!checkoutRegionOptions(address.country).includes(address.region)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['region'],
+        message: `Choose a valid ${country.label} state or region.`,
+      });
+      return;
+    }
+
+    if (
+      !checkoutCityOptions(address.country, address.region).includes(
+        address.city,
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['city'],
+        message: 'Choose a city from the selected state or region.',
+      });
+    }
+  });
 
 export const CreateCheckoutSessionInputSchema = z.object({
   cart: z.object({

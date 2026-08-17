@@ -28,11 +28,11 @@ const cart: ValidatedCheckoutCart = {
 const address: CheckoutAddress = {
   email: 'buyer@example.com',
   fullName: 'Buyer Example',
-  phone: '',
+  phone: '+639171234567',
   addressLine1: '123 Main Street',
   addressLine2: '',
   city: 'Manila',
-  region: 'Metro Manila',
+  region: 'National Capital Region (NCR)',
   postalCode: '1000',
   country: 'PH',
 };
