@@ -20,10 +20,16 @@ export const STOREFRONT_FREIGHT_QUOTES_PATH =
 export class ProductsApiError extends Error {
   readonly status?: number;
 
-  constructor(message: string, options?: { status?: number; cause?: unknown }) {
+  readonly safeMessage?: string;
+
+  constructor(
+    message: string,
+    options?: { status?: number; cause?: unknown; safeMessage?: string },
+  ) {
     super(message, { cause: options?.cause });
     this.name = 'ProductsApiError';
     this.status = options?.status;
+    this.safeMessage = options?.safeMessage;
   }
 }
 
@@ -62,6 +68,29 @@ type RequestOptions = {
   method?: 'GET' | 'POST';
   body?: unknown;
 };
+
+async function safeErrorMessageFrom(
+  response: Response,
+): Promise<string | undefined> {
+  try {
+    const payload: unknown = await response.json();
+
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'error' in payload &&
+      typeof payload.error === 'string' &&
+      payload.error.length > 0 &&
+      payload.error.length <= 240
+    ) {
+      return payload.error;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
 
 /**
  * Fetches, checks the status, and parses — returning `undefined` only for the
@@ -103,8 +132,11 @@ export async function requestStorefrontJson<Schema extends z.ZodTypeAny>(
   }
 
   if (!response.ok) {
+    const safeMessage = await safeErrorMessageFrom(response);
+
     throw new ProductsApiError(`Storefront ${input.subject} request failed.`, {
       status: response.status,
+      safeMessage,
     });
   }
 
