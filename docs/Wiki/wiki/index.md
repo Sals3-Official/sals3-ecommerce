@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-15
+updated: 2026-08-17
 status: canonical
 authority: navigation
 owner_approved: true
@@ -57,6 +57,7 @@ related:
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel|2026-08-05 Landing Page API Carousel Turnover Prompt]] — copy-paste handoff prompt for the next agent after that session.
+- [[../../journal/sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix|2026-08-17 Specification Dropdown and Category Resync Fix]] — PR #105: `MULTI_SELECT_DROPDOWN` Specification fields rebuilt as a closed dropdown, a category-switch state bug fixed, and a Dependabot `nanoid` alert confirmed stale.
 
 ## Business and product
 
@@ -75,6 +76,7 @@ related:
 - [[sals3-portal-seller-market-configuration|Seller Market Configuration]] — real per-seller `/market-rules` profile replacing the PH/ID/SG fixture: AU+PH bounded-pilot capability boundary, `DRAFT/ACTIVE/SUSPENDED` lifecycle with compare-and-set, session-derived tenant isolation, and the four country/currency concepts kept separate. Code complete; migration `0012` **not applied**.
 - [[sals3-marketing-banner-integration-proposal|Marketing Banner Integration Proposal]] — 4 proposed banner placements (home, in-feed ads, PDP, cart). Proposed, not approved; flags a colour-token mismatch against the shipped code and a target-artifact mismatch against the real Next.js app.
 - [[sals3-geo-aeo-seo-strategy-proposal|GEO/AEO/SEO Strategy Proposal]] — proposed Next.js RSC + JSON-LD architecture for search/generative-AI/answer-engine visibility, plus truthful neuromarketing patterns. Route-independent pieces (`robots.txt`, `llms.txt`, global `Organization` JSON-LD) implemented 2026-08-05; the rest needs PDP/cart routes that don't exist yet, see [[parked-ideas-backlog]].
+- [[../../sals3-deferred-product-discovery/00 - Start Here|Deferred Product Discovery Work (PDP Structured Data, URL Handles, AI Enrichment, SEO Title)]] — small linked note set reminding an agent not to build PDP structured data, seller-editable URL handles/redirects, Gemini AI listing enrichment, or full SEO page-title generation inside the current Product Editor pass. Logged in [[parked-ideas-backlog]].
 - `Raw/` — UI mockups, presentation deck, the build spec PDF, and the category taxonomy workbook.
 
 ## Customer Website

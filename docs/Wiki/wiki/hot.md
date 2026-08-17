@@ -338,6 +338,30 @@ for the full incident writeup, including the Drizzle-migration-bookkeeping,
 fail-closed-seeding, and lazy-import hardening the break-glass endpoint
 needed on review before it was trusted enough to merge.
 
+**Follow-up QA pass, same day: two real UI/state defects fixed
+([PR #105](https://github.com/Sals3-Official/sals3-portal/pull/105)).**
+The incident writeup above flagged its own gap - no live database-mode QA
+pass on the Specification section before merge. Bogs did that pass and found
+two things: every `MULTI_SELECT_DROPDOWN` attribute (Material, Style,
+Pattern, Occasion) rendered as a permanently-open checkbox list instead of
+the same closed-dropdown footprint as every single-select field, and
+switching a product's Sals3 category left the section showing the old
+category's fields until a full page reload. `MultiSelectChipsControl` is now
+a `Popover`-based trigger matching `SingleSelectControl`'s
+height/border/radius, closed by default. The stale-fields bug was
+`useState(fixture.categoryAttributes)` only reading its argument on mount;
+`router.refresh()` after a category decision re-renders the already-mounted
+`ProductEditorWorkspace` with a fresh `fixture` prop but never remounts it -
+fixed by resyncing during render (React's "adjusting state when a prop
+changes" pattern, not an effect) keyed on `sals3CategoryCode` specifically,
+not `categoryAttributesControlsVersion` (identical across every category, so
+it would never have fired). A regression test was written, deliberately
+reverted to confirm it fails without the fix, then restored. See
+[[../../journal/sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]].
+A same-session Dependabot check (`nanoid`, `GHSA-2v37-7h3g-55p8`) found the
+default branch's lockfile already on the patched `3.3.18` via `postcss` -
+a stale alert, no code change needed.
+
 ### Supplier connection ownership is stranded by identity, with no transfer tool
 
 The first real Better Auth login (2026-08-08) exposed a CJ connection created under the `dev-user` placeholder identity, unreachable and unreconnectable by the real account signing in afterward: `supplier_connections_provider_external_hash_key` is a hard unique index on `(providerId, externalAccountLookupHash)`, so the same real CJ account can have exactly one connection row, ever - soft-disconnecting the stale row does not release it for a different seller to claim, only reassigning `sellerAccountId` does. Fixed this time with a one-off script (data correction, not committed - see [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]], [[sals3-skills]] entry 66). **Open**: no permanent tool exists for this reassignment; it will recur for any connection created before a seller's first real login, and eventually between two real sellers contesting the same CJ account.
@@ -364,6 +388,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[../../journal/sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]] — the Specification section's open QA-gap follow-up (PR #105): `MULTI_SELECT_DROPDOWN` attributes rebuilt as a closed `Popover` dropdown matching every single-select field, a category-switch state bug fixed (stale `useState(fixture.categoryAttributes)` resynced during render, keyed on `sals3CategoryCode`), a regression test proven to fail without the fix, and a Dependabot `nanoid` alert confirmed stale (already patched via `postcss`).
 - [[../../journal/sals3-session-2026-08-17-category-attribute-specifications-production-rollout]] — PR #102 (category-driven Specification section, 53,625 attribute controls) merged, immediately 404'd the whole Product Catalogue in production (migration/seed only ever run locally), reverted, fixed with a break-glass migration endpoint (PR #103, hardened over a second review round for Drizzle-migration bookkeeping/fail-closed-seeding/lazy-import), run for real against production, then the feature safely restored (PR #104) and confirmed live.
 - [[../../journal/sals3-session-2026-08-17-seller-photo-upload-manager]] — real seller photo uploads end to end (Vercel Blob + `sharp`, 5MB/2000×2000 hard limits, magic-byte validation), supplier evidence gallery, branded variant toggles, and Supplier Details relocated to a collapsible section (PRs #100/#101).
 - [[../../journal/sals3-session-2026-08-17-portal-editor-supplier-details-refinements]] — Basic Information layout rework, category picker changed from search-first to browse-first modal, a CJ points-cost/data-provenance investigation, and a stale-summary-card bug fix (PRs #98/#99).

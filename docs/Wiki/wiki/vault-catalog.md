@@ -2,7 +2,7 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-16
+updated: 2026-08-17
 status: canonical
 authority: navigation
 owner_approved: true
@@ -67,6 +67,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[sals3-portal-code-review-2026-08-06]] — 7 findings from reading `sals3-portal`'s CJ integration/storefront-API code directly (pagination mismatch, unbounded cache, dead reset logic, fabricated total, uncaught `PermissionError`, and two documented/defensive-coded items). Findings only, not fixed.
 - [[sals3-marketing-banner-integration-proposal]] — proposed marketing banner placements (home, in-feed, PDP, cart). Proposed, not yet reviewed; flags objections.
 - [[sals3-geo-aeo-seo-strategy-proposal]] — proposed GEO/AEO/SEO + neuromarketing architecture (Next.js RSC, JSON-LD entity graph, citation-first content, `llms.txt`). Route-independent pieces (`robots.txt`, `llms.txt`, global `Organization` JSON-LD) implemented and verified 2026-08-05; PDP/cart-dependent pieces parked in [[parked-ideas-backlog]].
+- [[../../sals3-deferred-product-discovery/00 - Start Here]] — deferred-work index (PDP structured product data, URL handle/redirect editing, Gemini AI listing enrichment, SEO page-title expansion) kept out of the current Product Editor pass; logged in [[parked-ideas-backlog]].
 
 ## Customer Website
 
@@ -134,6 +135,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — verified 2026-08-05 landing-page API, pagination, carousel, test, and lesson session note.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel]] — copy-paste turnover prompt for the next agent after the landing-page API and carousel work.
+- [[../../journal/sals3-session-2026-08-17-category-attribute-specifications-production-rollout]] — PR #102 (category-driven Specification section) merged, immediately 404'd the whole Product Catalogue in production, reverted, fixed with a break-glass migration endpoint (PR #103), run for real against production, then the feature safely restored (PR #104) and confirmed live.
+- [[../../journal/sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]] — that incident note's own disclosed QA gap, closed (PR #105): `MULTI_SELECT_DROPDOWN` Specification fields rebuilt as a closed dropdown matching every single-select field, a category-switch state bug fixed (stale `useState` resynced during render, keyed on `sals3CategoryCode`), a regression test proven to fail without the fix, and a Dependabot `nanoid` alert confirmed stale (already patched via `postcss`).
 
 ## Domains not started yet
 
