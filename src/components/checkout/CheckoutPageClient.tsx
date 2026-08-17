@@ -1,187 +1,33 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import type { CartState } from '@/lib/cart';
-import { formatMoney, money } from '@/lib/money';
-import {
-  CheckoutAddressSchema,
-  type CheckoutAddress,
-} from '@/lib/checkout/schema';
-import {
-  CHECKOUT_COUNTRY_DETAILS,
-  isCheckoutCountry,
-} from '@/lib/checkout/locations';
 import { useCart } from '@/components/cart/CartProvider';
-import CheckoutAddressForm, {
-  type CheckoutAddressErrors,
-} from '@/components/checkout/CheckoutAddressForm';
+import useCheckout from '@/components/checkout/useCheckout';
+import CheckoutAddressForm from '@/components/checkout/CheckoutAddressForm';
+import CheckoutAddressRecap from '@/components/checkout/CheckoutAddressRecap';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
-import CheckoutShippingOptions, {
-  type SelectedShippingQuote,
-} from '@/components/checkout/CheckoutShippingOptions';
-import {
-  createCheckoutSessionAction,
-  quoteCheckoutShippingAction,
-} from '@/app/checkout/actions';
-import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
-
-const INITIAL_ADDRESS: CheckoutAddress = {
-  email: '',
-  fullName: '',
-  phone: CHECKOUT_COUNTRY_DETAILS.PH.phonePrefix,
-  addressLine1: '',
-  addressLine2: '',
-  city: '',
-  region: '',
-  postalCode: '',
-  country: 'PH',
-};
-
-function errorsFor(address: CheckoutAddress): CheckoutAddressErrors {
-  const parsed = CheckoutAddressSchema.safeParse(address);
-
-  if (parsed.success) return {};
-
-  return parsed.error.issues.reduce<CheckoutAddressErrors>((acc, issue) => {
-    const field = issue.path[0];
-
-    if (typeof field === 'string' && field in address) {
-      acc[field as keyof CheckoutAddress] = issue.message;
-    }
-
-    return acc;
-  }, {});
-}
-
-function toCheckoutCart(items: CartState['items']) {
-  return {
-    items: items.map((line) => ({
-      productId: line.productId,
-      ...(line.variant?.id === undefined ? {} : { variantId: line.variant.id }),
-      quantity: line.quantity,
-    })),
-  };
-}
+import CheckoutPaymentSection from '@/components/checkout/CheckoutPaymentSection';
+import CheckoutShippingOptions from '@/components/checkout/CheckoutShippingOptions';
+import CheckoutStepper from '@/components/checkout/CheckoutStepper';
 
 export default function CheckoutPageClient() {
   const { items, itemCount, subtotal } = useCart();
-  const [address, setAddress] = useState(INITIAL_ADDRESS);
-  const [errors, setErrors] = useState<CheckoutAddressErrors>({});
-  const [message, setMessage] = useState<string | null>(null);
-  const [shippingQuote, setShippingQuote] =
-    useState<CheckoutFreightQuoteResponse | null>(null);
-  const [selectedShipping, setSelectedShipping] = useState<
-    SelectedShippingQuote[]
-  >([]);
-  const [isPending, startTransition] = useTransition();
-  const allPackagesSelected =
-    shippingQuote !== null &&
-    selectedShipping.length === shippingQuote.packages.length;
-  const disabled = isPending || items.length === 0 || !allPackagesSelected;
-  const shippingTotal = selectedShipping.reduce(
-    (total, selected) => total + selected.amountMinor,
-    0,
-  );
-  const total = money(subtotal.amountMinor + shippingTotal, subtotal.currency);
+  const checkout = useCheckout(items, subtotal);
+  const { step, isPending, message } = checkout;
+  const stepContentRef = useRef<HTMLElement>(null);
+  const hasNavigatedRef = useRef(false);
 
-  const updateAddress = useCallback(
-    (field: keyof CheckoutAddress, nextValue: string) => {
-      setAddress((current) => {
-        if (field === 'country' && isCheckoutCountry(nextValue)) {
-          return {
-            ...current,
-            country: nextValue,
-            phone: CHECKOUT_COUNTRY_DETAILS[nextValue].phonePrefix,
-            region: '',
-            city: '',
-          };
-        }
-
-        if (field === 'region') {
-          return { ...current, region: nextValue, city: '' };
-        }
-
-        return { ...current, [field]: nextValue };
-      });
-      setErrors((current) => ({
-        ...current,
-        [field]: undefined,
-        ...(field === 'country'
-          ? { phone: undefined, region: undefined, city: undefined }
-          : {}),
-        ...(field === 'region' ? { city: undefined } : {}),
-      }));
-      setShippingQuote(null);
-      setSelectedShipping([]);
-    },
-    [],
-  );
-
-  const validateAddress = useCallback((): boolean => {
-    const nextErrors = errorsFor(address);
-
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      setMessage('Check the highlighted address fields.');
-      return false;
-    }
-
-    return true;
-  }, [address]);
-
-  const quoteShipping = useCallback(() => {
-    if (!validateAddress()) return;
-
-    setMessage(null);
-    startTransition(async () => {
-      const result = await quoteCheckoutShippingAction({
-        cart: toCheckoutCart(items),
-        address,
-      });
-
-      if (result.ok) {
-        setShippingQuote(result.quote);
-        setSelectedShipping([]);
-        return;
-      }
-
-      setMessage(result.message);
-    });
-  }, [address, items, validateAddress]);
-
-  const selectShipping = useCallback((next: SelectedShippingQuote) => {
-    setSelectedShipping((current) => [
-      ...current.filter((item) => item.packageId !== next.packageId),
-      next,
-    ]);
-    setMessage(null);
-  }, []);
-
-  function submit() {
-    if (!validateAddress()) return;
-
-    if (!allPackagesSelected) {
-      setMessage('Choose a delivery option before payment.');
+  useEffect(() => {
+    // Skip the initial mount so page load does not steal focus.
+    if (!hasNavigatedRef.current) {
+      hasNavigatedRef.current = true;
       return;
     }
 
-    setMessage(null);
-    startTransition(async () => {
-      const result = await createCheckoutSessionAction({
-        cart: toCheckoutCart(items),
-        address,
-        shippingSelection: { packageSelections: selectedShipping },
-      });
-
-      if (result.ok) {
-        window.location.assign(result.url);
-        return;
-      }
-
-      setMessage(result.message);
-    });
-  }
+    window.scrollTo({ top: 0 });
+    stepContentRef.current?.focus({ preventScroll: true });
+  }, [step]);
 
   if (items.length === 0) {
     return (
@@ -202,71 +48,85 @@ export default function CheckoutPageClient() {
 
   return (
     <div>
-      <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-          Secure checkout
-        </p>
-        <h1 className="font-display text-2xl font-semibold text-ink">
-          Checkout
-        </h1>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+            Secure checkout
+          </p>
+          <h1 className="font-display text-2xl font-semibold text-ink">
+            Checkout
+          </h1>
+        </div>
+        <CheckoutStepper
+          step={step}
+          disabled={isPending}
+          onEditInformation={checkout.backToInformation}
+        />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="flex flex-col gap-4">
-          <CheckoutAddressForm
-            value={address}
-            errors={errors}
-            disabled={isPending}
-            onChange={updateAddress}
-          />
-          <CheckoutShippingOptions
-            quote={shippingQuote}
-            selected={selectedShipping}
-            disabled={isPending}
-            onQuote={quoteShipping}
-            onSelect={selectShipping}
-          />
-          <section
-            aria-labelledby="checkout-payment-heading"
-            className="rounded-xl border border-border bg-white p-4"
-          >
-            <h2
-              id="checkout-payment-heading"
-              className="font-display text-xl font-semibold"
-            >
-              Payment
-            </h2>
-            <p className="mt-1 text-sm text-ink-muted">
-              Continue to Stripe to pay by card or eligible bank debit.
-            </p>
-            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-ink-muted">Total today</p>
-                <p className="font-display text-2xl font-semibold text-ink">
-                  {formatMoney(total)}
+        <section
+          ref={stepContentRef}
+          tabIndex={-1}
+          aria-label={step === 1 ? 'Information' : 'Delivery and payment'}
+          className="flex flex-col gap-4 outline-none"
+        >
+          {step === 1 ? (
+            <>
+              <CheckoutAddressForm
+                value={checkout.address}
+                errors={checkout.errors}
+                disabled={isPending}
+                onChange={checkout.updateAddress}
+              />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-ink-muted">
+                  Nothing is charged yet. Delivery options and the final total
+                  come next.
                 </p>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={checkout.continueToDelivery}
+                  className="bg-brand-gradient min-h-11 shrink-0 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-none disabled:bg-surface-sunken disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
+                >
+                  {isPending
+                    ? 'Loading delivery options...'
+                    : 'Continue to delivery'}
+                </button>
               </div>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={submit}
-                className="bg-brand-gradient min-h-11 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-none disabled:bg-surface-sunken disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
-              >
-                {isPending ? 'Opening payment...' : 'Payment'}
-              </button>
-            </div>
-            <p className="mt-3 text-xs text-ink-faint">
-              Stripe decides which enabled payment methods appear from currency
-              and location. Sals3 does not store card or bank details.
-            </p>
-            <p aria-live="polite" className="mt-3 text-sm text-red-600">
-              {message ?? ''}
-            </p>
-          </section>
-        </div>
+              <p aria-live="polite" className="text-sm text-red-600">
+                {message ?? ''}
+              </p>
+            </>
+          ) : (
+            <>
+              <CheckoutAddressRecap
+                address={checkout.address}
+                disabled={isPending}
+                onEdit={checkout.backToInformation}
+              />
+              <CheckoutShippingOptions
+                quote={checkout.shippingQuote}
+                selected={checkout.selectedShipping}
+                disabled={isPending}
+                onQuote={checkout.refreshQuote}
+                onSelect={checkout.selectShipping}
+              />
+              <CheckoutPaymentSection
+                total={checkout.total}
+                isPending={isPending}
+                disabled={checkout.disabled}
+                message={message}
+                onSubmit={checkout.submit}
+                onBack={checkout.backToInformation}
+              />
+            </>
+          )}
+        </section>
         <CheckoutOrderSummary
           items={items}
           itemCount={itemCount}
-          shipping={selectedShipping}
+          shipping={checkout.selectedShipping}
         />
       </div>
     </div>
