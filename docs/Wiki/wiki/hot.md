@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-17
+updated: 2026-08-17 (part 49)
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -60,6 +60,7 @@ related:
   - "[[sals3-session-2026-08-15-part43-admin-portal-audit-trail-merged-and-synced-locally]]"
   - "[[sals3-session-2026-08-15-part44-storefront-variant-label-and-retail-price-floor]]"
   - "[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]"
+  - "[[sals3-session-2026-08-17-part49-portal-variant-matrix-r2-storage-meta-description-brand-origin-defaults]]"
 ---
 
 # Sals3 - Current State Cache
@@ -152,6 +153,8 @@ related:
 - **A candidate detail drawer opens from any Product Sourcing row, 2026-08-13.** Clicking a row previously did nothing in any of the six pipeline tabs. Now opens a read-only drawer (`?candidate=<uuid>`, five tabs: Overview/Stock/Supplier evidence/Screening & queue/History) whose authorization boundary is one function, `resolveCandidateDetail`, filtering on `supplier_connections.seller_account_id` in the same `WHERE` as the lookup so a cross-tenant or unknown id costs exactly one statement and returns the identical `null` either way. Absence is kept three-way distinct (`not-fetched`/`reported-zero`/`never-recorded`, discriminated by timestamp presence) rather than collapsing to one blank state, and the manual stock attestation outranks raw CJ evidence in the Stock tab per ADR-013. Found and fixed in passing: `buildQueryString` was silently dropping `page` on any non-filter patch, which would have reset a clicked list to page 1 - the identical bug is confirmed still live on `/products`' own Source Details panel, flagged, not fixed here. See [[sals3-session-2026-08-13-part39-candidate-detail-drawer]]. `sals3-portal` [PR #61](https://github.com/Sals3-Official/sals3-portal/pull/61), merged.
 
 - **Candidate drawer follow-up, 2026-08-13: a product photo, a real security fix, and 19→11 statements per open (PR #62).** Supplier evidence now shows the one image address the database actually holds (`candidate_evaluations.feed_snapshot.imageUrl`) with the empty-gallery reason stated honestly rather than implied. Real fix: `imageUrl()` now re-checks the host on the **read** path, not just at intake - `images.loader: 'custom'` bypasses `/_next/image` entirely, so any value that ever reached that column outside the normal write path was a browser `GET` issued from the seller's own session. Separately, one render of `/products/pipeline` dropped from 19 statements open (12 close) to 4 warm, via `React.cache` deduplication of three redundant `seller_accounts` reads and a 30-second tagged `unstable_cache` for the nav-badge/tab-bar counts (seller id passed as a cache-key argument, so tenant isolation is structural) - accepted tradeoff: a tab can read one count stale for up to 30 seconds, self-healing within the TTL. See [[sals3-session-2026-08-13-part39-candidate-detail-drawer]]'s follow-up section. `sals3-portal` [PR #62](https://github.com/Sals3-Official/sals3-portal/pull/62), merged.
+
+- **Variant Matrix UX, Cloudflare R2 photo storage, Meta Description, and Brand/Country-of-Origin display defaults — 2026-08-17, PR open and deliberately not merged.** `VariantOptionMappingSection` no longer renders its own nav-unreachable `EditorSectionCard`; it is now a presentational subsection inside the `variants` card, and seller-facing copy is renamed "Option groups" → "Variant Matrix" throughout (backend names unchanged). Seller photo uploads moved from Vercel Blob (shipped days earlier, see [[../../journal/sals3-session-2026-08-17-seller-photo-upload-manager]]) to Cloudflare R2 via `@aws-sdk/client-s3`, per owner decision that the feature needs durable object storage — all prior upload validation preserved. A new `products.meta_description` column and dedicated, narrowly-scoped field (140-160 char guidance, a Sals3-native search preview, a local non-AI auto-suggestion, its own compare-and-set save action) ships behind a break-glass migration endpoint following the exact pattern the category-attribute-controls incident established (see [[../../journal/sals3-session-2026-08-17-category-attribute-specifications-production-rollout]]). The Specification section's `Brand`/`Country of Origin` dropdowns now show "Generic"/"Others" instead of the raw `UNBRANDED` token or a blank placeholder — display only, the raw token is still what is submitted and stored. **Deliberately not merged**: Bogs supplied real Cloudflare R2 credentials in chat for setup, which per this agent's standing rules are never entered into any third-party service (Vercel included) even under explicit authorization; the public R2 base URL was never supplied at all (only the private S3 endpoint, which the feature's own code refuses as a public value); and Bogs then explicitly handed the remaining Cloudflare/Vercel configuration and merge decision to AJ rather than proceeding. See [[sals3-session-2026-08-17-part49-portal-variant-matrix-r2-storage-meta-description-brand-origin-defaults]]. `sals3-portal` [PR #106](https://github.com/Sals3-Official/sals3-portal/pull/106), pushed, **not merged**.
 
 ### Incomplete or placeholder
 
@@ -437,6 +440,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-portal-cj-to-sals3-category-mapping-pilot]]
 - [[sals3-session-2026-08-11-part33-admin-portal-gate-0-and-bootstrap]]
 - [[sals3-session-2026-08-12-part35-listing-readiness-panel-repair]]
+- [[sals3-session-2026-08-17-part49-portal-variant-matrix-r2-storage-meta-description-brand-origin-defaults]]
 
 ## Reusable lessons
 
