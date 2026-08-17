@@ -57,7 +57,7 @@ export default function CheckoutShippingOptions({
             Delivery
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            CJ delivery methods are quoted from the address above.
+            CJ delivery methods are quoted for your delivery address.
           </p>
         </div>
         <button
@@ -66,7 +66,7 @@ export default function CheckoutShippingOptions({
           onClick={onQuote}
           className="min-h-11 rounded-lg border border-brand-600 px-4 text-sm font-bold text-brand-600 transition-all duration-200 hover:bg-brand-600/10 disabled:cursor-not-allowed disabled:border-border-strong disabled:text-ink-faint disabled:hover:bg-transparent"
         >
-          Get delivery options
+          Refresh options
         </button>
       </div>
       {quote === null ? null : (

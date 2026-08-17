@@ -110,13 +110,18 @@ cart lines and the completed delivery address. CJ credentials remain in
 
 ## Checkout and Stripe
 
-`/cart` now sends buyers to `/checkout`. Checkout reads the browser-local cart
-for display, asks for contact and delivery address, then lets the buyer request
-CJ freight options from the protected Portal quote endpoint. The buyer must
-select one option per fulfillment package before payment. The server re-fetches
-each product and re-quotes the selected freight from the Sals3 Portal storefront
-API before creating a Stripe Hosted Checkout Session. Browser cart prices and
-browser freight prices are never trusted for payment.
+`/cart` now sends buyers to `/checkout`. Checkout is a two-step flow on one
+route: step 1 collects contact and delivery address, and "Continue to
+delivery" validates the address, fetches CJ freight options from the protected
+Portal quote endpoint, and only advances on success; step 2 shows a "Ship to"
+recap (with Edit returning to step 1), the delivery options, and payment. The
+buyer must select one option per fulfillment package before payment. Editing
+any address field clears the quote, so returning to step 2 re-quotes; going
+back without editing reuses the live quote and keeps the selection (a "Refresh
+options" button re-quotes on demand). The server re-fetches each product and
+re-quotes the selected freight from the Sals3 Portal storefront API before
+creating a Stripe Hosted Checkout Session. Browser cart prices and browser
+freight prices are never trusted for payment.
 
 Checkout address entry is country-aware for the currently enabled CJ
 destinations. Philippines starts phone numbers with `+639`; Australia starts
