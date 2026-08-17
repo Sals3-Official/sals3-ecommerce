@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-16
+updated: 2026-08-17
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -312,6 +312,32 @@ to ADR-002 (do not silently rewrite it) before treating this as resolved.
 Item 8 under "Current build priorities" below (pilot/validate Taxonomy v0
 branches) is affected by the same staleness.
 
+### Category-driven Specification section is live in production, after a real 404 incident and fix
+
+`sals3-portal`'s Product Editor now has a "Specification" section (between
+Basic Information and Description), backed by 53,625 per-category attribute
+controls and a 149-entry attribute dictionary extracted from the finalized
+taxonomy workbook. REQUIRED attributes are real, server-enforced publish
+blockers. Merging this feature the first time
+([PR #102](https://github.com/Sals3-Official/sals3-portal/pull/102)) 404'd
+the entire Product Catalogue in production, because its Drizzle migration
+and seed had only ever run against a local database - the same root cause
+as the Taxonomy v1 incident above, one level worse (missing tables, not just
+missing rows). Fixed using that same incident's established pattern: a
+`CRON_SECRET`-authenticated, `workflow_dispatch`-only break-glass endpoint
+(`/api/internal/catalog/taxonomy/migrate-attribute-controls`,
+[PR #103](https://github.com/Sals3-Official/sals3-portal/pull/103)) that
+runs the DDL and seed directly against the deployed app's own database - no
+raw DB credentials needed by the agent. Run once against production
+(19/19 DDL statements, 149/149 dictionary rows, 53,625/53,625 control rows,
+zero missing category codes), then the feature itself was safely restored
+on top ([PR #104](https://github.com/Sals3-Official/sals3-portal/pull/104))
+and confirmed live and working directly in production. See
+[[../../journal/sals3-session-2026-08-17-category-attribute-specifications-production-rollout]]
+for the full incident writeup, including the Drizzle-migration-bookkeeping,
+fail-closed-seeding, and lazy-import hardening the break-glass endpoint
+needed on review before it was trusted enough to merge.
+
 ### Supplier connection ownership is stranded by identity, with no transfer tool
 
 The first real Better Auth login (2026-08-08) exposed a CJ connection created under the `dev-user` placeholder identity, unreachable and unreconnectable by the real account signing in afterward: `supplier_connections_provider_external_hash_key` is a hard unique index on `(providerId, externalAccountLookupHash)`, so the same real CJ account can have exactly one connection row, ever - soft-disconnecting the stale row does not release it for a different seller to claim, only reassigning `sellerAccountId` does. Fixed this time with a one-off script (data correction, not committed - see [[sals3-session-2026-08-08-part18-supplier-connection-identity-reassignment]], [[sals3-skills]] entry 66). **Open**: no permanent tool exists for this reassignment; it will recur for any connection created before a seller's first real login, and eventually between two real sellers contesting the same CJ account.
@@ -338,6 +364,10 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[../../journal/sals3-session-2026-08-17-category-attribute-specifications-production-rollout]] — PR #102 (category-driven Specification section, 53,625 attribute controls) merged, immediately 404'd the whole Product Catalogue in production (migration/seed only ever run locally), reverted, fixed with a break-glass migration endpoint (PR #103, hardened over a second review round for Drizzle-migration bookkeeping/fail-closed-seeding/lazy-import), run for real against production, then the feature safely restored (PR #104) and confirmed live.
+- [[../../journal/sals3-session-2026-08-17-seller-photo-upload-manager]] — real seller photo uploads end to end (Vercel Blob + `sharp`, 5MB/2000×2000 hard limits, magic-byte validation), supplier evidence gallery, branded variant toggles, and Supplier Details relocated to a collapsible section (PRs #100/#101).
+- [[../../journal/sals3-session-2026-08-17-portal-editor-supplier-details-refinements]] — Basic Information layout rework, category picker changed from search-first to browse-first modal, a CJ points-cost/data-provenance investigation, and a stale-summary-card bug fix (PRs #98/#99).
+- [[../../journal/sals3-session-2026-08-16-portal-option-mapping-editor]] — variant option-mapping wired end to end in the Product Editor (`VariantOptionMappingSection`, `saveOptionMapping`), with Taxonomy v1 preset axis-name prefills and supplier cost/stock observed-at timestamps sourced only from stored evidence, never a live CJ call.
 - [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]] — the real Sals3 Taxonomy v1 (5,595 rows) confirmed live in production; a CJ-mirror data-pollution bug in the category picker's search fixed; the one-time seed endpoint removed now its job is done; the picker reworked to a compact, Shopee-style read-only view once a category is decided, and repositioned beside Product Name. Flags [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] as stale (see the "Active risks" section above). Continues from part 47 below.
 - [[sals3-session-2026-08-15-part47-option-mapping-wiring-and-supplier-change-detection]] — the seven-PR session (`sals3-portal` PRs #81-#87): option mapping wired end to end, supplier change detection shipped at zero CJ points, and Sals3 Taxonomy replaced with v1 (Google Product Taxonomy) in application code and the local database. Corrects three stale statuses without rewriting history: [[universal-category-variation-taxonomy-reference]] described v0 as canonical (superseded-banner added, v0 kept as history), part 45's frontmatter said "designed-not-built" for work that shipped this session, and [[sals3-portal-cj-to-sals3-category-mapping-pilot]] said the migration was unapplied anywhere (it's now applied locally, not production).
 - [[sals3-session-2026-08-15-part46-cj-evidence-field-capture-and-points-ledger]] — three CJ evidence fields already paid for and silently discarded (description, variant dimensions, per-country stock origin); a zero-new-call fix for all three; and a corrected, re-verified CJ points ledger (20 points/candidate, not 30).
