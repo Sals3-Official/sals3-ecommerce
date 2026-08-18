@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateCheckoutCart } from '@/services/checkout/cart-validation';
 import { createStripeCheckoutSession } from '@/services/stripe/checkout';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
+import createPortalCheckoutIntent from '@/services/checkout/intent';
 import { ProductsApiError } from '@/services/storefront/client';
 import {
   createCheckoutSessionAction,
@@ -26,6 +27,10 @@ vi.mock('@/services/stripe/checkout', () => ({
 }));
 
 vi.mock('@/services/checkout/freight-quotes', () => ({
+  default: vi.fn(),
+}));
+
+vi.mock('@/services/checkout/intent', () => ({
   default: vi.fn(),
 }));
 
@@ -83,6 +88,7 @@ describe('createCheckoutSessionAction', () => {
     vi.mocked(validateCheckoutCart).mockReset();
     vi.mocked(createStripeCheckoutSession).mockReset();
     vi.mocked(requestCheckoutFreightQuotes).mockReset();
+    vi.mocked(createPortalCheckoutIntent).mockReset();
   });
 
   it('rejects an empty cart', async () => {
@@ -98,14 +104,18 @@ describe('createCheckoutSessionAction', () => {
     });
   });
 
-  it('returns a Stripe redirect URL for a valid checkout', async () => {
+  it('returns an embedded Stripe Checkout client secret for a valid checkout', async () => {
     vi.mocked(validateCheckoutCart).mockResolvedValue({
       lines: [],
       subtotal: { amountMinor: 0, currency: 'USD' },
     });
-    vi.mocked(createStripeCheckoutSession).mockResolvedValue(
-      'https://checkout.stripe.test/pay',
-    );
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
+      checkoutIntentId: '11111111-1111-4111-8111-111111111111',
+    });
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_123',
+    });
     vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
 
     await expect(
@@ -116,10 +126,25 @@ describe('createCheckoutSessionAction', () => {
       }),
     ).resolves.toEqual({
       ok: true,
-      url: 'https://checkout.stripe.test/pay',
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_123',
     });
+    expect(createPortalCheckoutIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shippingSelection: {
+          packageSelections: [
+            expect.objectContaining({
+              quoteId: 'quote-new',
+              optionId: 'option-1',
+              amountMinor: 409,
+            }),
+          ],
+        },
+      }),
+    );
     expect(createStripeCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({
+        checkoutIntentId: '11111111-1111-4111-8111-111111111111',
         shippingSelection: {
           packageSelections: [
             expect.objectContaining({

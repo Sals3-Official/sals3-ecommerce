@@ -254,6 +254,15 @@ export const CheckoutFreightQuoteResponseSchema = z.object({
   quotedAt: z.string().datetime(),
 });
 
+export const CheckoutIntentResponseSchema = z.object({
+  checkoutIntentId: z.uuid(),
+});
+
+export const CheckoutOrderAcceptResponseSchema = z.object({
+  orderId: z.uuid(),
+  orderNumber: z.string().min(1).max(80),
+});
+
 const ProductCategorySchema = z.object({
   id: z.string().regex(CATEGORY_SLUG_PATTERN),
   code: z.string().min(1).max(4),
@@ -276,4 +285,10 @@ export type ProductSpecsPayload = z.infer<typeof ProductSpecsSchema>;
 export type CheckoutFreightQuote = z.infer<typeof CheckoutFreightQuoteSchema>;
 export type CheckoutFreightQuoteResponse = z.infer<
   typeof CheckoutFreightQuoteResponseSchema
+>;
+export type CheckoutIntentResponse = z.infer<
+  typeof CheckoutIntentResponseSchema
+>;
+export type CheckoutOrderAcceptResponse = z.infer<
+  typeof CheckoutOrderAcceptResponseSchema
 >;

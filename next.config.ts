@@ -18,6 +18,9 @@ export const SECURITY_HEADERS = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=()' },
 ];
 
+export const CHECKOUT_CSP =
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; frame-src https://*.stripe.com https://*.link.com; connect-src 'self' https://*.stripe.com https://*.link.com; worker-src 'self' blob:";
+
 /*
  * `/_next/` is excluded rather than covered by a plain `/:path*`. With the
  * broader matcher, `next dev` (16.3.0) answered its own chunk requests with 403
@@ -48,6 +51,10 @@ const nextConfig: NextConfig = {
         source,
         headers: [{ key: 'Cache-Control', value: 'no-store' }],
       })),
+      {
+        source: '/checkout/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: CHECKOUT_CSP }],
+      },
     ];
   },
   images: {

@@ -27,6 +27,9 @@ export default function useCheckout(
 ) {
   const [step, setStep] = useState<CheckoutStep>(1);
   const [message, setMessage] = useState<string | null>(null);
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
+    null,
+  );
   const [isSubmitPending, startTransition] = useTransition();
 
   const {
@@ -76,6 +79,7 @@ export default function useCheckout(
 
   const backToInformation = useCallback(() => {
     setMessage(null);
+    setStripeClientSecret(null);
     setStep(1);
   }, []);
 
@@ -92,6 +96,7 @@ export default function useCheckout(
     }
 
     setMessage(null);
+    setStripeClientSecret(null);
     startTransition(async () => {
       const result = await createCheckoutSessionAction({
         cart: toCheckoutCart(items),
@@ -100,7 +105,7 @@ export default function useCheckout(
       });
 
       if (result.ok) {
-        window.location.assign(result.url);
+        setStripeClientSecret(result.clientSecret);
         return;
       }
 
@@ -120,6 +125,7 @@ export default function useCheckout(
     errors,
     updateAddress,
     message,
+    stripeClientSecret,
     shippingQuote,
     selectedShipping,
     isPending,

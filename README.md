@@ -99,6 +99,7 @@ repeat the four-list scan; the main product detail read remains live.
 Required `.env.local` values:
 
 ```text
+SALS3_PORTAL_URL=http://localhost:3001
 SALS3_PORTAL_API_URL=http://localhost:3001
 SALS3_STOREFRONT_API_TOKEN=<same value as sals3-portal>
 ```
@@ -120,7 +121,7 @@ any address field clears the quote, so returning to step 2 re-quotes; going
 back without editing reuses the live quote and keeps the selection (a "Refresh
 options" button re-quotes on demand). The server re-fetches each product and
 re-quotes the selected freight from the Sals3 Portal storefront API before
-creating a Stripe Hosted Checkout Session. Browser cart prices and browser
+creating a Stripe Embedded Checkout Session. Browser cart prices and browser
 freight prices are never trusted for payment.
 
 Checkout address entry is country-aware for the currently enabled CJ
@@ -136,18 +137,23 @@ Required Stripe values in `.env.local` or host secrets:
 
 ```text
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SALS3_ECOMMERCE_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<pk_... publishable key>
 STRIPE_SECRET_KEY=<test or restricted secret key>
 STRIPE_WEBHOOK_SECRET=<Stripe webhook signing secret>
 STRIPE_PAYMENT_METHOD_CONFIGURATION_ID=<pmc_... config for card + eligible bank debit>
 ```
 
 Use a Stripe restricted key (`rk_...`) instead of `sk_...` when possible. Never
-commit Stripe keys. The checkout integration uses dynamic payment methods and
-passes `STRIPE_PAYMENT_METHOD_CONFIGURATION_ID`; it deliberately does not pass
-`payment_method_types`. Cards work in the current USD flow. Bank debit appears
-only when Stripe says the session currency, buyer details, account, and payment
-method configuration are eligible. AU BECS requires an AUD cart; this app does
-not convert USD to AUD.
+commit Stripe keys. The checkout integration mounts Stripe Embedded Checkout
+with `@stripe/react-stripe-js`, creates sessions with `ui_mode:
+embedded_page`, returns `{ clientSecret, sessionId }` to the browser, uses
+dynamic payment methods, and passes `STRIPE_PAYMENT_METHOD_CONFIGURATION_ID`;
+it deliberately does not pass `payment_method_types` or `automatic_tax`.
+Cards work in the current USD flow. Bank debit appears only when Stripe says
+the session currency, buyer details, account, and payment method configuration
+are eligible. AU BECS requires an AUD cart; this app does not convert USD to
+AUD.
 
 Selected CJ freight is added to Stripe as a separate line item named
 `Shipping - <CJ logistics name>`. A compact, non-sensitive freight snapshot is
@@ -155,11 +161,15 @@ stored in Stripe Checkout Session and PaymentIntent metadata: selected option
 IDs, channel IDs, price, days, package count, destination country, and quote
 timestamp.
 
-`/checkout/success` verifies the Stripe Session server-side before showing the
-payment status. `/api/stripe/webhook` verifies Stripe signatures and accepts
-checkout completion, async-payment-failed, and expired events. This is still a
-Stripe-only v1: no Sals3 order database, supplier fulfillment, refunds ledger,
-or tax automation is created here.
+Before creating Stripe payment, ecommerce creates an immutable Portal checkout
+intent that owns the cart, address, freight, and supplier snapshot. The Stripe
+Session uses that intent id as `client_reference_id`. `/checkout/success`
+verifies the Stripe Session server-side before showing the payment status.
+`/api/stripe/webhook` verifies Stripe signatures; on paid
+`checkout.session.completed` events it calls Portal's protected accept-order
+endpoint with the Stripe event id as the idempotency key. The Sals3 order
+database, CJ credentials, queue, and supplier fulfillment live in
+`sals3-portal`, not this app.
 
 ## Authentication
 
