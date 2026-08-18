@@ -62,6 +62,7 @@ related:
   - "[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]"
   - "[[sals3-session-2026-08-17-part49-portal-variant-matrix-r2-storage-meta-description-brand-origin-defaults]]"
   - "[[sals3-session-2026-08-17-part50-aj-checkout-freight-quotes]]"
+  - "[[sals3-session-2026-08-18-part51-supplier-photo-toggle-and-the-missing-column-outage]]"
 ---
 
 # Sals3 - Current State Cache
@@ -394,6 +395,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[sals3-session-2026-08-18-part51-supplier-photo-toggle-and-the-missing-column-outage]] — **a repeat of the previous day's PR #102 outage**: a migration run only locally, merged, and `/listings` 500'd on `column products.show_supplier_photo does not exist` (PR #113, reverted by #114). Rebuilt as four PRs — break-glass migration endpoint alone (#115), the two fixes needing no schema at all (#116), spec fields no longer *styled* as errors (#119), and the toggle last (#117), only after the workflow had proven the column existed. Produced the standing rule **never `db:migrate` locally**, a `lock_timeout`-bounded self-verifying migration, and the observation that a session note describing an incident is not a control.
 - [[../../journal/sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]] — the Specification section's open QA-gap follow-up (PR #105): `MULTI_SELECT_DROPDOWN` attributes rebuilt as a closed `Popover` dropdown matching every single-select field, a category-switch state bug fixed (stale `useState(fixture.categoryAttributes)` resynced during render, keyed on `sals3CategoryCode`), a regression test proven to fail without the fix, and a Dependabot `nanoid` alert confirmed stale (already patched via `postcss`).
 - [[../../journal/sals3-session-2026-08-17-category-attribute-specifications-production-rollout]] — PR #102 (category-driven Specification section, 53,625 attribute controls) merged, immediately 404'd the whole Product Catalogue in production (migration/seed only ever run locally), reverted, fixed with a break-glass migration endpoint (PR #103, hardened over a second review round for Drizzle-migration bookkeeping/fail-closed-seeding/lazy-import), run for real against production, then the feature safely restored (PR #104) and confirmed live.
 - [[../../journal/sals3-session-2026-08-17-seller-photo-upload-manager]] — real seller photo uploads end to end (Vercel Blob + `sharp`, 5MB/2000×2000 hard limits, magic-byte validation), supplier evidence gallery, branded variant toggles, and Supplier Details relocated to a collapsible section (PRs #100/#101).
