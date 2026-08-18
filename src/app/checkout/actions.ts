@@ -15,10 +15,12 @@ import {
 import { createStripeCheckoutSession } from '@/services/stripe/checkout';
 import { ProductsApiError } from '@/services/storefront/client';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
+import createPortalCheckoutIntent from '@/services/checkout/intent';
 import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
 
 export type CreateCheckoutSessionResult =
-  { ok: true; url: string } | { ok: false; message: string };
+  | { ok: true; clientSecret: string; sessionId: string }
+  | { ok: false; message: string };
 export type QuoteCheckoutShippingResult =
   | { ok: true; quote: CheckoutFreightQuoteResponse }
   | { ok: false; message: string };
@@ -169,14 +171,20 @@ export async function createCheckoutSessionAction(
       quoted,
       parsed.data.shippingSelection,
     );
-    const url = await createStripeCheckoutSession({
+    const intent = await createPortalCheckoutIntent({
+      cart: parsed.data.cart,
+      address: parsed.data.address,
+      shippingSelection,
+    });
+    const session = await createStripeCheckoutSession({
       cart,
       address: parsed.data.address,
       shippingSelection,
       shippingQuotedAt: quoted.quotedAt,
+      checkoutIntentId: intent.checkoutIntentId,
     });
 
-    return { ok: true, url };
+    return { ok: true, ...session };
   } catch (error) {
     if (error instanceof CheckoutValidationError) {
       return { ok: false, message: error.message };

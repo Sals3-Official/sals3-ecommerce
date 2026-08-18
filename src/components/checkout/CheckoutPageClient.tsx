@@ -117,6 +117,7 @@ export default function CheckoutPageClient() {
                 isPending={isPending}
                 disabled={checkout.disabled}
                 message={message}
+                clientSecret={checkout.stripeClientSecret}
                 onSubmit={checkout.submit}
                 onBack={checkout.backToInformation}
               />

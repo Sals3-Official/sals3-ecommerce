@@ -62,9 +62,10 @@ describe('createStripeCheckoutSession', () => {
     process.env.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID = 'pmc_test_123';
   });
 
-  it('creates a hosted Checkout Session with dynamic payment methods', async () => {
+  it('creates an embedded Checkout Session with dynamic payment methods', async () => {
     createSession.mockResolvedValue({
-      url: 'https://checkout.stripe.test/pay',
+      id: 'cs_test_123',
+      client_secret: 'cs_test_secret',
     });
 
     await expect(
@@ -73,21 +74,28 @@ describe('createStripeCheckoutSession', () => {
         address,
         shippingSelection,
         shippingQuotedAt: '2026-08-17T14:00:00.000Z',
+        checkoutIntentId: '11111111-1111-4111-8111-111111111111',
       }),
-    ).resolves.toBe('https://checkout.stripe.test/pay');
+    ).resolves.toEqual({
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_123',
+    });
 
     const params = createSession.mock.calls[0]?.[0];
 
     expect(params).toMatchObject({
       mode: 'payment',
+      ui_mode: 'embedded_page',
+      client_reference_id: '11111111-1111-4111-8111-111111111111',
       customer_email: 'buyer@example.com',
       payment_method_configuration: 'pmc_test_123',
-      success_url:
+      return_url:
         'https://sals3.test/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: 'https://sals3.test/checkout?canceled=1',
     });
     expect(params).not.toHaveProperty('payment_method_types');
     expect(params).not.toHaveProperty('automatic_tax');
+    expect(params).not.toHaveProperty('success_url');
+    expect(params).not.toHaveProperty('cancel_url');
     expect(params.integration_identifier).toMatch(/^sals3_checkout_[a-z]{8}$/);
     expect(params.line_items[0].price_data.unit_amount).toBe(2000);
     expect(params.line_items[1]).toMatchObject({
@@ -110,7 +118,8 @@ describe('createStripeCheckoutSession', () => {
 
   it('adds selected CJ freight but still does not enable Stripe automatic tax', async () => {
     createSession.mockResolvedValue({
-      url: 'https://checkout.stripe.test/pay',
+      id: 'cs_test_123',
+      client_secret: 'cs_test_secret',
     });
 
     await createStripeCheckoutSession({
@@ -118,6 +127,7 @@ describe('createStripeCheckoutSession', () => {
       address,
       shippingSelection,
       shippingQuotedAt: '2026-08-17T14:00:00.000Z',
+      checkoutIntentId: '11111111-1111-4111-8111-111111111111',
     });
 
     const params = createSession.mock.calls[0]?.[0];

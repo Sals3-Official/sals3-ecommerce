@@ -16,6 +16,10 @@ export const STOREFRONT_PRODUCTS_PATH = '/api/storefront/products';
 export const STOREFRONT_CATEGORIES_PATH = '/api/storefront/categories';
 export const STOREFRONT_FREIGHT_QUOTES_PATH =
   '/api/storefront/checkout/freight-quotes';
+export const STOREFRONT_CHECKOUT_INTENTS_PATH =
+  '/api/storefront/checkout/intents';
+export const STOREFRONT_CHECKOUT_ORDERS_ACCEPT_PATH =
+  '/api/storefront/checkout/orders/accept';
 
 export class ProductsApiError extends Error {
   readonly status?: number;
@@ -36,7 +40,9 @@ export class ProductsApiError extends Error {
 export function getStorefrontApiUrl(path: string): URL {
   return new URL(
     path,
-    process.env.SALS3_PORTAL_API_URL ?? DEFAULT_STOREFRONT_API_URL,
+    process.env.SALS3_PORTAL_URL ??
+      process.env.SALS3_PORTAL_API_URL ??
+      DEFAULT_STOREFRONT_API_URL,
   );
 }
 

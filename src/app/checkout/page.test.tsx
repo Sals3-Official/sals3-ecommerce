@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
@@ -13,6 +14,17 @@ import CheckoutPage, { generateMetadata } from './page';
 vi.mock('@/app/checkout/actions', () => ({
   createCheckoutSessionAction: vi.fn(),
   quoteCheckoutShippingAction: vi.fn(),
+}));
+
+vi.mock('@/services/stripe/browser', () => ({
+  getStripePromise: vi.fn(() => Promise.resolve(null)),
+}));
+
+vi.mock('@stripe/react-stripe-js', () => ({
+  EmbeddedCheckoutProvider: ({ children }: { children: ReactNode }) => (
+    <div data-testid="embedded-checkout-provider">{children}</div>
+  ),
+  EmbeddedCheckout: () => <div data-testid="embedded-checkout" />,
 }));
 
 const mockedCreateCheckoutSessionAction = vi.mocked(
@@ -252,6 +264,30 @@ describe('Checkout page', () => {
         }),
       }),
     );
+  });
+
+  it('mounts Embedded Checkout after a shipping selection creates a Stripe session', async () => {
+    seedCart(1);
+    mockedQuoteCheckoutShippingAction.mockResolvedValue({
+      ok: true,
+      quote: shippingQuote,
+    });
+    mockedCreateCheckoutSessionAction.mockResolvedValue({
+      ok: true,
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_123',
+    });
+
+    renderWithCart(<CheckoutPage />);
+
+    await fillValidAddress();
+    clickContinue();
+    await waitForStep2();
+    fireEvent.click(screen.getByLabelText(/standard.*cjpacket postal/i));
+    fireEvent.click(screen.getByRole('button', { name: /^payment$/i }));
+
+    expect(await screen.findByTestId('embedded-checkout')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^payment$/i })).toBeDisabled();
   });
 
   it('stays on step 1 when quoting fails', async () => {

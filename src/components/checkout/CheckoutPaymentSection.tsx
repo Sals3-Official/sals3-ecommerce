@@ -1,12 +1,18 @@
 'use client';
 
+import {
+  EmbeddedCheckout,
+  EmbeddedCheckoutProvider,
+} from '@stripe/react-stripe-js';
 import { formatMoney, type Money } from '@/lib/money';
+import { getStripePromise } from '@/services/stripe/browser';
 
 type CheckoutPaymentSectionProps = {
   total: Money;
   isPending: boolean;
   disabled: boolean;
   message: string | null;
+  clientSecret: string | null;
   onSubmit: () => void;
   onBack: () => void;
 };
@@ -16,9 +22,13 @@ export default function CheckoutPaymentSection({
   isPending,
   disabled,
   message,
+  clientSecret,
   onSubmit,
   onBack,
 }: CheckoutPaymentSectionProps) {
+  const stripePromise = getStripePromise();
+  const canMountStripe = stripePromise !== null && clientSecret !== null;
+
   return (
     <section
       aria-labelledby="checkout-payment-heading"
@@ -42,13 +52,28 @@ export default function CheckoutPaymentSection({
         </div>
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled || clientSecret !== null}
           onClick={onSubmit}
           className="bg-brand-gradient min-h-11 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-none disabled:bg-surface-sunken disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
         >
-          {isPending ? 'Opening payment...' : 'Payment'}
+          {isPending ? 'Preparing payment...' : 'Payment'}
         </button>
       </div>
+      {canMountStripe ? (
+        <div className="mt-4 overflow-hidden rounded-lg border border-border-strong">
+          <EmbeddedCheckoutProvider
+            stripe={stripePromise}
+            options={{ clientSecret }}
+          >
+            <EmbeddedCheckout />
+          </EmbeddedCheckoutProvider>
+        </div>
+      ) : null}
+      {stripePromise === null ? (
+        <p className="mt-3 text-sm text-red-600">
+          Stripe checkout is not configured.
+        </p>
+      ) : null}
       <p className="mt-3 text-xs text-ink-faint">
         Stripe decides which enabled payment methods appear from currency and
         location. Sals3 does not store card or bank details.

@@ -96,7 +96,8 @@ export async function createStripeCheckoutSession(input: {
   address: CheckoutAddress;
   shippingSelection: CheckoutShippingSelection;
   shippingQuotedAt: string;
-}): Promise<string> {
+  checkoutIntentId: string;
+}): Promise<{ clientSecret: string; sessionId: string }> {
   const baseUrl = getBaseUrl();
   const stripe = getStripeClient();
   const paymentMethodConfiguration =
@@ -123,9 +124,10 @@ export async function createStripeCheckoutSession(input: {
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
+    ui_mode: 'embedded_page',
     integration_identifier: `${INTEGRATION_PREFIX}${randomLowercase(8)}`,
-    success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/checkout?canceled=1`,
+    return_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    client_reference_id: input.checkoutIntentId,
     customer_email: input.address.email,
     billing_address_collection: 'auto',
     ...(paymentMethodConfiguration === undefined ||
@@ -160,11 +162,11 @@ export async function createStripeCheckoutSession(input: {
     ],
   });
 
-  if (session.url === null) {
-    throw new Error('Stripe Checkout Session did not include a redirect URL.');
+  if (session.client_secret === null) {
+    throw new Error('Stripe Checkout Session did not include a client secret.');
   }
 
-  return session.url;
+  return { clientSecret: session.client_secret, sessionId: session.id };
 }
 
 export async function retrieveStripeCheckoutSession(
