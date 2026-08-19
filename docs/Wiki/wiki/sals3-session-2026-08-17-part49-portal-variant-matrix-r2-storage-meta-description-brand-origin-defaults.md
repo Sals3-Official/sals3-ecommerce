@@ -249,3 +249,27 @@ stashing, or otherwise disturbing that unrelated in-progress work; `git
 stash` on the original checkout was itself blocked by the same auto-mode
 classifier mentioned in §6, which made isolating via worktree the only
 available path rather than a stylistic preference.
+
+## 8. Follow-up 2026-08-19 — PR #106 merged; the Cloudflare configuration did not
+
+§6 above records PR #106 as deliberately unmerged, waiting on AJ to complete
+the Cloudflare R2 setup. **It merged on 2026-08-18 at 00:06 UTC.** The status
+in §6 is history, not the current state, and is left standing rather than
+rewritten.
+
+What merging changed and what it did not:
+
+- The Variant Matrix rename, the R2 storage backend, the Meta Description
+  field, and the Brand/Country-of-Origin display defaults are all on
+  `develop` and deployed.
+- **The five Cloudflare R2 environment variables were still not set** as of
+  2026-08-19, and `CLOUDFLARE_R2_PUBLIC_BASE_URL` has still never been
+  supplied. Seller photo upload and the description images added in
+  [[sals3-session-2026-08-18-part54-description-blocks-images-and-variant-matrix-rename]]
+  both stay visibly disabled with an honest reason until they exist.
+- The break-glass migration workflow for `0021` (§5) is likewise unconfirmed
+  from this side.
+
+The secret values Bogs pasted into the chat transcript during that session
+were flagged then as worth rotating in the Cloudflare dashboard. That is also
+unconfirmed.
