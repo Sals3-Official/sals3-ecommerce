@@ -7,35 +7,28 @@ import {
   EmbeddedCheckoutProvider,
 } from '@stripe/react-stripe-js';
 import { useCheckoutFlow } from '@/components/checkout/CheckoutFlowProvider';
-import { formatMoney, money } from '@/lib/money';
 import { getStripePromise } from '@/services/stripe/browser';
 
 /**
- * Step 3: pay.
+ * Step 3: pay. Stripe's embedded form, and nothing else of ours.
  *
- * There is no submit button here. The delivery step created the Stripe session
- * before navigating, so the embedded form is mounted on arrival — the buyer
- * lands ready to pay rather than pressing a second button to reach a payment
- * form they thought they had already opened.
+ * There is no submit button. The delivery step created the Stripe session
+ * before navigating, so the form is mounted on arrival — the buyer lands ready
+ * to pay rather than pressing a second button to reach a payment form they
+ * thought they had already opened.
  *
- * Two blocks, deliberately: a small card carrying the amounts, then Stripe at
- * the page's full width with no frame of our own. The embedded form already
- * draws its own card, its own itemised summary, and its own borders; wrapping
- * it in a second bordered box put two nested frames on screen and narrowed the
- * form for no gain. The totals stay above it because they are the one thing
- * Stripe cannot show before it finishes loading — and shipping is the line most
- * likely to be the surprise, so it is broken out rather than folded into a
- * single number.
+ * Everything we used to draw around it is gone: no wrapper card, no border, no
+ * order summary, no totals panel. The embedded form renders its own card, its
+ * own itemised list, its own shipping row, and its own total, so each of those
+ * was a second copy of the same numbers competing to be believed, and the
+ * wrapper cost the form width to say nothing new. The one consequence worth
+ * knowing: the page shows no amount until Stripe finishes loading, because
+ * Stripe is now the only thing that states it.
  */
 export default function CheckoutPaymentStep() {
   const router = useRouter();
-  const { items, stripeClientSecret, shipping, total, message, isPending } =
-    useCheckoutFlow();
+  const { stripeClientSecret, message, isPending } = useCheckoutFlow();
   const stripePromise = getStripePromise();
-  const merchandise = money(
-    total.amountMinor - shipping.amountMinor,
-    total.currency,
-  );
 
   /*
    * No prepared session means a reload or a pasted URL: the client secret lives
@@ -56,44 +49,9 @@ export default function CheckoutPaymentStep() {
 
   return (
     <>
-      <section
-        aria-labelledby="checkout-payment-heading"
-        className="rounded-xl border border-border bg-white p-4"
-      >
-        <h2
-          id="checkout-payment-heading"
-          className="font-display text-xl font-semibold"
-        >
-          Payment
-        </h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Pay by card or eligible bank debit. Sals3 does not store card or bank
-          details.
-        </p>
-        <dl className="mt-4 border-t border-border pt-4 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-ink-muted">
-              {items.length === 1 ? '1 item' : `${items.length} items`}
-            </dt>
-            <dd className="font-semibold text-ink">
-              {formatMoney(merchandise)}
-            </dd>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <dt className="text-ink-muted">Shipping</dt>
-            <dd className="font-semibold text-ink">{formatMoney(shipping)}</dd>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3 border-t border-border pt-2">
-            <dt className="font-semibold text-ink">Total today</dt>
-            <dd className="font-display text-2xl font-semibold text-ink">
-              {formatMoney(total)}
-            </dd>
-          </div>
-        </dl>
-        <p aria-live="polite" className="mt-3 text-sm text-red-600">
-          {message ?? ''}
-        </p>
-      </section>
+      <p aria-live="polite" className="text-sm text-red-600">
+        {message ?? ''}
+      </p>
 
       {stripePromise === null ? (
         <p className="text-sm text-red-600">

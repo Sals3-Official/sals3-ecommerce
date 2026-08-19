@@ -149,15 +149,13 @@ into web storage. A step entered without the state it needs redirects to
 The order summary sidebar renders on information and delivery, so items and
 shipping cost stay visible while the buyer is still choosing.
 
-**Payment takes the full width and has no sidebar.** Stripe's embedded form
-draws its own itemised summary — every line, the shipping row, the total — so
-ours beside it would be a second copy of the same numbers competing to be
-believed, while narrowing the payment form to make room. What the payment step
-does keep is an item-count / shipping / total breakdown above the form: those
-are the amounts Stripe cannot show until it has loaded, and shipping is the line
-most likely to be the surprise. The embedded form is also rendered without a
-wrapper of our own — it already draws a card and its own borders, and nesting it
-in a second bordered box showed two frames.
+**Payment renders Stripe's embedded form and nothing else.** No sidebar, no
+wrapper card, no totals panel. The form draws its own card, its own itemised
+list, its own shipping row, and its own total, so anything of ours beside it was
+a second copy of the same numbers competing to be believed — and a wrapper cost
+the form width to say nothing new. One consequence worth knowing: the page shows
+no amount until Stripe finishes loading, because Stripe is now the only thing
+that states it.
 
 **Duplicate-session guard.** Separate routes hand the buyer a Back button.
 `useCheckout` records a signature of the address plus the selected couriers when

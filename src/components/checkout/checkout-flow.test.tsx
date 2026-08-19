@@ -251,16 +251,23 @@ describe('checkout flow across routes', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('breaks out the item count, shipping, and total on the payment route', async () => {
+  /*
+   * Stripe's embedded form states the items, the shipping row, and the total
+   * itself. Anything of ours alongside it was a second copy of the same numbers
+   * competing to be believed, so the payment route now renders the form and
+   * nothing else.
+   */
+  it('renders the payment form without a summary or totals panel of ours', async () => {
     renderWithCart(<CheckoutFlowHarness />);
 
     await reachPayment();
 
-    expect(screen.getByText(/^1 item$/)).toBeInTheDocument();
-    expect(screen.getByText('Shipping')).toBeInTheDocument();
-    expect(screen.getByText('US$4.09')).toBeInTheDocument();
-    expect(screen.getByText('Total today')).toBeInTheDocument();
-    expect(screen.getByText('US$24.09')).toBeInTheDocument();
+    expect(screen.getByTestId('embedded-checkout')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /^payment$/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Total today')).not.toBeInTheDocument();
+    expect(screen.queryByText('US$24.09')).not.toBeInTheDocument();
   });
 
   /*
