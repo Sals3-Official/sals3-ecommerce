@@ -1,58 +1,59 @@
 import 'server-only';
 
 import { cache } from 'react';
+import {
+  fetchBuyerOrder,
+  fetchBuyerOrders,
+} from '@/services/storefront/orders';
 import type { BuyerOrder } from './contracts';
-import buildFixtureOrders from './fixtures';
+import toBuyerOrder from './from-api';
 
 /**
  * The one seam between the buyer orders UI and its data.
  *
- * ## Why it reads a fixture today
+ * Reads the portal's buyer orders API (`GET /api/storefront/orders*`, shipped
+ * 2026-08-19) through `services/storefront/orders.ts` and maps the payload in
+ * `from-api.ts`. The fixture module this file used to serve while no API
+ * existed remains for tests only — it is not a fallback here, because a failed
+ * fetch must read as a failure (the route's error boundary), never as somebody
+ * else's orders.
  *
- * The portal publishes no buyer orders read API. `storefront/client.ts` covers
- * products, categories, freight quotes, checkout intents and `orders/accept`,
- * and nothing there lists a buyer's orders or reads one back by number. Rather
- * than block the screens, both functions return `fixtures.ts` and this file is
- * where `GET /api/storefront/orders` lands the day it exists — the components
- * above it never learn which it was.
- *
- * ## The ownership rule survives the swap
+ * ## The ownership rule
  *
  * Both functions take the **verified session email** and nothing from the
- * request. A detail page resolves an order number only within the list the
- * session owns, so an order belonging to somebody else is indistinguishable
- * from one that does not exist — the same posture, and the same wording, that
- * `/checkout/success` uses. Holding an order number is not authorisation
- * (rules 20 and 21).
+ * request; it travels to the portal in the `X-Buyer-Email` header, and the
+ * portal filters on it inside the query. A detail read of an order the
+ * session does not own returns `null`, indistinguishable from an unknown
+ * number — the same posture `/checkout/success` takes with a Stripe id.
  *
  * ## Why `cache`
  *
- * `/orders/[orderNumber]` reads the list twice in one render: once in
+ * `/orders/[orderNumber]` reads the order twice in one render — once in
  * `generateMetadata` and once in the page. React's per-request cache collapses
- * that into one read now and one fetch later.
+ * that into one portal call.
  */
 
-async function loadOrders(email: string): Promise<BuyerOrder[]> {
-  // The email is not a filter yet — there is nothing to filter against — but it
-  // is required so that no call site can be written today that would have to
-  // grow an authorisation argument tomorrow.
-  if (email === '') return [];
-
-  return buildFixtureOrders();
-}
-
 export const listBuyerOrders = cache(
-  async (email: string): Promise<BuyerOrder[]> => loadOrders(email),
+  async (email: string): Promise<BuyerOrder[]> => {
+    if (email === '') return [];
+
+    const payloads = await fetchBuyerOrders(email);
+
+    return payloads
+      .map(toBuyerOrder)
+      .sort((a, b) => b.placedAt.localeCompare(a.placedAt));
+  },
 );
 
 export const readBuyerOrder = cache(
   async (email: string, orderNumber: string): Promise<BuyerOrder | null> => {
-    const orders = await loadOrders(email);
+    if (email === '') return null;
 
-    return (
-      orders.find(
-        (order) => order.number.toUpperCase() === orderNumber.toUpperCase(),
-      ) ?? null
+    const payload = await fetchBuyerOrder(
+      email,
+      orderNumber.trim().toUpperCase(),
     );
+
+    return payload === null ? null : toBuyerOrder(payload);
   },
 );

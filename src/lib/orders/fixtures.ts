@@ -20,32 +20,19 @@ import {
 } from './format';
 
 /**
- * Stand-in orders for the buyer surface, until the portal publishes a read API.
+ * Test fixtures for the buyer orders surface.
  *
- * ## Why this module exists
+ * Until 2026-08-19 this module was also the data behind `/orders`, because no
+ * buyer orders read API existed. The portal now serves
+ * `GET /api/storefront/orders*` and `lib/orders/read.ts` reads it through
+ * `services/storefront/orders.ts` — so this file is imported by tests only,
+ * where it exercises the lane/filter/query machinery and the card components
+ * against every state the design covers. It is not a seed, not a default, and
+ * not a fallback for a failed fetch.
  *
- * `src/services/storefront/client.ts` can fetch products, categories, freight
- * quotes, checkout intents, and `orders/accept`. Nothing lists a buyer's orders
- * and nothing reads one back by number, so on 2026-08-19 there was no data
- * source to build `/orders` against. The design was settled and the UI was
- * wanted, so the screens are built against this typed module instead, and
- * `src/lib/orders/read.ts` is the single seam the real API replaces.
- *
- * ## What keeps it honest
- *
- * - It is imported by `read.ts` and by tests, and by nothing else. It is not a
- *   seed, not a default, and not a fallback for a failed fetch — a failed fetch
- *   must read as a failure, never as somebody else's orders.
- * - Every money label is produced by `formatMoney`, and every line total is
- *   `unit × quantity` rather than a typed-in number, so the arithmetic the page
- *   claims is the arithmetic it does.
- * - The shapes are exactly `contracts.ts`. When the API lands, the mapping runs
- *   from its payload into the same types and this file is deleted.
- *
- * The content mirrors the design handoff's fixtures so the shipped page can be
- * compared against the prototype state for state. One number was corrected:
- * the prototype's first order printed a subtotal that did not equal its own
- * lines, which this file cannot reproduce because it adds them up.
+ * Every money label is produced by `formatMoney`, and every line total is
+ * `unit × quantity` rather than a typed-in number, so the arithmetic the tests
+ * assert is the arithmetic the pages do.
  */
 
 const CURRENCY: CurrencyCode = 'USD';

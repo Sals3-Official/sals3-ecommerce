@@ -48,6 +48,7 @@ const CLIENT_ENTRY_POINTS = [
   // client boundary — a filter form that routes, and a clipboard button.
   'components/orders/OrdersToolbar.tsx',
   'components/orders/CopyOrderNumber.tsx',
+  'app/orders/error.tsx',
   'components/product/ProductAddToCartButtons.tsx',
   'components/product/ProductOptionList.tsx',
   'components/product/ProductRecordPanel.tsx',

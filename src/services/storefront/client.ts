@@ -18,6 +18,7 @@ export const STOREFRONT_FREIGHT_QUOTES_PATH =
   '/api/storefront/checkout/freight-quotes';
 export const STOREFRONT_CHECKOUT_INTENTS_PATH =
   '/api/storefront/checkout/intents';
+export const STOREFRONT_ORDERS_PATH = '/api/storefront/orders';
 export const STOREFRONT_CHECKOUT_ORDERS_ACCEPT_PATH =
   '/api/storefront/checkout/orders/accept';
 
@@ -73,6 +74,13 @@ type RequestOptions = {
   cachePolicy?: StorefrontCachePolicy;
   method?: 'GET' | 'POST';
   body?: unknown;
+  /**
+   * Extra request headers. Exists for the buyer-identity header the orders
+   * endpoints require (`X-Buyer-Email`, always the session-verified email,
+   * never anything a request supplied) — a header rather than a query
+   * parameter so the address stays out of URLs and access logs.
+   */
+  headers?: Record<string, string>;
 };
 
 async function safeErrorMessageFrom(
@@ -119,6 +127,7 @@ export async function requestStorefrontJson<Schema extends z.ZodTypeAny>(
     cachePolicy = { cache: 'no-store' },
     method = 'GET',
     body,
+    headers,
   }: RequestOptions = {},
 ): Promise<z.output<Schema> | undefined> {
   const response = await fetcher(input.url, {
@@ -128,6 +137,7 @@ export async function requestStorefrontJson<Schema extends z.ZodTypeAny>(
       Accept: 'application/json',
       Authorization: getAuthorizationHeader(),
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(headers ?? {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal,
