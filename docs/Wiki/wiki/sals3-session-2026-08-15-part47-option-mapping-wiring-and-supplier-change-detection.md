@@ -261,11 +261,12 @@ categories that were ever supposed to have only one axis.
 
 ## 7. Work list, ranked by value
 
-1. **Fix `deriveOptionSplit` to drop a constant position instead of refusing
-   the whole product.** Opens 4 of 14 live products immediately (§5), likely
+1. ~~**Fix `deriveOptionSplit` to drop a constant position instead of refusing
+   the whole product.**~~ **Shipped 2026-08-15 as [PR #89](https://github.com/Sals3-Official/sals3-portal/pull/89)** — see the dated follow-up in §9. Opens 4 of 14 live products immediately (§5), likely
    most of the remaining catalogue as it grows. Needs `saveOptionMapping`
    updated too — its position-indexed matching must agree with the server on
-   which token means what once a position is dropped.
+   which token means what once a position is dropped. That second half was
+   the subtle one, and #89 did it.
 2. **Pre-fill option-mapping axis names from the Taxonomy v1 preset** instead
    of asking the seller to type "Colour"/"Size" from nothing (§6, last
    section).
@@ -296,3 +297,11 @@ categories that were ever supposed to have only one axis.
 - 14 live products, not 12 as an earlier handoff stated: 6 Live, 8 Draft (§5
   table covers all 14).
 - Taxonomy v1: 5,595 categories / 21 departments / 86 patterns, local only.
+
+## 9. Follow-up 2026-08-19 — work-list item 1 shipped four days ago
+
+§7's first item was fixed on **2026-08-15 by [PR #89](https://github.com/Sals3-Official/sals3-portal/pull/89)**, the same week this note was written, and nothing closed the loop here. `deriveOptionSplit` now drops a constant position from the proposal instead of disqualifying the whole product, and `saveOptionMapping`'s write loop is keyed by the supplier's true label position (`split.positions[i].index`) rather than the axis's array index — the two only coincide when nothing was dropped, and keying by array index would have left every variant on an affected product silently unmapped with no error.
+
+`product_options.position` is deliberately still keyed by array index, so a dropped position leaves no gap in the seller's own display order.
+
+[[hot]] carried the same stale claim until the 2026-08-19 audit. See [[sals3-session-2026-08-19-part56-backfill-of-five-undocumented-portal-prs]].
