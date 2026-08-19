@@ -164,3 +164,26 @@ body {
     rgb(0 31 58 / 0) 55%
   );
 }
+
+/*
+ * The orders list's loading skeleton. Declared here rather than as an arbitrary
+ * Tailwind value because a `@keyframes` cannot live in a utility class, and
+ * because `prefers-reduced-motion` above already neutralises it for anyone who
+ * asked — a second, component-local animation would escape that rule.
+ *
+ * Opacity rather than a moving highlight: a sweep implies progress the page
+ * cannot measure, and this is a placeholder for a fetch of unknown length.
+ */
+@keyframes s3pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-s3pulse {
+  animation: s3pulse 1.4s ease-in-out infinite;
+}

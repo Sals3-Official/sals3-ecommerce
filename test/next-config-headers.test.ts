@@ -43,21 +43,32 @@ describe('next.config header rules', () => {
     expect(SECURITY_HEADERS).toContainEqual({ key, value });
   });
 
-  it.each(['/login', '/signup', '/checkout/:path*'])(
-    'marks %s as never cacheable',
-    async (source) => {
-      const rules = await getHeaderRules();
+  it.each([
+    '/login',
+    '/signup',
+    '/checkout/:path*',
+    '/orders',
+    '/orders/:path*',
+  ])('marks %s as never cacheable', async (source) => {
+    const rules = await getHeaderRules();
 
-      expect(findRule(rules, source)?.headers).toEqual([
-        { key: 'Cache-Control', value: 'no-store' },
-      ]);
-    },
-  );
+    expect(findRule(rules, source)?.headers).toEqual([
+      { key: 'Cache-Control', value: 'no-store' },
+    ]);
+  });
 
   it('covers every sensitive browser screen and no API route', async () => {
     // API routes send `no-store` from `noStoreJson`, so listing them here too
     // would create a second place to keep in step.
-    expect(NO_STORE_ROUTES).toEqual(['/login', '/signup', '/checkout/:path*']);
+    expect(NO_STORE_ROUTES).toEqual([
+      '/login',
+      '/signup',
+      '/checkout/:path*',
+      // The buyer orders surface renders a name, an address, a phone number
+      // and a purchase history behind a session cookie.
+      '/orders',
+      '/orders/:path*',
+    ]);
     expect(NO_STORE_ROUTES.some((route) => route.startsWith('/api'))).toBe(
       false,
     );
