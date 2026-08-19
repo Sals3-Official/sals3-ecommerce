@@ -90,8 +90,21 @@ body {
   color: var(--color-ink);
 }
 
-a {
-  color: var(--color-brand-600);
+/*
+ * `@layer base`, not a bare rule.
+ *
+ * Tailwind v4 emits every utility inside `@layer utilities`, and CSS gives
+ * unlayered declarations priority over layered ones regardless of specificity.
+ * An unlayered `a { color }` therefore beat `text-white` on every anchor in the
+ * app: the cart's "Proceed to Checkout" and the checkout-success button both
+ * rendered brand blue on brand blue — a 1:1 contrast ratio, text invisible.
+ * Declaring it in the base layer restores the intended order, so utilities win
+ * and a bare link still gets the brand colour.
+ */
+@layer base {
+  a {
+    color: var(--color-brand-600);
+  }
 }
 
 :focus-visible {

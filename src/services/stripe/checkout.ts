@@ -169,8 +169,18 @@ export async function createStripeCheckoutSession(input: {
   return { clientSecret: session.client_secret, sessionId: session.id };
 }
 
+/**
+ * Expanded because the receipt on `/checkout/success` is rendered entirely from
+ * this one call: `line_items` for what was bought, its `price.product` for the
+ * thumbnails, and `payment_intent` for the shipping address recorded at
+ * creation. Reading the accepted order from the portal instead would race the
+ * `checkout.session.completed` webhook, which usually has not landed by the
+ * time the buyer is redirected back; the session is consistent immediately.
+ */
 export async function retrieveStripeCheckoutSession(
   sessionId: string,
 ): Promise<Stripe.Checkout.Session> {
-  return getStripeClient().checkout.sessions.retrieve(sessionId);
+  return getStripeClient().checkout.sessions.retrieve(sessionId, {
+    expand: ['line_items', 'line_items.data.price.product', 'payment_intent'],
+  });
 }

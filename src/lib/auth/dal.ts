@@ -13,12 +13,19 @@ import { SESSION_COOKIE_NAME } from './session-cookies';
  * place to change. `GET /api/auth/session` deliberately stays separate: it also
  * clears a stale cookie on the way out, which a Server Component cannot do.
  *
- * Only the uid is returned. The decoded token carries the email, the display
- * name, the provider, and custom claims; none of that is needed to answer "may
- * this request continue", and not returning it keeps the surface honest.
+ * Only the uid and the verified email are returned. The decoded token also
+ * carries the display name, the provider, and custom claims; none of that is
+ * needed to answer "may this request continue", and not returning it keeps the
+ * surface honest.
+ *
+ * `email` is present because `/checkout/success` has to answer a second
+ * question — "is this receipt *yours*" — and the Stripe session identifies its
+ * buyer by email. It comes from the verified session cookie, never from a
+ * request parameter.
  */
 export type BuyerSession = {
   uid: string;
+  email?: string;
 };
 
 async function readSessionCookie() {
@@ -52,7 +59,12 @@ async function verifyBuyerSession(
       checkRevoked,
     );
 
-    return { uid: decodedToken.uid };
+    return {
+      uid: decodedToken.uid,
+      ...(typeof decodedToken.email === 'string'
+        ? { email: decodedToken.email }
+        : {}),
+    };
   } catch {
     return null;
   }
