@@ -139,7 +139,7 @@ describe('Home page', () => {
     renderWithCart(await Home());
 
     expect(
-      screen.getByPlaceholderText(/search 240,000 products/i),
+      screen.getByPlaceholderText(/search 1,500,000 products/i),
     ).toBeInTheDocument();
   });
 
