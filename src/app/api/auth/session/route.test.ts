@@ -137,7 +137,7 @@ describe('/api/auth/session', () => {
     expect(setCookie).toContain('Path=/');
   });
 
-  it('returns signedIn true with the sanitized first name only when the session cookie verifies', async () => {
+  it('returns signedIn true with the sanitized full name only when the session cookie verifies', async () => {
     firebaseAdminAuth.verifySessionCookie.mockResolvedValue({
       uid: 'user-1',
       name: 'AJ Shopper',
@@ -151,7 +151,7 @@ describe('/api/auth/session', () => {
 
     await expect(response.json()).resolves.toEqual({
       signedIn: true,
-      firstName: 'AJ',
+      fullName: 'AJ Shopper',
     });
     expect(firebaseAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
       'session-cookie',

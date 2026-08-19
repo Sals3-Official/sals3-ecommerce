@@ -10,7 +10,7 @@ export default function CartCountBadge() {
   }
 
   return (
-    <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-xs font-bold text-white">
+    <span className="rounded-full bg-[var(--header-badge-bg)] px-1.5 py-0.5 text-xs font-bold text-[color:var(--header-badge-fg)]">
       {itemCount > 99 ? '99+' : itemCount}
     </span>
   );

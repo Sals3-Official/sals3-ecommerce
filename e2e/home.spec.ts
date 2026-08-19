@@ -75,7 +75,7 @@ test('opens the signed-in account menu and logs out', async ({ page }) => {
       body: JSON.stringify(
         didDeleteSession
           ? { signedIn: false }
-          : { signedIn: true, firstName: 'AJ' },
+          : { signedIn: true, fullName: 'AJ Shopper' },
       ),
     });
   });
@@ -88,7 +88,9 @@ test('opens the signed-in account menu and logs out', async ({ page }) => {
   });
 
   await page.goto('/');
-  const accountMenu = page.getByRole('button', { name: /aj account menu/i });
+  const accountMenu = page.getByRole('button', {
+    name: /aj shopper account menu/i,
+  });
 
   await expect(accountMenu).toBeVisible();
   await expect(page.getByRole('link', { name: /^log in$/i })).toHaveCount(0);

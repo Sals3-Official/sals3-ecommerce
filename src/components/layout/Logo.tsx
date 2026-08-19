@@ -1,19 +1,29 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+/**
+ * The mark is 2000x647 and is drawn in navy and teal on transparency, so it
+ * disappears against the expanded header's gradient. `--header-logo-filter`
+ * flips it to solid white there and back to its own colours once the header
+ * compacts; both states are written as the same filter list so the swap
+ * interpolates instead of snapping.
+ *
+ * Height is the only dimension set (40px expanded, 30px compact, from
+ * `--header-logo-height`). `width: auto` keeps the intrinsic 3.09:1 proportion
+ * at every height, and the `width`/`height` attributes stay at the intrinsic
+ * pixel size so the browser reserves the right box before the file arrives.
+ */
 export default function Logo() {
   return (
-    <Link
-      href="/"
-      className="flex items-center rounded-lg bg-brand-600/10 px-2.5 py-1.5 hover:bg-white"
-    >
+    <Link href="/" className="flex shrink-0 items-center rounded-lg">
       <Image
         src="/sals3-logo.webp"
         alt="Sals3"
         width={2000}
         height={647}
         priority
-        style={{ height: '28px', width: 'auto' }}
+        className="h-[var(--header-logo-height)] w-auto transition-[height,filter] duration-250 ease-out"
+        style={{ filter: 'var(--header-logo-filter)' }}
       />
     </Link>
   );

@@ -12,7 +12,7 @@ import {
 type HeaderAuthSession =
   | { status: 'loading' }
   | { status: 'signed-out' }
-  | { status: 'signed-in'; firstName?: string };
+  | { status: 'signed-in'; fullName?: string };
 
 type HeaderAuthContextValue = {
   session: HeaderAuthSession;
@@ -23,7 +23,7 @@ const HeaderAuthContext = createContext<HeaderAuthContextValue | undefined>(
   undefined,
 );
 
-function getSignedInFirstName(value: unknown) {
+function getSignedInFullName(value: unknown) {
   if (
     typeof value !== 'object' ||
     value === null ||
@@ -34,11 +34,11 @@ function getSignedInFirstName(value: unknown) {
   }
 
   if (
-    'firstName' in value &&
-    typeof value.firstName === 'string' &&
-    value.firstName.trim()
+    'fullName' in value &&
+    typeof value.fullName === 'string' &&
+    value.fullName.trim()
   ) {
-    return value.firstName;
+    return value.fullName;
   }
 
   return '';
@@ -63,16 +63,16 @@ export function HeaderAuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const firstName = getSignedInFirstName(await response.json());
+        const fullName = getSignedInFullName(await response.json());
 
         if (!isMounted) {
           return;
         }
 
         setSession(
-          firstName === undefined
+          fullName === undefined
             ? { status: 'signed-out' }
-            : { status: 'signed-in', ...(firstName ? { firstName } : {}) },
+            : { status: 'signed-in', ...(fullName ? { fullName } : {}) },
         );
       } catch {
         if (isMounted) {

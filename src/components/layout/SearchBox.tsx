@@ -16,10 +16,10 @@ export default function SearchBox() {
   }
 
   return (
-    <div className="relative max-w-xl flex-1">
+    <div className="relative min-w-0 flex-1">
       <label
         htmlFor="site-search"
-        className="flex items-center gap-2 rounded-lg border border-border-strong bg-white px-3.5 py-2.5"
+        className="flex items-center gap-2 rounded-lg border border-border-strong bg-white px-3.5 py-[var(--header-field-py)] transition-[padding,border-color] duration-250 ease-out focus-within:border-brand-600"
       >
         <span className="sr-only">Search products</span>
         <SearchIcon className="text-ink-faint" />
@@ -41,7 +41,7 @@ export default function SearchBox() {
         <div
           id={listboxId}
           role="listbox"
-          className="absolute top-[46px] right-0 left-0 z-40 rounded-xl border border-border bg-white p-2 shadow-[0_12px_32px_rgba(11,44,77,0.14)]"
+          className="absolute top-full right-0 left-0 z-40 mt-1.5 rounded-xl border border-border bg-white p-2 shadow-[0_12px_32px_rgba(11,44,77,0.14)]"
         >
           <div className="px-2.5 py-1.5 text-xs text-ink-faint">
             Recent searches

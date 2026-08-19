@@ -12,7 +12,7 @@ export default function AccountHeaderLink() {
 
   return (
     <AccountDropdownMenu
-      label={session.firstName ?? 'Account'}
+      label={session.fullName ?? 'Account'}
       onLogoutSuccess={setSignedOut}
     />
   );
