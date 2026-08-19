@@ -1,8 +1,16 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { redirect } from 'next/navigation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getBuyerSession } from '@/lib/auth/dal';
+import {
+  addCartItem,
+  CART_STORAGE_KEY,
+  CLEARED_CHECKOUTS_STORAGE_KEY,
+  EMPTY_CART,
+  parseCartState,
+} from '@/lib/cart';
+import { usd } from '@/lib/money';
 import { retrieveStripeCheckoutSession } from '@/services/stripe/checkout';
 import renderWithCart from '../../../../test/render-with-cart';
 import CheckoutSuccessPage, { generateMetadata } from './page';
@@ -82,6 +90,30 @@ function stripeSession(overrides: Record<string, unknown> = {}) {
   } as unknown as Awaited<ReturnType<typeof retrieveStripeCheckoutSession>>;
 }
 
+function seedCart() {
+  window.localStorage.setItem(
+    CART_STORAGE_KEY,
+    JSON.stringify(
+      addCartItem(
+        EMPTY_CART,
+        {
+          productId: 'hat',
+          title: 'Woolen hat',
+          imageAlt: 'Woolen hat',
+          tone: 'ocean',
+          unitPrice: usd(656),
+        },
+        2,
+      ),
+    ),
+  );
+}
+
+function storedCartCount() {
+  return parseCartState(window.localStorage.getItem(CART_STORAGE_KEY)).items
+    .length;
+}
+
 function renderPage(sessionId = 'cs_test_123') {
   return CheckoutSuccessPage({
     searchParams: Promise.resolve({ session_id: sessionId }),
@@ -91,11 +123,71 @@ function renderPage(sessionId = 'cs_test_123') {
 describe('Checkout success page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     mockedGetBuyerSession.mockResolvedValue({
       uid: 'buyer-123',
       email: BUYER_EMAIL,
     });
     mockedRetrieveSession.mockResolvedValue(stripeSession());
+  });
+
+  it('empties the cart once the order is paid', async () => {
+    seedCart();
+    expect(storedCartCount()).toBe(1);
+
+    renderWithCart(await renderPage());
+
+    await waitFor(() => expect(storedCartCount()).toBe(0));
+  });
+
+  /*
+   * The receipt is a page buyers come back to — Back after shopping on, a link
+   * out of history, a second tab. Emptying again would wipe a cart filled after
+   * the purchase, which reads as the app losing the buyer's data.
+   */
+  it('leaves a cart filled after the purchase alone on a return visit', async () => {
+    renderWithCart(await renderPage());
+    await waitFor(() =>
+      expect(
+        window.localStorage.getItem(CLEARED_CHECKOUTS_STORAGE_KEY),
+      ).toContain('cs_test_123'),
+    );
+
+    seedCart();
+    renderWithCart(await renderPage());
+
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('heading', { name: /payment received/i }).length,
+      ).toBeGreaterThan(0),
+    );
+    expect(storedCartCount()).toBe(1);
+  });
+
+  /* A declined payment leaves the buyer needing their cart to retry with. */
+  it('keeps the cart when the checkout did not complete', async () => {
+    mockedRetrieveSession.mockResolvedValue(
+      stripeSession({ payment_status: 'unpaid', status: 'open' }),
+    );
+    seedCart();
+
+    renderWithCart(await renderPage());
+
+    await screen.findByRole('heading', { name: /checkout not completed/i });
+    expect(storedCartCount()).toBe(1);
+  });
+
+  it('keeps the cart when the receipt belongs to another account', async () => {
+    mockedGetBuyerSession.mockResolvedValue({
+      uid: 'other-buyer',
+      email: 'someone.else@example.com',
+    });
+    seedCart();
+
+    renderWithCart(await renderPage());
+
+    await screen.findByRole('heading', { name: /checkout not verified/i });
+    expect(storedCartCount()).toBe(1);
   });
 
   it('is not indexed', () => {

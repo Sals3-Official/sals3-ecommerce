@@ -193,6 +193,18 @@ display-only DTO; it tells the freight line from the product lines using the
 `sals3_line_count` metadata rather than matching the `Shipping - ` name, so a
 product legitimately called "Shipping Container" is not mistaken for freight.
 
+**The cart empties here, and only here.** Those lines are an order now, so
+`CheckoutCartCleanup` clears the `localStorage` cart when a receipt renders.
+Two rules keep that from destroying data:
+
+- **Only alongside a receipt.** The failure branches — "Checkout not completed",
+  "Checkout not verified" — render without it, because a buyer whose payment was
+  declined needs their cart to retry with.
+- **Once per Stripe session.** The receipt is a page buyers return to (Back after
+  shopping on, a link from history, a second tab). Clearing on every render would
+  wipe a cart filled _after_ the purchase. Cleared session ids are recorded under
+  `sals3-cleared-checkouts-v1`, newest first, capped at ten.
+
 **The page is gated twice.** It requires a signed-in buyer, and it requires the
 Stripe session's customer email to match that account — a session id travels in
 the URL, into browser history and anything pasted, and it must not be enough to
@@ -704,6 +716,17 @@ A `sals3-cart-v1` blob is **discarded, not converted** — converting a saved
 price invents a price that was never quoted to that buyer — and the stale key is
 removed on first hydrate rather than left holding purchase intent nothing reads.
 Nothing is lost: `/checkout` does not exist and no order has ever been placed.
+
+A second key, **`sals3-cleared-checkouts-v1`**, records which Stripe sessions
+have already emptied the cart, so a revisited receipt does not wipe a cart the
+buyer filled after the purchase. See
+[the receipt on `/checkout/success`](#the-receipt-on-checkoutsuccess).
+
+**Known limitation:** the cart store hydrates once per provider mount and does
+not listen for `storage` events, so a second open tab keeps a stale cart. If
+that tab then changes a quantity, it persists its stale state and purchased
+lines reappear. Reloading the tab fixes it. Worth wiring a `storage` listener
+when multi-tab shopping becomes worth supporting.
 
 ## Stage-2 catalogue groundwork (not wired to the live app)
 

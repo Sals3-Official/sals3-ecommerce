@@ -27,6 +27,58 @@ export const CART_STORAGE_KEY = 'sals3-cart-v2';
 /** Removed on first hydrate. A cart blob is purchase intent, so it is not left behind. */
 export const LEGACY_CART_STORAGE_KEYS = ['sals3-cart-v1'] as const;
 
+/**
+ * Which paid checkouts have already emptied the cart.
+ *
+ * Without this the receipt would empty the cart every time it rendered, and the
+ * receipt is a page buyers come back to: Back after browsing on, a link from
+ * history, a second tab. Any of those would wipe a cart filled *after* the
+ * purchase. Keyed by Stripe session id, so each checkout clears exactly once.
+ *
+ * The list is capped because it only exists to answer "have I already handled
+ * this id" for a receipt the buyer might revisit; older ids lead to receipts
+ * whose carts are long gone.
+ */
+export const CLEARED_CHECKOUTS_STORAGE_KEY = 'sals3-cleared-checkouts-v1';
+
+const MAX_REMEMBERED_CHECKOUTS = 10;
+
+const ClearedCheckoutsSchema = z.array(z.string().min(1).max(200));
+
+function parseClearedCheckouts(raw: string | null): string[] {
+  if (raw === null) {
+    return [];
+  }
+
+  try {
+    const result = ClearedCheckoutsSchema.safeParse(JSON.parse(raw));
+
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
+}
+
+/** True when this checkout has already emptied the cart once. */
+export function hasClearedCheckout(
+  raw: string | null,
+  sessionId: string,
+): boolean {
+  return parseClearedCheckouts(raw).includes(sessionId);
+}
+
+/** The next value to store, newest first and capped. */
+export function rememberClearedCheckout(
+  raw: string | null,
+  sessionId: string,
+): string {
+  const existing = parseClearedCheckouts(raw).filter((id) => id !== sessionId);
+
+  return JSON.stringify(
+    [sessionId, ...existing].slice(0, MAX_REMEMBERED_CHECKOUTS),
+  );
+}
+
 export type CartLineVariant = {
   id: string;
   sku?: string;
