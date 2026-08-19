@@ -7,8 +7,8 @@ export default function FooterBrand() {
         <Image
           src="/sals3-logo.webp"
           alt="Sals3"
-          width={2000}
-          height={647}
+          width={640}
+          height={219}
           style={{ height: '26px', width: 'auto' }}
         />
       </span>

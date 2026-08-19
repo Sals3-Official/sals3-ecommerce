@@ -26,15 +26,15 @@ export default function SignupCard({ nextKey }: SignupCardProps) {
     <div className="flex flex-1 items-center justify-center bg-white px-[clamp(28px,4vw,44px)] py-[clamp(40px,6vh,72px)] lg:basis-1/2">
       <div className="flex w-full max-w-[424px] flex-col gap-[30px]">
         {/*
-          Intrinsic size is the real asset's 2000x647 so Next can serve a
+          Intrinsic size is the real asset's 640x219 so Next can serve a
           correctly scaled rendition; the rendered box is pinned to 38px tall to
           match the design and to reserve space before the image decodes.
         */}
         <Image
           src="/sals3-logo.webp"
           alt={SITE_NAME}
-          width={2000}
-          height={647}
+          width={640}
+          height={219}
           priority
           className="h-[38px] w-auto self-start"
         />

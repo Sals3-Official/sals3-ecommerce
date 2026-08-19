@@ -988,6 +988,27 @@ Link targets reuse the existing footer stub routes (`/sell`, `/contact`) from
 My Order" was deliberately left out: the main header's `Orders` link already
 covers that, and Bogs flagged the duplication during review.
 
+### Brand mark
+
+`public/sals3-logo.webp` is the horizontal lockup — bag mark plus wordmark, 640x219,
+14.5 KB, navy-to-azure gradient on transparency. It was regenerated from the
+owner's 5238x1905 source on 2026-08-20 and trimmed to its own ink bounds, so the
+committed proportion is 2.92:1. That number matters: `next/image`'s optimizer is
+bypassed for local paths (see [Image loading](#image-loading)), so the file on
+disk is the file on the wire and the `width`/`height` attributes at every call
+site have to match it or the reserved box is wrong.
+
+The asset carries **no opaque white pixels** — the counter inside the bag is
+transparent. That is what lets the expanded header render the mark as a clean
+white knockout with `filter: brightness(0) invert(1)`: every opaque pixel becomes
+white and the counter shows the gradient through instead of filling in.
+
+The square icons (`public/icon-192.png`, `public/icon-512.png`,
+`src/app/apple-icon.png`, `src/app/favicon.ico`) are the bag mark alone, centred
+with 10% padding on transparency, generated from the same source in the same
+pass so the tab, the installed PWA and the header can never disagree about which
+mark is current.
+
 ### Two-state header chrome
 
 The header has two looks, driven by one boolean in
