@@ -29,6 +29,25 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/auth/dal', () => ({ getBuyerSession }));
 
+// The pages read the portal's orders API through this service; the routes
+// under test only care about the guard and the metadata, so it serves the
+// test fixtures the UI was built against.
+vi.mock('@/services/storefront/orders', async () => {
+  const { default: payloads } =
+    await import('../../../test/fixtures/buyer-order-payloads');
+
+  return {
+    fetchBuyerOrders: vi.fn(async () => payloads),
+    fetchBuyerOrder: vi.fn(async (_email: string, orderNumber: string) => {
+      const match = payloads.find(
+        (candidate) => candidate.orderNumber === orderNumber.toUpperCase(),
+      );
+
+      return match ?? null;
+    }),
+  };
+});
+
 const SIGNED_IN = { uid: 'u1', email: 'buyer@example.com' };
 
 beforeEach(() => {

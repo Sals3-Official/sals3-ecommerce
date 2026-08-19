@@ -290,25 +290,34 @@ and both `noindex`:
 | `/orders`               | The list: lanes, search, date range, status, paging — all of it in the URL.     |
 | `/orders/[orderNumber]` | One order: packages, tracking events, payment, destination, lifecycle, actions. |
 
-### The data is a fixture, and that is deliberate
+### The data is the portal's buyer orders API
 
-**There is no buyer orders read API yet.** `src/services/storefront/client.ts`
-covers products, categories, freight quotes, checkout intents and
-`orders/accept`; nothing lists a buyer's orders and nothing reads one back by
-number. Both screens therefore run against a typed local module,
-`src/lib/orders/fixtures.ts`, behind one seam:
+The portal serves `GET /api/storefront/orders` and
+`GET /api/storefront/orders/{orderNumber}` (shipped 2026-08-19), read through
+`src/services/storefront/orders.ts` — zod-parsed at the boundary like the
+product feed — and mapped in `src/lib/orders/from-api.ts` behind one seam:
 
 ```text
 src/lib/orders/read.ts     listBuyerOrders(email) / readBuyerOrder(email, number)
 ```
 
-That file is the only thing that changes when the portal publishes
-`GET /api/storefront/orders` and `GET /api/storefront/orders/{orderNumber}`.
-The fixture is **not** a seed, **not** a default and **not** a fallback for a
-failed fetch: a failed fetch must read as a failure, never as somebody else's
-orders. Every money label in it is produced by `formatMoney`, and every line
-total is `unit × quantity` rather than a typed-in number, so the arithmetic the
-page shows is the arithmetic it does.
+Both endpoints are server-to-server: the shared bearer token authenticates the
+storefront, and the **session-verified** buyer email travels in the
+`X-Buyer-Email` header — a header, not a query parameter, so the address stays
+out of URLs and access logs. Nothing request-supplied may ever be put in that
+header; it is the authorisation.
+
+There is **no fallback**: a failed portal read surfaces the
+`src/app/orders/error.tsx` boundary, never stale or fixture data.
+`src/lib/orders/fixtures.ts` remains for tests only. `from-api.ts` is the one
+place money arithmetic happens (line total = unit × quantity, subtotal = Σ
+lines), on the server, and `Total charged` renders the portal's
+`amountTotalMinor` — what Stripe actually charged — rather than a
+recomputation. Status words come from `src/lib/orders/status-copy.ts`, which
+maps all 21 lifecycle states to a label, a tone and two sentences; a package
+the status sync has not stamped yet falls back to a mapping of the fulfillment
+worker's own status, so a just-paid order reads "Being prepared" rather than
+nothing.
 
 ### Ownership, not just authentication
 
