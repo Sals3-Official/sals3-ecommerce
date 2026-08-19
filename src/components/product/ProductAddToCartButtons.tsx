@@ -1,5 +1,6 @@
 'use client';
 
+import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Money } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
@@ -39,6 +40,7 @@ export default function ProductAddToCartButtons({
 }: ProductAddToCartButtonsProps) {
   const { addItem } = useCart();
   const router = useRouter();
+  const [isNavigating, startNavigation] = useTransition();
   const disabled = disabledReason !== undefined;
 
   function line() {
@@ -61,7 +63,7 @@ export default function ProductAddToCartButtons({
   }
 
   function handleBuyNow() {
-    if (disabled) return;
+    if (disabled || isNavigating) return;
 
     trackKlaviyoBuyNowClicked({
       productId,
@@ -71,7 +73,14 @@ export default function ProductAddToCartButtons({
       unitPrice,
     });
     addItem(line());
-    router.push('/cart');
+    /*
+     * The push is wrapped so the button can show it is working. Navigating to
+     * /cart is not instant — the route is server-rendered — and without this
+     * the buyer gets an unchanged page after a click that did do something.
+     */
+    startNavigation(() => {
+      router.push('/cart');
+    });
   }
 
   return (
@@ -88,6 +97,7 @@ export default function ProductAddToCartButtons({
           variant="solid"
           onClick={() => handleBuyNow()}
           disabled={disabled}
+          isPending={isNavigating}
         >
           Buy Now
         </Button>

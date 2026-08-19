@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import CheckoutAddressRecap from '@/components/checkout/CheckoutAddressRecap';
 import CheckoutShippingOptions from '@/components/checkout/CheckoutShippingOptions';
 import { useCheckoutFlow } from '@/components/checkout/CheckoutFlowProvider';
+import LoadingOverlay from '@/components/ui/LoadingOverlay';
+import Spinner from '@/components/ui/Spinner';
 import { formatMoney } from '@/lib/money';
 
 /**
@@ -51,6 +53,12 @@ export default function CheckoutDeliveryStep() {
 
   return (
     <>
+      {/*
+        This click creates a Portal intent and a Stripe session before it can
+        navigate — the longest wait in checkout, and the one where a buyer is
+        most likely to click twice and mint a duplicate.
+      */}
+      <LoadingOverlay isVisible={isPending} label="Preparing payment" />
       <CheckoutAddressRecap
         address={address}
         disabled={isPending}
@@ -85,8 +93,10 @@ export default function CheckoutDeliveryStep() {
             onClick={() =>
               preparePayment(() => router.push('/checkout/payment'))
             }
-            className="bg-brand-gradient min-h-11 shrink-0 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
+            aria-busy={isPending}
+            className="bg-brand-gradient inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
           >
+            {isPending ? <Spinner /> : null}
             {isPending ? 'Preparing payment...' : 'Go to payment'}
           </button>
         </div>

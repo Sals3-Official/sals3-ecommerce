@@ -640,6 +640,51 @@ CJ image hosts from the portal feed (see [Image loading](#image-loading)).
 Money values follow the build spec's minor-unit convention
 (`src/lib/money.ts`).
 
+## Primary actions: gradient and loaders
+
+Every primary call to action — the PDP's **Buy Now**, the cart's **Proceed to
+Checkout**, **Continue to delivery**, and **Go to payment** — wears the one
+`.bg-brand-gradient` utility, a 150deg run from `--color-brand-blue-900`
+(`#002B53`) to `--color-brand-blue-500` (`#018CC9`). It previously ended on
+`--color-teal-500`, which read as green on wide buttons and made the same action
+look like two brands depending on where it sat. That token still exists and is
+still used for availability and success marks; it just no longer appears in a
+call to action.
+
+**The Pay button on `/checkout/payment` is not ours and cannot be styled from
+this repo.** It lives inside Stripe's Embedded Checkout iframe. Embedded
+Checkout has no `appearance` API (that belongs to Payment Element), so its
+colours come from **Stripe Dashboard → Settings → Branding**. Set the brand and
+accent colours there to match `#002B53` / `#018CC9`; no code change here will
+move it.
+
+### Loaders
+
+`Spinner` (`src/components/ui/Spinner.tsx`) is a decorative, `aria-hidden` ring
+that inherits `currentColor`. `LoadingOverlay` is a full-screen curtain with a
+live region.
+
+| Action                          | Feedback                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| Buy Now                         | Spinner inside the button while the `/cart` navigation transition runs        |
+| Continue to delivery            | Button spinner **and** a "Loading delivery options" curtain                   |
+| Go to payment                   | Button spinner **and** a "Preparing payment" curtain                          |
+| Arriving at `/checkout/payment` | "Loading payment" spinner behind the mount point until Stripe's iframe paints |
+
+The curtains exist because those two clicks wait on real upstream work — a CJ
+freight quote, then a Portal intent plus a Stripe session. Over that long a
+disabled button reads as a dead click and the buyer clicks again, which on the
+delivery step is how duplicate intents get minted. The curtain also blocks the
+second click outright.
+
+The payment spinner sits _behind_ the Stripe mount rather than being toggled by
+a ready callback, because `EmbeddedCheckout` does not expose one — the iframe
+simply covers it once painted, so there is no flag to get wrong and nothing left
+spinning on a slow load.
+
+`globals.css` already collapses every animation under `prefers-reduced-motion`,
+so none of these spin for a visitor who asked for less motion.
+
 ## Global CSS and Tailwind cascade layers
 
 Custom element styles in `src/app/globals.css` **must** live inside

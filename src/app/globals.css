@@ -20,6 +20,9 @@
   /* Primitive */
   --color-brand-900: #0b2c4d;
   --color-brand-600: #0a5c8a;
+  /* The primary-action gradient. Owner-supplied, 2026-08-19. */
+  --color-brand-blue-500: #018cc9;
+  --color-brand-blue-900: #002b53;
   --color-teal-500: #157f7f;
   --color-red-600: #d92d20;
 
@@ -122,12 +125,19 @@ body {
   }
 }
 
+/*
+ * The one gradient every primary action wears: cart, all three checkout steps,
+ * and the PDP's Buy Now. It used to end on `--color-teal-500`, which read as
+ * green on wide buttons and made the same action look like two different
+ * brands depending on where it sat. Now it runs dark navy to brand blue and
+ * stops there. `--color-teal-500` is still used for availability and success
+ * marks; it just no longer appears in a call to action.
+ */
 .bg-brand-gradient {
   background: linear-gradient(
     150deg,
-    var(--color-brand-900),
-    var(--color-brand-600) 60%,
-    var(--color-teal-500)
+    var(--color-brand-blue-900),
+    var(--color-brand-blue-500)
   );
 }
 

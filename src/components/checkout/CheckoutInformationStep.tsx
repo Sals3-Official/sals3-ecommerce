@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import CheckoutAddressForm from '@/components/checkout/CheckoutAddressForm';
 import { useCheckoutFlow } from '@/components/checkout/CheckoutFlowProvider';
+import LoadingOverlay from '@/components/ui/LoadingOverlay';
+import Spinner from '@/components/ui/Spinner';
 
 /**
  * Step 1: contact and delivery address.
@@ -25,6 +27,12 @@ export default function CheckoutInformationStep() {
 
   return (
     <>
+      {/*
+        The quote is a CJ round trip through the Portal and routinely takes
+        seconds. A disabled button alone reads as a dead click over that long,
+        so the wait is made unmistakable and nothing underneath stays clickable.
+      */}
+      <LoadingOverlay isVisible={isPending} label="Loading delivery options" />
       <CheckoutAddressForm
         value={address}
         errors={errors}
@@ -42,8 +50,10 @@ export default function CheckoutInformationStep() {
           onClick={() =>
             prepareDelivery(() => router.push('/checkout/delivery'))
           }
-          className="bg-brand-gradient min-h-11 shrink-0 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
+          aria-busy={isPending}
+          className="bg-brand-gradient inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-faint disabled:hover:opacity-100 disabled:active:scale-100"
         >
+          {isPending ? <Spinner /> : null}
           {isPending ? 'Loading delivery options...' : 'Continue to delivery'}
         </button>
       </div>

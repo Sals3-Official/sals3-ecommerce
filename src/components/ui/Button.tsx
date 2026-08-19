@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Spinner from '@/components/ui/Spinner';
 
 /**
  * The storefront's two button shapes.
@@ -16,12 +17,20 @@ import type { ReactNode } from 'react';
  *
  * ## The `solid` fill
  *
- * `solid` is flat `bg-brand-900`. The app's `.bg-brand-gradient` utility still
- * exists in `globals.css` and is used elsewhere; the PDP deliberately does not
- * use it, because a gradient call-to-action reads as promotional and the page is
- * meant to read as a record of what is known about an item. That is a taste call
- * the owner may reverse: swap `bg-brand-900` for `bg-brand-gradient` on the one
- * line below and nothing else changes.
+ * `solid` now wears `.bg-brand-gradient`, the same navy-to-brand-blue run as the
+ * cart and checkout calls to action. It was flat `bg-brand-900` on the argument
+ * that a gradient reads as promotional on a page meant to read as a record —
+ * the owner reversed that on 2026-08-19 so the primary action looks identical
+ * everywhere a buyer meets it. This was the exact one-line swap the previous
+ * note anticipated.
+ *
+ * ## `isPending`
+ *
+ * Renders a spinner and disables the control. Separate from `disabled` because
+ * the two mean different things to a buyer: `disabled` is "you cannot do this",
+ * `isPending` is "you already did, wait". The label stays visible beside the
+ * spinner rather than being replaced, so the button does not change width
+ * mid-click and the buyer can still see what they pressed.
  */
 
 const BASE =
@@ -31,7 +40,7 @@ const VARIANTS = {
   outline:
     'border border-brand-600 text-brand-600 hover:bg-brand-600/10 disabled:border-border-strong disabled:text-ink-faint disabled:hover:bg-transparent',
   solid:
-    'bg-brand-900 text-white hover:opacity-90 disabled:bg-surface-sunken disabled:text-ink-faint disabled:hover:opacity-100',
+    'bg-brand-gradient text-white hover:opacity-90 disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-faint disabled:hover:opacity-100',
 } as const;
 
 type ButtonProps = {
@@ -39,6 +48,7 @@ type ButtonProps = {
   children: ReactNode;
   onClick?: () => void;
   disabled?: boolean;
+  isPending?: boolean;
   className?: string;
 };
 
@@ -47,16 +57,21 @@ export default function Button({
   children,
   onClick,
   disabled = false,
+  isPending = false,
   className = '',
 }: ButtonProps) {
+  const isBlocked = disabled || isPending;
+
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      aria-disabled={disabled}
-      className={`${BASE} ${VARIANTS[variant]} ${className}`}
+      disabled={isBlocked}
+      aria-disabled={isBlocked}
+      aria-busy={isPending}
+      className={`${BASE} ${VARIANTS[variant]} ${className} inline-flex items-center justify-center gap-2`}
     >
+      {isPending ? <Spinner /> : null}
       {children}
     </button>
   );
