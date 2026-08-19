@@ -161,12 +161,12 @@ describe('Home page', () => {
 
   it('hides Log In and Sign Up when the server session verifies', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
-    mockProductsFetch(21, { signedIn: true, firstName: 'AJ' });
+    mockProductsFetch(21, { signedIn: true, fullName: 'AJ Shopper' });
 
     renderWithCart(await Home());
 
     expect(
-      await screen.findByRole('button', { name: /aj account menu/i }),
+      await screen.findByRole('button', { name: /aj shopper account menu/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^log in$/i })).toBeNull();
     expect(screen.queryByRole('link', { name: /^sign up$/i })).toBeNull();

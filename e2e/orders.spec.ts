@@ -32,12 +32,37 @@ test('an order number in the URL does not open an order for a signed-out visitor
   );
 });
 
-test('the orders link in the header points at the guarded route', async ({
+test('the header offers no Orders link to a signed-out visitor', async ({
   page,
 }) => {
   await page.goto('/');
 
   await expect(
+    page.getByRole('link', { name: 'Orders', exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^log in$/i })).toBeVisible();
+});
+
+test('the header offers Orders once the verified session reports signed in', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ signedIn: true, fullName: 'AJ Shopper' }),
+    });
+  });
+
+  await page.goto('/');
+
+  await expect(
     page.getByRole('link', { name: 'Orders', exact: true }).first(),
+  ).toHaveAttribute('href', '/orders');
+
+  await page.getByRole('button', { name: /aj shopper account menu/i }).click();
+
+  await expect(
+    page.getByRole('menuitem', { name: 'Orders', exact: true }),
   ).toHaveAttribute('href', '/orders');
 });

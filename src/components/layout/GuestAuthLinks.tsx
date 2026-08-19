@@ -14,13 +14,13 @@ export default function GuestAuthLinks() {
     <>
       <Link
         href="/login"
-        className="font-bold text-ink transition-colors duration-200 hover:text-brand-600 hover:underline"
+        className="font-bold text-[color:var(--header-fg)] transition-colors duration-200 hover:text-[color:var(--header-fg-hover)] hover:underline"
       >
         Log In
       </Link>
       <Link
         href="/signup"
-        className="font-bold text-brand-600 transition-colors duration-200 hover:text-brand-900 hover:underline"
+        className="font-bold text-[color:var(--header-strong)] transition-colors duration-200 hover:text-[color:var(--header-strong-hover)] hover:underline"
       >
         Sign Up
       </Link>

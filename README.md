@@ -471,10 +471,13 @@ Firebase Admin verifies a recent sign-in and sets a 24-hour `httpOnly`
 `sals3_session` cookie. Client Firebase persistence is `inMemoryPersistence`
 and is cleared after the server cookie exchange. Signed-in header
 personalization reads only the verified server session and exposes at most a
-sanitized first name. The account menu signs out with the same CSRF-protected
-cookie flow and clears only the server session. The top `Log In` and `Sign Up`
-links render only after the verified server session reports signed out, and the
-account shortcut is hidden unless that same session reports signed in.
+sanitized full name (`GET /api/auth/session` returns `fullName`, capped at 60
+characters with control characters stripped and whitespace collapsed; no email,
+uid, provider, or custom claim ever crosses to the client). The account menu
+signs out with the same CSRF-protected cookie flow and clears only the server
+session. The top `Log In` and `Sign Up` links render only after the verified
+server session reports signed out, and the full-name account menu that replaces
+them renders only when that same session reports signed in.
 
 Required Firebase values in `.env.local`:
 
@@ -695,8 +698,10 @@ brand tokens (`--color-brand-600` `#0a5c8a`, `--color-surface` `#f6f7f8`).
 
 ## Home Page
 
-`src/app/page.tsx` renders the marketplace landing page: header (logo, search,
-delivery region, cart/orders/account links), a full-bleed category band, an
+`src/app/page.tsx` renders the marketplace landing page: header (logo,
+full-width search, cart, and a signed-in-only `Orders` link styled to match
+`Cart`; gradient at the top of the page, compact white once scrolled), a
+full-bleed category band, an
 Embla promo carousel, a portal-fed deals grid, and a paginated "For you" grid.
 Promo carousel images live in `public/home-promos/` and slide metadata lives
 in `src/lib/home-promo-slides.ts`. The carousel uses local, allow-listed static
@@ -958,13 +963,87 @@ specifically so it isn't mistaken for the shipped card.
 `src/components/layout/GuestUtilityBar.tsx` renders a thin strip above the
 main header row (Feedback, Sell on Sals3, Customer Care, Log In, Sign Up),
 matching the signed-out state from a reference marketplace screenshot. Sals3
-now verifies the server session before showing auth-specific header actions:
-signed-out visitors see `Log In` and `Sign Up`, while signed-in visitors see
-only the first-name account dropdown in the main header. Link targets reuse the
-existing footer stub routes (`/sell`, `/contact`) from `src/lib/footer-data.ts`
-where they already overlap, plus a new `/help`. "Track My Order" was
-deliberately left out: the main header's existing `Orders` link already covers
-that, and Bogs flagged the duplication during review.
+verifies the server session before showing auth-specific header actions, and the
+strip's right-hand auth slot has exactly two states:
+
+- **Signed out** — `GuestAuthLinks` renders `Log In` and `Sign Up`.
+- **Signed in** — `AccountHeaderLink` renders the buyer's verified **full name**
+  as a button that opens the account menu (`Orders`, `Log out`).
+
+Neither renders while the session request is still in flight, so the bar never
+flashes the wrong identity. The signed-in state deliberately has no avatar: the
+old rounded gradient user chip was removed by owner decision (2026-08-20) in
+favour of the name itself.
+
+Link targets reuse the existing footer stub routes (`/sell`, `/contact`) from
+`src/lib/footer-data.ts` where they already overlap, plus a new `/help`. "Track
+My Order" was deliberately left out: the main header's `Orders` link already
+covers that, and Bogs flagged the duplication during review.
+
+### Two-state header chrome
+
+The header has two looks, driven by one boolean in
+`src/components/layout/SiteHeaderShell.tsx` — the only client state in the whole
+bar:
+
+- **At the top of the page** — a brand gradient
+  (`--color-brand-blue-900` -> `--color-brand-600`, 100deg) with light type, a
+  40px logo flipped to white, and roomy rows.
+- **Scrolled** — a solid white bar with dark type, a 30px logo, and tighter rows
+  (~108px tall becomes ~82px).
+
+Every colour and vertical measurement the header's children use is a CSS
+variable declared on `.site-header` in `src/app/globals.css` and re-declared
+under `.site-header[data-compact='true']`. The state swap is therefore one
+`data-compact` attribute: `GuestUtilityBar`, `Logo`, `SearchBox` and the rest
+stay Server Components with no prop or context threaded through them, and the
+on-gradient contrast lives in one auditable place.
+
+Details that are load-bearing rather than decorative:
+
+- **Contrast.** The gradient ends at `--color-brand-600` (#0a5c8a), not at
+  `.bg-brand-gradient`'s lighter `--color-brand-blue-500` (#018cc9): white text
+  on #018cc9 measures 3.74:1, below the 4.5:1 minimum, and header type spans the
+  full width. On #0a5c8a white measures 7.2:1 and the muted
+  `--color-footer-link` value measures 5.1:1. The global `:focus-visible`
+  outline is `--color-brand-600` — the gradient's own colour — so the expanded
+  header overrides it to white.
+- **Hysteresis.** The bar compacts above 72px of scroll and expands again only
+  below 32px. A single threshold would sit inside the ~26px of height the swap
+  removes, and the browser's scroll anchoring could then pull `scrollY` back
+  across it, flipping the header on every frame.
+- **Cross-fade.** A gradient cannot animate to a flat colour, so the gradient
+  lives on a `::before` layer whose opacity animates and `isolation: isolate`
+  keeps it above the header's white background and below its content.
+- **No `position` in the CSS rule.** `.site-header` deliberately sets no
+  `position`: the element carries Tailwind's `sticky`, and an unlayered
+  `position: relative` in `globals.css` beat that utility and silently unstuck
+  the header during this build.
+- **The support links state their own colour.** `Sell on Sals3` and
+  `Customer Care` cannot inherit it from their `<nav>` — the base-layer
+  `a { color }` rule wins over inheritance, which is what made them render brand
+  blue on the gradient until each link carried `--header-fg-muted` itself.
+
+The main header row itself carries the logo (no tinted background plate), a
+search field that takes every remaining pixel, `Cart`, and
+`src/components/layout/HeaderOrdersLink.tsx` — an `Orders` shortcut that renders
+only for a verified signed-in session. That gate is UX, not authorisation:
+`/orders` still redirects a signed-out visitor server-side through
+`getBuyerSession`, and that redirect remains the security boundary. The
+"Deliver to <region>" control was removed in the same pass; it cycled three
+hardcoded city names and was never wired to shipping, pricing, or availability.
+
+Header hover and focus states were quietened in the same pass (owner decision,
+2026-08-20): `Cart` and `Orders` no longer paint a grey `hover:bg-black/5` plate
+and change text colour instead, and the search field no longer stacks the global
+`:focus-visible` ring inside its own border. `#site-search:focus-visible` turns
+that outline off — unlayered in `src/app/globals.css`, because the global rule is
+unlayered and beats any utility class — and `SearchBox` recolours the wrapper
+border to `brand-600` on `focus-within` in its place. Focus is therefore still
+visible, but as one indicator rather than two; note that a colour-only border
+change is a weaker indicator than the outline it replaces, which is a deliberate
+accepted trade-off, not an oversight. The account menu's own items keep their row
+highlight — a menu with no hover feedback loses the sense of which row is armed.
 
 `Log In` and `Sign Up` link to real routes, `/login` and `/signup`
 (`src/app/login/page.tsx`, `src/app/signup/page.tsx`). Both are built, working

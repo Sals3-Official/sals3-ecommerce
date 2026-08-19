@@ -43,6 +43,13 @@ const CLIENT_ENTRY_POINTS = [
   'components/klaviyo/KlaviyoLoader.tsx',
   'components/klaviyo/KlaviyoViewedProduct.tsx',
   'components/layout/HeaderAuthContext.tsx',
+  // The header's two session-gated controls: the utility-bar account menu
+  // (full name, Orders, Log out) and the main-row Orders shortcut.
+  'components/layout/AccountHeaderLink.tsx',
+  'components/layout/GuestAuthLinks.tsx',
+  'components/layout/HeaderOrdersLink.tsx',
+  // Owns the header's scroll state; every child it wraps stays server-rendered.
+  'components/layout/SiteHeaderShell.tsx',
   // The buyer orders surface. Everything else on `/orders` and
   // `/orders/[orderNumber]` is a Server Component; these two are the whole
   // client boundary — a filter form that routes, and a clipboard button.

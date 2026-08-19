@@ -116,6 +116,107 @@ body {
   border-radius: 4px;
 }
 
+/*
+ * Site header chrome: one element, two states.
+ *
+ * At the top of the page the header is a brand gradient carrying light type.
+ * Once the visitor scrolls past `SiteHeaderShell`'s threshold it compacts to a
+ * solid white bar with dark type. Every colour and every vertical measurement
+ * the header's children use is declared here as a variable, so the swap is one
+ * `data-compact` attribute on the `<header>` — `GuestUtilityBar`, `Logo`,
+ * `SearchBox` and the rest stay Server Components with no state threaded
+ * through them, and there is one place to audit the on-gradient contrast.
+ *
+ * The gradient ends at `--color-brand-600`, not at the lighter
+ * `--color-brand-blue-500` of `.bg-brand-gradient`: white text on #018cc9
+ * measures 3.74:1, under the 4.5:1 minimum, and header type sits across the
+ * full width. On #0a5c8a it measures 7.2:1, and the muted `--color-footer-link`
+ * value measures 5.1:1.
+ *
+ * A gradient cannot cross-fade to a flat colour, so the gradient lives on a
+ * `::before` layer whose opacity animates instead. `isolation: isolate` puts
+ * that layer above the header's own white background and below its content.
+ */
+.site-header {
+  --header-fg: var(--color-footer-ink);
+  --header-fg-hover: #ffffff;
+  --header-fg-muted: var(--color-footer-link);
+  --header-strong: #ffffff;
+  --header-strong-hover: #ffffff;
+  --header-border: rgb(255 255 255 / 0.24);
+  --header-focus-ring: #ffffff;
+  --header-badge-bg: #ffffff;
+  --header-badge-fg: var(--color-brand-900);
+  --header-gradient-opacity: 1;
+  --header-utility-py: 0.5rem;
+  --header-row-py: 0.75rem;
+  --header-field-py: 0.625rem;
+  --header-logo-height: 2.5rem;
+  --header-logo-filter: brightness(0) invert(1);
+
+  /*
+   * No `position` here: the element carries Tailwind's `sticky` utility, and an
+   * unlayered declaration would beat it and silently unstick the header.
+   * `sticky` is itself a positioned ancestor, so the gradient layer resolves
+   * against it. `isolation` puts that layer above this background colour.
+   */
+  isolation: isolate;
+  background-color: #ffffff;
+}
+
+.site-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(
+    100deg,
+    var(--color-brand-blue-900) 0%,
+    var(--color-brand-600) 100%
+  );
+  opacity: var(--header-gradient-opacity);
+  transition: opacity 250ms ease;
+}
+
+.site-header[data-compact='true'] {
+  --header-fg: var(--color-ink);
+  --header-fg-hover: var(--color-brand-600);
+  --header-fg-muted: var(--color-ink-muted);
+  --header-strong: var(--color-brand-600);
+  --header-strong-hover: var(--color-brand-900);
+  --header-border: var(--color-border);
+  --header-focus-ring: var(--color-brand-600);
+  --header-badge-bg: var(--color-brand-600);
+  --header-badge-fg: #ffffff;
+  --header-gradient-opacity: 0;
+  --header-utility-py: 0.25rem;
+  --header-row-py: 0.375rem;
+  --header-field-py: 0.375rem;
+  --header-logo-height: 1.875rem;
+  --header-logo-filter: brightness(1) invert(0);
+}
+
+/*
+ * The global focus ring below is `--color-brand-600`, which is the gradient's
+ * own colour — invisible on the expanded header. Light type gets a light ring.
+ */
+.site-header:not([data-compact='true']) :focus-visible {
+  outline-color: #ffffff;
+}
+
+/*
+ * The header search field is the one exception to the global focus ring. The
+ * input sits inside a bordered wrapper, so the ring drew a second heavy box
+ * inside the field — the state the owner rejected on 2026-08-20. Focus is not
+ * removed: `SearchBox` recolours the wrapper's own border to `brand-600` on
+ * `focus-within`, so the field still announces focus with a single indicator
+ * instead of two. This has to be unlayered, because the rule above is unlayered
+ * and would otherwise beat any Tailwind utility (see the note on `a` above).
+ */
+#site-search:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -23,6 +23,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function stubSession(body: unknown) {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })),
+  );
+}
+
 function renderWithHeaderAuth() {
   render(
     <HeaderAuthProvider>
@@ -32,86 +41,90 @@ function renderWithHeaderAuth() {
 }
 
 describe('AccountHeaderLink', () => {
-  it('does not show the account link when there is no verified session', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn<typeof fetch>().mockResolvedValue(
-        new Response(JSON.stringify({ signedIn: false }), {
-          status: 200,
-        }),
-      ),
-    );
+  it('does not show the account menu when there is no verified session', async () => {
+    stubSession({ signedIn: false });
 
     renderWithHeaderAuth();
 
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: /my account/i }),
+        screen.queryByRole('button', { name: /account menu/i }),
       ).not.toBeInTheDocument(),
     );
   });
 
-  it('shows the verified first name from the server session endpoint', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn<typeof fetch>().mockResolvedValue(
-        new Response(JSON.stringify({ signedIn: true, firstName: 'AJ' }), {
-          status: 200,
-        }),
-      ),
-    );
+  it('shows the verified full name from the server session endpoint', async () => {
+    stubSession({ signedIn: true, fullName: 'AJ Shopper' });
 
     renderWithHeaderAuth();
 
     await waitFor(() =>
       expect(
-        screen.getByRole('button', { name: /aj account menu/i }),
-      ).toHaveTextContent('AJ'),
+        screen.getByRole('button', { name: /aj shopper account menu/i }),
+      ).toHaveTextContent('AJ Shopper'),
     );
   });
 
-  it('opens the account menu and logs out through the secure session endpoint', async () => {
-    logoutServerSession.mockResolvedValue(undefined);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn<typeof fetch>().mockResolvedValue(
-        new Response(JSON.stringify({ signedIn: true, firstName: 'AJ' }), {
-          status: 200,
-        }),
-      ),
-    );
+  it('replaces the old rounded avatar with the name itself', async () => {
+    stubSession({ signedIn: true, fullName: 'AJ Shopper' });
+
+    renderWithHeaderAuth();
+
+    const trigger = await screen.findByRole('button', {
+      name: /aj shopper account menu/i,
+    });
+
+    expect(trigger.querySelector('.rounded-full')).toBeNull();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('opens the account menu with Orders and Log out', async () => {
+    stubSession({ signedIn: true, fullName: 'AJ Shopper' });
 
     renderWithHeaderAuth();
 
     fireEvent.click(
-      await screen.findByRole('button', { name: /aj account menu/i }),
+      await screen.findByRole('button', { name: /aj shopper account menu/i }),
     );
-    expect(screen.getByRole('menu', { name: /account menu/i })).toBeVisible();
 
+    const menu = screen.getByRole('menu', { name: /account menu/i });
+
+    expect(menu).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: /orders/i })).toHaveAttribute(
+      'href',
+      '/orders',
+    );
+    expect(
+      screen.getByRole('menuitem', { name: /log out/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('logs out through the secure session endpoint', async () => {
+    logoutServerSession.mockResolvedValue(undefined);
+    stubSession({ signedIn: true, fullName: 'AJ Shopper' });
+
+    renderWithHeaderAuth();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /aj shopper account menu/i }),
+    );
     fireEvent.click(screen.getByRole('menuitem', { name: /log out/i }));
 
     await waitFor(() => expect(logoutServerSession).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1));
     expect(
-      screen.queryByRole('link', { name: /my account/i }),
+      screen.queryByRole('button', { name: /account menu/i }),
     ).not.toBeInTheDocument();
   });
 
   it('keeps the menu open with recoverable feedback when logout fails', async () => {
     logoutServerSession.mockRejectedValue(new Error('nope'));
-    vi.stubGlobal(
-      'fetch',
-      vi.fn<typeof fetch>().mockResolvedValue(
-        new Response(JSON.stringify({ signedIn: true, firstName: 'AJ' }), {
-          status: 200,
-        }),
-      ),
-    );
+    stubSession({ signedIn: true, fullName: 'AJ Shopper' });
 
     renderWithHeaderAuth();
 
     fireEvent.click(
-      await screen.findByRole('button', { name: /aj account menu/i }),
+      await screen.findByRole('button', { name: /aj shopper account menu/i }),
     );
     fireEvent.click(screen.getByRole('menuitem', { name: /log out/i }));
 
