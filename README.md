@@ -146,9 +146,18 @@ choice: the alternative was persisting a name, phone, email, and street address
 into web storage. A step entered without the state it needs redirects to
 `/checkout`.
 
-The order summary renders on all three steps, so items and shipping cost stay
-visible right through payment, and the payment step repeats a subtotal /
-shipping / total breakdown at the point of commitment.
+The order summary sidebar renders on information and delivery, so items and
+shipping cost stay visible while the buyer is still choosing.
+
+**Payment takes the full width and has no sidebar.** Stripe's embedded form
+draws its own itemised summary — every line, the shipping row, the total — so
+ours beside it would be a second copy of the same numbers competing to be
+believed, while narrowing the payment form to make room. What the payment step
+does keep is an item-count / shipping / total breakdown above the form: those
+are the amounts Stripe cannot show until it has loaded, and shipping is the line
+most likely to be the surprise. The embedded form is also rendered without a
+wrapper of our own — it already draws a card and its own borders, and nesting it
+in a second bordered box showed two frames.
 
 **Duplicate-session guard.** Separate routes hand the buyer a Back button.
 `useCheckout` records a signature of the address plus the selected couriers when
