@@ -111,8 +111,8 @@ cart lines and the completed delivery address. CJ credentials remain in
 
 ## Checkout and Stripe
 
-**Checkout requires a signed-in buyer.** `/checkout` reads the session server-side
-before rendering; a signed-out visitor is redirected to `/login?next=checkout`
+**Checkout requires a signed-in buyer.** The `(flow)` layout reads the session
+server-side before any step renders, so all three checkout routes are covered; a signed-out visitor is redirected to `/login?next=checkout`
 and lands back on `/checkout` once signed in — by password or by Google. The
 cart survives the hop by itself (it lives in `localStorage`). Both checkout
 Server Actions re-check the session independently, because a Server Action is a
@@ -125,18 +125,44 @@ empty cart sees the login screen rather than "add an item before checkout"
 local development without Firebase Admin credentials — `GOOGLE_APPLICATION_CREDENTIALS`
 or the `FIREBASE_*` trio in `.env.local`.
 
-`/cart` now sends buyers to `/checkout`. Checkout is a two-step flow on one
-route: step 1 collects contact and delivery address, and "Continue to
-delivery" validates the address, fetches CJ freight options from the protected
-Portal quote endpoint, and only advances on success; step 2 shows a "Ship to"
-recap (with Edit returning to step 1), the delivery options, and payment. The
-buyer must select one option per fulfillment package before payment. Editing
-any address field clears the quote, so returning to step 2 re-quotes; going
-back without editing reuses the live quote and keeps the selection (a "Refresh
-options" button re-quotes on demand). The server re-fetches each product and
-re-quotes the selected freight from the Sals3 Portal storefront API before
-creating a Stripe Embedded Checkout Session. Browser cart prices and browser
-freight prices are never trusted for payment.
+`/cart` sends buyers to `/checkout`. Checkout is **three routes**, grouped under
+`src/app/checkout/(flow)/`:
+
+| Route                | Step           | What it does                                                                                                                                                               |
+| -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.        |
+| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and one courier choice per fulfillment package. "Go to payment" creates the Portal intent and the Stripe session, then navigates. |
+| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                           |
+
+The `(flow)` route group exists so `/checkout/success` stays outside it: the
+receipt is not a step, has no stepper or order summary, and is Stripe's
+`return_url`.
+
+**Flow state lives in the layout, not in a page.** `CheckoutFlowProvider` is
+mounted from `(flow)/layout.tsx`, and Next keeps a layout mounted while the
+buyer moves between its child routes — that is what carries the address, the
+quote, and the client secret across the steps. It does not survive a reload, by
+choice: the alternative was persisting a name, phone, email, and street address
+into web storage. A step entered without the state it needs redirects to
+`/checkout`.
+
+The order summary renders on all three steps, so items and shipping cost stay
+visible right through payment, and the payment step repeats a subtotal /
+shipping / total breakdown at the point of commitment.
+
+**Duplicate-session guard.** Separate routes hand the buyer a Back button.
+`useCheckout` records a signature of the address plus the selected couriers when
+it creates a Stripe session, and reuses that session while the signature is
+unchanged — so bouncing delivery↔payment does not mint duplicate Portal intents
+or burn CJ freight quota. Editing the address or changing a courier clears the
+prepared session, because it priced the previous choice.
+
+Editing any address field clears the quote, so returning to delivery re-quotes;
+going back without editing reuses the live quote and keeps the selection (a
+"Refresh options" button re-quotes on demand). The server re-fetches each
+product and re-quotes the selected freight from the Sals3 Portal storefront API
+before creating a Stripe Embedded Checkout Session. Browser cart prices and
+browser freight prices are never trusted for payment.
 
 Checkout address entry is country-aware for the currently enabled CJ
 destinations. Philippines starts phone numbers with `+639`; Australia starts

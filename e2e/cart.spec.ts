@@ -101,13 +101,17 @@ test('a signed-out visitor is sent to sign in, and pointed back at checkout', as
 });
 
 // The guard is on the route, not on the cart button: a bookmark, a typed URL,
-// and a Back navigation all have to hit it too.
-test('checkout cannot be reached directly while signed out', async ({
-  page,
-}) => {
-  await page.goto('/checkout');
+// and a Back navigation all have to hit it too. Checkout is three routes now,
+// and delivery and payment are each directly addressable, so the guard on the
+// shared layout has to cover all three.
+['/checkout', '/checkout/delivery', '/checkout/payment'].forEach((path) => {
+  test(`${path} cannot be reached directly while signed out`, async ({
+    page,
+  }) => {
+    await page.goto(path);
 
-  await expect(page).toHaveURL(/\/login\?next=checkout$/);
+    await expect(page).toHaveURL(/\/login\?next=checkout$/);
+  });
 });
 
 // Not run: Buy Now is a product-page button, and the product page can't
