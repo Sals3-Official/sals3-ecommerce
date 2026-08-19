@@ -8,6 +8,10 @@ import {
   type CheckoutCartLineInput,
 } from '@/lib/checkout/schema';
 import { getRevocationCheckedBuyerSession } from '@/lib/auth/dal';
+import {
+  classifyStorefrontFailure,
+  logCheckoutFailure,
+} from '@/lib/checkout/failure-log';
 import checkRateLimit from '@/lib/rate-limit';
 import {
   CheckoutValidationError,
@@ -35,6 +39,19 @@ import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas
  * server knows about them (rule 34).
  */
 const SIGNED_OUT_MESSAGE = 'Sign in to continue to checkout.';
+
+/**
+ * Two failures, two sentences.
+ *
+ * `UNSHIPPABLE_MESSAGE` carries no "try again": the portal raises it when a
+ * cart item has no offer that can be shipped at all, so retrying spends
+ * rate-limit budget on an outcome that cannot change. Only a genuinely
+ * transient upstream failure invites another attempt.
+ */
+const UNSHIPPABLE_MESSAGE =
+  'An item in your cart cannot be delivered to this address. Remove it, or use a different address.';
+const QUOTE_UNAVAILABLE_MESSAGE =
+  'Delivery options are unavailable. Try again in a moment.';
 
 export type CreateCheckoutSessionResult =
   | { ok: true; clientSecret: string; sessionId: string }
@@ -144,19 +161,18 @@ export async function quoteCheckoutShippingAction(input: {
 
     return { ok: true, quote };
   } catch (error) {
-    if (error instanceof ProductsApiError && error.status === 422) {
+    const failure = classifyStorefrontFailure(error);
+
+    logCheckoutFailure('shipping-quote', failure, error);
+
+    if (failure.reason === 'unshippable') {
       return {
         ok: false,
-        message:
-          error.safeMessage ??
-          'Delivery options are unavailable. Try again in a moment.',
+        message: failure.safeMessage ?? UNSHIPPABLE_MESSAGE,
       };
     }
 
-    return {
-      ok: false,
-      message: 'Delivery options are unavailable. Try again in a moment.',
-    };
+    return { ok: false, message: QUOTE_UNAVAILABLE_MESSAGE };
   }
 }
 
@@ -216,18 +232,30 @@ export async function createCheckoutSessionAction(
     return { ok: true, ...session };
   } catch (error) {
     if (error instanceof CheckoutValidationError) {
+      // Already a buyer-facing sentence, and the buyer can act on it — a stale
+      // quote or an unselected package, not a fault worth logging as one.
       return { ok: false, message: error.message };
     }
 
     if (error instanceof ProductsApiError) {
+      const failure = classifyStorefrontFailure(error);
+
+      logCheckoutFailure('checkout-session', failure, error);
+
+      if (failure.reason === 'unshippable') {
+        return {
+          ok: false,
+          message: failure.safeMessage ?? UNSHIPPABLE_MESSAGE,
+        };
+      }
+
       return {
         ok: false,
-        message:
-          error.status === 422 && error.safeMessage !== undefined
-            ? error.safeMessage
-            : 'Catalogue check failed. Try again in a moment.',
+        message: 'Catalogue check failed. Try again in a moment.',
       };
     }
+
+    logCheckoutFailure('checkout-session', { reason: 'payment' }, error);
 
     return {
       ok: false,

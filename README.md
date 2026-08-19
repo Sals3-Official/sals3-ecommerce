@@ -157,6 +157,31 @@ unchanged — so bouncing delivery↔payment does not mint duplicate Portal inte
 or burn CJ freight quota. Editing the address or changing a courier clears the
 prepared session, because it priced the previous choice.
 
+### When a quote fails
+
+`src/lib/checkout/failure-log.ts` classifies the failure and writes one
+structured line — step, reason, upstream status, error name. No address, email,
+phone, or cart: rule 35, and none of it is needed to answer "which step failed
+against which upstream". Grep Vercel logs for `[checkout] step failed`.
+
+It exists because a real report was undiagnosable. A buyer saw "Delivery options
+are unavailable. Try again in a moment." and the logs for that minute held two
+`λ POST /checkout` lines and nothing else — the quote path had no logging, and
+both catch branches returned the same sentence.
+
+Two reasons, two sentences, because only one of them is worth retrying:
+
+| Reason        | When                                                     | Buyer sees                                                                                                                                                                                                                  |
+| ------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unshippable` | Portal 422 — no offer for a cart item can ship there     | The portal's own sentence, or "An item in your cart cannot be delivered to this address. Remove it, or use a different address." **No "try again"** — retrying cannot change it, and each attempt spends rate-limit budget. |
+| `upstream`    | Any other status, a schema mismatch, a transport failure | "Delivery options are unavailable. Try again in a moment."                                                                                                                                                                  |
+
+A 422 is a fact about the catalogue, not a hiccup: the portal raises it when no
+offer satisfies its dropship conditions (published, `RESOLVED` price,
+`AVAILABLE`, `ACTIVE` binding on a `CONNECTED` CJ connection). Worth knowing
+that a product can be publishable and purchasable on the storefront while being
+unquotable — a buyer then discovers it only after entering a full address.
+
 Editing any address field clears the quote, so returning to delivery re-quotes;
 going back without editing reuses the live quote and keeps the selection (a
 "Refresh options" button re-quotes on demand). The server re-fetches each
