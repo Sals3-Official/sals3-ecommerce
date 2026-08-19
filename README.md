@@ -961,8 +961,16 @@ specifically so it isn't mistaken for the shipped card.
 ## Guest Header Strip and Auth Entry Points
 
 `src/components/layout/GuestUtilityBar.tsx` renders a thin strip above the
-main header row (Feedback, Sell on Sals3, Customer Care, Log In, Sign Up),
-matching the signed-out state from a reference marketplace screenshot. Sals3
+main header row — Sell on Sals3, Customer Care, Feedback, then Log In and Sign
+Up, all right-aligned, with no rule separating the strip from the row (owner
+decision, 2026-08-20: `Feedback` moved from the left edge to sit beside
+`Customer Care`, which left that side empty, and the divider cut one piece of
+chrome in half). All three carry one type style — bold, on
+`--header-strong` — after the owner levelled `Sell on Sals3` and `Customer Care`
+with `Feedback` on 2026-08-20; the only difference left between them is that
+`Feedback` stays visible below `sm` while the other two fold away for space,
+carried by each link's own `hideOnMobile` flag in
+`src/lib/guest-utility-links.ts` rather than by its position in the list. Sals3
 verifies the server session before showing auth-specific header actions, and the
 strip's right-hand auth slot has exactly two states:
 
