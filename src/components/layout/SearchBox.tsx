@@ -27,7 +27,7 @@ export default function SearchBox() {
           id="site-search"
           type="search"
           value={query}
-          placeholder="Search 240,000 products"
+          placeholder="Search 1,500,000 products"
           role="combobox"
           aria-expanded={open}
           aria-controls={listboxId}
