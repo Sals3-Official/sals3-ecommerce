@@ -1,16 +1,31 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import AUTH_LINKS from '@/lib/auth/auth-links';
+import {
+  resolvePostLoginPath,
+  withPostLoginKey,
+  type PostLoginKey,
+} from '@/lib/auth/post-login-redirect';
 import { SITE_NAME } from '@/lib/site';
 import LoginForm from './LoginForm';
 import { AUTH_LINK_CLASS } from './auth-field-styles';
+
+type LoginCardProps = {
+  nextKey?: PostLoginKey;
+};
 
 /**
  * Right half of the login screen. A Server Component: only the credential form
  * inside it needs client JavaScript, so the logo, headings, and legal copy ship
  * as static markup.
+ *
+ * This is where the post-login destination fans out: down into the form, which
+ * navigates there on success, and across onto the signup link, so a visitor
+ * who came here for checkout and needs an account first does not lose the
+ * thread. The legal and pricing links deliberately do not carry it — they lead
+ * out of the flow, not through it.
  */
-export default function LoginCard() {
+export default function LoginCard({ nextKey }: LoginCardProps) {
   return (
     <div className="flex flex-1 items-center justify-center bg-white px-[clamp(28px,4vw,44px)] py-[clamp(40px,6vh,72px)] lg:basis-1/2">
       <div className="flex w-full max-w-[424px] flex-col gap-[30px]">
@@ -32,11 +47,14 @@ export default function LoginCard() {
           Sign in or create an account
         </h2>
 
-        <LoginForm />
+        <LoginForm postLoginPath={resolvePostLoginPath(nextKey)} />
 
         <p className="text-center text-[15px] text-auth-body">
           New to {SITE_NAME}?{' '}
-          <Link href={AUTH_LINKS.signUp} className={AUTH_LINK_CLASS}>
+          <Link
+            href={withPostLoginKey(AUTH_LINKS.signUp, nextKey)}
+            className={AUTH_LINK_CLASS}
+          >
             Create an account
           </Link>
         </p>

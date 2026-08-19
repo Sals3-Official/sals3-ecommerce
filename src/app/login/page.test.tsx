@@ -8,8 +8,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('Login page', () => {
-  it('renders the hero value proposition as the page heading', () => {
-    render(<LoginPage />);
+  it('renders the hero value proposition as the page heading', async () => {
+    render(await LoginPage({}));
 
     expect(
       screen.getByRole('heading', {
@@ -22,8 +22,8 @@ describe('Login page', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders the sign-in card with the brand mark and its own heading', () => {
-    render(<LoginPage />);
+  it('renders the sign-in card with the brand mark and its own heading', async () => {
+    render(await LoginPage({}));
 
     expect(
       screen.getByRole('heading', {
@@ -34,22 +34,22 @@ describe('Login page', () => {
     expect(screen.getByAltText('Sals3')).toBeInTheDocument();
   });
 
-  it('gives the hero photo a descriptive alternative text', () => {
-    render(<LoginPage />);
+  it('gives the hero photo a descriptive alternative text', async () => {
+    render(await LoginPage({}));
 
     expect(screen.getByAltText(/shopper smiling/i)).toBeInTheDocument();
   });
 
-  it('offers a labelled way back to the home page', () => {
-    render(<LoginPage />);
+  it('offers a labelled way back to the home page', async () => {
+    render(await LoginPage({}));
 
     expect(
       screen.getByRole('link', { name: /go back to the sals3 home page/i }),
     ).toHaveAttribute('href', '/');
   });
 
-  it('points every supporting link at the site path already used elsewhere', () => {
-    render(<LoginPage />);
+  it('points every supporting link at the site path already used elsewhere', async () => {
+    render(await LoginPage({}));
 
     const expected: [RegExp, string][] = [
       [/how pricing works/i, '/help/pricing'],
@@ -62,6 +62,33 @@ describe('Login page', () => {
     expected.forEach(([name, href]) => {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     });
+  });
+
+  it('carries an allow-listed destination across to signup', async () => {
+    render(
+      await LoginPage({ searchParams: Promise.resolve({ next: 'checkout' }) }),
+    );
+
+    expect(
+      screen.getByRole('link', { name: /create an account/i }),
+    ).toHaveAttribute('href', '/signup?next=checkout');
+  });
+
+  /*
+   * The `next` parameter is a key, not a path: an attacker-supplied URL must
+   * not survive the hop to signup, where it would become a link the visitor
+   * trusts because it sits on a Sals3 credential screen.
+   */
+  it('drops a destination it does not recognise', async () => {
+    render(
+      await LoginPage({
+        searchParams: Promise.resolve({ next: 'https://evil.example' }),
+      }),
+    );
+
+    expect(
+      screen.getByRole('link', { name: /create an account/i }),
+    ).toHaveAttribute('href', '/signup');
   });
 
   it('is kept out of search and AI answer surfaces', () => {

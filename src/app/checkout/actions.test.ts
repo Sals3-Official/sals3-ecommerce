@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getRevocationCheckedBuyerSession } from '@/lib/auth/dal';
 import { validateCheckoutCart } from '@/services/checkout/cart-validation';
 import { createStripeCheckoutSession } from '@/services/stripe/checkout';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
@@ -32,6 +33,10 @@ vi.mock('@/services/checkout/freight-quotes', () => ({
 
 vi.mock('@/services/checkout/intent', () => ({
   default: vi.fn(),
+}));
+
+vi.mock('@/lib/auth/dal', () => ({
+  getRevocationCheckedBuyerSession: vi.fn(async () => ({ uid: 'buyer-123' })),
 }));
 
 const address = {
@@ -83,12 +88,41 @@ const freightQuote = {
   ],
 };
 
+const mockedGetBuyerSession = vi.mocked(getRevocationCheckedBuyerSession);
+
 describe('createCheckoutSessionAction', () => {
   beforeEach(() => {
     vi.mocked(validateCheckoutCart).mockReset();
     vi.mocked(createStripeCheckoutSession).mockReset();
     vi.mocked(requestCheckoutFreightQuotes).mockReset();
     vi.mocked(createPortalCheckoutIntent).mockReset();
+    mockedGetBuyerSession.mockResolvedValue({ uid: 'buyer-123' });
+  });
+
+  /*
+   * A Server Action is a public POST endpoint whose id is readable in the
+   * client bundle, so the redirect on `/checkout` proves nothing about who is
+   * calling this. Signed out, nothing downstream may run: no Stripe session,
+   * no portal intent, and no CJ freight quote spent.
+   */
+  it('refuses to create a checkout session for a signed-out caller', async () => {
+    mockedGetBuyerSession.mockResolvedValue(null);
+
+    await expect(
+      createCheckoutSessionAction({
+        cart: { items: [{ productId: 'corduroy-jacket', quantity: 1 }] },
+        address,
+        shippingSelection,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Sign in to continue to checkout.',
+    });
+
+    expect(validateCheckoutCart).not.toHaveBeenCalled();
+    expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
+    expect(createPortalCheckoutIntent).not.toHaveBeenCalled();
+    expect(createStripeCheckoutSession).not.toHaveBeenCalled();
   });
 
   it('rejects an empty cart', async () => {
@@ -167,6 +201,22 @@ describe('createCheckoutSessionAction', () => {
         address,
       }),
     ).resolves.toEqual({ ok: true, quote: freightQuote });
+  });
+
+  it('refuses to spend CJ freight quota for a signed-out caller', async () => {
+    mockedGetBuyerSession.mockResolvedValue(null);
+
+    await expect(
+      quoteCheckoutShippingAction({
+        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+        address,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Sign in to continue to checkout.',
+    });
+
+    expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
   });
 
   it('shows safe portal quote validation messages', async () => {

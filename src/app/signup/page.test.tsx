@@ -12,8 +12,8 @@ afterEach(() => {
 });
 
 describe('Signup page', () => {
-  it('renders the split hero and the create-account card', () => {
-    render(<SignupPage />);
+  it('renders the split hero and the create-account card', async () => {
+    render(await SignupPage({}));
 
     expect(
       screen.getByRole('heading', { level: 1, name: /one price\./i }),
@@ -23,8 +23,8 @@ describe('Signup page', () => {
     ).toBeInTheDocument();
   });
 
-  it('collects a name, an address, and a confirmed password', () => {
-    render(<SignupPage />);
+  it('collects a name, an address, and a confirmed password', async () => {
+    render(await SignupPage({}));
 
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
@@ -32,8 +32,8 @@ describe('Signup page', () => {
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
   });
 
-  it('asks the password manager to generate a new credential', () => {
-    render(<SignupPage />);
+  it('asks the password manager to generate a new credential', async () => {
+    render(await SignupPage({}));
 
     expect(screen.getByLabelText(/^password$/i)).toHaveAttribute(
       'autocomplete',
@@ -45,8 +45,32 @@ describe('Signup page', () => {
     );
   });
 
-  it('points the already-registered visitor at the sign-in screen', () => {
-    render(<SignupPage />);
+  it('points the already-registered visitor at the sign-in screen', async () => {
+    render(await SignupPage({}));
+
+    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+  });
+
+  it('carries an allow-listed destination back to sign-in', async () => {
+    render(
+      await SignupPage({ searchParams: Promise.resolve({ next: 'checkout' }) }),
+    );
+
+    expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
+      'href',
+      '/login?next=checkout',
+    );
+  });
+
+  it('drops a destination it does not recognise', async () => {
+    render(
+      await SignupPage({
+        searchParams: Promise.resolve({ next: '//evil.example' }),
+      }),
+    );
 
     expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
       'href',

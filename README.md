@@ -111,6 +111,20 @@ cart lines and the completed delivery address. CJ credentials remain in
 
 ## Checkout and Stripe
 
+**Checkout requires a signed-in buyer.** `/checkout` reads the session server-side
+before rendering; a signed-out visitor is redirected to `/login?next=checkout`
+and lands back on `/checkout` once signed in — by password or by Google. The
+cart survives the hop by itself (it lives in `localStorage`). Both checkout
+Server Actions re-check the session independently, because a Server Action is a
+public POST endpoint whose id ships in the client bundle, so the page redirect
+is a UI gate only. See [Post-login redirects](#post-login-redirects).
+
+Two consequences worth knowing before filing a bug: a signed-out visitor with an
+empty cart sees the login screen rather than "add an item before checkout"
+(sign-in is the earlier gate, deliberately), and `/checkout` is unreachable in
+local development without Firebase Admin credentials — `GOOGLE_APPLICATION_CREDENTIALS`
+or the `FIREBASE_*` trio in `.env.local`.
+
 `/cart` now sends buyers to `/checkout`. Checkout is a two-step flow on one
 route: step 1 collects contact and delivery address, and "Continue to
 delivery" validates the address, fetches CJ freight options from the protected
@@ -174,8 +188,37 @@ database, CJ credentials, queue, and supplier fulfillment live in
 ## Authentication
 
 Two ways in: Google, and email with a password. Both end at the same 24-hour
-`httpOnly` `sals3_session` cookie, and nothing is gated behind being signed in
-yet — guest browsing and the local cart are unaffected.
+`httpOnly` `sals3_session` cookie. Guest browsing and the local cart are
+unaffected; `/checkout` is the one gated surface (see
+[Checkout and Stripe](#checkout-and-stripe)).
+
+### Reading the session on the server
+
+`src/lib/auth/dal.ts` is the single place server code asks who is signed in.
+Two readers, differing only in cost:
+
+| Function                             | `checkRevoked` | Use                                                                                       |
+| ------------------------------------ | -------------- | ----------------------------------------------------------------------------------------- |
+| `getBuyerSession()`                  | `false`        | Page-render gates. Local verify, no network. Memoized with React `cache` per render pass. |
+| `getRevocationCheckedBuyerSession()` | `true`         | Server Actions that spend money or CJ quota. One Firebase call per invocation.            |
+
+The split is deliberate. The cheap reader means a session revoked mid-life
+(signed out everywhere, password changed, account disabled) can still _render_
+`/checkout` until the cookie expires — at most 24 hours. It cannot transact:
+every action that costs anything uses the revocation-checked reader. Both fail
+closed, and both return `null` before touching `firebase-admin` when there is
+no cookie at all, which is why the signed-out redirect is testable end to end
+with no Firebase credentials present.
+
+### Post-login redirects
+
+A guarded route sends visitors to `/login?next=<key>`. `next` is an **opaque
+allow-listed key**, never a path and never a URL: `src/lib/auth/post-login-redirect.ts`
+maps `checkout` to `/checkout` and resolves everything else — including
+`/checkout`, `//evil.example`, and `https://evil.example` — to the home page.
+Add a key there when a new route starts gating itself. The key travels between
+`/login` and `/signup` so a buyer who needs an account first still lands where
+they were headed.
 
 ### Email and password
 
@@ -195,7 +238,8 @@ a fixed error code and never a sentence; the human copy lives client-side in
 
 `POST /api/auth/signup` creates the account through `accounts:signUp`, records
 the display name, and mints the same session cookie, so the form redirects
-straight to the home page with the visitor already signed in.
+straight on with the visitor already signed in — to the home page, or to the
+route named by `?next=` (see [Post-login redirects](#post-login-redirects)).
 
 **Email address verification is deliberately out of scope.** No verification
 mail is sent, and sign-in does not inspect the `email_verified` claim. Two
@@ -664,7 +708,8 @@ control is the way out.
 
 `/signup` reuses that layout unchanged. The two screens cross-link to each
 other, so giving them different chrome would throw a visitor between two
-layouts mid-task.
+layouts mid-task. Both accept `?next=<key>` and carry it across that cross-link
+— see [Post-login redirects](#post-login-redirects).
 
 ### How to see it
 
