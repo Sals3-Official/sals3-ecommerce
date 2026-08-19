@@ -6,8 +6,10 @@ import {
   getCartItemCount,
   getCartLineTotal,
   getCartSubtotal,
+  hasClearedCheckout,
   MAX_LINE_QUANTITY,
   parseCartState,
+  rememberClearedCheckout,
   removeCartItem,
   setCartItemQuantity,
   type CartLineItem,
@@ -223,5 +225,50 @@ describe('parseCartState', () => {
     });
 
     expect(parseCartState(tampered)).toEqual(EMPTY_CART);
+  });
+});
+
+describe('cleared checkout bookkeeping', () => {
+  it('reports a checkout that has not emptied the cart yet', () => {
+    expect(hasClearedCheckout(null, 'cs_1')).toBe(false);
+    expect(hasClearedCheckout('["cs_2"]', 'cs_1')).toBe(false);
+  });
+
+  it('reports a checkout that already emptied the cart', () => {
+    const stored = rememberClearedCheckout(null, 'cs_1');
+
+    expect(hasClearedCheckout(stored, 'cs_1')).toBe(true);
+  });
+
+  /*
+   * The receipt is a page buyers return to. Re-clearing on a second visit would
+   * wipe a cart filled after the purchase, which reads as the app losing data.
+   */
+  it('stays recorded across repeated visits to the same receipt', () => {
+    const first = rememberClearedCheckout(null, 'cs_1');
+    const second = rememberClearedCheckout(first, 'cs_1');
+
+    expect(JSON.parse(second)).toEqual(['cs_1']);
+    expect(hasClearedCheckout(second, 'cs_1')).toBe(true);
+  });
+
+  it('keeps the ten most recent checkouts, newest first', () => {
+    const stored = Array.from({ length: 12 }, (_unused, index) => index).reduce(
+      (raw, index) => rememberClearedCheckout(raw, `cs_${index}`),
+      null as string | null,
+    );
+    const ids = JSON.parse(stored ?? '[]') as string[];
+
+    expect(ids).toHaveLength(10);
+    expect(ids[0]).toBe('cs_11');
+    expect(hasClearedCheckout(stored, 'cs_0')).toBe(false);
+  });
+
+  it('treats unreadable storage as nothing cleared rather than throwing', () => {
+    expect(hasClearedCheckout('not json', 'cs_1')).toBe(false);
+    expect(hasClearedCheckout('{"not":"an array"}', 'cs_1')).toBe(false);
+    expect(JSON.parse(rememberClearedCheckout('not json', 'cs_1'))).toEqual([
+      'cs_1',
+    ]);
   });
 });

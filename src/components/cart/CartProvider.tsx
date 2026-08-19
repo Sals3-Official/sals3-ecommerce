@@ -37,6 +37,13 @@ type CartContextValue = {
   /** `lineId`, not a product id: two variants of one product are two lines. */
   setQuantity: (lineId: string, quantity: number) => void;
   removeItem: (lineId: string) => void;
+  /**
+   * Empties the cart outright. Used once a checkout is paid — those lines are
+   * an order now, not purchase intent. Deliberately silent: `removeItem` is a
+   * buyer's decision worth confirming, this is a consequence of one they
+   * already made and the receipt beside it is the feedback.
+   */
+  clear: () => void;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -128,6 +135,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ),
       removeItem: (lineId) =>
         store.update((current) => removeCartItem(current, lineId)),
+      clear: () => {
+        store.update(() => EMPTY_CART);
+      },
     }),
     [state, store],
   );

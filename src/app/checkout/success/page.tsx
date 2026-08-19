@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import CheckoutCartCleanup from '@/components/checkout/CheckoutCartCleanup';
 import CheckoutReceiptDelivery from '@/components/checkout/CheckoutReceiptDelivery';
 import CheckoutReceiptItems from '@/components/checkout/CheckoutReceiptItems';
 import SiteFooter from '@/components/layout/SiteFooter';
@@ -159,7 +160,8 @@ export default async function CheckoutSuccessPage({
   }
 
   const params = await searchParams;
-  const status = await statusFor(first(params?.session_id), buyer.email);
+  const sessionId = first(params?.session_id) ?? '';
+  const status = await statusFor(sessionId, buyer.email);
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
@@ -182,6 +184,13 @@ export default async function CheckoutSuccessPage({
 
           {status.receipt === undefined ? null : (
             <>
+              {/*
+                Inside the receipt branch on purpose: those lines are an order
+                now, so the cart empties — but only here. The failure branches
+                above render without it, because a buyer whose payment was
+                declined needs their cart to retry with.
+              */}
+              <CheckoutCartCleanup sessionId={sessionId} />
               <CheckoutReceiptItems items={status.receipt.items} />
               <CheckoutReceiptDelivery
                 shipTo={status.receipt.shipTo}
