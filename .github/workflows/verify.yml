@@ -9,10 +9,17 @@ on:
     branches:
       - develop
       - main
+  # Lets a run be re-triggered by hand when a runner, rather than the code,
+  # is what failed.
+  workflow_dispatch:
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    # Backstop. A green run takes a few minutes; the default ceiling is 6
+    # hours, which is how a hung apt step sat unnoticed for ten minutes at a
+    # time on 2026-08-19 until a human cancelled it.
+    timeout-minutes: 25
 
     steps:
       - name: Check out repository
@@ -27,8 +34,62 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Keyed on the resolved Playwright version, not the lockfile hash: the
+      # browser build is tied to that version and nothing else, so an
+      # unrelated dependency bump must not throw away a still-valid cache.
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Playwright $version"
+
+      - name: Cache Playwright browser
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      # Split from the apt step below, which is the whole point of this
+      # change. `install --with-deps` did both in one command, so a stalled
+      # apt also blocked the browser and there was no way to skip one without
+      # the other.
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 8
+        run: npx playwright install chromium
+
+      # `install-deps` shells out to `apt-get`, which made this the least
+      # reliable thing in the pipeline. On 2026-08-19 it stalled repeatedly in
+      # this repository and in `sals3-portal`, ten to twenty-two minutes at a
+      # time, each stall needing a manual cancel. The portal's logs showed two
+      # different causes — the runner's own boot-time apt job holding the lock,
+      # and `archive.ubuntu.com` itself going slow — so there is no single apt
+      # failure to harden against.
+      #
+      # It does not have to gate anything. `ubuntu-24.04` already ships the
+      # Chromium libraries and the browser comes from the cache above, so on a
+      # cache hit this call usually re-confirms what is already installed.
+      # When it cannot run, the honest thing is to say so and carry on: the
+      # e2e suite is the real test, and Playwright fails with an explicit
+      # "Host system is missing dependencies" naming each one — a better
+      # diagnostic than a hung step, and impossible to mistake for flake.
+      #
+      # Proven in `sals3-portal` ([PR #140](https://github.com/Sals3-Official/sals3-portal/pull/140)):
+      # apt was skipped entirely and all 69 e2e tests still passed.
+      - name: Refresh Playwright system dependencies (best effort)
+        timeout-minutes: 4
+        continue-on-error: true
+        run: |
+          echo 'DPkg::Lock::Timeout "120";' \
+            | sudo tee /etc/apt/apt.conf.d/99lock-timeout > /dev/null
+
+          if npx playwright install-deps chromium; then
+            exit 0
+          fi
+
+          echo "::warning::install-deps could not run (apt lock or slow mirror). Continuing: the runner image already ships these libraries, and the e2e run will name any that are genuinely missing."
 
       - name: Run verification
         run: npm run verify
