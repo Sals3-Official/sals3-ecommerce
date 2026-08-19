@@ -223,3 +223,50 @@ researched fact, until a real per-category review happens — the same caution
 - [ ] Reconciling the live codebase's `sals3_categories`/mapping tables against this new
       reference data, or an explicit decision not to — not started.
 - A real platform category-governance authority (ADR-014) before any mapping mutation is exposed to a user.
+
+---
+
+## Amendment — 2026-08-20: the CJ mirror is a draft default only; publication requires a real Sals3 category
+
+Owner decision (Bogs, 2026-08-20). This narrows the 2026-08-14 "the CJ category IS the Sals3
+category" decision recorded in
+[[sals3-session-2026-08-14-part40-aj-category-mirror-and-draft-evidence-work]] and referenced in the
+amendment above. It does not reverse that decision everywhere — it moves the line to the point where
+the consequence becomes visible to a buyer.
+
+**What was happening.** `publishProduct` called `ensureProductCjCategory` whenever a product reached
+publication without a Sals3 category: it minted a `CJ-<uuid>` mirror row from the supplier's own
+category and published on it. That mirror then became the category a buyer browses and, since the
+2026-08-19 pricing rework, the node the margin-inheritance chain resolves against. Bogs, reading the
+live Market Rules screen, found two of them sitting among the 21 real departments
+(`Men's Clothing / Outerwear & Jackets / Man Hoodies & Sweatshirts`,
+`CJ-976399B4-534B-46F0-B18A-62075824A717`) and named the rule directly: nothing should proceed to
+publish without a Sals3 category.
+
+**Where the line now sits.**
+
+- **Draft: unchanged.** `create-draft.ts` still calls `ensureCjCategoryMirror`. A new product still
+  lands on the supplier's own category, which remains the right default — a product has to sit
+  somewhere before a person has looked at it, and the supplier's category is the best evidence
+  available at that moment.
+- **Publish: refuses.** A `CJ-` mirror code, a Taxonomy v0 code, `UNMAPPED`, `AMBIGUOUS`, or a null
+  category all return `SALS3_CATEGORY_REQUIRED` (renamed from `CATEGORY_UNMAPPED`, which described a
+  mapping state rather than what the product carries). The refusal lands before pricing, so a
+  mirrored node can never resolve a margin even on the way to being rejected.
+- `products/category-mirror.ts` is deleted — publication was its only production caller.
+  `taxonomy/cj-mirror.ts` stays; that is the draft path.
+
+**Verified state at the time of this decision** (read-only census via
+`/api/internal/catalog/taxonomy/status`, production, 2026-08-19): `sals3_categories` holds 5,602
+rows — 5,595 Taxonomy v1 (`CAT-GGL-`), 7 CJ mirrors, 0 other. How many products sit on those 7
+mirrors is **not** established here; no endpoint reports it and no production query was run. Any
+that do can no longer be republished until a person assigns a real category. Already-published rows
+are untouched — this gates the publish action, not the catalogue.
+
+`sals3-portal` [PR #145](https://github.com/Sals3-Official/sals3-portal/pull/145), merged
+2026-08-19. 2,140 unit tests green; tests assert the reversal directly, including that nothing is
+written on the way to the refusal.
+
+**Still open**: the seller-facing path to *fix* an affected product is the Product Editor's category
+picker, which already restricts selection to `CAT-GGL-` rows. Nothing yet surfaces "this product
+cannot publish because its category is a supplier mirror" ahead of the publish attempt.
