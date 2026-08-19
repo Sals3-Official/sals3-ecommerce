@@ -1,36 +1,67 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useRef, useState, useTransition } from 'react';
 import type { CartState } from '@/lib/cart';
+import type { CheckoutAddress } from '@/lib/checkout/schema';
 import { money, type Money } from '@/lib/money';
 import useCheckoutAddress from '@/components/checkout/useCheckoutAddress';
 import useShippingQuote, {
   toCheckoutCart,
 } from '@/components/checkout/useShippingQuote';
+import type { SelectedShippingQuote } from '@/components/checkout/CheckoutShippingOptions';
 import { createCheckoutSessionAction } from '@/app/checkout/actions';
-
-export type CheckoutStep = 1 | 2;
 
 const INVALID_ADDRESS_MESSAGE = 'Check the highlighted address fields.';
 
 /**
- * Owns the checkout flow: the current step, the user-facing message, and
- * the submit transition. Composes `useCheckoutAddress` (which reports edits
- * so the quote is invalidated whenever the address changes) and
- * `useShippingQuote`. Step 2 is only reachable with a fetched quote:
- * `continueToDelivery` reuses a live quote for an unchanged address and
- * otherwise fetches one, advancing only on success.
+ * Identifies the exact order a Stripe session was created for.
+ *
+ * Splitting checkout across routes handed buyers a Back button, and without
+ * this every bounce between delivery and payment would mint a fresh Portal
+ * intent, a fresh Stripe session, and another CJ freight re-quote — the sort of
+ * per-navigation supplier call the operating contract's CJ call budget exists
+ * to prevent. Selections are sorted so the same choices in a different click
+ * order still compare equal.
+ */
+function paymentSignature(
+  address: CheckoutAddress,
+  selected: SelectedShippingQuote[],
+): string {
+  return JSON.stringify({
+    address,
+    selected: [...selected].sort((left, right) =>
+      left.packageId.localeCompare(right.packageId),
+    ),
+  });
+}
+
+/**
+ * Owns the checkout flow's data: the address, the courier quote, the buyer's
+ * selection, and the Stripe client secret.
+ *
+ * It deliberately does **not** own which step is showing — the URL does that
+ * now (`/checkout`, `/checkout/delivery`, `/checkout/payment`). The two
+ * `prepare*` calls take a callback the caller uses to navigate, so this hook
+ * stays free of routing and the pages stay free of business rules.
+ *
+ * Mounted once by `CheckoutFlowProvider` in the flow layout, which is what
+ * keeps the state alive as the buyer moves between those routes.
  */
 export default function useCheckout(
   items: CartState['items'],
   subtotal: Money,
 ) {
-  const [step, setStep] = useState<CheckoutStep>(1);
   const [message, setMessage] = useState<string | null>(null);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
     null,
   );
+  const preparedSignatureRef = useRef<string | null>(null);
   const [isSubmitPending, startTransition] = useTransition();
+
+  const clearPreparedPayment = useCallback(() => {
+    setStripeClientSecret(null);
+    preparedSignatureRef.current = null;
+  }, []);
 
   const {
     shippingQuote,
@@ -41,8 +72,16 @@ export default function useCheckout(
     selectShipping,
   } = useShippingQuote(items, setMessage);
 
+  // Editing the address invalidates the quote *and* any prepared payment: the
+  // session was created for the old address, and paying against it would ship
+  // to somewhere the buyer has since corrected.
+  const invalidateQuote = useCallback(() => {
+    clearQuote();
+    clearPreparedPayment();
+  }, [clearPreparedPayment, clearQuote]);
+
   const { address, errors, updateAddress, validateAddress } =
-    useCheckoutAddress(clearQuote);
+    useCheckoutAddress(invalidateQuote);
 
   const isPending = isQuotePending || isSubmitPending;
   const allPackagesSelected =
@@ -53,6 +92,7 @@ export default function useCheckout(
     (total, selected) => total + selected.amountMinor,
     0,
   );
+  const shipping = money(shippingTotal, subtotal.currency);
   const total = money(subtotal.amountMinor + shippingTotal, subtotal.currency);
 
   const requireValidAddress = useCallback((): boolean => {
@@ -62,79 +102,110 @@ export default function useCheckout(
     return false;
   }, [validateAddress]);
 
-  const continueToDelivery = useCallback(() => {
-    if (!requireValidAddress()) return;
+  /** Information step: quote the address, then let the caller navigate. */
+  const prepareDelivery = useCallback(
+    (onReady: () => void) => {
+      if (!requireValidAddress()) return;
 
-    // A live quote proves the address is unchanged since it was fetched
-    // (any edit clears it), so skip the rate-limited re-fetch and keep the
-    // buyer's selection.
-    if (shippingQuote !== null) {
-      setMessage(null);
-      setStep(2);
-      return;
-    }
-
-    fetchQuote(address, () => setStep(2));
-  }, [address, fetchQuote, requireValidAddress, shippingQuote]);
-
-  const backToInformation = useCallback(() => {
-    setMessage(null);
-    setStripeClientSecret(null);
-    setStep(1);
-  }, []);
-
-  const refreshQuote = useCallback(() => {
-    fetchQuote(address);
-  }, [address, fetchQuote]);
-
-  const submit = useCallback(() => {
-    if (!requireValidAddress()) return;
-
-    if (!allPackagesSelected) {
-      setMessage('Choose a delivery option before payment.');
-      return;
-    }
-
-    setMessage(null);
-    setStripeClientSecret(null);
-    startTransition(async () => {
-      const result = await createCheckoutSessionAction({
-        cart: toCheckoutCart(items),
-        address,
-        shippingSelection: { packageSelections: selectedShipping },
-      });
-
-      if (result.ok) {
-        setStripeClientSecret(result.clientSecret);
+      // A live quote proves the address is unchanged since it was fetched (any
+      // edit clears it), so skip the rate-limited re-fetch and keep the
+      // buyer's selection.
+      if (shippingQuote !== null) {
+        setMessage(null);
+        onReady();
         return;
       }
 
-      setMessage(result.message);
-    });
-  }, [
-    address,
-    allPackagesSelected,
-    items,
-    requireValidAddress,
-    selectedShipping,
-  ]);
+      fetchQuote(address, onReady);
+    },
+    [address, fetchQuote, requireValidAddress, shippingQuote],
+  );
+
+  /**
+   * Delivery step: create the Stripe session, then let the caller navigate —
+   * so the payment page renders with a client secret already in hand and mounts
+   * Stripe immediately instead of behind a second button.
+   */
+  const preparePayment = useCallback(
+    (onReady: () => void) => {
+      if (!requireValidAddress()) return;
+
+      if (!allPackagesSelected) {
+        setMessage('Choose a delivery option before payment.');
+        return;
+      }
+
+      const signature = paymentSignature(address, selectedShipping);
+
+      if (
+        stripeClientSecret !== null &&
+        preparedSignatureRef.current === signature
+      ) {
+        setMessage(null);
+        onReady();
+        return;
+      }
+
+      setMessage(null);
+      clearPreparedPayment();
+      startTransition(async () => {
+        const result = await createCheckoutSessionAction({
+          cart: toCheckoutCart(items),
+          address,
+          shippingSelection: { packageSelections: selectedShipping },
+        });
+
+        if (result.ok) {
+          setStripeClientSecret(result.clientSecret);
+          preparedSignatureRef.current = signature;
+          onReady();
+          return;
+        }
+
+        setMessage(result.message);
+      });
+    },
+    [
+      address,
+      allPackagesSelected,
+      clearPreparedPayment,
+      items,
+      requireValidAddress,
+      selectedShipping,
+      stripeClientSecret,
+    ],
+  );
+
+  const refreshQuote = useCallback(() => {
+    clearPreparedPayment();
+    fetchQuote(address);
+  }, [address, clearPreparedPayment, fetchQuote]);
+
+  const selectShippingOption = useCallback(
+    (next: SelectedShippingQuote) => {
+      // The prepared session priced the previous choice.
+      clearPreparedPayment();
+      selectShipping(next);
+    },
+    [clearPreparedPayment, selectShipping],
+  );
 
   return {
-    step,
     address,
     errors,
     updateAddress,
     message,
+    setMessage,
     stripeClientSecret,
     shippingQuote,
     selectedShipping,
     isPending,
     disabled,
+    shipping,
     total,
-    continueToDelivery,
-    backToInformation,
+    prepareDelivery,
+    preparePayment,
     refreshQuote,
-    selectShipping,
-    submit,
+    selectShipping: selectShippingOption,
   };
 }

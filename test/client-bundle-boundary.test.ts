@@ -31,6 +31,14 @@ const CLIENT_ENTRY_POINTS = [
   'components/auth/NameField.tsx',
   'components/cart/CartPageClient.tsx',
   'components/cart/CartProvider.tsx',
+  // The checkout flow, split across three routes: each step is a client
+  // component reached from the group's layout.
+  'components/checkout/CheckoutFlowProvider.tsx',
+  'components/checkout/CheckoutFlowChrome.tsx',
+  'components/checkout/CheckoutInformationStep.tsx',
+  'components/checkout/CheckoutDeliveryStep.tsx',
+  'components/checkout/CheckoutPaymentStep.tsx',
+  'components/checkout/CheckoutStepper.tsx',
   'components/klaviyo/KlaviyoConsentProvider.tsx',
   'components/klaviyo/KlaviyoLoader.tsx',
   'components/klaviyo/KlaviyoViewedProduct.tsx',
@@ -83,6 +91,21 @@ function findServerOnlyImports(entry: string) {
     visited.add(file);
 
     const source = readFileSync(file, 'utf8');
+
+    /*
+     * A `'use server'` module is itself a boundary: the client receives a
+     * reference the bundler replaces with a network call, never the module's
+     * imports. Walking through one would report every Server Action's
+     * server-side dependencies as if the browser loaded them, which is the
+     * false positive that kept the checkout components out of this guard.
+     */
+    if (
+      file !== resolve(SOURCE_ROOT, entry) &&
+      /^\s*['"]use server['"]/.test(source)
+    ) {
+      return;
+    }
+
     const specifiers = Array.from(
       source.matchAll(IMPORT_PATTERN),
       (m) => m[1]!,

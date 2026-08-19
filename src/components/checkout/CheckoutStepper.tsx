@@ -1,12 +1,14 @@
 'use client';
 
-import type { CheckoutStep } from '@/components/checkout/useCheckout';
+import Link from 'next/link';
 
-type CheckoutStepperProps = {
-  step: CheckoutStep;
-  disabled: boolean;
-  onEditInformation: () => void;
-};
+export type CheckoutStep = 1 | 2 | 3;
+
+const STEPS: { step: CheckoutStep; label: string; href: string }[] = [
+  { step: 1, label: 'Information', href: '/checkout' },
+  { step: 2, label: 'Delivery', href: '/checkout/delivery' },
+  { step: 3, label: 'Payment', href: '/checkout/payment' },
+];
 
 function stepNumberClass(active: boolean): string {
   return `grid h-7 w-7 place-items-center rounded-full border font-display text-xs font-semibold ${
@@ -17,48 +19,63 @@ function stepNumberClass(active: boolean): string {
 }
 
 function stepLabelClass(active: boolean): string {
-  return `text-xs font-semibold uppercase tracking-wide ${
+  return `text-xs font-semibold tracking-wide uppercase ${
     active ? 'text-brand-600' : 'text-ink-muted'
   }`;
 }
 
+/**
+ * Progress through the three checkout routes.
+ *
+ * Only steps already completed are links. A forward step is inert markup, not a
+ * disabled link: reaching payment requires a quoted address and a prepared
+ * Stripe session, so an enabled link there would promise a destination that
+ * would immediately bounce the buyer back.
+ */
 export default function CheckoutStepper({
   step,
   disabled,
-  onEditInformation,
-}: CheckoutStepperProps) {
+}: {
+  step: CheckoutStep;
+  disabled: boolean;
+}) {
   return (
     <nav aria-label="Checkout progress">
       <ol className="flex items-center gap-3">
-        <li aria-current={step === 1 ? 'step' : undefined}>
-          {step === 2 ? (
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={onEditInformation}
-              className="flex min-h-11 items-center gap-2 rounded-lg transition-colors duration-200 hover:text-brand-600 disabled:cursor-not-allowed"
-            >
-              <span className={stepNumberClass(false)}>01</span>
-              <span className={stepLabelClass(false)}>Information</span>
-            </button>
-          ) : (
-            <span className="flex min-h-11 items-center gap-2">
-              <span className={stepNumberClass(true)}>01</span>
-              <span className={stepLabelClass(true)}>Information</span>
-            </span>
-          )}
-        </li>
-        <li aria-hidden="true">
-          <span className="block h-px w-8 bg-border sm:w-12" />
-        </li>
-        <li aria-current={step === 2 ? 'step' : undefined}>
-          <span className="flex min-h-11 items-center gap-2">
-            <span className={stepNumberClass(step === 2)}>02</span>
-            <span className={stepLabelClass(step === 2)}>
-              Delivery &amp; payment
-            </span>
-          </span>
-        </li>
+        {STEPS.map((entry, index) => (
+          <li
+            key={entry.step}
+            className="flex items-center gap-3"
+            aria-current={entry.step === step ? 'step' : undefined}
+          >
+            {index === 0 ? null : (
+              <span
+                aria-hidden="true"
+                className="block h-px w-6 bg-border sm:w-10"
+              />
+            )}
+            {entry.step < step && !disabled ? (
+              <Link
+                href={entry.href}
+                className="flex min-h-11 items-center gap-2 rounded-lg transition-colors duration-200 hover:text-brand-600 hover:no-underline"
+              >
+                <span className={stepNumberClass(false)}>
+                  {`0${entry.step}`}
+                </span>
+                <span className={stepLabelClass(false)}>{entry.label}</span>
+              </Link>
+            ) : (
+              <span className="flex min-h-11 items-center gap-2">
+                <span className={stepNumberClass(entry.step === step)}>
+                  {`0${entry.step}`}
+                </span>
+                <span className={stepLabelClass(entry.step === step)}>
+                  {entry.label}
+                </span>
+              </span>
+            )}
+          </li>
+        ))}
       </ol>
     </nav>
   );
