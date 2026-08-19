@@ -25,9 +25,16 @@ const STEP_LABEL: Record<CheckoutStep, string> = {
  * Everything the three checkout routes share: the heading, the progress
  * stepper, and the order summary.
  *
- * The summary lives here rather than inside a step so it is present on all
- * three — a buyer on the payment page can still see what they are buying and
- * what shipping costs without navigating back to check.
+ * The summary lives here rather than inside a step so information and delivery
+ * both carry it — a buyer choosing a courier can see what they are buying and
+ * what it costs without navigating back.
+ *
+ * Payment is the exception, and gets the full width instead. Stripe's embedded
+ * checkout renders its own itemised summary — every line, the shipping row, and
+ * the total — so keeping ours beside it would put two copies of the same
+ * numbers on one screen, competing to be believed, while squeezing the payment
+ * form nobody can afford to have cramped. The totals the payment step prints
+ * above the form cover the sanity check the sidebar was there for.
  */
 export default function CheckoutFlowChrome({
   children,
@@ -37,6 +44,7 @@ export default function CheckoutFlowChrome({
   const { items, itemCount, selectedShipping, isPending } = useCheckoutFlow();
   const pathname = usePathname();
   const step = STEP_BY_PATH[pathname] ?? 1;
+  const showsSummary = step !== 3;
   const stepContentRef = useRef<HTMLElement>(null);
   const hasNavigatedRef = useRef(false);
 
@@ -81,7 +89,13 @@ export default function CheckoutFlowChrome({
         </div>
         <CheckoutStepper step={step} disabled={isPending} />
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+      <div
+        className={
+          showsSummary
+            ? 'grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]'
+            : 'grid grid-cols-1 gap-6'
+        }
+      >
         <section
           ref={stepContentRef}
           tabIndex={-1}
@@ -90,11 +104,13 @@ export default function CheckoutFlowChrome({
         >
           {children}
         </section>
-        <CheckoutOrderSummary
-          items={items}
-          itemCount={itemCount}
-          shipping={selectedShipping}
-        />
+        {showsSummary ? (
+          <CheckoutOrderSummary
+            items={items}
+            itemCount={itemCount}
+            shipping={selectedShipping}
+          />
+        ) : null}
       </div>
     </div>
   );

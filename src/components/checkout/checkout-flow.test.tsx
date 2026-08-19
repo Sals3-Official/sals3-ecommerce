@@ -251,17 +251,40 @@ describe('checkout flow across routes', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows the items, the shipping cost, and the total on the payment route', async () => {
+  it('breaks out the item count, shipping, and total on the payment route', async () => {
     renderWithCart(<CheckoutFlowHarness />);
 
     await reachPayment();
 
-    // Once in the payment breakdown, once in the order summary beside it.
-    expect(screen.getAllByText('US$4.09').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('US$24.09').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/^1 item$/)).toBeInTheDocument();
+    expect(screen.getByText('Shipping')).toBeInTheDocument();
+    expect(screen.getByText('US$4.09')).toBeInTheDocument();
+    expect(screen.getByText('Total today')).toBeInTheDocument();
+    expect(screen.getByText('US$24.09')).toBeInTheDocument();
+  });
+
+  /*
+   * Stripe's embedded form draws its own itemised summary, so ours beside it
+   * would be a second copy of the same numbers competing to be believed — and
+   * it would narrow the payment form to make room. Earlier steps keep it.
+   */
+  it('gives payment the full width and keeps the summary on the earlier steps', async () => {
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await reachDelivery();
     expect(
-      screen.getByText(/men's casual retro corduroy jacket coat/i),
+      screen.getByRole('heading', { name: /order summary/i }),
     ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/standard.*cjpacket postal/i));
+    fireEvent.click(
+      await screen.findByRole('button', { name: /go to payment/i }),
+    );
+    await screen.findByTestId('embedded-checkout');
+
+    expect(
+      screen.queryByRole('heading', { name: /order summary/i }),
+    ).not.toBeInTheDocument();
   });
 
   /*
