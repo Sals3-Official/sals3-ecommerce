@@ -179,6 +179,31 @@ Before creating Stripe payment, ecommerce creates an immutable Portal checkout
 intent that owns the cart, address, freight, and supplier snapshot. The Stripe
 Session uses that intent id as `client_reference_id`. `/checkout/success`
 verifies the Stripe Session server-side before showing the payment status.
+
+### The receipt on `/checkout/success`
+
+The page renders the purchased items, the shipping address, and the selected
+delivery option from **one expanded Stripe retrieve** — `line_items`,
+`line_items.data.price.product`, and `payment_intent`. Nothing is read from the
+browser's cart, which by then may already be cleared, and nothing is read from
+the Portal order: the `checkout.session.completed` webhook is asynchronous and
+usually has not landed when the buyer is redirected back, so reading it here
+would race a write. `src/services/checkout/receipt.ts` maps the session to a
+display-only DTO; it tells the freight line from the product lines using the
+`sals3_line_count` metadata rather than matching the `Shipping - ` name, so a
+product legitimately called "Shipping Container" is not mistaken for freight.
+
+**The page is gated twice.** It requires a signed-in buyer, and it requires the
+Stripe session's customer email to match that account — a session id travels in
+the URL, into browser history and anything pasted, and it must not be enough to
+read a stranger's name, phone, and street address. A mismatch returns the same
+"Checkout not verified" wording as an unknown id, so an unauthorised reader
+cannot learn whether the id exists.
+
+Known limitation: the buyer types the contact email during checkout, so
+ordering with an address that differs from the account email locks the buyer out
+of their own receipt. The durable fix is stamping the verified uid onto the
+checkout intent; until then a mismatch is treated as "not yours".
 `/api/stripe/webhook` verifies Stripe signatures; on paid
 `checkout.session.completed` events it calls Portal's protected accept-order
 endpoint with the Stripe event id as the idempotency key. The Sals3 order
@@ -197,10 +222,10 @@ unaffected; `/checkout` is the one gated surface (see
 `src/lib/auth/dal.ts` is the single place server code asks who is signed in.
 Two readers, differing only in cost:
 
-| Function                             | `checkRevoked` | Use                                                                                       |
-| ------------------------------------ | -------------- | ----------------------------------------------------------------------------------------- |
-| `getBuyerSession()`                  | `false`        | Page-render gates. Local verify, no network. Memoized with React `cache` per render pass. |
-| `getRevocationCheckedBuyerSession()` | `true`         | Server Actions that spend money or CJ quota. One Firebase call per invocation.            |
+| Function                             | `checkRevoked` | Use                                                                                                                                                                                   |
+| ------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getBuyerSession()`                  | `false`        | Page-render gates. Local verify, no network. Memoized with React `cache` per render pass. Returns the verified email as well, which `/checkout/success` uses for its ownership check. |
+| `getRevocationCheckedBuyerSession()` | `true`         | Server Actions that spend money or CJ quota. One Firebase call per invocation.                                                                                                        |
 
 The split is deliberate. The cheap reader means a session revoked mid-life
 (signed out everywhere, password changed, account disabled) can still _render_
@@ -544,6 +569,21 @@ Product images are rendered with `next/image` and limited to the allow-listed
 CJ image hosts from the portal feed (see [Image loading](#image-loading)).
 Money values follow the build spec's minor-unit convention
 (`src/lib/money.ts`).
+
+## Global CSS and Tailwind cascade layers
+
+Custom element styles in `src/app/globals.css` **must** live inside
+`@layer base`. Tailwind v4 emits every utility inside `@layer utilities`, and
+CSS gives unlayered declarations priority over layered ones regardless of
+specificity — so a bare `a { color: … }` silently outranks `text-white` on every
+anchor in the app.
+
+That exact bug shipped: the cart's "Proceed to Checkout" and the checkout-success
+button both rendered brand blue on brand blue, a 1:1 contrast ratio with the
+label invisible, while `text-white` sat right there in the class list. jsdom does
+not apply Tailwind, so a `toHaveClass('text-white')` unit assertion passes either
+way. `e2e/cart.spec.ts` guards it in a real browser with `toHaveCSS('color', …)`;
+add that kind of assertion when a colour matters, not a class assertion.
 
 ## Image loading
 

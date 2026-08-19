@@ -52,6 +52,28 @@ test('adjust quantity and remove an item from the cart', async ({ page }) => {
 });
 
 /**
+ * Guards a cascade bug that no unit test can see.
+ *
+ * `globals.css` styles bare links with the brand colour. While that rule sat
+ * outside `@layer base`, it outranked every Tailwind utility — utilities live
+ * in `@layer utilities`, and unlayered CSS beats layered CSS whatever the
+ * specificity — so `text-white` lost and this button rendered brand blue on
+ * brand blue: a 1:1 contrast ratio with the label invisible. jsdom does not
+ * apply Tailwind, so `toHaveClass('text-white')` passes either way; only a real
+ * browser can tell. Assert the computed colour, not the class.
+ */
+test('the checkout call to action renders readable white text', async ({
+  page,
+}) => {
+  await seedCartItem(page);
+  await page.goto('/cart');
+
+  const cta = page.getByRole('link', { name: /proceed to checkout/i });
+
+  await expect(cta).toHaveCSS('color', 'rgb(255, 255, 255)');
+});
+
+/**
  * Checkout requires a signed-in buyer.
  *
  * Runnable without Firebase credentials on purpose: a signed-out visitor has

@@ -269,7 +269,13 @@ describe('Checkout page', () => {
     fireEvent.click(screen.getByLabelText(/standard.*cjpacket postal/i));
 
     expect(screen.getAllByText('US$24.09')).toHaveLength(2);
-    fireEvent.click(screen.getByRole('button', { name: /^payment$/i }));
+    /*
+     * `findByRole`, not `getByRole`: selecting a delivery method re-renders the
+     * stepper, and a synchronous query here raced that render — the suite
+     * failed intermittently under parallel load while passing every time this
+     * file ran alone.
+     */
+    fireEvent.click(await screen.findByRole('button', { name: /^payment$/i }));
 
     expect(mockedCreateCheckoutSessionAction).toHaveBeenCalledWith(
       expect.objectContaining({

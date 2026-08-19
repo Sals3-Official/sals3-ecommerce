@@ -51,6 +51,20 @@ describe('auth dal', () => {
       );
     });
 
+    /* `/checkout/success` compares this against the Stripe session's buyer. */
+    it('carries the verified email through when the token has one', async () => {
+      seedCookie('session-cookie-value');
+      verifySessionCookie.mockResolvedValue({
+        uid: 'buyer-123',
+        email: 'buyer@example.com',
+      });
+
+      await expect(readSession()).resolves.toEqual({
+        uid: 'buyer-123',
+        email: 'buyer@example.com',
+      });
+    });
+
     it('never reaches Firebase when no session cookie is present', async () => {
       seedCookie();
 
