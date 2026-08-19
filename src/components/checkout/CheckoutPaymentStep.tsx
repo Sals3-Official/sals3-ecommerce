@@ -7,6 +7,7 @@ import {
   EmbeddedCheckoutProvider,
 } from '@stripe/react-stripe-js';
 import { useCheckoutFlow } from '@/components/checkout/CheckoutFlowProvider';
+import Spinner from '@/components/ui/Spinner';
 import { getStripePromise } from '@/services/stripe/browser';
 
 /**
@@ -58,12 +59,29 @@ export default function CheckoutPaymentStep() {
           Stripe checkout is not configured.
         </p>
       ) : (
-        <EmbeddedCheckoutProvider
-          stripe={stripePromise}
-          options={{ clientSecret: stripeClientSecret }}
-        >
-          <EmbeddedCheckout className="w-full" />
-        </EmbeddedCheckoutProvider>
+        /*
+         * The spinner sits behind the mount point rather than being toggled by
+         * a ready callback, because `EmbeddedCheckout` does not expose one. It
+         * is what the buyer sees while Stripe's iframe is still empty, and the
+         * iframe simply covers it once it has painted — no flag to get wrong,
+         * and nothing left spinning if the load is slow.
+         */
+        <div className="relative min-h-[520px] w-full">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+            <Spinner size="lg" className="text-brand-blue-500" />
+            <p className="font-display text-sm font-bold tracking-[0.18em] text-ink-muted uppercase">
+              Loading payment
+            </p>
+          </div>
+          <div className="relative">
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret: stripeClientSecret }}
+            >
+              <EmbeddedCheckout className="w-full" />
+            </EmbeddedCheckoutProvider>
+          </div>
+        </div>
       )}
 
       <div>

@@ -212,6 +212,43 @@ describe('checkout flow across routes', () => {
     expect(screen.queryByLabelText(/address line 1/i)).not.toBeInTheDocument();
   });
 
+  /*
+   * The quote and the Stripe session are real upstream round trips. Without a
+   * visible loader a disabled button reads as a dead click, and the buyer
+   * clicks again — which on the delivery step is how duplicate Portal intents
+   * get minted.
+   */
+  it('shows a loading curtain while the delivery quote is in flight', async () => {
+    // Initialised to a no-op rather than null: assigning inside the promise
+    // callback is invisible to control-flow analysis, and a nullable type would
+    // narrow to `null` at the call below.
+    let releaseQuote: () => void = () => undefined;
+    mockedQuoteShipping.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseQuote = () => resolve({ ok: true, quote: shippingQuote });
+        }),
+    );
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await fillValidAddress();
+    fireEvent.click(
+      screen.getByRole('button', { name: /continue to delivery/i }),
+    );
+
+    const curtain = await screen.findByRole('alert');
+    expect(curtain).toHaveTextContent(/loading delivery options/i);
+    expect(curtain).toHaveAttribute('aria-busy', 'true');
+
+    releaseQuote();
+    await screen.findByText(/cjpacket postal/i);
+    // `waitFor`, not a bare assertion: the options render as soon as the quote
+    // resolves, but the transition driving `isPending` settles a tick later.
+    await waitFor(() =>
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
+    );
+  });
+
   it('keeps the buyer on information when the address is invalid', () => {
     renderWithCart(<CheckoutFlowHarness />);
 
