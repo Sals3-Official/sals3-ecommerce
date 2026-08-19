@@ -14,7 +14,7 @@ import {
 const REJECTED_VALUES: [label: string, value: unknown][] = [
   ['no parameter', undefined],
   ['empty string', ''],
-  ['unknown key', 'orders'],
+  ['unknown key', 'wishlist'],
   ['the destination path itself', '/checkout'],
   ['protocol-relative URL', '//evil.example'],
   ['absolute URL', 'https://evil.example'],
@@ -31,6 +31,13 @@ describe('post-login-redirect', () => {
   it('resolves the allow-listed key to its internal path', () => {
     expect(getPostLoginKey('checkout')).toBe('checkout');
     expect(resolvePostLoginPath(getPostLoginKey('checkout'))).toBe('/checkout');
+  });
+
+  // `/orders` joined the allow list on 2026-08-19 when the buyer orders list
+  // shipped; before that, `orders` was itself one of the rejected values.
+  it('resolves the orders key added by the buyer orders list', () => {
+    expect(getPostLoginKey('orders')).toBe('orders');
+    expect(resolvePostLoginPath(getPostLoginKey('orders'))).toBe('/orders');
   });
 
   it.each(REJECTED_VALUES)('sends %s home', (_label, value) => {

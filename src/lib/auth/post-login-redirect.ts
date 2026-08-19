@@ -32,6 +32,7 @@ export const DEFAULT_POST_LOGIN_PATH = AUTH_LINKS.home;
  */
 const POST_LOGIN_DESTINATIONS = {
   checkout: '/checkout',
+  orders: '/orders',
 } as const;
 
 export type PostLoginKey = keyof typeof POST_LOGIN_DESTINATIONS;

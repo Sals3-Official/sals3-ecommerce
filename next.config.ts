@@ -41,7 +41,16 @@ const DOCUMENT_PATHS = '/((?!_next/).*)';
  * `noStoreJson`, and duplicating it here would leave two places to keep in
  * step.
  */
-export const NO_STORE_ROUTES = ['/login', '/signup', '/checkout/:path*'];
+export const NO_STORE_ROUTES = [
+  '/login',
+  '/signup',
+  '/checkout/:path*',
+  // `/orders` and `/orders/*` render a name, a street address, a phone number
+  // and a purchase history behind a session cookie. A shared or browser cache
+  // holding one of those would serve it to the next reader of the same device.
+  '/orders',
+  '/orders/:path*',
+];
 
 const nextConfig: NextConfig = {
   async headers() {

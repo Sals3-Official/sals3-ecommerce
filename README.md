@@ -280,12 +280,110 @@ endpoint with the Stripe event id as the idempotency key. The Sals3 order
 database, CJ credentials, queue, and supplier fulfillment live in
 `sals3-portal`, not this app.
 
+## Buyer orders (`/orders`)
+
+A buyer's own order list and one order in full. Two routes, both signed-in only
+and both `noindex`:
+
+| Route                   | What it is                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| `/orders`               | The list: lanes, search, date range, status, paging — all of it in the URL.     |
+| `/orders/[orderNumber]` | One order: packages, tracking events, payment, destination, lifecycle, actions. |
+
+### The data is a fixture, and that is deliberate
+
+**There is no buyer orders read API yet.** `src/services/storefront/client.ts`
+covers products, categories, freight quotes, checkout intents and
+`orders/accept`; nothing lists a buyer's orders and nothing reads one back by
+number. Both screens therefore run against a typed local module,
+`src/lib/orders/fixtures.ts`, behind one seam:
+
+```text
+src/lib/orders/read.ts     listBuyerOrders(email) / readBuyerOrder(email, number)
+```
+
+That file is the only thing that changes when the portal publishes
+`GET /api/storefront/orders` and `GET /api/storefront/orders/{orderNumber}`.
+The fixture is **not** a seed, **not** a default and **not** a fallback for a
+failed fetch: a failed fetch must read as a failure, never as somebody else's
+orders. Every money label in it is produced by `formatMoney`, and every line
+total is `unit × quantity` rather than a typed-in number, so the arithmetic the
+page shows is the arithmetic it does.
+
+### Ownership, not just authentication
+
+Both functions take the **verified session email** first and the order number
+second, and a detail page resolves a number only within the list that session
+owns. An order belonging to somebody else takes the same path as one that does
+not exist — `notFound()`, with wording that never says "not yours" — because
+whether an order number exists is not something an unauthorised reader should
+learn by trying. A signed-out visitor is redirected with
+`withPostLoginKey(AUTH_LINKS.signIn, 'orders')`, the same posture
+`/checkout/success` takes with a Stripe session id. Both routes are in
+`NO_STORE_ROUTES`: they render a name, an address, a phone number and a
+purchase history.
+
+### Lanes and status vocabulary
+
+`src/lib/orders/contracts.ts` mirrors the portal's 21 `PARCEL_LIFECYCLE_STATES`
+(ADR-004 §2). The two repositories share no package, so the list is mirrored
+rather than imported and a test pins it. Buyer lanes are **not** the portal's
+lanes — a seller's queues are not a buyer's questions:
+
+| Lane                | Counts? |
+| ------------------- | ------- |
+| All                 | no      |
+| To pay              | no      |
+| To ship             | yes     |
+| Shipping            | yes     |
+| Completed           | yes     |
+| Cancelled & refunds | yes     |
+
+A count is a claim that something is waiting, so `All` and `To pay` carry none.
+There is no buyer "Needs attention" lane: the four exception states surface as a
+red-edged card inside the lane the order already sits in, plus one page notice.
+
+### Rules this surface holds
+
+- The grouping unit is the **package**, never a store or a supplier. No supplier
+  name, connection name or `S3V-` hash appears in any buyer-facing string —
+  carrier name only.
+- No rating, review, star or "write a review" anywhere; there is no review
+  entity in either repository, and the honesty note says so out loud.
+- Every status renders a **label and a sentence**. Never a bare pill.
+- A blocked action stays visible and disabled with **the reason as its label** —
+  "Cannot be cancelled — one package has shipped", "Locked while the payment
+  settles". An action that vanishes reads as a missing feature. `Cancel order`,
+  `Request return` and `Buy again` have no backing path in this repository, and
+  `Track package` has no confirmed carrier deep link, so all four render blocked
+  rather than pointing at nothing.
+- A `TRACKING_CONFLICT` prints both sources with their timestamps and does not
+  pick a winner.
+- `ink-faint` (#8A9196, 3.2:1 on white) is borders and placeholders only. A test
+  walks the feature's own source to keep it that way.
+
+### Layout
+
+One full-width **ledger** card per order — header strip, status sentence,
+per-package bands, footer actions — chosen from the two candidates in the design
+handoff on 2026-08-19. The other candidate was not built. Mobile is the same
+information in one column with 44px actions, not a reduced feature set.
+
+### What ships to the browser
+
+Two client components only: `OrdersToolbar` (the filter form, which routes
+instead of submitting so defaults stay out of the URL) and `CopyOrderNumber`.
+Lanes, filter chips and paging are `next/link` anchors, so navigation costs no
+JavaScript. Both are registered by hand in `CLIENT_ENTRY_POINTS` in
+`test/client-bundle-boundary.test.ts` — that array has no auto-discovery.
+
 ## Authentication
 
 Two ways in: Google, and email with a password. Both end at the same 24-hour
 `httpOnly` `sals3_session` cookie. Guest browsing and the local cart are
-unaffected; `/checkout` is the one gated surface (see
-[Checkout and Stripe](#checkout-and-stripe)).
+unaffected; `/checkout` and `/orders` are the gated surfaces (see
+[Checkout and Stripe](#checkout-and-stripe) and
+[Buyer orders](#buyer-orders-orders)).
 
 ### Reading the session on the server
 
@@ -309,8 +407,9 @@ with no Firebase credentials present.
 
 A guarded route sends visitors to `/login?next=<key>`. `next` is an **opaque
 allow-listed key**, never a path and never a URL: `src/lib/auth/post-login-redirect.ts`
-maps `checkout` to `/checkout` and resolves everything else — including
-`/checkout`, `//evil.example`, and `https://evil.example` — to the home page.
+maps `checkout` to `/checkout` and `orders` to `/orders`, and resolves
+everything else — including `/checkout`, `//evil.example`, and
+`https://evil.example` — to the home page.
 Add a key there when a new route starts gating itself. The key travels between
 `/login` and `/signup` so a buyer who needs an account first still lands where
 they were headed.

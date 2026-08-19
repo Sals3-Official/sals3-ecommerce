@@ -43,6 +43,11 @@ const CLIENT_ENTRY_POINTS = [
   'components/klaviyo/KlaviyoLoader.tsx',
   'components/klaviyo/KlaviyoViewedProduct.tsx',
   'components/layout/HeaderAuthContext.tsx',
+  // The buyer orders surface. Everything else on `/orders` and
+  // `/orders/[orderNumber]` is a Server Component; these two are the whole
+  // client boundary — a filter form that routes, and a clipboard button.
+  'components/orders/OrdersToolbar.tsx',
+  'components/orders/CopyOrderNumber.tsx',
   'components/product/ProductAddToCartButtons.tsx',
   'components/product/ProductOptionList.tsx',
   'components/product/ProductRecordPanel.tsx',
