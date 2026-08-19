@@ -1,7 +1,9 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { redirect } from 'next/navigation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getBuyerSession } from '@/lib/auth/dal';
 import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
 import { usd } from '@/lib/money';
 import {
@@ -11,9 +13,20 @@ import {
 import renderWithCart from '../../../test/render-with-cart';
 import CheckoutPage, { generateMetadata } from './page';
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('@/app/checkout/actions', () => ({
   createCheckoutSessionAction: vi.fn(),
   quoteCheckoutShippingAction: vi.fn(),
+}));
+
+vi.mock('@/lib/auth/dal', () => ({
+  getBuyerSession: vi.fn(async () => ({ uid: 'buyer-123' })),
+}));
+
+vi.mock('next/navigation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/navigation')>()),
+  redirect: vi.fn(),
 }));
 
 vi.mock('@/services/stripe/browser', () => ({
@@ -33,6 +46,8 @@ const mockedCreateCheckoutSessionAction = vi.mocked(
 const mockedQuoteCheckoutShippingAction = vi.mocked(
   quoteCheckoutShippingAction,
 );
+const mockedGetBuyerSession = vi.mocked(getBuyerSession);
+const mockedRedirect = vi.mocked(redirect);
 
 const shippingQuote = {
   quotedAt: '2026-08-17T14:00:00.000Z',
@@ -112,6 +127,17 @@ describe('Checkout page', () => {
   beforeEach(() => {
     mockedCreateCheckoutSessionAction.mockReset();
     mockedQuoteCheckoutShippingAction.mockReset();
+    mockedRedirect.mockReset();
+    mockedGetBuyerSession.mockResolvedValue({ uid: 'buyer-123' });
+  });
+
+  it('sends a signed-out visitor to sign in, and back here afterwards', async () => {
+    mockedGetBuyerSession.mockResolvedValue(null);
+    seedCart(1);
+
+    await CheckoutPage();
+
+    expect(mockedRedirect).toHaveBeenCalledWith('/login?next=checkout');
   });
 
   it('is not indexed', () => {
@@ -124,7 +150,7 @@ describe('Checkout page', () => {
   it('shows cart items, address fields, and the stepper on step 1', async () => {
     seedCart(2);
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     expect(await screen.findByRole('heading', { name: /^checkout$/i }));
     expect(
@@ -154,7 +180,7 @@ describe('Checkout page', () => {
   it('shows field errors for an invalid address', async () => {
     seedCart(1);
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await screen.findByLabelText(/^email$/i);
     clickContinue();
@@ -172,7 +198,7 @@ describe('Checkout page', () => {
   it('resets phone, state, city, and delivery quote state when country changes', async () => {
     seedCart(1);
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     fireEvent.change(await screen.findByLabelText(/state or region/i), {
       target: { value: 'National Capital Region (NCR)' },
@@ -203,7 +229,7 @@ describe('Checkout page', () => {
   it('updates city options from the selected state or region', async () => {
     seedCart(1);
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     fireEvent.change(await screen.findByLabelText(/state or region/i), {
       target: { value: 'Central Visayas (Region VII)' },
@@ -229,7 +255,7 @@ describe('Checkout page', () => {
       message: 'Stripe checkout failed. Try again in a moment.',
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -278,7 +304,7 @@ describe('Checkout page', () => {
       sessionId: 'cs_test_123',
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -297,7 +323,7 @@ describe('Checkout page', () => {
       message: 'No delivery options for this address yet.',
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -318,7 +344,7 @@ describe('Checkout page', () => {
       quote: shippingQuote,
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -344,7 +370,7 @@ describe('Checkout page', () => {
       quote: shippingQuote,
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -367,7 +393,7 @@ describe('Checkout page', () => {
       quote: shippingQuote,
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -390,7 +416,7 @@ describe('Checkout page', () => {
       quote: shippingQuote,
     });
 
-    renderWithCart(<CheckoutPage />);
+    renderWithCart(await CheckoutPage());
 
     await fillValidAddress();
     clickContinue();
@@ -411,8 +437,8 @@ describe('Checkout page', () => {
     ).not.toBeChecked();
   });
 
-  it('shows an empty-cart state', () => {
-    renderWithCart(<CheckoutPage />);
+  it('shows an empty-cart state', async () => {
+    renderWithCart(await CheckoutPage());
 
     expect(
       screen.getByText(/add an item before checkout/i),

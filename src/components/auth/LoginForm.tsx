@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth/login-schema';
 import getLoginErrorNotice from '@/lib/auth/login-status';
 import signInWithPasswordSession from '@/lib/auth/password-login';
+import { DEFAULT_POST_LOGIN_PATH } from '@/lib/auth/post-login-redirect';
 import { syncKlaviyoProfile } from '@/lib/klaviyo/client';
 import EmailField from './EmailField';
 import LoginFormActions from './LoginFormActions';
@@ -21,6 +22,11 @@ import {
   getServerHydrationSnapshot,
   subscribeToHydration,
 } from './hydration-snapshot';
+
+type LoginFormProps = {
+  /** Optional so the 27 existing render sites keep meaning "go home". */
+  postLoginPath?: string;
+};
 
 /**
  * Login credential form.
@@ -39,8 +45,15 @@ import {
  * - Client validation is UX only. `POST /api/auth/login` re-validates with the
  *   same `loginSchema`, checks CSRF, and throttles per address and per account
  *   (nextjs-component-security-code-rules rules 17, 27, 29).
+ *
+ * `postLoginPath` is where both sign-in methods navigate on success. It
+ * arrives already resolved from `LoginCard`, which is a Server Component and
+ * the only thing that reads the query string; this form never sees the raw
+ * `?next=` value, so there is no path here for a visitor-supplied URL to take.
  */
-export default function LoginForm() {
+export default function LoginForm({
+  postLoginPath = DEFAULT_POST_LOGIN_PATH,
+}: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,7 +85,7 @@ export default function LoginForm() {
 
       setPassword('');
       setStatus({ kind: 'success' });
-      router.replace('/');
+      router.replace(postLoginPath);
     } catch (error) {
       setStatus({ kind: 'error', message: getLoginErrorNotice(error) });
       // No field can fix this, so focus stays on the submit control and Enter
@@ -138,7 +151,7 @@ export default function LoginForm() {
           setPassword('');
           setStatus({ kind: 'success' });
           syncKlaviyoProfile().catch(() => undefined);
-          router.replace('/');
+          router.replace(postLoginPath);
         }}
       />
     </form>

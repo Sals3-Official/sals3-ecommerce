@@ -183,6 +183,17 @@ describe('LoginForm — password sign-in', () => {
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'));
   });
 
+  it('returns the visitor to the route that asked them to sign in', async () => {
+    signInWithPasswordSession.mockResolvedValue();
+    render(<LoginForm postLoginPath="/checkout" />);
+
+    await submitValidCredentials();
+
+    await waitFor(() =>
+      expect(routerReplace).toHaveBeenCalledWith('/checkout'),
+    );
+  });
+
   it('discards the password once it can no longer be needed', async () => {
     signInWithPasswordSession.mockResolvedValue();
     render(<LoginForm />);
@@ -369,6 +380,17 @@ describe('LoginForm — Google sign-in', () => {
     );
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'));
     expect(getPassword()).toHaveValue('');
+  });
+
+  it('returns the visitor to the route that asked them to sign in', async () => {
+    signInWithGoogleSession.mockResolvedValue();
+    render(<LoginForm postLoginPath="/checkout" />);
+
+    fireEvent.click(getGoogle());
+
+    await waitFor(() =>
+      expect(routerReplace).toHaveBeenCalledWith('/checkout'),
+    );
   });
 
   it('shows a generic Google error when Firebase is not configured or the provider rejects', async () => {

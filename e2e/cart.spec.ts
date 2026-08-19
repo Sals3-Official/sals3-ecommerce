@@ -51,6 +51,43 @@ test('adjust quantity and remove an item from the cart', async ({ page }) => {
   ).toBeVisible();
 });
 
+/**
+ * Checkout requires a signed-in buyer.
+ *
+ * Runnable without Firebase credentials on purpose: a signed-out visitor has
+ * no session cookie, and the guard returns before it ever reaches the Admin
+ * SDK. The other half of the round trip — landing back on /checkout after
+ * signing in — is a unit test, because `login.spec.ts` stubs the login API at
+ * the network layer and so never mints a real session cookie to come back
+ * with.
+ */
+test('a signed-out visitor is sent to sign in, and pointed back at checkout', async ({
+  page,
+}) => {
+  await seedCartItem(page);
+  await page.goto('/cart');
+
+  await page.getByRole('link', { name: /proceed to checkout/i }).click();
+
+  await expect(page).toHaveURL(/\/login\?next=checkout$/);
+  await expect(
+    page.getByRole('heading', { name: /sign in or create an account/i }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: /create an account/i }),
+  ).toHaveAttribute('href', '/signup?next=checkout');
+});
+
+// The guard is on the route, not on the cart button: a bookmark, a typed URL,
+// and a Back navigation all have to hit it too.
+test('checkout cannot be reached directly while signed out', async ({
+  page,
+}) => {
+  await page.goto('/checkout');
+
+  await expect(page).toHaveURL(/\/login\?next=checkout$/);
+});
+
 // Not run: Buy Now is a product-page button, and the product page can't
 // render without a reachable sals3-portal instance/token (see
 // product.spec.ts). Unwired once that backend is configured locally/in CI.

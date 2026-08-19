@@ -7,6 +7,7 @@ import getLoginErrorNotice, {
   SIGNED_IN_ANNOUNCEMENT,
 } from '@/lib/auth/login-status';
 import signUpWithPasswordAccount from '@/lib/auth/password-signup';
+import { DEFAULT_POST_LOGIN_PATH } from '@/lib/auth/post-login-redirect';
 import { syncKlaviyoProfile } from '@/lib/klaviyo/client';
 import {
   SIGNUP_FIELD_ORDER,
@@ -45,6 +46,11 @@ function getSignupAnnouncement(status: SignupStatus) {
   return status.kind === 'pending' ? 'Creating your account.' : '';
 }
 
+type SignupFormProps = {
+  /** Optional so the 19 existing render sites keep meaning "go home". */
+  postLoginPath?: string;
+};
+
 /**
  * Account registration form.
  *
@@ -52,11 +58,15 @@ function getSignupAnnouncement(status: SignupStatus) {
  * password only ever in React state, and client validation treated as UX while
  * `POST /api/auth/signup` re-validates, checks CSRF, and throttles.
  *
- * A successful registration signs the visitor in and sends them home. There is
+ * A successful registration signs the visitor in and sends them on. There is
  * no interstitial: the account is usable immediately, so a confirmation screen
- * would be a step with nothing to confirm.
+ * would be a step with nothing to confirm. Where "on" leads is decided by
+ * `SignupCard` — home by default, or back to the route that asked for a
+ * sign-in.
  */
-export default function SignupForm() {
+export default function SignupForm({
+  postLoginPath = DEFAULT_POST_LOGIN_PATH,
+}: SignupFormProps) {
   const router = useRouter();
   const [fields, setFields] = useState(EMPTY_FIELDS);
   const [errors, setErrors] = useState<SignupFieldErrors>({});
@@ -100,7 +110,7 @@ export default function SignupForm() {
       setStatus({ kind: 'success' });
       // `replace`, not `push`: Back must not return a signed-in visitor to a
       // registration form.
-      router.replace('/');
+      router.replace(postLoginPath);
     } catch (error) {
       setStatus({ kind: 'error', message: getLoginErrorNotice(error) });
     }

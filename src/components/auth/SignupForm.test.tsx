@@ -194,6 +194,17 @@ describe('SignupForm — registration', () => {
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'));
   });
 
+  it('sends a buyer who registered mid-checkout back to checkout', async () => {
+    signUpWithPasswordAccount.mockResolvedValue(undefined);
+    render(<SignupForm postLoginPath="/checkout" />);
+
+    await submitValidRegistration();
+
+    await waitFor(() =>
+      expect(routerReplace).toHaveBeenCalledWith('/checkout'),
+    );
+  });
+
   it('announces the redirect, which is otherwise silent', async () => {
     signUpWithPasswordAccount.mockResolvedValue(undefined);
     render(<SignupForm />);

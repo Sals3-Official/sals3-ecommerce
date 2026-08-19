@@ -7,6 +7,7 @@ import {
   type CheckoutShippingSelection,
   type CheckoutCartLineInput,
 } from '@/lib/checkout/schema';
+import { getRevocationCheckedBuyerSession } from '@/lib/auth/dal';
 import checkRateLimit from '@/lib/rate-limit';
 import {
   CheckoutValidationError,
@@ -17,6 +18,23 @@ import { ProductsApiError } from '@/services/storefront/client';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
 import createPortalCheckoutIntent from '@/services/checkout/intent';
 import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
+
+/**
+ * Shown when an action runs without a signed-in buyer.
+ *
+ * Both actions below check the session themselves rather than trusting the
+ * guard on `/checkout`. A Server Action is an independently addressable POST
+ * endpoint whose id ships inside the public client bundle, so a page-level
+ * redirect is a UI gate only — these two spend real money and real CJ quota
+ * and must re-verify (rules 18 and 19, and the bundled Next auth guide's
+ * "treat Server Actions with the same security considerations as
+ * public-facing API endpoints").
+ *
+ * The message is deliberately the same sentence for a missing, expired,
+ * forged, and revoked session: the caller is told what to do, not what the
+ * server knows about them (rule 34).
+ */
+const SIGNED_OUT_MESSAGE = 'Sign in to continue to checkout.';
 
 export type CreateCheckoutSessionResult =
   | { ok: true; clientSecret: string; sessionId: string }
@@ -114,6 +132,13 @@ export async function quoteCheckoutShippingAction(input: {
     };
   }
 
+  // After the rate limit on purpose: a flood is refused before it can force
+  // unbounded session verifications, and a signed-out caller is refused before
+  // spending any CJ freight-quote budget.
+  if (!(await getRevocationCheckedBuyerSession())) {
+    return { ok: false, message: SIGNED_OUT_MESSAGE };
+  }
+
   try {
     const quote = await requestCheckoutFreightQuotes(parsed.data);
 
@@ -159,6 +184,10 @@ export async function createCheckoutSessionAction(
       ok: false,
       message: 'Too many checkout attempts. Wait a minute, then try again.',
     };
+  }
+
+  if (!(await getRevocationCheckedBuyerSession())) {
+    return { ok: false, message: SIGNED_OUT_MESSAGE };
   }
 
   try {

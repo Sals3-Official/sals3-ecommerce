@@ -1,7 +1,12 @@
 import type { Metadata } from 'next';
 import AuthHeroPanel from '@/components/auth/AuthHeroPanel';
 import LoginCard from '@/components/auth/LoginCard';
+import { getPostLoginKey } from '@/lib/auth/post-login-redirect';
 import { SITE_NAME } from '@/lib/site';
+
+type LoginPageProps = {
+  searchParams?: Promise<{ next?: string | string[] }>;
+};
 
 export function generateMetadata(): Metadata {
   return {
@@ -21,12 +26,18 @@ export function generateMetadata(): Metadata {
  * Full-bleed split login screen. The site header and footer are intentionally
  * absent: this route is a focused single-task surface, and the hero's back
  * control is the way out.
+ *
+ * `?next=` says where a guarded route wanted the visitor to end up. It is
+ * narrowed to a known key here, at the edge, so nothing downstream ever holds
+ * a visitor-supplied path — see `post-login-redirect.ts`.
  */
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+
   return (
     <div className="flex w-full flex-1 flex-col bg-white font-auth text-auth-ink lg:flex-row">
       <AuthHeroPanel />
-      <LoginCard />
+      <LoginCard nextKey={getPostLoginKey(params?.next)} />
     </div>
   );
 }
