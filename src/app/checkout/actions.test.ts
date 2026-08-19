@@ -238,6 +238,79 @@ describe('createCheckoutSessionAction', () => {
     });
   });
 
+  /*
+   * The failure that started this: the portal said the item could not ship,
+   * and the buyer was told to "try again in a moment" — a retry that spends
+   * rate-limit budget on an outcome that cannot change.
+   */
+  it('does not invite a retry when an item simply cannot ship', async () => {
+    vi.mocked(requestCheckoutFreightQuotes).mockRejectedValue(
+      new ProductsApiError('Storefront checkout freight quote API failed.', {
+        status: 422,
+      }),
+    );
+
+    const result = await quoteCheckoutShippingAction({
+      cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+      address,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message:
+        'An item in your cart cannot be delivered to this address. Remove it, or use a different address.',
+    });
+    expect(result).not.toMatchObject({
+      message: expect.stringMatching(/try again/i),
+    });
+  });
+
+  it('still offers a retry when the quote service itself failed', async () => {
+    vi.mocked(requestCheckoutFreightQuotes).mockRejectedValue(
+      new ProductsApiError('Storefront checkout freight quote API failed.', {
+        status: 500,
+      }),
+    );
+
+    await expect(
+      quoteCheckoutShippingAction({
+        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+        address,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Delivery options are unavailable. Try again in a moment.',
+    });
+  });
+
+  /* Without this the only trace of a failed checkout is `λ POST /checkout`. */
+  it('logs the failed step, its reason, and the upstream status', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    vi.mocked(requestCheckoutFreightQuotes).mockRejectedValue(
+      new ProductsApiError('Storefront checkout freight quote API failed.', {
+        status: 502,
+      }),
+    );
+
+    await quoteCheckoutShippingAction({
+      cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+      address,
+    });
+
+    expect(consoleError).toHaveBeenCalledWith(
+      '[checkout] step failed',
+      expect.objectContaining({
+        step: 'shipping-quote',
+        reason: 'upstream',
+        status: 502,
+      }),
+    );
+
+    consoleError.mockRestore();
+  });
+
   it('rejects a stale shipping selection', async () => {
     vi.mocked(validateCheckoutCart).mockResolvedValue({
       lines: [],
