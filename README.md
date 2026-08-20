@@ -845,6 +845,24 @@ module because the loader is serialized into the client bundle. `next.config.ts`
 `src/services/storefront/mappers.ts` must stay in step with it; the enforcing
 gate is the mapper, which drops an off-list address before a component sees it.
 
+**Seller-uploaded photos (Cloudflare R2) join the allow-list via
+`NEXT_PUBLIC_R2_IMAGE_BASE_URL` (2026-08-20).** The portal stores a seller's
+own product photos in Cloudflare R2 and serves them from a public r2.dev
+subdomain or custom domain; `src/lib/r2-image-host.ts` derives the allowed
+hostname from that env var (dependency-free, same reasoning as
+`cj-image-hosts.ts`), and the mapper accepts it alongside the CJ hosts. Unset
+or malformed means seller uploads are simply dropped at the mapper — the env
+var can widen the list only to exactly one host it names. R2 addresses pass
+through the CJ loader untouched (R2 has no `x-oss-process` analogue; the
+portal already re-encodes every upload to a ≤2000px WebP at write time).
+The description block union also gained an `image` block in the same change:
+seller-placed description photos render inside `ProductDescription` via
+`DescriptionImageRow`, with consecutive image blocks sharing one row (a single
+image runs full width at 16:9, two or more sit in a 4:3 grid) — the same
+adjacency rule the portal's description studio previews. Each image block's
+URL passes the same `getAllowedProductImageUrl` gate; a disallowed address
+costs that photo, never the text around it.
+
 ## Product Page (PDP)
 
 `src/app/p/[id]/page.tsx` renders a product detail page at `/p/<slug>`. Every

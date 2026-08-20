@@ -1,4 +1,5 @@
 import CJ_IMAGE_HOSTS from '@/lib/cj-image-hosts';
+import R2_IMAGE_HOST from '@/lib/r2-image-host';
 import { money } from '@/lib/money';
 import type {
   Category as HomeCategory,
@@ -6,6 +7,7 @@ import type {
   Product as HomeProduct,
 } from '@/lib/home-placeholder-data';
 import type {
+  ProductDescriptionBlock,
   ProductDetail,
   ProductImage,
   ProductOptionAxis,
@@ -14,6 +16,7 @@ import type {
 import type {
   Product,
   ProductCategory,
+  ProductDescriptionBlock as ProductDescriptionBlockPayload,
   ProductPayloadDetail,
   ProductVariantPayload,
 } from './schemas';
@@ -41,11 +44,13 @@ function toneFor(index: number): PlaceholderTone {
 }
 
 /**
- * Hosts whose images this app will render, from the one dependency-free module
- * `src/lib/images/cj-image-loader.ts` also reads. `next.config.ts`'s
- * `images.remotePatterns` and the portal's own `lib/cj/image-hosts.ts` must
- * agree with it, and a URL that reaches here is still re-checked because a
- * payload is data, not a promise.
+ * Hosts whose images this app will render: the CJ CDN hosts (supplier
+ * originals) plus the configured Cloudflare R2 public host (the seller's own
+ * uploads, `NEXT_PUBLIC_R2_IMAGE_BASE_URL`). Both come from dependency-free
+ * modules `src/lib/images/cj-image-loader.ts` can also read.
+ * `next.config.ts`'s `images.remotePatterns` and the portal's own allow-lists
+ * must agree with them, and a URL that reaches here is still re-checked
+ * because a payload is data, not a promise.
  */
 export function getAllowedProductImageUrl(
   url: string | null | undefined,
@@ -59,7 +64,8 @@ export function getAllowedProductImageUrl(
 
     if (
       parsedUrl.protocol === 'https:' &&
-      CJ_IMAGE_HOSTS.includes(parsedUrl.hostname)
+      (CJ_IMAGE_HOSTS.includes(parsedUrl.hostname) ||
+        (R2_IMAGE_HOST !== null && parsedUrl.hostname === R2_IMAGE_HOST))
     ) {
       return parsedUrl.toString();
     }
@@ -159,11 +165,44 @@ function toProductImages(
     : [{ url: single, alt: payload.imageAlt ?? title }];
 }
 
+/**
+ * Description blocks, with each image block re-checked against the host
+ * allow-list — the same gate the gallery goes through, applied per block so a
+ * disallowed or malformed image address costs that photo, never the seller's
+ * words around it. `alt` falls back to the product title, the same non-claim
+ * the gallery uses when the portal supplies no per-image text.
+ */
+function toDescriptionBlocks(
+  blocks: ProductDescriptionBlockPayload[],
+  title: string,
+): ProductDescriptionBlock[] {
+  return blocks.flatMap((block): ProductDescriptionBlock[] => {
+    if (block.type !== 'image') return [block];
+
+    const url = getAllowedProductImageUrl(block.url);
+
+    if (url === undefined) return [];
+
+    return [
+      {
+        type: 'image',
+        url,
+        alt: block.alt ?? title,
+        ...(block.caption === undefined ? {} : { caption: block.caption }),
+      },
+    ];
+  });
+}
+
 export function toProductDetail(
   product: ProductPayloadDetail,
   index = 0,
 ): ProductDetail {
   const images = toProductImages(product, product.title);
+  const descriptionBlocks =
+    product.description === undefined
+      ? []
+      : toDescriptionBlocks(product.description.blocks, product.title);
   const variants = (product.variants ?? []).map(toProductVariant);
   const options = toProductOptionAxes(variants);
   const oldPrice =
@@ -198,10 +237,9 @@ export function toProductDetail(
     ...(product.availability === undefined
       ? {}
       : { availability: product.availability }),
-    ...(product.description === undefined ||
-    product.description.blocks.length === 0
+    ...(descriptionBlocks.length === 0
       ? {}
-      : { description: product.description.blocks }),
+      : { description: descriptionBlocks }),
     ...(variants.length === 0 ? {} : { variants }),
     ...(options.length === 0 ? {} : { options }),
     ...(product.specs === undefined ? {} : { specs: product.specs }),

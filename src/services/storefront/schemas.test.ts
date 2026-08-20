@@ -170,7 +170,13 @@ describe('the committed contract fixture', () => {
     const parsed = StorefrontProductResponseSchema.parse(JSON.parse(raw));
 
     expect(parsed.product.images).toHaveLength(2);
-    expect(parsed.product.description?.blocks).toHaveLength(4);
+    expect(parsed.product.description?.blocks).toHaveLength(5);
+    // The image block survives the parse whole — a fixture image silently
+    // salvaged away would read as "the block type shipped" when it did not.
+    expect(parsed.product.description?.blocks[4]).toMatchObject({
+      type: 'image',
+      alt: 'Size chart for the shell jacket',
+    });
     expect(parsed.product.variants).toHaveLength(2);
     expect(parsed.product.specs?.brand).toBe('Sals3 Basics');
     expect(parsed.product.currency).toBe('USD');

@@ -32,13 +32,17 @@ import CJ_IMAGE_HOSTS from '@/lib/cj-image-hosts';
  * that answers `cache-control: public, max-age=31536000`.
  *
  * Note what this does NOT do: it never proxies, and it never invents a host. A
- * non-CJ address — a local `/public` path, anything else — is returned
- * untouched, so the browser fetches exactly what the component asked for. The
- * loader therefore cannot be turned into an open image proxy, and it is not the
- * security boundary for remote imagery either: `getAllowedProductImageUrl` in
- * `src/services/storefront/mappers.ts` drops any address off `CJ_IMAGE_HOSTS`
- * as the payload is mapped, before a component sees it, and `next.config.ts`
- * `remotePatterns` still carries the same list.
+ * non-CJ address — a local `/public` path, a seller upload on the Cloudflare
+ * R2 public host, anything else — is returned untouched, so the browser
+ * fetches exactly what the component asked for. (R2 has no `x-oss-process`
+ * analogue; the portal already re-encodes every seller upload to a ≤2000px
+ * WebP at write time, so the untouched original is the optimized rendition.)
+ * The loader therefore cannot be turned into an open image proxy, and it is
+ * not the security boundary for remote imagery either:
+ * `getAllowedProductImageUrl` in `src/services/storefront/mappers.ts` drops
+ * any address off `CJ_IMAGE_HOSTS` + the configured R2 host as the payload is
+ * mapped, before a component sees it, and `next.config.ts` `remotePatterns`
+ * still carries the same list.
  */
 
 /** Instruction pipeline CJ's CDN understands. Unsupported params are ignored by the CDN, which then serves the original. */

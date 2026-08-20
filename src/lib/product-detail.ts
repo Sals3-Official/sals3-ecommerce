@@ -63,7 +63,15 @@ export type ProductDescriptionBlock =
   | { type: 'paragraph'; text: string }
   | { type: 'heading'; level: 2 | 3; text: string }
   | { type: 'bulletList'; items: string[] }
-  | { type: 'keyValueList'; entries: { label: string; value: string }[] };
+  | { type: 'keyValueList'; entries: { label: string; value: string }[] }
+  /**
+   * A seller-placed description photo, already re-checked against the image
+   * host allow-list by the mapper — a block that reaches this type renders.
+   * `alt` is always present: the mapper falls back to the product title.
+   * Consecutive image blocks are one row — the layout is derived from
+   * adjacency, exactly as the portal's description studio previews it.
+   */
+  | { type: 'image'; url: string; alt: string; caption?: string };
 
 export type ProductSpecs = {
   sku?: string;
