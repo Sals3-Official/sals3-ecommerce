@@ -7,6 +7,17 @@ import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons/Icon';
 import { homePromoSlides } from '@/lib/home-promo-slides';
 
+/**
+ * The brand gradient with a white chevron, the same navy-to-brand-blue run
+ * `.bg-brand-gradient` gives every solid brand action. White on the light end
+ * of that gradient measures 3.74:1 — under the 4.5:1 body-text minimum, over
+ * the 3:1 WCAG 1.4.11 minimum for a graphical control, which is what a
+ * chevron is. `border-white/30` keeps the circle readable where a slide's own
+ * photo is dark.
+ */
+const ARROW_CLASS =
+  'bg-brand-gradient pointer-events-auto flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/30 text-white shadow-md transition duration-200 ease-out hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45';
+
 export default function PromoCarousel() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const hasMultipleSlides = homePromoSlides.length > 1;
@@ -44,57 +55,62 @@ export default function PromoCarousel() {
       aria-label="Featured deals"
       aria-roledescription="carousel"
     >
-      <div
-        className="overflow-hidden rounded-xl border border-border bg-white shadow-sm"
-        ref={emblaRef}
-      >
-        <div className="flex touch-pan-y">
-          {homePromoSlides.map((slide, index) => (
-            <div
-              key={slide.id}
-              className="min-w-0 flex-[0_0_100%]"
-              role="group"
-              aria-roledescription="slide"
-              aria-label={`${index + 1} of ${homePromoSlides.length}`}
-            >
-              <Link
-                href={slide.href}
-                className="relative block aspect-[1734/662] overflow-hidden hover:no-underline"
+      {/* The arrows live inside this wrapper, not the <section>: `inset-y-0`
+          on the section also spans the dot row below the banner, which pushed
+          both arrows below the image's true centre. */}
+      <div className="relative">
+        <div
+          className="overflow-hidden rounded-xl border border-border bg-white shadow-sm"
+          ref={emblaRef}
+        >
+          <div className="flex touch-pan-y">
+            {homePromoSlides.map((slide, index) => (
+              <div
+                key={slide.id}
+                className="min-w-0 flex-[0_0_100%]"
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${index + 1} of ${homePromoSlides.length}`}
               >
-                <Image
-                  src={slide.imageSrc}
-                  alt={slide.imageAlt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 1152px"
-                  fetchPriority={index === 0 ? 'high' : 'auto'}
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                />
-                <span className="sr-only">{slide.title}</span>
-              </Link>
-            </div>
-          ))}
+                <Link
+                  href={slide.href}
+                  className="relative block aspect-[1734/662] overflow-hidden hover:no-underline"
+                >
+                  <Image
+                    src={slide.imageSrc}
+                    alt={slide.imageAlt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 1152px"
+                    fetchPriority={index === 0 ? 'high' : 'auto'}
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                  />
+                  <span className="sr-only">{slide.title}</span>
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="pointer-events-none absolute inset-y-0 right-3 left-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => emblaApi?.scrollPrev()}
-          disabled={!canScrollPrev}
-          aria-label="Show previous featured deal"
-          className="pointer-events-auto flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/70 bg-white/85 text-slate-900 shadow-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          <ChevronLeftIcon />
-        </button>
-        <button
-          type="button"
-          onClick={() => emblaApi?.scrollNext()}
-          disabled={!canScrollNext}
-          aria-label="Show next featured deal"
-          className="pointer-events-auto flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/70 bg-white/85 text-slate-900 shadow-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          <ChevronRightIcon />
-        </button>
+        <div className="pointer-events-none absolute inset-y-0 right-3 left-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => emblaApi?.scrollPrev()}
+            disabled={!canScrollPrev}
+            aria-label="Show previous featured deal"
+            className={ARROW_CLASS}
+          >
+            <ChevronLeftIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => emblaApi?.scrollNext()}
+            disabled={!canScrollNext}
+            aria-label="Show next featured deal"
+            className={ARROW_CLASS}
+          >
+            <ChevronRightIcon />
+          </button>
+        </div>
       </div>
       <div
         className="mt-3 flex justify-center gap-2"

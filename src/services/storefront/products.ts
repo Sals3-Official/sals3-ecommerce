@@ -92,13 +92,33 @@ export async function fetchProducts({
   return payload as ProductsResponse;
 }
 
+type FetchProductCategoriesOptions = FetchOptions & {
+  /**
+   * `'stocked'` (default) asks for the main categories with a published
+   * product behind them; `'all'` asks for every department in the taxonomy,
+   * which is what the "All departments" page shows.
+   */
+  scope?: 'stocked' | 'all';
+};
+
+function getCategoriesApiUrl(scope: 'stocked' | 'all'): string {
+  const url = getStorefrontApiUrl(STOREFRONT_CATEGORIES_PATH);
+
+  // Only sent for 'all': the producer's default is the stocked list, and an
+  // explicit `scope=stocked` would needlessly split its cache key.
+  if (scope === 'all') url.searchParams.set('scope', 'all');
+
+  return url.toString();
+}
+
 export async function fetchProductCategories({
+  scope = 'stocked',
   fetcher,
   signal,
-}: FetchOptions = {}): Promise<ProductCategory[]> {
+}: FetchProductCategoriesOptions = {}): Promise<ProductCategory[]> {
   const payload = await requestStorefrontJson(
     {
-      url: getStorefrontApiUrl(STOREFRONT_CATEGORIES_PATH).toString(),
+      url: getCategoriesApiUrl(scope),
       schema: ProductCategoriesResponseSchema,
       subject: 'categories API',
     },

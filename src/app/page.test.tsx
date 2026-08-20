@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { homePromoSlides } from '@/lib/home-promo-slides';
@@ -65,14 +65,14 @@ function mockProductsFetch(
       return new Response(
         JSON.stringify([
           {
-            id: 'beauty',
-            code: 'BE',
-            name: 'Beauty',
+            id: 'health-beauty',
+            code: 'HB',
+            name: 'Health & Beauty',
           },
           {
-            id: 'mobile-accessories',
-            code: 'MA',
-            name: 'Mobile Accessories',
+            id: 'electronics',
+            code: 'EL',
+            name: 'Electronics',
           },
         ]),
         {
@@ -172,18 +172,130 @@ describe('Home page', () => {
     expect(screen.queryByRole('link', { name: /^sign up$/i })).toBeNull();
   });
 
-  it('renders the category navigation', async () => {
+  it('renders the category grid below the promo banner', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
     renderWithCart(await Home());
 
+    const categories = screen.getByRole('navigation', { name: /categories/i });
+
     expect(
-      screen.getByRole('navigation', { name: /categories/i }),
+      screen.getByRole('heading', { level: 2, name: 'Shop by category' }),
     ).toBeInTheDocument();
+    // Scoped to the grid: the footer lists the same main categories, so a
+    // page-wide query matches twice.
     expect(
-      screen.getByRole('link', { name: /mobile accessories/i }),
-    ).toHaveAttribute('href', '/c/mobile-accessories');
+      within(categories).getByRole('link', { name: /electronics/i }),
+    ).toHaveAttribute('href', '/c/electronics');
+
+    // Order matters here — the grid used to be a full-bleed band above the
+    // banner. They are siblings inside <main>, so the comparison is exactly
+    // DOCUMENT_POSITION_FOLLOWING with no containment bit mixed in.
+    const banner = screen.getByRole('region', { name: /featured deals/i });
+
+    expect(banner.compareDocumentPosition(categories)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('shows every department, stocked ones first', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+
+    const fetchMock = vi.fn<typeof fetch>(async (url) => {
+      if (String(url) === '/api/auth/session') {
+        return new Response(JSON.stringify({ signedIn: false }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const requestUrl = new URL(String(url));
+
+      if (requestUrl.pathname === '/api/storefront/categories') {
+        // `scope=all` is the department list; the bare call is the stocked one.
+        const payload =
+          requestUrl.searchParams.get('scope') === 'all'
+            ? [
+                { id: 'animals-pet-supplies', code: 'AP', name: 'Animals' },
+                { id: 'electronics', code: 'EL', name: 'Electronics' },
+                { id: 'furniture', code: 'FU', name: 'Furniture' },
+              ]
+            : [{ id: 'furniture', code: 'FU', name: 'Furniture' }];
+
+        return new Response(JSON.stringify(payload), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({ products: [], total: 0, page: 1, limit: 14 }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithCart(await Home());
+
+    const grid = screen.getByRole('navigation', { name: /categories/i });
+    const names = within(grid)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'));
+
+    // Furniture is the only stocked department, so it leads; the two with no
+    // published product still appear rather than being hidden.
+    expect(names).toEqual([
+      '/c/furniture',
+      '/c/animals-pet-supplies',
+      '/c/electronics',
+    ]);
+  });
+
+  it('shows departments even while the portal still sends leaf categories', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+
+    // Exactly what production served before the portal's rollup deployed.
+    const leafFeed = [
+      { id: 'aquarium-lighting', code: 'AL', name: 'Aquarium Lighting' },
+      { id: 'rangefinders', code: 'RA', name: 'Rangefinders' },
+    ];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(async (url) => {
+        if (String(url) === '/api/auth/session') {
+          return new Response(JSON.stringify({ signedIn: false }), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        const requestUrl = new URL(String(url));
+
+        if (requestUrl.pathname === '/api/storefront/categories') {
+          return new Response(JSON.stringify(leafFeed), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        return new Response(
+          JSON.stringify({ products: [], total: 0, page: 1, limit: 14 }),
+          { headers: { 'Content-Type': 'application/json' } },
+        );
+      }),
+    );
+
+    renderWithCart(await Home());
+
+    const grid = screen.getByRole('navigation', { name: /categories/i });
+
+    expect(
+      within(grid).getByRole('link', { name: /animals & pet supplies/i }),
+    ).toHaveAttribute('href', '/c/animals-pet-supplies');
+    expect(
+      within(grid).queryByRole('link', { name: /aquarium lighting/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders the promo carousel instead of the old shipping banner', async () => {
