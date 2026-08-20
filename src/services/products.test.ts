@@ -164,6 +164,25 @@ describe('fetchProducts', () => {
     });
   });
 
+  it('asks for every department only when the scope says so', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+
+    const requested: string[] = [];
+    const fetcher: typeof fetch = async (input) => {
+      requested.push(String(input));
+
+      return jsonResponse(validCategoriesResponse);
+    };
+
+    await fetchProductCategories({ fetcher });
+    await fetchProductCategories({ fetcher, scope: 'all' });
+
+    // The stocked read stays on the bare URL on purpose: an explicit
+    // `scope=stocked` would split the producer's cache key for nothing.
+    expect(requested[0]).not.toContain('scope');
+    expect(requested[1]).toContain('scope=all');
+  });
+
   it('rejects invalid product category slugs', async () => {
     vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
     const fetcher: typeof fetch = async () =>

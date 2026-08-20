@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
-import CategoryRow from '@/components/home/CategoryRow';
-import CategoryRowSkeleton from '@/components/home/CategoryRowSkeleton';
+import CategorySection from '@/components/home/CategorySection';
+import CategorySectionSkeleton from '@/components/home/CategorySectionSkeleton';
 import PromoCarousel from '@/components/home/PromoCarousel';
 import DealsSection from '@/components/home/DealsSection';
 import ForYouSection from '@/components/home/ForYouSection';
@@ -14,8 +14,8 @@ import {
   SITE_TAGLINE,
   getSiteUrl,
 } from '@/lib/site';
+import { departmentsOrTaxonomy, isDepartmentId } from '@/lib/departments';
 import {
-  categories,
   deals,
   forYouProducts,
   adSlot,
@@ -84,14 +84,48 @@ async function getDealProducts(): Promise<HomeProduct[]> {
   return response.products.map(toHomeProduct);
 }
 
-async function getHomeCategories(): Promise<Category[]> {
+async function fetchCategoriesOrNull(
+  scope: 'stocked' | 'all',
+): Promise<Category[] | null> {
   try {
-    const productCategories = await fetchProductCategories();
-
-    return productCategories.map(toHomeCategory);
+    return (await fetchProductCategories({ scope })).map(toHomeCategory);
   } catch {
-    return categories;
+    return null;
   }
+}
+
+/**
+ * The home grid's main categories: every department, ordered so the ones with
+ * stock behind them come first.
+ *
+ * Both reads run in parallel and each is allowed to fail on its own — the
+ * department list is the shape of the catalogue and the stocked list is only
+ * an ordering signal, so losing the second must not cost the grid. Both also
+ * go through `departmentsOrTaxonomy`/`isDepartmentId`, so a portal that has
+ * not shipped the L1 rollup yet cannot put leaf names ("Rangefinders") back
+ * on the home page.
+ */
+async function getHomeCategories(): Promise<Category[]> {
+  const [stocked, departments] = await Promise.all([
+    fetchCategoriesOrNull('stocked'),
+    fetchCategoriesOrNull('all'),
+  ]);
+
+  const catalogue = departmentsOrTaxonomy(departments);
+  const stockedIds = new Set(
+    (stocked ?? [])
+      .map((category) => category.id)
+      .filter((id) => isDepartmentId(id)),
+  );
+  const withStock: Category[] = [];
+  const withoutStock: Category[] = [];
+
+  // One pass, not two filters: the partition is the whole point.
+  catalogue.forEach((department) => {
+    (stockedIds.has(department.id) ? withStock : withoutStock).push(department);
+  });
+
+  return [...withStock, ...withoutStock];
 }
 
 type ForYouResult = Pick<
@@ -158,26 +192,27 @@ export default async function Home({ searchParams }: HomeProps = {}) {
     <div className="flex flex-1 flex-col bg-surface">
       <WebSiteSchema />
       <SiteHeader />
-      {/* Suspense boundary is structural, not a real defer: homeCategories
-          resolves in the Promise.all above, same as every other section on
-          this page, so the skeleton fallback never actually renders here.
-          A genuinely streamed category row (fetch started, then awaited
-          inside its own async child component) is valid Next.js and works
-          in the real dev server, but this repo's page.test.tsx renders via
-          `renderWithCart(await Home())` — a plain client render() of an
-          already-resolved tree — which cannot execute a nested async
-          Server Component at all (proved directly: even an async
-          `findByRole` times out). Making this one section stream while the
-          rest of the page still blocks is also a page-wide architecture
-          change beyond this refactor's scope. CategoryRowSkeleton stays
-          built and tested for when that decision is made deliberately. */}
-      <Suspense fallback={<CategoryRowSkeleton />}>
-        <CategoryRow categories={homeCategories} />
-      </Suspense>
       <main className="mx-auto w-full max-w-6xl px-6 py-5 pb-16">
         {/* sr-only h1: correct heading hierarchy for crawlers and screen readers */}
         <h1 className="sr-only">{SITE_TAGLINE}</h1>
         <PromoCarousel />
+        {/* Suspense boundary is structural, not a real defer: homeCategories
+            resolves in the Promise.all above, same as every other section on
+            this page, so the skeleton fallback never actually renders here.
+            A genuinely streamed category grid (fetch started, then awaited
+            inside its own async child component) is valid Next.js and works
+            in the real dev server, but this repo's page.test.tsx renders via
+            `renderWithCart(await Home())` — a plain client render() of an
+            already-resolved tree — which cannot execute a nested async
+            Server Component at all (proved directly: even an async
+            `findByRole` times out). Making this one section stream while the
+            rest of the page still blocks is also a page-wide architecture
+            change beyond this refactor's scope. CategorySectionSkeleton
+            stays built and tested for when that decision is made
+            deliberately. */}
+        <Suspense fallback={<CategorySectionSkeleton />}>
+          <CategorySection categories={homeCategories} />
+        </Suspense>
         <DealsSection deals={homeProducts.deals} />
         <ForYouSection
           products={homeProducts.products}
