@@ -36,11 +36,25 @@ import Spinner from '@/components/ui/Spinner';
 const BASE =
   'min-h-11 flex-1 cursor-pointer rounded-lg px-6 text-sm font-bold transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100';
 
+/**
+ * The Sals3 Blue Gradient pair, **split by role** — the one thing about these
+ * two colours that must not be forgotten:
+ *
+ * - `brand-blue-900` `#002b53` is 14.3:1 on white and carries every label.
+ * - `brand-blue-500` `#018cc9` is 3.75:1 on white. It passes the 3:1 bar for a
+ *   UI component boundary and fails the 4.5:1 bar for text, so it is a border
+ *   and a focus ring and **never** a label colour. Reaching for it as text
+ *   reintroduces the exact failure that took three review rounds to clear.
+ *
+ * `disabled:text-ink-subtle`, not `ink-faint`: `#8a9196` is 3.2:1 and this
+ * codebase treats it as a border-only token. WCAG exempts an inactive control,
+ * but a token split by role is only worth anything if it is absolute.
+ */
 const VARIANTS = {
   outline:
-    'border border-brand-600 text-brand-600 hover:bg-brand-600/10 disabled:border-border-strong disabled:text-ink-faint disabled:hover:bg-transparent',
+    'border border-brand-blue-500 text-brand-blue-900 hover:bg-brand-blue-900/8 disabled:border-border-strong disabled:text-ink-subtle disabled:hover:bg-transparent',
   solid:
-    'bg-brand-gradient text-white hover:opacity-90 disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-faint disabled:hover:opacity-100',
+    'bg-brand-gradient text-white hover:opacity-90 disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-subtle disabled:hover:opacity-100',
 } as const;
 
 type ButtonProps = {

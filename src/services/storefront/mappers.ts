@@ -243,5 +243,15 @@ export function toProductDetail(
     ...(variants.length === 0 ? {} : { variants }),
     ...(options.length === 0 ? {} : { options }),
     ...(product.specs === undefined ? {} : { specs: product.specs }),
+    // Absent and empty are kept apart here as everywhere else: a product whose
+    // every attribute is unanswered arrives as `[]` from `salvagedArray`, and
+    // an empty array must not become a heading over nothing.
+    ...(product.specification === undefined ||
+    product.specification.length === 0
+      ? {}
+      : { specification: product.specification }),
+    ...(product.metaDescription === undefined
+      ? {}
+      : { metaDescription: product.metaDescription }),
   };
 }

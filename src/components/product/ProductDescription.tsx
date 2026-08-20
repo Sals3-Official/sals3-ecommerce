@@ -53,9 +53,11 @@ export default function ProductDescription({
   if (blocks === undefined || blocks.length === 0) return null;
 
   return (
-    <section className="mt-8">
-      <h2 className="text-base font-bold text-ink">About this product</h2>
-      <div className="mt-3 flex flex-col gap-3">
+    <section className="mt-10">
+      <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
+        About this product
+      </h2>
+      <div className="mt-4 flex flex-col gap-4.5">
         {groupBlocks(blocks).map((group, groupIndex) => {
           // Index-based keys: blocks have no ids, and this list is never
           // reordered or filtered — it is re-rendered whole from one payload.
@@ -64,6 +66,14 @@ export default function ProductDescription({
 
           if (first === undefined) return null;
 
+          /*
+            Image rows break out of the reading column and run the full section
+            width; text stays at 70ch. A photo held to a measure sized for prose
+            is smaller than it needs to be, and a line of prose run to the
+            section's full width stops being readable — so the two get different
+            widths rather than a compromise that suits neither. No card around a
+            card: the row is the widest thing here, not a panel inside a panel.
+          */
           if (first.type === 'image') {
             return (
               <DescriptionImageRow
@@ -77,7 +87,10 @@ export default function ProductDescription({
 
           if (block.type === 'paragraph') {
             return (
-              <p key={key} className="text-sm text-ink-muted">
+              <p
+                key={key}
+                className="max-w-[70ch] text-[15px] leading-[1.7] text-ink-muted text-pretty"
+              >
                 {block.text}
               </p>
             );
@@ -87,11 +100,17 @@ export default function ProductDescription({
             // Only h2/h3 exist in the union — the product title owns the page's
             // single h1.
             return block.level === 2 ? (
-              <h3 key={key} className="text-sm font-bold text-ink">
+              <h3
+                key={key}
+                className="max-w-[70ch] font-display text-base font-semibold text-ink"
+              >
                 {block.text}
               </h3>
             ) : (
-              <h4 key={key} className="text-sm font-semibold text-ink">
+              <h4
+                key={key}
+                className="max-w-[70ch] text-sm font-semibold text-ink"
+              >
                 {block.text}
               </h4>
             );
@@ -101,7 +120,7 @@ export default function ProductDescription({
             return (
               <ul
                 key={key}
-                className="list-disc pl-5 text-sm text-ink-muted marker:text-ink-faint"
+                className="max-w-[70ch] list-disc pl-5 text-[15px] leading-[1.7] text-ink-muted marker:text-ink-subtle"
               >
                 {block.items.map((item) => (
                   <li key={item} className="mt-1">
@@ -113,15 +132,13 @@ export default function ProductDescription({
           }
 
           return (
-            <dl key={key} className="flex flex-col gap-1">
+            <dl key={key} className="flex max-w-[70ch] flex-col gap-2.5">
               {block.entries.map((entry) => (
                 <div
                   key={entry.label}
-                  className="flex flex-col gap-0.5 sm:flex-row sm:gap-4"
+                  className="flex flex-col gap-0.5 sm:grid sm:grid-cols-[minmax(0,9.375rem)_minmax(0,1fr)] sm:gap-5"
                 >
-                  <dt className="text-sm text-ink-muted sm:w-56 sm:shrink-0">
-                    {entry.label}
-                  </dt>
+                  <dt className="text-sm text-ink-subtle">{entry.label}</dt>
                   <dd className="text-sm text-ink">{entry.value}</dd>
                 </div>
               ))}

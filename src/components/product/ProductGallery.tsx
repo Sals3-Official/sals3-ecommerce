@@ -22,7 +22,12 @@ export default function ProductGallery({ images, tone }: ProductGalleryProps) {
 
   return (
     <div className="md:sticky md:top-20">
-      <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-white">
+      {/*
+        4:5 rather than square. Apparel is the catalogue's shape and a portrait
+        frame gives a jacket more of the first screen without pushing the record
+        panel below the fold.
+      */}
+      <div className="relative aspect-4/5 overflow-hidden rounded-xl border border-border bg-white">
         {selected ? (
           <Image
             src={selected.url}
@@ -40,7 +45,15 @@ export default function ProductGallery({ images, tone }: ProductGalleryProps) {
         <div
           role="group"
           aria-label="Product photos"
-          className="mt-2 flex gap-2"
+          /*
+            A five-column grid, not a flex row: `flex-1` divided one gallery's
+            thumbnails across the full width, so a two-photo product got two
+            half-width thumbnails and a five-photo product got five narrow ones.
+            A fixed column count keeps every thumbnail the same size whatever
+            the count, and the twelfth photo wraps to a second row instead of
+            shrinking the first eleven.
+          */
+          className="mt-2.5 grid grid-cols-5 gap-2"
         >
           {images.map((image, index) => (
             <button
@@ -51,9 +64,9 @@ export default function ProductGallery({ images, tone }: ProductGalleryProps) {
               aria-pressed={index === selectedIndex}
               /* `min-w-11` as well as `min-h-11`: a 44px-tall target that is
                  only 30px wide is not a 44x44 target. */
-              className={`relative aspect-square min-h-11 min-w-11 flex-1 cursor-pointer overflow-hidden rounded-lg border-2 bg-white transition-all duration-200 active:scale-95 ${
+              className={`relative aspect-square min-h-11 min-w-11 cursor-pointer overflow-hidden rounded-lg border-2 bg-white transition-all duration-200 active:scale-95 ${
                 index === selectedIndex
-                  ? 'border-brand-600'
+                  ? 'border-brand-blue-500'
                   : 'border-border hover:border-border-strong'
               }`}
             >

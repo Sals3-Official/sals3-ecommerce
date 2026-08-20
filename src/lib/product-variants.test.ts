@@ -10,6 +10,7 @@ import {
   resolveVariant,
   variantById,
   variantCountInWords,
+  variantsAboveFloor,
 } from './product-variants';
 
 function variant(
@@ -185,5 +186,74 @@ describe('variantCountInWords', () => {
     // the second-money-string exposure the words rule exists to avoid.
     expect(variantCountInWords(21)).toBe('21');
     expect(variantCountInWords(200)).toBe('200');
+  });
+});
+
+describe('variantsAboveFloor', () => {
+  function priced(id: string, amountMinor: number): ProductVariant {
+    return {
+      id,
+      sku: `S3V-${id}`,
+      price: { amountMinor, currency: 'USD' },
+      availability: 'AVAILABLE',
+    };
+  }
+
+  it('counts the options that cost more than the figure on screen', () => {
+    const variants = [
+      priced('a', 451),
+      priced('b', 530),
+      priced('c', 780),
+      priced('d', 2000),
+      priced('e', 2000),
+    ];
+
+    expect(variantsAboveFloor(variants, usd(451))).toEqual({
+      total: 5,
+      dearer: 4,
+    });
+  });
+
+  it('reports none dearer when every option is the same price', () => {
+    expect(
+      variantsAboveFloor([priced('a', 2000), priced('b', 2000)], usd(2000)),
+    ).toEqual({ total: 2, dearer: 0 });
+  });
+
+  /** One option is not a spread, and "From" is not rendered for it either. */
+  it('says nothing about a single variant', () => {
+    expect(variantsAboveFloor([priced('a', 451)], usd(451))).toBeUndefined();
+  });
+
+  /**
+   * A currency mix is not a distribution one floor describes. Returning a count
+   * across two currencies would compare minor units of different money.
+   */
+  it('says nothing when the variants mix currencies', () => {
+    const mixed: ProductVariant[] = [
+      priced('a', 451),
+      {
+        id: 'b',
+        sku: 'S3V-b',
+        price: { amountMinor: 700, currency: 'AUD' },
+        availability: 'AVAILABLE',
+      },
+    ];
+
+    expect(variantsAboveFloor(mixed, usd(451))).toBeUndefined();
+  });
+
+  /**
+   * No money value is returned, deliberately: the panel keeps exactly one
+   * currency-formatted string in its price block, because a second one is what
+   * a price extractor can pick up instead of the real offer price.
+   */
+  it('returns counts only, never a price', () => {
+    const result = variantsAboveFloor(
+      [priced('a', 451), priced('b', 2000)],
+      usd(451),
+    );
+
+    expect(Object.keys(result ?? {}).sort()).toEqual(['dearer', 'total']);
   });
 });

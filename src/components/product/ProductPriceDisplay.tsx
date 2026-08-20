@@ -45,7 +45,7 @@ export default function ProductPriceDisplay({
       </span>
       {hasDiscount ? (
         <>
-          <span className="text-sm text-ink-faint line-through">
+          <span className="text-sm text-ink-subtle line-through">
             {formatMoney(oldPrice)}
           </span>
           <span className="text-sm font-bold text-deal">

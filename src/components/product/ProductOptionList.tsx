@@ -121,12 +121,26 @@ export default function ProductOptionList({
     );
   }
 
+  /*
+    The weight lives on the states, not here. With `font-medium` on the shared
+    class and `font-bold` on the selected one, both land in the same cascade
+    layer and Tailwind's own property ordering decides the winner — which it
+    did, silently, in favour of `font-medium`. One weight per state has no
+    conflict to resolve.
+  */
   const CHIP =
-    'block min-h-11 rounded-lg border-2 px-3 py-1.5 text-left font-medium transition-all duration-200 active:scale-[0.98]';
-  const CHIP_ON = 'border-brand-600 text-brand-600';
-  const CHIP_OFF = 'border-border text-ink hover:border-border-strong';
+    'block min-h-11 rounded-lg border-2 px-3 py-1.5 text-left transition-all duration-200 active:scale-[0.98]';
+  /*
+    The Sals3 Blue Gradient pair, split by role: `brand-blue-500` `#018cc9` is
+    the selected chip's **border** (3.75:1 — fine for a component boundary,
+    never for text) and `brand-blue-900` `#002b53` is its **label** (14.3:1).
+    Bold as well as coloured, so the selection is not carried by hue alone.
+  */
+  const CHIP_ON = 'border-brand-blue-500 font-bold text-brand-blue-900';
+  const CHIP_OFF =
+    'border-border font-medium text-ink hover:border-border-strong';
   const CHIP_DEAD =
-    'block min-h-11 rounded-lg border-2 border-border px-3 py-1.5 text-left text-ink-faint line-through';
+    'block min-h-11 rounded-lg border-2 border-border px-3 py-1.5 text-left text-ink-subtle line-through';
 
   function heading(note: string) {
     return (
@@ -137,7 +151,7 @@ export default function ProductOptionList({
         >
           Choose an option
         </h2>
-        <p className="mt-1 mb-2.5 text-xs text-ink-faint">{note}</p>
+        <p className="mt-1 mb-2.5 text-xs text-ink-subtle">{note}</p>
       </>
     );
   }

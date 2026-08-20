@@ -888,23 +888,110 @@ After hydration, a normal left-click on a variant option updates
 `?variant=<id>` and the price from the already-loaded payload; direct URL visits,
 reloads, copied links, and modified clicks still use the server-rendered route.
 
+### Section order, and why it is this one
+
+Rebuilt 2026-08-21 to the approved **PDP Redesign v3.1** shell.
+
+| #   | Section                                      | Band              |
+| --- | -------------------------------------------- | ----------------- |
+| 1   | Breadcrumb                                   | surface           |
+| 2   | Gallery 4:5 + the sticky record panel        | surface           |
+| 3   | **Product specifications** — seller-declared | white, full-bleed |
+| 4   | **About this product** — description, 70ch   | surface           |
+| 5   | **Supplier details** — technical, demoted    | surface           |
+| 6   | Related products                             | surface           |
+
+Two background colours in total. The one white full-bleed band at 3 is the
+page's only rhythm break; a third would stop reading as structure and start
+reading as decoration. `main` carries no max-width of its own so that band can
+run edge to edge — each region owns its own `max-w-6xl` container instead.
+
+**Specifications come before the description.** Specifications exist on every
+categorised product: the workbook defines an attribute set for all 5,595
+categories, and the portal blocks publication on the required ones. A written
+description exists on almost none — the portal's only producer is a seller
+typing into a textarea, and CJ's own HTML is deliberately never imported. With
+the old order the first thing below the fold on a typical product was nothing at
+all.
+
+**The record panel sticks, not the gallery.** The buy controls are what a buyer
+scrolling the description wants back within reach; the photographs are what they
+have already looked at.
+
 Composed from small single-purpose components under `src/components/product/`:
 
-| Component                         | Renders                                                                                                  |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `ProductGallery` (client)         | Every approved photo, lead image first, with per-image alt text; thumbnails appear from the second image |
-| `ProductPriceBox` (server)        | Price and purchase for a product with **no** option axes                                                 |
-| `ProductPurchasePanel` (client)   | Price, variant selector, stock, and purchase for a product with **several** variants                     |
-| `ProductVariantSelector` (client) | One `radiogroup` per axis; unavailable values stay visible and `aria-disabled`                           |
-| `ProductAvailabilityNotice`       | Stock as an evidence statement — never a count                                                           |
-| `ProductDescription`              | The seller-authored allow-listed blocks                                                                  |
-| `ProductSpecsTable`               | Physical and identifier facts, labelled supplier-reported                                                |
-| `ProductShippingCard`             | That shipping is quoted at checkout, because no estimate exists                                          |
-| `RelatedProducts`                 | Same-category products, reusing the home grid                                                            |
-| `ProductSchema`                   | `Product`/`Offer` JSON-LD                                                                                |
+| Component                     | Renders                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ProductGallery` (client)     | Every approved photo at 4:5, lead image first, per-image alt text, five-column thumbnail grid        |
+| `ProductRecordPanel` (client) | One bounded panel: price, price note, options, purchase, evidence ledger — hairlines, not four cards |
+| `ProductPriceDisplay`         | The price line, with exactly one currency-formatted string in it                                     |
+| `ProductOptionList` (client)  | The four option tiers; unreachable values are non-interactive `<span>`s, never disabled anchors      |
+| `ProductEvidenceLedger`       | "What we know" — a filled mark per evidenced claim, a hollow one per stated unknown                  |
+| `ProductSpecifications`       | The **seller's own** declarations against their category's attribute set                             |
+| `ProductDescription`          | The seller-authored allow-listed blocks; text at 70ch, image rows breaking out wider                 |
+| `DescriptionImageRow`         | One adjacency group of description photos: 16:9 alone, 4:3 paired                                    |
+| `ProductSupplierDetails`      | Physical and identifier facts, labelled supplier-reported, deliberately demoted                      |
+| `RelatedProducts`             | Same-category products, reusing the home grid                                                        |
+| `ProductSchema`               | `Product`/`Offer` JSON-LD                                                                            |
 
-`ProductPurchasePanel` mounts **only** when there is a real choice to make, so a
-catalogue with no variants ships no extra client JavaScript.
+### Two spec sections, two provenance lines
+
+`ProductSpecifications` renders `specification` — `{ label, value }` pairs the
+**seller** entered against their category's attribute set. `ProductSupplierDetails`
+renders `specs` — weight, dimensions, condition, MPN, GTIN, as the **supplier**
+reported them.
+
+They are separate because one footnote cannot honestly cover both. "As reported
+by the supplier" becomes false the moment a seller-entered attribute appears
+under it, and attributing a seller's own declaration to CJ is a provenance
+error, not a wording preference. The portal editor already keeps its
+`specification` and `specs` sections apart; the single flat table this replaces
+contradicted that boundary.
+
+Supplier details is deliberately quieter — a 16px bold heading against the other
+sections' 20px display type, 13.5px rows against their 14px. These are claims
+Sals3 **repeats** rather than facts it holds, and the hierarchy should say so
+before the footnote does.
+
+Two rows moved out of it:
+
+- **No SKU.** `specs.sku` is an `S3V-<hex>` digest. It identified nothing for a
+  buyer, and showing it was the same defect as putting a variant hash on an
+  option chip. It stays on the payload for cart and order plumbing, and stays in
+  Product JSON-LD where machines read it — a page test asserts it reaches no
+  text a buyer can read.
+- **Brand moved up.** A brand is the seller's own claim even when it arrives on
+  the technical payload, so it renders in Product specifications. When the
+  seller answered the workbook's own `Brand` attribute, that answer wins and no
+  second row appears.
+
+### The price note
+
+`From US$4.51` on a product whose other seven options are US$20 is honest and
+incomplete. The panel now says how many options cost more than the figure on
+screen — counted from `variants[].price`, nothing estimated.
+
+It names a **count, not the higher price**, which is a deliberate divergence
+from the v3.1 prototype: the price block must contain exactly one
+currency-formatted string, because a second one is what a price extractor can
+pick up instead of the real offer price. `variantsAboveFloor` returns counts
+only and cannot produce money.
+
+### Page metadata
+
+`generateMetadata` prefers the seller's own `metaDescription` when the portal
+sends one, then falls back to `{title} — {categoryName} at Sals3.`, then the
+title. The editor has a dedicated field for it, with its own length guidance and
+search preview.
+
+Two rules on it:
+
+- It is **hidden metadata**. It never renders in the page body — a page test
+  asserts that — because it is written for a search result, not for a reader.
+- The **visible description is not in the fallback chain**. Substituting body
+  copy for a meta description silently republishes the seller's first paragraph
+  as their search snippet, and truncating prose mid-sentence at 155 characters
+  is how a result reads as machine-generated.
 
 ### Every section is absent, not empty, when the data is
 
@@ -915,8 +1002,17 @@ reserved boxes. What that means in practice today:
 - **No rating anywhere.** Sals3 has no buyer reviews, and CJ's
   supplier-platform review counts are not Sals3 ratings. The deprecated
   `ratingLine` is optional and carries a non-claim; nothing renders a star.
-- **No delivery estimate.** Freight is destination-specific and quoted at
-  checkout (ADR-003).
+- **No delivery estimate, and the ledger no longer denies the charge.** Freight
+  is destination-specific and quoted at checkout (ADR-003). Until 2026-08-21 the
+  ledger's Delivery row read "Nothing is added to this price at checkout." That
+  was true when written and became **false on 2026-08-17**, when live CJ freight
+  quotes shipped: `quoteCheckoutShippingAction` prices each package against the
+  buyer's address and the selected amount goes into the Stripe session. The row
+  now states the unknown it actually has — what delivery will cost _this_ buyer,
+  which needs an address the PDP does not have — and says where it resolves. The
+  mark stays hollow, because that is still genuinely unknown here. The v3.1
+  prototype's enabled-state line carries the same false sentence and is
+  deliberately **not** transcribed.
 - **No was/now price.** `oldPrice` is absent unless the portal sends a genuinely
   higher, evidence-backed comparison price. It never has.
 - **Description and variants render nothing yet**, because no published product

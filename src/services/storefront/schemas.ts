@@ -217,6 +217,23 @@ const ProductSpecsSchema = z.object({
   condition: z.enum(['NEW', 'REFURBISHED', 'USED']).optional(),
 });
 
+/**
+ * One seller-entered category attribute — a **different kind of claim** from
+ * `ProductSpecsSchema` above, which is why it is a separate schema rather than
+ * more keys on that one. These are the seller's own declarations against their
+ * category's attribute set; `specs` is what the supplier reported.
+ *
+ * The portal has already applied its display mapping (`UNBRANDED` → `Generic`)
+ * and already dropped anything the workbook marks as not buyer-facing, so this
+ * side validates shape and length and nothing else. Both fields are required
+ * within a row — a labelless value or a valueless label is not a fact — and a
+ * bad row is dropped by `salvagedArray` rather than costing the page.
+ */
+const ProductSpecificationSchema = z.object({
+  label: truncatedText(80),
+  value: truncatedText(300),
+});
+
 export const StorefrontProductDetailSchema = StorefrontProductBaseSchema.extend(
   {
     imageUrl: z.string().url().nullable().optional(),
@@ -229,6 +246,12 @@ export const StorefrontProductDetailSchema = StorefrontProductBaseSchema.extend(
       .optional(),
     variants: salvagedArray(ProductVariantSchema, 200).optional(),
     specs: ProductSpecsSchema.optional(),
+    specification: salvagedArray(ProductSpecificationSchema, 40).optional(),
+    /**
+     * The seller-edited `<meta name="description">`. Hidden metadata: it is
+     * never rendered in the page body, and it is not the visible description.
+     */
+    metaDescription: truncatedText(320).optional(),
   },
 );
 
