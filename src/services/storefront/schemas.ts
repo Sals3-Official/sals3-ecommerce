@@ -136,10 +136,17 @@ const ProductImageSchema = z.object({
 
 /**
  * The producer's allow-listed block union, matched exactly —
- * `paragraph`, `heading`, `bulletList`, `keyValueList`. There is no `html`
- * block and no raw-string passthrough on either side, so there is nothing for a
- * renderer to interpret as markup even before escaping. CJ's own `description`
- * **is** supplier HTML and never enters this document.
+ * `paragraph`, `heading`, `bulletList`, `keyValueList`, `image`. There is no
+ * `html` block and no raw-string passthrough on either side, so there is
+ * nothing for a renderer to interpret as markup even before escaping. CJ's own
+ * `description` **is** supplier HTML and never enters this document.
+ *
+ * The `image` block's `url` is only shape-checked here; the host allow-list
+ * (`getAllowedProductImageUrl`) is applied in the mapper, where a
+ * disallowed-host image costs that block rather than the whole description.
+ * `alt` is optional on the wire (tolerant, like every post-2026-08-13 field)
+ * even though the producer always sends it; the mapper falls back to the
+ * product title.
  */
 const DescriptionBlockSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('paragraph'), text: truncatedText(4000) }),
@@ -160,6 +167,12 @@ const DescriptionBlockSchema = z.discriminatedUnion('type', [
       )
       .min(1)
       .max(40),
+  }),
+  z.object({
+    type: z.literal('image'),
+    url: z.string().url(),
+    alt: truncatedText(160).optional(),
+    caption: truncatedText(4000).optional(),
   }),
 ]);
 

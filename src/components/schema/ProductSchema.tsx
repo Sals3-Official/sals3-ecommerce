@@ -39,10 +39,15 @@ function describe(detail: ProductDetail): string | undefined {
 
       if (block.type === 'bulletList') return block.items.join(' ');
 
+      // An image contributes no description text — its caption is about the
+      // picture, and its alt inside JSON-LD prose would read as padding.
+      if (block.type === 'image') return '';
+
       return block.entries
         .map((entry) => `${entry.label}: ${entry.value}`)
         .join(' ');
     })
+    .filter((part) => part !== '')
     .join(' ')
     .trim();
 

@@ -52,6 +52,35 @@ export const NO_STORE_ROUTES = [
   '/orders/:path*',
 ];
 
+/*
+ * The Cloudflare R2 public host seller-uploaded product photos are served
+ * from, derived from the same env var `src/lib/r2-image-host.ts` reads so the
+ * two cannot drift. Empty when unset — the storefront then simply drops
+ * seller-uploaded image addresses at the mapper, same as any other
+ * non-allow-listed host.
+ */
+function r2RemotePatterns() {
+  const baseUrl = process.env.NEXT_PUBLIC_R2_IMAGE_BASE_URL;
+
+  if (baseUrl === undefined || baseUrl.trim() === '') return [];
+
+  try {
+    const url = new URL(baseUrl);
+
+    return url.protocol === 'https:'
+      ? [
+          {
+            protocol: 'https' as const,
+            hostname: url.hostname,
+            pathname: '/**',
+          },
+        ]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -104,6 +133,8 @@ const nextConfig: NextConfig = {
         hostname: 'oss-cf.cjdropshipping.com',
         pathname: '/**',
       },
+      // Seller-uploaded photos on Cloudflare R2 (NEXT_PUBLIC_R2_IMAGE_BASE_URL).
+      ...r2RemotePatterns(),
     ],
   },
 };
