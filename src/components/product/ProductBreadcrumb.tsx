@@ -30,7 +30,7 @@ export default function ProductBreadcrumb({ trail }: ProductBreadcrumbProps) {
           return (
             <li key={key} className="flex items-center">
               {index > 0 ? (
-                <span aria-hidden="true" className="mr-1.5 text-ink-faint">
+                <span aria-hidden="true" className="mr-1.5 text-ink-subtle">
                   /
                 </span>
               ) : null}

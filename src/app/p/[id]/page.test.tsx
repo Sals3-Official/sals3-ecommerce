@@ -140,14 +140,14 @@ describe('Product page', () => {
     expect(screen.queryByText(/rating/i)).not.toBeInTheDocument();
   });
 
-  it("renders description, specs, and the ledger's stock row when the portal sends them", async () => {
+  it("renders description, supplier details, and the ledger's stock row when the portal sends them", async () => {
     mockFetch({
       productOverrides: {
         availability: 'AVAILABLE',
         description: {
           blocks: [{ type: 'paragraph', text: 'A quiet tower cooler.' }],
         },
-        specs: { sku: 'SALS3-AC-1', weightGrams: 4200, condition: 'NEW' },
+        specs: { sku: 'S3V-2268B366F762', weightGrams: 4200, condition: 'NEW' },
       },
     });
 
@@ -156,8 +156,8 @@ describe('Product page', () => {
     );
 
     expect(screen.getByText('A quiet tower cooler.')).toBeInTheDocument();
-    expect(screen.getByText('SALS3-AC-1')).toBeInTheDocument();
     expect(screen.getByText('4,200 g')).toBeInTheDocument();
+    expect(screen.getByText('New')).toBeInTheDocument();
     // The stock claim now lives in the evidence ledger rather than in a separate
     // notice, and a filled mark there means "the payload supports this".
     expect(
@@ -166,6 +166,88 @@ describe('Product page', () => {
     // The lead paragraph is promoted out of the description, so it appears
     // exactly once on the page.
     expect(screen.getAllByText('A quiet tower cooler.')).toHaveLength(1);
+  });
+
+  /**
+   * The assertion that stops the rejected behaviour coming back. `specs.sku` is
+   * an `S3V-<hex>` digest: it stays on the payload for cart and order plumbing,
+   * and it must reach no text a buyer can read — the same rule the option chips
+   * already follow, applied to the section that used to break it.
+   *
+   * `<script>` content is deliberately excluded rather than the assertion being
+   * relaxed. Product JSON-LD carries `sku` on purpose: it is the real
+   * identifier, Merchant listings want it, and structured data is read by
+   * machines. The rejected thing was *showing* a digest to a person.
+   */
+  it('never shows the Sals3 SKU digest to a buyer, while keeping it in structured data', async () => {
+    mockFetch({
+      productOverrides: {
+        specs: { sku: 'S3V-2268B366F762', weightGrams: 4200 },
+        variants: [
+          {
+            id: 'v1',
+            sku: 'S3V-AAAABBBBCCCC',
+            currency: 'USD',
+            priceMinor: 199900,
+            availability: 'AVAILABLE',
+            options: [{ name: 'Colour', value: 'Black' }],
+          },
+          {
+            id: 'v2',
+            sku: 'S3V-DDDDEEEEFFFF',
+            currency: 'USD',
+            priceMinor: 209900,
+            availability: 'AVAILABLE',
+            options: [{ name: 'Colour', value: 'White' }],
+          },
+        ],
+      },
+    });
+
+    const { container } = renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+    const readable = container.cloneNode(true) as HTMLElement;
+
+    readable.querySelectorAll('script').forEach((node) => node.remove());
+
+    expect(readable.textContent ?? '').not.toMatch(/S3V-[0-9A-F]{12}/);
+    expect(readable.innerHTML).not.toMatch(/S3V-[0-9A-F]{12}/);
+    expect(screen.queryByText('SKU')).not.toBeInTheDocument();
+    // Still in the machine-readable payload, which is where it belongs.
+    expect(container.innerHTML).toContain('S3V-2268B366F762');
+  });
+
+  /**
+   * Two sections, two provenance lines. One footnote cannot cover both: "as
+   * reported by the supplier" becomes false the moment a seller-entered
+   * attribute appears under it.
+   */
+  it('separates seller declarations from supplier-reported facts', async () => {
+    mockFetch({
+      productOverrides: {
+        specs: { weightGrams: 4200 },
+        specification: [{ label: 'Material', value: 'ABS plastic' }],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(
+      screen.getByRole('heading', { name: /product specifications/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /supplier details/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('ABS plastic')).toBeInTheDocument();
+    expect(
+      screen.getByText(/entered by the seller against this category/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/as reported by the supplier/i),
+    ).toBeInTheDocument();
   });
 
   it('renders a variant selector only when there is a choice to make', async () => {
@@ -582,6 +664,66 @@ describe('Product page', () => {
 
     expect(metadata.title).toMatch(/quiet tower air cooler/i);
     expect(metadata.description).toMatch(/home and living/i);
+  });
+
+  it("prefers the seller's own meta description over the assembled fallback", async () => {
+    mockFetch({
+      productOverrides: {
+        metaDescription: 'Cools a bedroom without the fan noise.',
+      },
+    });
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ id: 'air-cooler' }),
+    });
+
+    expect(metadata.description).toBe('Cools a bedroom without the fan noise.');
+    expect(metadata.openGraph?.description).toBe(
+      'Cools a bedroom without the fan noise.',
+    );
+  });
+
+  /**
+   * Hidden metadata is hidden. Rendering it would put the seller's search
+   * snippet in the page body next to the description they wrote for a reader —
+   * two different pieces of writing for two different audiences.
+   */
+  it('never renders the meta description in the page body', async () => {
+    mockFetch({
+      productOverrides: {
+        metaDescription: 'Cools a bedroom without the fan noise.',
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+    );
+
+    expect(
+      screen.queryByText('Cools a bedroom without the fan noise.'),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * The visible description is deliberately **not** in the fallback chain: a
+   * seller who wrote body copy but no meta description gets the assembled
+   * fallback, not their first paragraph truncated at 155 characters.
+   */
+  it('falls back to the assembled description rather than the visible one', async () => {
+    mockFetch({
+      productOverrides: {
+        description: {
+          blocks: [{ type: 'paragraph', text: 'A quiet tower cooler.' }],
+        },
+      },
+    });
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ id: 'air-cooler' }),
+    });
+
+    expect(metadata.description).toMatch(/home and living/i);
+    expect(metadata.description).not.toMatch(/a quiet tower cooler/i);
   });
 
   /**

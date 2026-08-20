@@ -85,6 +85,25 @@ export type ProductSpecs = {
   condition?: 'NEW' | 'REFURBISHED' | 'USED';
 };
 
+/**
+ * One seller-entered product specification — their own answer to a category
+ * attribute control, e.g. `Material: Cotton corduroy`.
+ *
+ * Deliberately **not** part of `ProductSpecs`. That type is what the supplier
+ * reported and Sals3 repeats; this is what the seller declared themselves. The
+ * PDP renders them as two sections with two provenance lines, because one
+ * footnote cannot honestly cover both: "as reported by the supplier" becomes
+ * false the moment a seller-entered attribute appears under it.
+ *
+ * `label` is the workbook's own attribute name, verbatim — the portal is the
+ * authority on what an attribute is called, and re-wording it here would drift
+ * from what the seller was asked in the editor.
+ */
+export type ProductSpecification = {
+  label: string;
+  value: string;
+};
+
 export type ProductDetail = {
   id: string;
   title: string;
@@ -121,4 +140,15 @@ export type ProductDetail = {
   variants?: ProductVariant[];
   options?: ProductOptionAxis[];
   specs?: ProductSpecs;
+  /** Seller-declared category attributes. See `ProductSpecification`. */
+  specification?: ProductSpecification[];
+  /**
+   * The seller-edited meta description.
+   *
+   * Hidden metadata, used by `generateMetadata` only. It is **never** rendered
+   * in the page body, and the visible description is never substituted for it
+   * when this is present — they are two different pieces of writing with two
+   * different audiences.
+   */
+  metaDescription?: string;
 };

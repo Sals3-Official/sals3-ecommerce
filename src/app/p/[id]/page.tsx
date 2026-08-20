@@ -8,7 +8,8 @@ import ProductBreadcrumb from '@/components/product/ProductBreadcrumb';
 import ProductDescription from '@/components/product/ProductDescription';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductRecordPanel from '@/components/product/ProductRecordPanel';
-import ProductSpecsTable from '@/components/product/ProductSpecsTable';
+import ProductSpecifications from '@/components/product/ProductSpecifications';
+import ProductSupplierDetails from '@/components/product/ProductSupplierDetails';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import BreadcrumbSchema from '@/components/schema/BreadcrumbSchema';
 import ProductSchema from '@/components/schema/ProductSchema';
@@ -96,12 +97,26 @@ export async function generateMetadata({
   }
 
   const title = `${detail.title} — ${SITE_NAME}`;
-  // Built from what exists: the category name when the product is mapped, then
-  // the title. Never a rating or a delivery claim.
+  /*
+    The seller's own meta description wins when they wrote one. It is the only
+    description on this page written *for* a search result rather than for a
+    buyer reading the product, and the editor has a dedicated field with its own
+    guidance and preview for exactly that.
+
+    Then the assembled fallback, built from what exists: the category name when
+    the product is mapped, then the title. Never a rating or a delivery claim.
+
+    The **visible** description is deliberately not in this chain. Two different
+    pieces of writing for two different audiences: substituting body copy for a
+    meta description silently republishes the seller's first paragraph as their
+    search snippet, and truncating prose mid-sentence at 155 characters is how a
+    result reads as machine-generated.
+  */
   const description = truncateForMetaDescription(
-    detail.categoryName === undefined
-      ? detail.title
-      : `${detail.title} — ${detail.categoryName} at ${SITE_NAME}.`,
+    detail.metaDescription ??
+      (detail.categoryName === undefined
+        ? detail.title
+        : `${detail.title} — ${detail.categoryName} at ${SITE_NAME}.`),
   );
   const siteUrl = getSiteUrl();
   const image = detail.images[0]?.url;
@@ -226,29 +241,43 @@ export default async function ProductPage({
   return (
     <div className="flex flex-1 flex-col bg-surface">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl px-6 py-5 pb-16">
-        <ProductBreadcrumb trail={trail} />
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-          <KlaviyoViewedProduct
-            productId={detail.id}
-            title={detail.title}
-            imageUrl={detail.imageUrl}
-            unitPrice={detail.price}
-            category={detail.category}
-          />
-          <ProductGallery images={detail.images} tone={detail.tone} />
-          <div className="flex flex-col gap-4">
-            <div>
-              <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-ink text-pretty md:text-[28px]">
-                {detail.title}
-              </h1>
-              {summary === undefined ? null : (
-                <p className="mt-2 text-sm leading-relaxed text-ink-muted text-pretty">
-                  {summary}
-                </p>
-              )}
-            </div>
+      {/*
+        `main` carries no width of its own any more, and each region owns its
+        container instead. That is what lets Product specifications run a white
+        band edge to edge while everything else stays on the 1152px measure —
+        the page's one rhythm break, and its second background colour. Two
+        total: a third stops reading as structure and starts reading as
+        decoration.
+      */}
+      <main className="w-full pb-16">
+        <div className="mx-auto w-full max-w-6xl px-6 pt-5">
+          <ProductBreadcrumb trail={trail} />
+          <div className="grid grid-cols-1 items-start gap-9 md:grid-cols-2">
+            <KlaviyoViewedProduct
+              productId={detail.id}
+              title={detail.title}
+              imageUrl={detail.imageUrl}
+              unitPrice={detail.price}
+              category={detail.category}
+            />
+            <ProductGallery images={detail.images} tone={detail.tone} />
             {/*
+              The record column sticks, not the gallery. The buy controls are
+              what a buyer scrolling the description wants back within reach;
+              the photographs are what they have already looked at.
+            */}
+            <div className="flex flex-col gap-3.5 md:sticky md:top-6">
+              <div>
+                <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-ink text-pretty md:text-[28px]">
+                  {detail.title}
+                </h1>
+                {summary === undefined ? null : (
+                  <p className="mt-2 text-sm leading-relaxed text-ink-muted text-pretty">
+                    {summary}
+                  </p>
+                )}
+              </div>
+              {/*
               One panel for every product. The axes and no-axes paths used to be
               two different compositions — a client purchase panel with its own
               price state, or the server price box — which meant a change to one
@@ -256,18 +285,38 @@ export default async function ProductPage({
               after paint (ADR-016). Both now resolve selection from the URL and
               render on the server.
             */}
-            <ProductRecordPanel
-              detail={detail}
-              selectedVariant={selectedVariant}
-              selectedFromUrl={fromUrl !== undefined}
-            />
+              <ProductRecordPanel
+                detail={detail}
+                selectedVariant={selectedVariant}
+                selectedFromUrl={fromUrl !== undefined}
+              />
+            </div>
           </div>
         </div>
-        <ProductDescription blocks={remainingBlocks} />
-        <ProductSpecsTable specs={detail.specs} />
-        <RelatedProducts products={relatedProducts} />
-        <ProductSchema detail={detail} />
-        <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
+        {/*
+          ## Why specifications come before the description
+
+          Specifications exist on every categorised product — the workbook
+          defines an attribute set for all 5,595 categories, and the editor
+          blocks publication on the required ones. A written description exists
+          on almost none: the portal's only producer is a seller typing into a
+          textarea, and CJ's own HTML is deliberately never imported.
+
+          So the always-present section must not sit behind the usually-absent
+          one. With the old order, the first thing below the fold on a typical
+          product was nothing at all.
+        */}
+        <ProductSpecifications
+          specification={detail.specification}
+          specs={detail.specs}
+        />
+        <div className="mx-auto w-full max-w-6xl px-6">
+          <ProductDescription blocks={remainingBlocks} />
+          <ProductSupplierDetails specs={detail.specs} />
+          <RelatedProducts products={relatedProducts} />
+          <ProductSchema detail={detail} />
+          <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
+        </div>
       </main>
       <SiteFooter />
     </div>

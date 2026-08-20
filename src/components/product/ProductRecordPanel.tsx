@@ -7,6 +7,7 @@ import {
   optionSummary,
   variantById,
   variantCountInWords,
+  variantsAboveFloor,
 } from '@/lib/product-variants';
 import {
   PRODUCT_VARIANT_CHANGE_EVENT,
@@ -158,7 +159,34 @@ export default function ProductRecordPanel({
     return undefined;
   }
 
+  /**
+   * What the figure above the note does and does not commit to.
+   *
+   * The v3.1 prototype's enabled-state line reads "Ready to add. Nothing is
+   * added to this price at checkout." **That is false as of 2026-08-17**: live
+   * CJ freight quotes ship in `quoteCheckoutShippingAction`, and the amount the
+   * buyer picks is added to the Stripe session. Transcribing it would put a
+   * false money claim on the page — see the same correction in
+   * `ProductEvidenceLedger`'s Delivery row.
+   */
+  function priceNote(): string | undefined {
+    if (selected !== undefined && selectionCameFromUrl) {
+      return 'The exact price for this option. Delivery is quoted at checkout.';
+    }
+
+    const spread = variantsAboveFloor(variants, detail.price);
+
+    if (spread === undefined) return undefined;
+
+    if (spread.dearer === 0) return 'Every option is this price.';
+
+    return `${variantCountInWords(spread.dearer)} of the ${variantCountInWords(
+      spread.total,
+    ).toLowerCase()} options cost more than this. Choose to see the exact price.`;
+  }
+
   const count = countLine();
+  const note = priceNote();
 
   return (
     <Card divided>
@@ -171,6 +199,11 @@ export default function ProductRecordPanel({
         {count === undefined ? null : (
           <p className="mt-2 font-display text-lg text-ink-muted tabular-nums">
             {count}
+          </p>
+        )}
+        {note === undefined ? null : (
+          <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+            {note}
           </p>
         )}
       </CardSection>
@@ -208,7 +241,13 @@ export default function ProductRecordPanel({
         />
       </CardSection>
 
-      <CardSection>
+      {/*
+        The panel's only tinted band, and the only one it should ever have. The
+        ledger is the element on this page a competitor cannot copy without
+        admitting their own data is stale, so it gets the one visual signal that
+        says "this part is different" — spent once, on that.
+      */}
+      <CardSection className="bg-surface">
         <ProductEvidenceLedger
           availability={availability}
           publishedAt={detail.publishedAt}

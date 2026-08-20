@@ -195,3 +195,43 @@ export function firstUnchosenAxis(
 ): ProductOptionAxis | undefined {
   return axes.find((axis) => selection[axis.name] === undefined);
 }
+
+/**
+ * What the `From {floor}` price is not saying, in words.
+ *
+ * A ten-variant jacket whose floor is `US$4.51` while seven of its options are
+ * `US$20` leads with a price almost no buyer will pay. The floor is still the
+ * honest figure to show — it is what the feed reports and what the card the
+ * buyer clicked promised — but showing it and stopping there lets the page
+ * imply a distribution it never stated.
+ *
+ * So this counts how many options cost **more than the figure on screen**,
+ * which is the fact the buyer is missing. Both numbers come from
+ * `variants[].price`; nothing is estimated.
+ *
+ * **No money value is returned, deliberately.** `ProductPriceDisplay` documents
+ * why: the price block must contain exactly one currency-formatted string,
+ * because a second one is what a price extractor can pick up instead of the
+ * real offer price. The mockup's version of this sentence names the higher
+ * price; naming a count instead carries the same warning and keeps that rule.
+ *
+ * `undefined` when there is nothing to say — fewer than two variants, or a
+ * currency mix, which no single floor describes.
+ */
+export function variantsAboveFloor(
+  variants: ProductVariant[],
+  floor: Money,
+): { total: number; dearer: number } | undefined {
+  if (variants.length < 2) return undefined;
+
+  if (variants.some((variant) => variant.price.currency !== floor.currency)) {
+    return undefined;
+  }
+
+  return {
+    total: variants.length,
+    dearer: variants.filter(
+      (variant) => variant.price.amountMinor > floor.amountMinor,
+    ).length,
+  };
+}

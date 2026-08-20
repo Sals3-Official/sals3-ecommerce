@@ -28,7 +28,10 @@ export default function Card({
 }: CardProps) {
   return (
     <div
-      className={`rounded-xl border border-border bg-white ${
+      /* `overflow-hidden` so a tinted `CardSection` — the PDP's evidence
+         ledger — is clipped by the rounded corners instead of squaring off the
+         bottom two. */
+      className={`overflow-hidden rounded-xl border border-border bg-white ${
         divided ? 'divide-y divide-border' : ''
       } ${className}`}
     >

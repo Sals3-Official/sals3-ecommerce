@@ -28,8 +28,22 @@ type ProductEvidenceLedgerProps = {
  * would be the worst available failure on this page.
  */
 
+/**
+ * Corrected 2026-08-21. This row used to read "No estimate exists yet. Nothing
+ * is added to this price at checkout." The second sentence was true when it was
+ * written and is **false now**: live CJ freight quotes shipped on 2026-08-17,
+ * `quoteCheckoutShippingAction` prices each package against the buyer's own
+ * address, and `selectionTotal` adds the chosen amount to the Stripe session.
+ * So a delivery charge is added, and the ledger was denying it — on the one
+ * element of this page whose whole purpose is to be the part a buyer can trust.
+ *
+ * The mark stays **hollow**, and that is still correct: what remains genuinely
+ * unknown here is what delivery will cost *this* buyer, because it depends on
+ * an address the PDP does not have. The row now states that unknown and where
+ * it resolves, instead of making a price claim on its behalf.
+ */
 const DELIVERY =
-  'No estimate exists yet. Nothing is added to this price at checkout.';
+  'No estimate until checkout, where it is quoted for your address and added to this price.';
 const REVIEWS = 'None. Sals3 has no reviews yet.';
 
 /**
@@ -101,26 +115,55 @@ export default function ProductEvidenceLedger({
   const stock = stockRow(availability);
   const publishedOn =
     publishedAt === undefined ? undefined : formatPublishedOn(publishedAt);
+  /*
+    Built as data rather than as four `<Row>` elements so the count in the
+    header is derived from what actually renders. A hardcoded "4 facts" would
+    be a fact about the ledger that the ledger itself could contradict — in the
+    one element on this page whose entire purpose is not doing that.
+  */
+  const rows = [
+    { term: 'Supplier stock', value: stock.value, filled: stock.filled },
+    {
+      term: 'Price',
+      value:
+        publishedOn === undefined
+          ? 'Fixed when this product was published.'
+          : `Fixed when published, ${publishedOn}.`,
+      filled: true,
+    },
+    { term: 'Delivery', value: DELIVERY, filled: false },
+    { term: 'Buyer reviews', value: REVIEWS, filled: false },
+  ];
 
   return (
     <>
-      <h2 className="mb-2.5 text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase">
-        What we know
-      </h2>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-2.5">
+        <h2 className="text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase">
+          What we know
+        </h2>
+        <span className="text-[11.5px] text-ink-subtle">
+          {rows.length} facts
+        </span>
+      </div>
       <dl className="flex flex-col gap-2.5">
-        <Row term="Supplier stock" value={stock.value} filled={stock.filled} />
-        <Row
-          term="Price"
-          value={
-            publishedOn === undefined
-              ? 'Fixed when this product was published.'
-              : `Fixed when published, ${publishedOn}.`
-          }
-          filled
-        />
-        <Row term="Delivery" value={DELIVERY} filled={false} />
-        <Row term="Buyer reviews" value={REVIEWS} filled={false} />
+        {rows.map((row) => (
+          <Row
+            key={row.term}
+            term={row.term}
+            value={row.value}
+            filled={row.filled}
+          />
+        ))}
       </dl>
+      {/*
+        The key to the marks, in words. The marks themselves are `aria-hidden`
+        and every row's meaning already lives in its `<dd>`, so this is the
+        sighted reader's equivalent of what a screen reader already gets.
+      */}
+      <p className="mt-3 text-xs leading-relaxed text-ink-subtle">
+        A filled mark is a claim with evidence behind it. A hollow mark is
+        something we do not know, and why.
+      </p>
     </>
   );
 }
