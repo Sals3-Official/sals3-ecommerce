@@ -94,7 +94,7 @@ export default function ProductSupplierDetails({
 
   return (
     <section className="mt-10">
-      <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
+      <h2 className="font-display text-base font-bold tracking-[-0.01em] text-ink">
         Supplier details
       </h2>
       <dl className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-white">
