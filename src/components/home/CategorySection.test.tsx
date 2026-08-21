@@ -59,7 +59,7 @@ describe('CategorySection', () => {
     expect(link).not.toHaveTextContent('HG');
   });
 
-  it('falls back to the line icon for a department with no photograph yet', () => {
+  it('photographs every department, Toys & Games included', () => {
     render(
       <CategorySection
         categories={[category('toys-games', 'TG', 'Toys & Games')]}
@@ -68,9 +68,10 @@ describe('CategorySection', () => {
 
     const link = screen.getByRole('link', { name: /Toys & Games/ });
 
-    expect(link.querySelector('img')).not.toBeInTheDocument();
-    expect(link.querySelector('svg')).toBeInTheDocument();
-    expect(link).not.toHaveTextContent('TG');
+    expect(
+      decodeURIComponent(link.querySelector('img')?.getAttribute('src') ?? ''),
+    ).toContain('/categories/toys-games.webp');
+    expect(link.querySelector('svg')).not.toBeInTheDocument();
   });
 
   it('falls back to the real feed code when it has neither photo nor icon', () => {
@@ -112,10 +113,12 @@ describe('CategorySection', () => {
     expect(plate).toHaveClass('bg-white');
   });
 
-  it('keeps the sunken plate where the media is an icon, not a photo', () => {
+  it('keeps the sunken plate where the media is an icon or initials, not a photo', () => {
+    // A leaf id: no photograph and no icon, so the plate stays grey behind the
+    // code initials.
     render(
       <CategorySection
-        categories={[category('toys-games', 'TG', 'Toys & Games')]}
+        categories={[category('aquarium-lighting', 'AL', 'Aquarium Lighting')]}
       />,
     );
 
@@ -124,38 +127,90 @@ describe('CategorySection', () => {
     expect(plate).toHaveClass('bg-surface-sunken', 'text-ink-muted');
   });
 
-  it('lays the tiles out as a 5-column grid at md and 3 columns below it', () => {
+  it('scrolls one snapped page at a time', () => {
     render(<CategorySection categories={liveCategories} />);
 
     expect(screen.getByRole('navigation')).toHaveClass(
-      'grid',
-      'grid-cols-3',
-      'md:grid-cols-5',
+      'flex',
+      'snap-x',
+      'snap-mandatory',
+      'overflow-x-auto',
     );
   });
 
-  it('fills the unfinished last row at each breakpoint so no grey slab shows', () => {
-    // 10 tiles: even at 5 columns (no desktop filler), 1 over at 3 columns
-    // (2 mobile fillers).
-    const ten = Array.from({ length: 10 }, (_, index) =>
+  it('fills each page row-major: 3 columns below md, 6 above, always 12 cells', () => {
+    const { container } = render(
+      <CategorySection categories={liveCategories} />,
+    );
+    const page = container.querySelector('nav > div');
+
+    expect(page).toHaveClass(
+      'grid',
+      'grid-cols-3',
+      'grid-rows-4',
+      'md:grid-cols-6',
+      'md:grid-rows-2',
+      'w-full',
+      'snap-start',
+    );
+    // Four real tiles, eight blanks — the page always holds 12 cells so no
+    // leftover cell shows the track's border colour.
+    expect(page?.children).toHaveLength(12);
+  });
+
+  it('breaks 21 categories into two pages, in order', () => {
+    const many = Array.from({ length: 21 }, (_, index) =>
       category(`live-${index}`, `L${index}`, `Live category ${index}`),
     );
 
-    const { container } = render(<CategorySection categories={ten} />);
+    const { container } = render(<CategorySection categories={many} />);
+    const pages = container.querySelectorAll('nav > div');
 
-    expect(container.querySelectorAll('.hidden.md\\:block')).toHaveLength(0);
-    expect(container.querySelectorAll('.md\\:hidden')).toHaveLength(2);
+    expect(pages).toHaveLength(2);
+    expect(pages[0]?.querySelectorAll('a')[0]?.getAttribute('href')).toBe(
+      '/c/live-0',
+    );
+    expect(pages[1]?.querySelectorAll('a')[0]?.getAttribute('href')).toBe(
+      '/c/live-12',
+    );
   });
 
-  it('caps the grid at 10 categories (spec section 15.1)', () => {
-    const many = Array.from({ length: 14 }, (_, index) =>
+  it('fills the last page out to 12 cells', () => {
+    const many = Array.from({ length: 21 }, (_, index) =>
+      category(`live-${index}`, `L${index}`, `Live category ${index}`),
+    );
+
+    const { container } = render(<CategorySection categories={many} />);
+    const lastPage = [...container.querySelectorAll('nav > div')].at(-1);
+
+    // 21 categories: 12 on page one, 9 on page two, so three blanks.
+    expect(lastPage?.querySelectorAll('a')).toHaveLength(9);
+    expect(lastPage?.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(
+      3,
+    );
+  });
+
+  it('adds no filler when the categories fill their pages exactly', () => {
+    const exact = Array.from({ length: 24 }, (_, index) =>
+      category(`live-${index}`, `L${index}`, `Live category ${index}`),
+    );
+
+    const { container } = render(<CategorySection categories={exact} />);
+
+    expect(container.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(
+      0,
+    );
+  });
+
+  it('shows every category and counts every one — no top-N slice', () => {
+    const many = Array.from({ length: 21 }, (_, index) =>
       category(`live-${index}`, `L${index}`, `Live category ${index}`),
     );
 
     render(<CategorySection categories={many} />);
 
-    expect(tiles()).toHaveLength(10);
-    expect(screen.getByText('10 categories')).toBeInTheDocument();
+    expect(tiles()).toHaveLength(21);
+    expect(screen.getByText('21 categories')).toBeInTheDocument();
   });
 
   it('states the empty catalogue plainly instead of dropping the heading', () => {
@@ -167,19 +222,17 @@ describe('CategorySection', () => {
     expect(
       screen.getByText(/No categories are listed yet/),
     ).toBeInTheDocument();
-    // The "See all" link stays: an empty stocked grid is exactly when a
-    // buyer most needs the department list.
-    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.queryByText(/^\d+ categor/)).not.toBeInTheDocument();
   });
 
-  it('links to the full department list, since the grid caps at 10', () => {
+  it('offers no "see all" link — the carousel already reaches every category', () => {
     render(<CategorySection categories={liveCategories} />);
 
-    expect(screen.getByRole('link', { name: /see all/i })).toHaveAttribute(
-      'href',
-      '/categories',
-    );
+    expect(
+      screen.queryByRole('link', { name: /see all/i }),
+    ).not.toBeInTheDocument();
+    expect(tiles()).toHaveLength(liveCategories.length);
   });
 
   it('exposes the grid as a labelled navigation region', () => {
@@ -188,11 +241,11 @@ describe('CategorySection', () => {
     expect(screen.getByRole('navigation')).toHaveAccessibleName('Categories');
   });
 
-  it('shows the first 10 of the real fallback departments', () => {
+  it('shows all 21 of the real fallback departments', () => {
     render(<CategorySection categories={placeholderCategories} />);
 
     expect(placeholderCategories.length).toBe(21);
-    expect(tiles()).toHaveLength(10);
+    expect(tiles()).toHaveLength(21);
     expect(screen.getByRole('link', { name: /Electronics/ })).toHaveAttribute(
       'href',
       '/c/electronics',
@@ -209,12 +262,13 @@ describe('CategorySection', () => {
 });
 
 describe('department photographs', () => {
-  it('covers every department except the one whose asset is missing', () => {
+  it('covers all 21 departments, none missing', () => {
     const missing = placeholderCategories
       .map((department) => department.id)
       .filter((id) => categoryImageSrc(id) === undefined);
 
-    expect(missing).toEqual(['toys-games']);
+    expect(missing).toEqual([]);
+    expect(placeholderCategories).toHaveLength(21);
   });
 
   it('never claims a photo for a leaf category id', () => {

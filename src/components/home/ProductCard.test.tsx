@@ -26,8 +26,6 @@ const product: Product = {
   id: 'corduroy-jacket',
   title: 'Corduroy jacket',
   price: usd(451),
-  ratingLine: 'No reviews yet',
-  shipLine: 'Delivery quoted at checkout',
   tone: 'ocean',
 };
 

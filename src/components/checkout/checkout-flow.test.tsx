@@ -178,9 +178,11 @@ async function reachDelivery() {
   await screen.findByText(/cjpacket postal/i);
 }
 
+// No courier click: the quote arrives with the first option already selected.
+// `findByRole` waits for the quote transition to settle — until it does the
+// button reads "Preparing payment...".
 async function reachPayment() {
   await reachDelivery();
-  fireEvent.click(screen.getByLabelText(/standard.*cjpacket postal/i));
   fireEvent.click(
     await screen.findByRole('button', { name: /go to payment/i }),
   );
@@ -210,6 +212,35 @@ describe('checkout flow across routes', () => {
     expect(push).toHaveBeenCalledWith('/checkout/delivery');
     expect(screen.getByText(/123 Main Street/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/address line 1/i)).not.toBeInTheDocument();
+  });
+
+  /*
+   * Every package needs a courier, so a quote that arrives with nothing
+   * selected only ever shows the buyer a disabled "Go to payment".
+   */
+  it('pre-selects the first courier offered for each package', async () => {
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await reachDelivery();
+
+    expect(screen.getByLabelText(/standard.*cjpacket postal/i)).toBeChecked();
+    expect(screen.getByLabelText(/express.*dhl official/i)).not.toBeChecked();
+    expect(
+      await screen.findByRole('button', { name: /go to payment/i }),
+    ).toBeEnabled();
+  });
+
+  it('lets the buyer switch away from the pre-selected courier', async () => {
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await reachDelivery();
+    fireEvent.click(screen.getByLabelText(/express.*dhl official/i));
+
+    expect(screen.getByLabelText(/express.*dhl official/i)).toBeChecked();
+    expect(
+      screen.getByLabelText(/standard.*cjpacket postal/i),
+    ).not.toBeChecked();
+    expect(screen.getByText(/shipping US\$37\.34/i)).toBeInTheDocument();
   });
 
   /*
@@ -371,8 +402,9 @@ describe('checkout flow across routes', () => {
     renderWithCart(<CheckoutFlowHarness />);
 
     await reachDelivery();
-    fireEvent.click(screen.getByLabelText(/standard.*cjpacket postal/i));
-    fireEvent.click(screen.getByRole('button', { name: /go to payment/i }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: /go to payment/i }),
+    );
 
     expect(
       await screen.findByText(/stripe checkout failed/i),

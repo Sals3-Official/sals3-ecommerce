@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
-import { formatMoney, percentOff, type Money } from '@/lib/money';
+import { formatMoney, type Money } from '@/lib/money';
 import ProductCardImage from '@/components/catalog/ProductCardImage';
 
 /**
@@ -31,10 +31,6 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const hasDiscount =
-    product.oldPrice !== undefined &&
-    product.oldPrice.amountMinor > product.price.amountMinor;
-
   return (
     <Link
       href={`/p/${product.id}`}
@@ -50,21 +46,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Price: heaviest, largest text on the card — nothing here outweighs it (spec §4.2, §11.2). */}
         <div className="font-display text-[22px] font-semibold tracking-tight text-ink">
           {formatMoney(product.price)}
-        </div>
-        <div className="flex min-h-[16px] items-center gap-1.5">
-          {hasDiscount ? (
-            <>
-              <span className="text-xs text-ink-faint line-through">
-                {formatMoney(product.oldPrice!)}
-              </span>
-              <span className="text-xs font-bold text-deal">
-                {percentOff(
-                  product.oldPrice!.amountMinor,
-                  product.price.amountMinor,
-                )}
-              </span>
-            </>
-          ) : null}
         </div>
         {/* Title: regular weight, quiet neutral, 2-line clamp (spec §11.2, §11.4: 4.5:1 contrast minimum, never bold). */}
         <p className="line-clamp-2 min-h-[33px] font-normal leading-snug text-ink-muted text-pretty">

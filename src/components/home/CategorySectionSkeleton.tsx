@@ -1,4 +1,4 @@
-const SKELETON_TILE_COUNT = 10;
+const SKELETON_TILE_COUNT = 12;
 
 /** Static, so the tree is built once at module load, not on every render. */
 const SKELETON_TILES = Array.from(
@@ -32,7 +32,7 @@ export default function CategorySectionSkeleton() {
       </div>
       <div
         aria-busy="true"
-        className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-5"
+        className="grid grid-cols-3 grid-rows-4 gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-6 md:grid-rows-2"
       >
         {SKELETON_TILES}
       </div>

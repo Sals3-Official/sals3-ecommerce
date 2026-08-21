@@ -32,6 +32,11 @@ import type {
  * value the rest of the app then had to keep reasoning about. `oldPrice` is now
  * absent unless the portal sends a genuinely higher one.
  *
+ * They also no longer default `ratingLine`/`shipLine` to "No reviews yet" and
+ * "Delivery quoted at checkout". Sals3 has no review or delivery-estimate data
+ * for a card to report, so the card states nothing instead of stating an
+ * absence, and the home view model has dropped both fields.
+ *
  * The `tone` gradient is the one invented value that stays: it is a placeholder
  * *background*, chosen only when there is no image, and it claims nothing about
  * the product.
@@ -88,8 +93,6 @@ export function toHomeProduct(product: Product, index: number): HomeProduct {
     title: product.title,
     price: money(product.priceMinor, product.currency),
     ...(oldPrice === undefined ? {} : { oldPrice }),
-    ratingLine: product.ratingLine ?? 'No reviews yet',
-    shipLine: product.shipLine ?? 'Delivery quoted at checkout',
     tone: toneFor(index),
     imageUrl: getAllowedProductImageUrl(product.imageUrl),
     imageAlt: product.imageAlt,

@@ -8,9 +8,9 @@
  * and 72px at `md`, and 192 covers both at 3× device pixel ratio without
  * shipping the 2048px originals (7.7 MB across the set).
  *
- * A department with no photograph falls back to its line icon, and then to its
- * code initials — see `CategoryTile`. `toys-games` has no photograph yet;
- * that is a missing asset, not a decision, unlike the two icon omissions.
+ * All 21 departments are covered. The icon and initials tiers in `CategoryTile`
+ * stay as the fallback for a department added before its photograph is shot,
+ * and for anything the feed sends that is not a department at all.
  */
 const CATEGORY_IMAGE_IDS = new Set([
   'animals-pet-supplies',
@@ -32,6 +32,7 @@ const CATEGORY_IMAGE_IDS = new Set([
   'religious-ceremonial',
   'software',
   'sporting-goods',
+  'toys-games',
   'vehicles-parts',
 ]);
 

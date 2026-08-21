@@ -7,6 +7,43 @@ afterEach(() => {
 });
 
 /**
+ * jsdom implements neither `ResizeObserver` nor `matchMedia`, and components
+ * that legitimately use them (the category carousel watches its own width for
+ * the arrow state and honours `prefers-reduced-motion`) would otherwise have to
+ * carry a guard for a browser gap that does not exist. Both stand-ins are
+ * inert: nothing observed, nothing matched.
+ */
+if (!('ResizeObserver' in globalThis)) {
+  const inert = {
+    observe: () => {},
+    unobserve: () => {},
+    disconnect: () => {},
+  };
+
+  globalThis.ResizeObserver = function ResizeObserverStub() {
+    return inert;
+  } as unknown as typeof ResizeObserver;
+}
+
+if (typeof window !== 'undefined' && window.matchMedia === undefined) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener() {},
+        removeEventListener() {},
+        addListener() {},
+        removeListener() {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  });
+}
+
+/**
  * jsdom's built-in localStorage is unreliable under recent Node versions
  * (Node's own experimental global localStorage can shadow it, leaving
  * window.localStorage undefined). A small in-memory Storage stand-in, reset

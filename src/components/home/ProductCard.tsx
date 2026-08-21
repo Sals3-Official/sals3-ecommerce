@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/home-placeholder-data';
-import { formatMoney, percentOff } from '@/lib/money';
+import { formatMoney } from '@/lib/money';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 
 type ProductCardProps = {
@@ -9,15 +9,9 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({ product }: ProductCardProps) {
-  // `oldPrice` is absent unless a genuine, evidence-backed comparison price
-  // exists, so the strikethrough and the badge are absent with it. Sals3
-  // publishes none today (ADR-003), and this must never be derived from the
-  // current price.
-  const { oldPrice } = product;
-  const off =
-    oldPrice !== undefined && oldPrice.amountMinor > product.price.amountMinor
-      ? percentOff(oldPrice.amountMinor, product.price.amountMinor)
-      : null;
+  // No comparison price and no percent-off badge on the card. Sals3 publishes
+  // no evidence-backed `oldPrice` (ADR-003), and one must never be derived from
+  // the current price, so `product.oldPrice` is deliberately read by nothing.
 
   return (
     <Link
@@ -42,21 +36,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="font-display text-[22px] font-semibold tracking-tight text-ink">
           {formatMoney(product.price)}
         </div>
-        <div className="flex min-h-[16px] items-center gap-1.5">
-          {off === null || oldPrice === undefined ? null : (
-            <>
-              <span className="text-xs text-ink-faint line-through">
-                {formatMoney(oldPrice)}
-              </span>
-              <span className="text-xs font-bold text-deal">{off}</span>
-            </>
-          )}
-        </div>
         <p className="line-clamp-2 min-h-[33px] text-xs text-ink-muted text-pretty">
           {product.title}
         </p>
-        <div className="text-xs text-ink-subtle">{product.ratingLine}</div>
-        <div className="text-xs text-ink-muted">{product.shipLine}</div>
       </div>
     </Link>
   );

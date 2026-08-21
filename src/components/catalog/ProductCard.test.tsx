@@ -52,16 +52,23 @@ describe('ProductCard', () => {
     expect(title.className).not.toMatch(/font-bold|font-semibold/);
   });
 
-  it('shows the old price struck through and the percent off only on a real discount', () => {
+  /*
+   * The card carries one price and no comparison. Sals3 publishes no
+   * evidence-backed `oldPrice` (ADR-003), so the strikethrough and the percent
+   * badge were removed rather than left waiting on data that never arrives —
+   * and an `oldPrice` reaching the card must not resurrect them.
+   */
+  it('shows no comparison price and no percent-off badge', () => {
     render(<ProductCard product={{ ...baseProduct, oldPrice: usd(120000) }} />);
 
-    expect(screen.getByText('US$1,200')).toHaveClass('line-through');
-    expect(screen.getByText('-29%')).toBeInTheDocument();
+    expect(screen.queryByText('US$1,200')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^-\d+%$/)).not.toBeInTheDocument();
   });
 
-  it('hides the discount row when there is no old price', () => {
+  it('renders the price on its own with no old price present', () => {
     render(<ProductCard product={baseProduct} />);
 
+    expect(screen.getByText('US$850')).toBeInTheDocument();
     expect(screen.queryByText(/^-\d+%$/)).not.toBeInTheDocument();
   });
 

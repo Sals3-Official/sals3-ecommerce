@@ -18,6 +18,30 @@ export function toCheckoutCart(items: CartState['items']) {
 }
 
 /**
+ * Pre-selects the first courier offered for each package.
+ *
+ * A fresh quote used to arrive with nothing selected, which left "Go to
+ * payment" disabled until the buyer noticed the radios — every order needs a
+ * courier per package, so defaulting to the first one CJ returns costs the
+ * buyer a click and still lets them pick another.
+ *
+ * Derived here, where the quote lands, rather than in an effect on the
+ * delivery step: an effect would render the disabled state first and then
+ * re-render to correct it.
+ */
+function firstOptionPerPackage(
+  quote: CheckoutFreightQuoteResponse,
+): SelectedShippingQuote[] {
+  return quote.packages.flatMap((pkg) => {
+    const first = quote.quotes.find(
+      (option) => option.packageId === pkg.packageId,
+    );
+
+    return first === undefined ? [] : [first];
+  });
+}
+
+/**
  * Owns the courier-quote state: the fetched quote, the buyer's selected
  * option per package, and the fetch transition. `onMessage` surfaces
  * failures to the caller's single user-facing message region.
@@ -49,7 +73,7 @@ export default function useShippingQuote(
 
         if (result.ok) {
           setShippingQuote(result.quote);
-          setSelectedShipping([]);
+          setSelectedShipping(firstOptionPerPackage(result.quote));
           onSuccess?.();
           return;
         }
