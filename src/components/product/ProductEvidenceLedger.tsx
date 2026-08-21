@@ -1,4 +1,5 @@
 import type { ProductAvailability } from '@/lib/product-detail';
+import { PRODUCT_MICRO_LABEL } from './product-label-styles';
 
 type ProductEvidenceLedgerProps = {
   availability?: ProductAvailability;
@@ -138,9 +139,7 @@ export default function ProductEvidenceLedger({
   return (
     <>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-2.5">
-        <h2 className="text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase">
-          What we know
-        </h2>
+        <h2 className={PRODUCT_MICRO_LABEL}>What we know</h2>
         <span className="text-[11.5px] text-ink-subtle">
           {rows.length} facts
         </span>

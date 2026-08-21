@@ -14,6 +14,10 @@ import {
   PRODUCT_VARIANT_CHANGE_EVENT,
   type ProductVariantChangeDetail,
 } from '@/lib/product-variant-events';
+import {
+  PRODUCT_MICRO_LABEL,
+  PRODUCT_MICRO_LABEL_VALUE,
+} from './product-label-styles';
 
 type ProductOptionListProps = {
   /** The product's public slug — `detail.id`. */
@@ -151,10 +155,7 @@ export default function ProductOptionList({
   function heading(note: string) {
     return (
       <>
-        <h2
-          id={labelId}
-          className="text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase"
-        >
+        <h2 id={labelId} className={PRODUCT_MICRO_LABEL}>
           Choose an option
         </h2>
         <p className="mt-1 mb-2.5 text-xs text-ink-subtle">{note}</p>
@@ -222,13 +223,10 @@ export default function ProductOptionList({
                 selected chip can wrap out of sight, and this keeps the answer to
                 "which colour did I pick" next to the question.
               */}
-              <h2
-                id={axisLabelId}
-                className="mb-1.5 text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase"
-              >
+              <h2 id={axisLabelId} className={`mb-1.5 ${PRODUCT_MICRO_LABEL}`}>
                 {axis.name}
                 {chosenValue === undefined ? null : (
-                  <span className="ml-1.5 font-semibold tracking-normal text-ink normal-case">
+                  <span className={PRODUCT_MICRO_LABEL_VALUE}>
                     {chosenValue}
                   </span>
                 )}
