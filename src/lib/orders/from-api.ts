@@ -1,12 +1,16 @@
 import 'server-only';
 
 import { isSupportedCurrency, type CurrencyCode } from '@/lib/money';
-import { getAllowedProductImageUrl } from '@/services/storefront/mappers';
+import {
+  getAllowedProductImageUrl,
+  toDescriptionBlocks,
+} from '@/services/storefront/mappers';
 import type {
   BuyerOrderPayload,
   BuyerOrderPackagePayload,
   BuyerOrderLinePayload,
   BuyerTrackingEventPayload,
+  OrderedListingPayload,
 } from '@/services/storefront/orders';
 import {
   isExceptionState,
@@ -17,6 +21,7 @@ import {
   type BuyerOrderPackage,
   type BuyerOrderTimelineStep,
   type BuyerOrderTrackingEvent,
+  type OrderedListing,
   type ParcelLifecycleState,
 } from './contracts';
 import {
@@ -95,14 +100,77 @@ function arrivalLabelOf(
   return `Arrives in ${pkg.arrivalDays.replace('-', '–')} days`;
 }
 
+/**
+ * The frozen listing, mapped with the same gates the product page uses.
+ *
+ * Every image address is re-checked against the host allow-list even though the
+ * portal checked it on the way in: a stored URL is still an address this
+ * deployment is about to fetch, and the allow-list is the only thing that makes
+ * that safe. Description blocks go through `toDescriptionBlocks`, the product
+ * page's own mapper, so an image block inside a frozen description is subject to
+ * exactly the same per-block check as a live one.
+ *
+ * Empty sections are dropped rather than kept as empty arrays: a heading over
+ * nothing reads as "the seller wrote nothing here", which is a different claim
+ * from "this order did not record it".
+ */
+function toOrderedListing(
+  listing: OrderedListingPayload,
+  fallbackTitle: string,
+): OrderedListing {
+  const imageUrls = (listing.imageUrls ?? [])
+    .map((url) => getAllowedProductImageUrl(url))
+    .filter((url): url is string => url !== undefined);
+  const description =
+    listing.description === null || listing.description === undefined
+      ? []
+      : toDescriptionBlocks(listing.description.blocks, fallbackTitle);
+  const specification = listing.specification ?? [];
+
+  return {
+    options: listing.options ?? [],
+    imageUrls,
+    ...(description.length === 0 ? {} : { description }),
+    ...(specification.length === 0 ? {} : { specification }),
+    ...(listing.specs === null || listing.specs === undefined
+      ? {}
+      : { specs: listing.specs }),
+    ...(listing.categoryPath === null || listing.categoryPath === undefined
+      ? {}
+      : { categoryPath: listing.categoryPath }),
+  };
+}
+
+/**
+ * The option axes, as one line of prose.
+ *
+ * Prefers the frozen buyer-facing pairs over `variantLabel`. They are not the
+ * same string: `variantLabel` is the supplier's own token (`army green-L`),
+ * while the buyer chose `Colour: Army Green` and `Size: L` from the seller's
+ * mapped axes. The supplier token is what CJ fulfilment matches on and is kept
+ * on the line, but it was never what the buyer read.
+ */
+function variantLineOf(line: BuyerOrderLinePayload): string | null {
+  const options = line.listing?.options ?? [];
+
+  if (options.length === 0) return line.variantLabel;
+
+  return options.map((option) => `${option.name}: ${option.value}`).join(' · ');
+}
+
 function toLine(
   line: BuyerOrderLinePayload,
   currency: CurrencyCode,
 ): BuyerOrderLine {
+  const listing =
+    line.listing === undefined
+      ? undefined
+      : toOrderedListing(line.listing, line.title);
+
   return {
     id: line.id,
     title: line.title,
-    variant: line.variantLabel,
+    variant: variantLineOf(line),
     quantity: line.quantity,
     unitAmountLabel: formatAmount(line.unitAmountMinor, currency),
     lineTotalLabel: formatAmount(
@@ -113,6 +181,7 @@ function toLine(
     // Same host allow-list as every other product image; an address on any
     // other host renders as the placeholder square rather than being fetched.
     imageUrl: getAllowedProductImageUrl(line.imageUrl) ?? null,
+    ...(listing === undefined ? {} : { listing }),
   };
 }
 

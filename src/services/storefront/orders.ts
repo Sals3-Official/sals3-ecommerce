@@ -6,6 +6,13 @@ import {
   requestStorefrontJson,
   STOREFRONT_ORDERS_PATH,
 } from './client';
+import {
+  DescriptionBlockSchema,
+  ProductSpecificationSchema,
+  ProductSpecsSchema,
+  salvagedArray,
+  truncatedText,
+} from './schemas';
 
 /**
  * The portal's buyer orders read API, typed at the boundary.
@@ -46,6 +53,43 @@ export const PARCEL_LIFECYCLE_STATE_VALUES = [
   'RETURNED',
 ] as const;
 
+/**
+ * The listing as it was when the order was placed.
+ *
+ * The portal freezes this onto the order line at intent creation, so a seller
+ * who later renames the product, replaces its photos or rewrites its
+ * description changes nothing here — the buyer keeps seeing what they bought.
+ *
+ * Every list is a `salvagedArray` and every block reuses the product feed's own
+ * `DescriptionBlockSchema`: the frozen document *is* the same document format
+ * the product page renders, so a second schema here would be a second opinion
+ * about what a description is, and the one that drifted would be this one.
+ */
+const orderedListingSchema = z.object({
+  version: z.number().int().positive(),
+  productSlug: truncatedText(200),
+  title: truncatedText(120),
+  categoryPath: truncatedText(200).nullable().optional(),
+  /**
+   * The option axes in the seller's own words and order, as chosen. This is the
+   * buyer-facing pair (`Colour: Army Green`), not the supplier's concatenated
+   * token — that stays in `variantLabel`.
+   */
+  options: salvagedArray(
+    z.object({ name: truncatedText(80), value: truncatedText(160) }),
+    12,
+  ).optional(),
+  imageUrls: salvagedArray(z.string().url(), 12).optional(),
+  description: z
+    .object({ blocks: salvagedArray(DescriptionBlockSchema, 60) })
+    .nullable()
+    .optional(),
+  specification: salvagedArray(ProductSpecificationSchema, 40)
+    .nullable()
+    .optional(),
+  specs: ProductSpecsSchema.nullable().optional(),
+});
+
 const orderLineSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -54,6 +98,13 @@ const orderLineSchema = z.object({
   unitAmountMinor: z.number().int().nonnegative(),
   imageUrl: z.string().nullable(),
   acceptedAt: z.string(),
+  /**
+   * `.catch(undefined)`, not a plain `.optional()`: an order accepted before the
+   * portal froze this has no snapshot, and one written by a newer portal than
+   * this deployment understands must cost the "as ordered" panel — never the
+   * order page of a buyer who has already paid and wants to read their receipt.
+   */
+  listing: orderedListingSchema.optional().catch(undefined),
 });
 
 const trackingEventSchema = z.object({
@@ -108,6 +159,7 @@ const orderDetailSchema = z.object({ order: buyerOrderPayloadSchema });
 export type BuyerOrderPayload = z.infer<typeof buyerOrderPayloadSchema>;
 export type BuyerOrderPackagePayload = z.infer<typeof packageSchema>;
 export type BuyerOrderLinePayload = z.infer<typeof orderLineSchema>;
+export type OrderedListingPayload = z.infer<typeof orderedListingSchema>;
 export type BuyerTrackingEventPayload = z.infer<typeof trackingEventSchema>;
 
 function buyerHeaders(verifiedEmail: string): Record<string, string> {

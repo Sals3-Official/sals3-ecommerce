@@ -180,3 +180,61 @@ const ALL_PAYLOADS: BuyerOrderPayload[] = [
 ];
 
 export default ALL_PAYLOADS;
+
+/**
+ * An order whose line carries the frozen listing (portal migration `0026` and
+ * the capture that follows it).
+ *
+ * The listing deliberately disagrees with the line's own frozen columns in one
+ * visible way: the buyer chose `Colour: Army Green` / `Size: L` from the mapped
+ * axes, while `variantLabel` holds the supplier's own `army green-L` token. That
+ * is the pair the mapper has to prefer, and the reason it exists.
+ */
+export const FROZEN_LISTING_ORDER_PAYLOAD: BuyerOrderPayload = {
+  ...SPLIT_ORDER_PAYLOAD,
+  orderNumber: 'S3-20260821-FROZENLIST',
+  packages: [
+    {
+      ...SPLIT_ORDER_PAYLOAD.packages[0]!,
+      lines: [
+        {
+          id: 'line-frozen',
+          title: "Men's Casual Retro Corduroy Jacket Coat",
+          variantLabel: 'army green-L',
+          quantity: 1,
+          unitAmountMinor: 725,
+          imageUrl: 'https://cf.cjdropshipping.com/frozen/cover.jpg',
+          acceptedAt: '2026-08-21T01:09:00.000Z',
+          listing: {
+            version: 1,
+            productSlug: 'mens-casual-retro-corduroy-jacket-coat',
+            title: "Men's Casual Retro Corduroy Jacket Coat",
+            categoryPath: 'Apparel & Accessories > Clothing > Outerwear',
+            options: [
+              { name: 'Colour', value: 'Army Green' },
+              { name: 'Size', value: 'L' },
+            ],
+            imageUrls: [
+              'https://cf.cjdropshipping.com/frozen/cover.jpg',
+              'https://cf.cjdropshipping.com/frozen/back.jpg',
+              // Not on the allow-list: this one must be dropped, and dropping
+              // it must not cost the other two or the panel.
+              'https://untrusted.example.com/frozen/side.jpg',
+            ],
+            description: {
+              blocks: [
+                { type: 'heading', level: 2, text: 'About this jacket' },
+                { type: 'paragraph', text: 'Corduroy, cotton, regular fit.' },
+              ],
+            },
+            specification: [
+              { label: 'Material', value: '100% Cotton' },
+              { label: 'Fit Type', value: 'Regular Fit' },
+            ],
+            specs: { brand: 'Generic', condition: 'NEW', weightGrams: 700 },
+          },
+        },
+      ],
+    },
+  ],
+};

@@ -386,6 +386,52 @@ Lanes, filter chips and paging are `next/link` anchors, so navigation costs no
 JavaScript. Both are registered by hand in `CLIENT_ENTRY_POINTS` in
 `test/client-bundle-boundary.test.ts` — that array has no auto-discovery.
 
+### Details as ordered
+
+Owner decision 2026-08-21: an order shows the **listing as it was bought**. A
+seller may rename a product, replace every photo, rewrite the description and
+reorder its option axes — they are entitled to, and it applies to what they sell
+next. It must not reach back into an order someone already placed.
+
+The portal freezes the record onto the order line at intent creation and serves
+it as an optional `listing` per line (`sals3-portal` PRs #166/#167). Here:
+
+- `services/storefront/orders.ts` parses it with `.catch(undefined)` and
+  `salvagedArray`, reusing the product feed's **own** `DescriptionBlockSchema`
+  and `ProductSpecificationSchema`. One schema, because the frozen document is
+  the same document format the product page renders — a second opinion about what
+  a description is would drift, and the copy that drifted would be this one.
+- `lib/orders/from-api.ts` re-checks every frozen image address against the host
+  allow-list. The portal checked it on the way in; that is not a reason to skip
+  the check on an address this deployment is about to fetch. Description blocks
+  go through `toDescriptionBlocks`, the product page's own mapper, so an image
+  block inside a frozen description gets exactly the same per-block gate as a
+  live one.
+- The line's `variant` now prefers the frozen buyer-facing axes
+  (`Colour: Army Green · Size: L`) over `variantLabel`, which is the supplier's
+  own concatenated token (`army green-L`). They were never the same string, and
+  the buyer chose the former.
+- `OrderedListingPanel` renders it as a native `<details>`, closed. An order page
+  is a statement — `unit × qty = total`, where the parcel is, who it is going to
+  — and expanding a product page under every line would bury the facts a worried
+  buyer opened the page for. Native `<details>` also means no client JavaScript
+  on a page that needs none, and it stays in `CLIENT_ENTRY_POINTS`-free
+  server-rendered territory.
+- Copy is deliberately "as ordered" and "saved when you placed this order", never
+  "current". The panel's whole value is that it may now differ from the live
+  product page; wording that implied otherwise would make a real mismatch look
+  like a bug in the order.
+
+`DescriptionBlockList` was extracted from `ProductDescription` for this — the
+blocks without the product page's heading and spacing — so both surfaces render
+one allow-listed union through one renderer. There is still no `html` block and
+no `dangerouslySetInnerHTML` on either path.
+
+An order accepted before the portal froze this has no `listing`, and a snapshot
+this deployment cannot parse is dropped: both fall back to `title`,
+`variantLabel` and `imageUrl`, which the portal freezes on the line regardless.
+Neither case may cost a buyer their receipt.
+
 ## Authentication
 
 Two ways in: Google, and email with a password. Both end at the same 24-hour
