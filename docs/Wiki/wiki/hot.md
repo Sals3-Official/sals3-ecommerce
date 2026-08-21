@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-21 (parts 53-61, retail markup floor, PDP v3.1 shell, ADR-002/011/015/016 amendments)
+updated: 2026-08-21 (parts 53-62, retail markup floor, PDP v3.1 shell, ADR-002/011/015/016 amendments, storefront webfonts never loaded)
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -72,6 +72,7 @@ related:
   - "[[sals3-session-2026-08-19-part58-aj-buyer-orders-api-status-sync-and-the-frozen-line-image]]"
   - "[[sals3-session-2026-08-19-part59-description-editor-rebuild-and-the-publish-gates-the-panel-never-knew]]"
   - "[[sals3-session-2026-08-21-part61-pdp-v31-shell-and-the-adr-sweep]]"
+  - "[[sals3-session-2026-08-21-part62-two-inert-pdp-fixes-and-the-fonts-that-were-never-loaded]]"
 ---
 
 # Sals3 - Current State Cache
@@ -281,6 +282,36 @@ References:
 - <https://developers.cjdropshipping.com/en/api/api2/standard/limit.html>
 
 ## Active risks and blockers
+
+### The storefront declares two webfonts and loads neither, so every design's typography is a system fallback - 2026-08-21
+
+`globals.css` declares `--font-jakarta: 'Plus Jakarta Sans', …` and
+`--font-outfit: 'Outfit', 'Segoe UI', …`, `@theme inline` maps them to
+`--font-sans` / `--font-display`, and Tailwind emits the utilities. All of that
+is correct. **Nothing ever fetches a font file.** Verified against live
+production 2026-08-21: zero `@font-face` rules in the served CSS bundle, no
+`<link>` to `fonts.googleapis.com` or `gstatic`, no `.woff2`/`.ttf`/`.otf`
+referenced anywhere, `Array.from(document.fonts)` empty, and no `next/font`
+import anywhere in `src/` — the only occurrence of the string `Outfit` in the
+tree is the variable declaration itself.
+
+Consequence: `Outfit` and `Plus Jakarta Sans` render **identically** (canvas
+`measureText` gives 288.916px for both, versus 303.760px for `Segoe UI`), so the
+display-versus-body type distinction that every approved `.dc.html` design is
+built on has never appeared on the site. Any PDP/portal work that "fixes a
+heading font" is inert until the families are actually loaded.
+
+Fix is one change (`next/font/google` for both families, assigning the generated
+variables to the existing `--font-outfit` / `--font-jakarta`) but it alters
+typography site-wide, so it needs its own reviewable PR. Not done.
+
+> [!WARNING] `document.fonts.check()` is not a probe for this
+> It returns `true` for a family that was never loaded, because it reports
+> whether the declaration can be rendered using fallback. Use the `@font-face`
+> count in the served CSS, an empty `document.fonts`, or canvas `measureText`
+> against a known-present family.
+
+See [[sals3-session-2026-08-21-part62-two-inert-pdp-fixes-and-the-fonts-that-were-never-loaded]].
 
 ### `STRIPE_WEBHOOK_SECRET` is unset in production, so no paid checkout becomes an order - 2026-08-19
 
@@ -506,6 +537,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[sals3-session-2026-08-21-part62-two-inert-pdp-fixes-and-the-fonts-that-were-never-loaded]] — one merged PR, two one-line changes, **zero visible effect on production**. Both reported defects were traced to real code and both fixes are correct; neither fixed what was reported, and the owner said so after looking at the live site. **The storefront never loads its webfonts**: zero `@font-face` rules in the served CSS, no Google Fonts link, no font files, `document.fonts` empty — `Outfit` and `Plus Jakarta Sans` measure byte-identically (288.916px) because both are absent and fall through to the same fallback, so the display-vs-body distinction the whole design rests on has never rendered. Adding `font-display` to one heading therefore could not show. **`position: sticky` does not change layout height**, so removing the gallery's stale `md:sticky` could not widen the record panel's travel: the panel has 95px of it (`778 − 679 − 24`), pinning at `scrollY 125` and releasing at 220, which is what the v3.1 mockup itself specifies — the reported scroll behaviour is a design decision, still unmade. And the process failure worth the most: **a fix "verified" against a local stub fixture whose panel was 541px, compared to remembered live numbers at 679px** — that difference was content height, not the change. Full `verify` green, CI green, production deploy successful, both defects still there. [#136](https://github.com/Sals3-Official/sals3-ecommerce/pull/136).
 - [[sals3-session-2026-08-21-part61-pdp-v31-shell-and-the-adr-sweep]] — five merged PRs across both repositories, from "load this design into the storefront" to correcting a false money claim that had been live for four days and amending four ADRs their own code had outrun. **A `.dc.html` prototype is not a transcription target**: two of v3.1's own strings were false against shipped code, and one of them ("Nothing is added to this price at checkout") had already been live in the evidence ledger since freight quoting shipped on 2026-08-17 — the design handoff was quoting the storefront's own stale copy back at it. **The design handoffs live outside every repository**, in `E:\Downloads\Project setup and blockers\`, one `<topic>_handoff\` folder per feature with the `.dc.html` and its build spec; nothing in this vault indexes them, so searching by title finds nothing and the natural conclusion is wrong. **ADR-016's "no Google Product Category crosswalk exists" is retired** — all 21 taxonomy department codes carry Google's real top-level category IDs, so `googleProductCategory` is derivable by stripping `CAT-GGL-`. And three ways of being wrong worth remembering: a grep that finds nothing is evidence about the **query**; a spot-check against remembered values is not evidence at all; and a backgrounded browser tab freezes CSS transitions, so `getComputedStyle` reports pre-transition values forever. [#163](https://github.com/Sals3-Official/sals3-portal/pull/163), [#127](https://github.com/Sals3-Official/sals3-ecommerce/pull/127), [#129](https://github.com/Sals3-Official/sals3-ecommerce/pull/129)-[#131](https://github.com/Sals3-Official/sals3-ecommerce/pull/131).
 - [[sals3-session-2026-08-19-part59-description-editor-rebuild-and-the-publish-gates-the-panel-never-knew]] — twelve merged `sals3-portal` PRs. The description moved to its own full-screen editor with paragraph bold/italic stored as **marks, never markup** (`runs` beside `text`, joined-invariant enforced, no new dependency), then gained a simple-text mode beside it. Owner decisions forced a stored `mode` field on the document — in the same JSONB column, so no migration — because "simple publishes only paragraphs" and "switching never deletes a photo" together mean the content can no longer say which mode it is in. The second arc started from one owner sentence about the Sals3 category and exposed the general case: **`publish.ts` refuses for eleven reasons and the readiness panel knew three**, with every refusal reachable only by pressing Publish. `@/lib/products/publish-gates` now holds all eleven and `PublishRefusal` derives from its keys, so a gate added without seller copy is a compile error; the *evaluation* is deliberately not shared, because the server decides inside a transaction the client has no part of. **Two defects shipped green and were found by the owner pressing a control**, one of them a string replacement that silently no-op'd because Prettier had reflowed the line and the edit carried no assertion. See the note for the Variant-Matrix-for-one-variant change and the workbook suggestion that was half-reported rather than wrong. [#133](https://github.com/Sals3-Official/sals3-portal/pull/133)-[#157](https://github.com/Sals3-Official/sals3-portal/pull/157).
 - [[sals3-session-2026-08-19-part58-aj-buyer-orders-api-status-sync-and-the-frozen-line-image]] — AJ's two PRs from the same window as part 57, neither previously in the vault. A buyer orders read API on the existing storefront token (`X-Buyer-Email` as a **header** so an address stays out of URLs and logs; unknown and not-yours answer the same 404; minor amounts only, never a CJ identifier — ADR-004 §6, test-pinned), plus a bounded CJ status sync every 30 minutes that treats a carrier "delivered" CJ disputes as `TRACKING_CONFLICT` rather than a silent downgrade. **ADR-013 §12's no-cron rule is scoped to the catalog pipeline**; order status has no reliable push source because CJ disables a webhook below 80% success. Migration 0025 was already applied to production and is `IF NOT EXISTS`-guarded — the opposite of the part-51 outage and the safe direction. Separately, **every order line in production had `image_url = null` (28/28)**, so every buyer's order history rendered a grey placeholder; the image now freezes onto the line at intent creation like `variantLabel`, with variant media outranking the product primary. [#141](https://github.com/Sals3-Official/sals3-portal/pull/141)/[#143](https://github.com/Sals3-Official/sals3-portal/pull/143), merged.
@@ -568,6 +600,7 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 - [[sals3-session-2026-08-17-part49-portal-variant-matrix-r2-storage-meta-description-brand-origin-defaults]]
 - [[sals3-session-2026-08-17-part50-aj-checkout-freight-quotes]]
 - [[sals3-session-2026-08-21-part61-pdp-v31-shell-and-the-adr-sweep]]
+- [[sals3-session-2026-08-21-part62-two-inert-pdp-fixes-and-the-fonts-that-were-never-loaded]]
 
 ## Reusable lessons
 
