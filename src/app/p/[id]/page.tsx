@@ -262,11 +262,25 @@ export default async function ProductPage({
             />
             <ProductGallery images={detail.images} tone={detail.tone} />
             {/*
-              The record column sticks, not the gallery. The buy controls are
-              what a buyer scrolling the description wants back within reach;
-              the photographs are what they have already looked at.
+              Neither column sticks. Owner's call, 2026-08-21, after seeing it
+              on production twice.
+
+              The v3.1 build spec does ask for a "sticky record panel", and it
+              was built that way. What it looks like in practice is the defect
+              that got reported: the panel is 679px inside a 778px grid row, so
+              it pins for ~95px and then travels with the page — and while it is
+              pinned, it drifts downward relative to the gallery beside it.
+              "Binababa neto ang nasa red box" is that drift, and it reads as
+              the buy box coming loose rather than as a panel staying in reach.
+
+              Do not restore this without a design decision that addresses the
+              drift, not just the pinning: the sticky range is bounded by the
+              gallery's height, so any version of it inside this grid row has
+              the same ~95px of travel. Making it genuinely useful would mean
+              extending the sticky container past the grid, which is a different
+              layout, not a class.
             */}
-            <div className="flex flex-col gap-3.5 md:sticky md:top-6">
+            <div className="flex flex-col gap-3.5">
               <div>
                 <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-ink text-pretty md:text-[28px]">
                   {detail.title}
