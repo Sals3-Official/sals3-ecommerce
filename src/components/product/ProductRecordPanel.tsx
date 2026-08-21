@@ -28,13 +28,16 @@ type ProductRecordPanelProps = {
 };
 
 /**
- * With real named axes, nothing is preselected: the buyer picks deliberately,
- * exactly as the client panel used to require. Both states are server-rendered —
- * "From {floor}" with purchase disabled, then the chosen variant's exact price —
- * so keeping that behaviour costs no ADR-016 compliance.
+ * Selection is never empty. `defaultVariantFor` preselects on every product —
+ * named axes included — so Add to Cart and Buy Now are live on arrival rather
+ * than disabled behind a choice the page has not asked for. The default prefers
+ * an available variant priced at the product's own displayed price, which is why
+ * preselecting cannot move the lead price off the feed price (ADR-016).
  *
- * Without axes there is nothing to choose, so `defaultVariantFor` preselects and
- * purchase stays enabled.
+ * The chips show that combination as chosen, so the preselection is stated on
+ * screen instead of being a hidden assumption in the cart line, and one click
+ * replaces it. What is lost is the deliberate first choice the earlier client
+ * panel forced; that was an owner decision, taken 2026-08-21.
  */
 
 /**
@@ -63,7 +66,6 @@ export default function ProductRecordPanel({
   const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
   const axes = useMemo(() => detail.options ?? [], [detail.options]);
   const hasOptions = variants.length > 1;
-  const hasOptionAxes = axes.length > 0;
   const [selectedVariantId, setSelectedVariantId] = useState(
     selectedVariant?.id,
   );
@@ -71,12 +73,10 @@ export default function ProductRecordPanel({
     useState(selectedFromUrl);
   const selected =
     variantById(variants, selectedVariantId) ??
-    (hasOptionAxes ? undefined : defaultVariantFor(variants, detail.price));
+    defaultVariantFor(variants, detail.price);
   const price = selected?.price ?? detail.price;
   const availability = selected?.availability ?? detail.availability;
   const unavailable = selected?.availability === 'UNAVAILABLE';
-  // Only reachable on an axes product, where nothing is preselected.
-  const unchosen = hasOptionAxes && selected === undefined;
 
   // "From" only while the figure is the floor of a range the buyer has not
   // narrowed. Once a variant is chosen the price is that variant's exact price
@@ -131,29 +131,16 @@ export default function ProductRecordPanel({
    * supplier's own label identifies it; with no label there is nothing honest to
    * name it by, so only the count is stated.
    */
-  function countLine(): string | undefined {
-    if (!hasOptions) return undefined;
-
-    const total = variantCountInWords(variants.length).toLowerCase();
-
-    if (selectionCameFromUrl && selected !== undefined) {
-      return selected.label === undefined
-        ? `One of ${total} options`
-        : `${selected.label} · one of ${total}`;
-    }
-
-    return `${variantCountInWords(variants.length)} supplier options`;
-  }
 
   /**
    * Why purchase is blocked, in words a buyer can act on. Absent means enabled —
    * never a silently grey button.
+   *
+   * "Choose a colour." is gone with the empty selection that produced it: there
+   * is always a variant now, so the only thing that can block a buy is that
+   * variant being unavailable, and the fix for that is picking another chip.
    */
   function disabledReason(): string | undefined {
-    if (unchosen) {
-      return `Choose a ${(axes[0]?.name ?? 'option').toLowerCase()}.`;
-    }
-
     if (unavailable) return 'This option is currently unavailable.';
 
     return undefined;
@@ -185,7 +172,6 @@ export default function ProductRecordPanel({
     ).toLowerCase()} options cost more than this. Choose to see the exact price.`;
   }
 
-  const count = countLine();
   const note = priceNote();
 
   return (
@@ -196,11 +182,6 @@ export default function ProductRecordPanel({
           oldPrice={selected === undefined ? detail.oldPrice : undefined}
           fromLabel={showFrom ? 'From' : undefined}
         />
-        {count === undefined ? null : (
-          <p className="mt-2 font-display text-lg text-ink-muted tabular-nums">
-            {count}
-          </p>
-        )}
         {note === undefined ? null : (
           <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
             {note}

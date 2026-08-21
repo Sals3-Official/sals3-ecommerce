@@ -120,15 +120,42 @@ describe('ProductRecordPanel', () => {
     );
   });
 
-  /** With named axes nothing is preselected, and the reason is announced. */
-  it('blocks purchase with a reason until an axis is chosen', () => {
+  /**
+   * Owner decision, 2026-08-21: a named-axes product arrives buyable. The
+   * default is preselected, both buttons are live, and no "Choose a colour."
+   * blocker is rendered — the buyer changes the selection rather than starting it.
+   */
+  it('arrives buyable on a named-axes product, with the default chosen', () => {
     renderWithCart(
       <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
     );
 
-    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+    expect(screen.queryByText('Choose a colour.')).not.toBeInTheDocument();
+    // The floor-priced option, so the lead price still matches the feed price.
+    expect(screen.getByRole('link', { name: 'black' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  /** An unavailable selection is the one remaining blocker, and it says so. */
+  it('blocks purchase when the chosen option is unavailable', () => {
+    renderWithCart(
+      <ProductRecordPanel
+        detail={detail({
+          variants: [{ ...priced('black', 451), availability: 'UNAVAILABLE' }],
+          options: [{ name: 'Colour', values: ['black'] }],
+        })}
+        selectedFromUrl={false}
+      />,
+    );
+
     expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
-    expect(screen.getByText('Choose a colour.')).toBeInTheDocument();
+    expect(
+      screen.getByText('This option is currently unavailable.'),
+    ).toBeInTheDocument();
   });
 
   it('says nothing about a spread when there is only one option', () => {

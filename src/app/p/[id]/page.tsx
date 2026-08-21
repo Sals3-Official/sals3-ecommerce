@@ -219,19 +219,19 @@ export default async function ProductPage({
   const query = searchParams === undefined ? {} : await searchParams;
   const relatedProducts = await getRelatedProducts(detail.category, detail.id);
   const variants = detail.variants ?? [];
-  const hasOptionAxes = (detail.options ?? []).length > 0;
 
   // Resolved against real ids, so the payload is the allow-list. An unknown
   // value falls back rather than 404s: a stale or hand-edited link is a normal
   // way to arrive at a crawlable URL.
   const fromUrl = variantById(variants, firstParam(query.variant));
-  // With real named axes nothing is preselected — the buyer chooses deliberately,
-  // and "From {floor}" with purchase disabled is rendered until they do. Without
-  // axes there is nothing to choose, so the honest default is preselected and the
-  // page is immediately buyable.
-  const selectedVariant =
-    fromUrl ??
-    (hasOptionAxes ? undefined : defaultVariantFor(variants, detail.price));
+  // Every product lands preselected, axes or not: `defaultVariantFor` picks an
+  // available variant priced at the product's own displayed price, so the buy
+  // buttons are live on arrival instead of greyed out behind a choice the buyer
+  // has not been asked for yet. The chips render that combination as chosen, so
+  // the selection is visible rather than implied — and any chip click replaces
+  // it. Preselecting cannot move the lead price off the feed price (ADR-016)
+  // because the base-price match is what the default prefers.
+  const selectedVariant = fromUrl ?? defaultVariantFor(variants, detail.price);
   const trail = breadcrumbTrail(detail);
   const summary = answerSummary(detail);
   // The lead is promoted out of the description so it renders once, not twice.
