@@ -9,6 +9,14 @@ import Spinner from '@/components/ui/Spinner';
  * auth `SubmitButton`, which meant a disabled-state or focus fix had to be made
  * four times and in practice drifted between them.
  *
+ * **That list is history, not current fact** — corrected 2026-08-21, after the
+ * stale version of it was quoted into a pull request description as the blast
+ * radius of a colour change, sending a reviewer to check three screens this
+ * component no longer reaches. Only `ProductAddToCartButtons` imports it today;
+ * the others drifted back to inline class strings. So a change here touches the
+ * PDP's purchase actions and nothing else — and re-adopting this component on
+ * those screens is the follow-up the extraction was for in the first place.
+ *
  * Props are listed explicitly rather than forwarded: this codebase forbids JSX
  * prop spreading, and an explicit surface is what keeps a shared control from
  * quietly growing a dozen behaviours. Presentational only — no hooks, no state —

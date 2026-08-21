@@ -61,9 +61,13 @@ const CLIENT_ENTRY_POINTS = [
   'components/product/ProductRecordPanel.tsx',
   // The variant path and the gallery, added 2026-08-13. `ProductGallery` was
   // already a client component and simply missing from this list.
+  //
+  // `ProductPurchasePanel.tsx` and `ProductVariantSelector.tsx` were removed on
+  // 2026-08-21 with the components themselves. This array has no
+  // auto-discovery, so a deleted entry left behind here would fail the walk on
+  // a missing file rather than degrade quietly — which is the right direction,
+  // and the reason the list is hand-maintained.
   'components/product/ProductGallery.tsx',
-  'components/product/ProductPurchasePanel.tsx',
-  'components/product/ProductVariantSelector.tsx',
   'lib/klaviyo/client.ts',
   'lib/auth/password-login.ts',
   'lib/auth/password-signup.ts',
