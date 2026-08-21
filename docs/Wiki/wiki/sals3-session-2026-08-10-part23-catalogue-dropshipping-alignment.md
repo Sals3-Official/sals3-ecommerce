@@ -2,7 +2,7 @@
 tags: [sals3, session, sals3-portal, product-catalogue, dropshipping, adr-011, adr-013, adr-007]
 aliases: [Product Catalogue Dropshipping Alignment]
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-22
 status: session-note
 authority: session-record
 owner_approved: true
@@ -14,9 +14,22 @@ related:
   - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
   - "[[sals3-session-2026-08-10-part22-product-sourcing-consolidation-and-catalogue-preview]]"
+  - "[[sals3-session-2026-08-22-part67-the-catalogue-column-that-was-doing-nothing]]"
 ---
 
 # Sals3 session 2026-08-10, part 23 — Product Catalogue aligned with the approved dropshipping system
+
+> [!WARNING] Superseded in one part, 2026-08-22 — the `Availability` column is no longer drawn
+> The three-separate-dimensions correction below still stands: Availability, Media status,
+> Attention and listing status are still four distinct fields, not one Active/Inactive flag.
+> What changed is that **Availability is no longer a parent column or a `Refine by` select** on
+> `/listings` — owner decision 2026-08-22, taken because the nine-column table was clipping its
+> own Actions cell. `deriveProductAvailability` still runs, the `Out of stock (N)` quick filter
+> and its count still read it, and the expanded variant rows still show it per variant with
+> `supplierObservedQuantity` / `evidenceFreshness` / `lastCheckedAt` beside it. Nothing in
+> ADR-013 is contradicted. The Actions cell described in §5 below is also gone: publish and pause
+> now live in the row's `More` menu. See
+> [[sals3-session-2026-08-22-part67-the-catalogue-column-that-was-doing-nothing]].
 
 `sals3-portal` PR [#21](https://github.com/Sals3-Official/sals3-portal/pull/21), branch `feat/portal-shell-redesign`, commit `d224713`.
 

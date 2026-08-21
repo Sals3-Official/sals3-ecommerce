@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, media, seller-upload, supplier-media, product-revision]
 aliases: [Product Media Source Selection, Seller Pictures and Supplier Fallback]
 created: 2026-08-10
-updated: 2026-08-21
+updated: 2026-08-22
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -24,6 +24,11 @@ related:
 > `mediaStatus` all ship and reach buyers. Read the amendment at the end before citing the first
 > Evidence bullet. `MediaAsset` proper, a `NEEDS_MEDIA_REVIEW` reviewer, and the
 > Merchant-Center eligibility check ADR-016 asks for are still missing.
+
+> [!DANGER] Amended 2026-08-22 — §4's `SUPPLIER_FALLBACK` label is not what the seller reads
+> The catalogue shows **`Supplier photo`** for that state. The code, the derivation, and this
+> ADR's vocabulary are unchanged; the seller-facing words are not. §4's table below is the
+> original wording. Read `Amendment — 2026-08-22` at the end before quoting a label from it.
 
 ## Status
 
@@ -252,3 +257,59 @@ None. This makes the media-source behavior implicit in ADR-001/007 and the imple
 
 **Frontmatter `updated`** moved to 2026-08-21. `status` stays `approved`: this records what was
 built against an approved decision and decides nothing new.
+
+
+## Amendment — 2026-08-22: `SUPPLIER_FALLBACK` reads `Supplier photo` in the catalogue
+
+> [!WARNING] Supersedes §4's label, not its state set
+> `SUPPLIER_FALLBACK` is still the state, still derived from the resolved set, still never
+> client-selected. Only the words the seller sees changed, plus the badge tone.
+
+Owner decision, 2026-08-22, on seeing the live Product Catalogue. §4 fixes the catalogue's media
+vocabulary verbatim and `SUPPLIER_FALLBACK` was rendered as **`Supplier fallback`**. It now reads
+**`Supplier photo`**, and its `StatusPill` tone moved from `warning` (amber) to `info`.
+
+### Why the label was wrong in practice
+
+"Fallback" names the *resolution rule* — no eligible seller picture exists, so the approved
+supplier set is used — which is precisely what §2's resolver does and what this ADR needed a word
+for. To a seller reading their own catalogue it names a **fault in their listing** instead.
+
+And it is not the exceptional case. `mediaStatusOf` returns `SUPPLIER_FALLBACK` for any published
+product carrying only the supplier's own photo, and `create-draft.ts` / `publish.ts` project that
+photo into `product_media_sources` as `SUPPLIER_ORIGINAL` — so it is the state of nearly every row
+in production. §4's own closing sentence already says it "is not a customer-facing warning when
+the supplier assets are approved"; the amber pill was contradicting that sentence on the seller's
+side of the screen, and a warning colour on the ordinary case trains a reader to ignore the
+column.
+
+### What is unchanged
+
+- The state code `SUPPLIER_FALLBACK`, everywhere in the schema, the read model, the filters, and
+  the tests.
+- §2's resolver order and the audited re-resolution in §3.
+- The tooltip, which still explains the resolution rule in full, so the mechanics remain
+  discoverable from the badge itself.
+- Every other label in §4's table.
+
+### Where the override is recorded
+
+On `MEDIA_STATUS_LABELS` in `sals3-portal`'s
+`src/lib/seller-center/product-catalogue/types.ts`, and on the tone map in
+`MediaStatusBadge.tsx`. Both doc comments name this amendment and say not to reconcile the label
+back. That is the same handling the PDP sticky-panel and micro-label overrides got, and it exists
+because the previous wording is quotable straight out of this ADR.
+
+### Known rough edge
+
+`SUPPLIER_PICTURES` still reads `Supplier pictures`, which now sits close to `Supplier photo` in
+the catalogue's media filter. The real read model never produces `SUPPLIER_PICTURES` — only
+fixtures do, and its §4 tooltip claims a revision-level supplier-only preference that is not
+stored anywhere — so the two never appear together on a production row. Left as-is rather than
+renamed in the same change; retiring that status is its own decision.
+
+See [[sals3-session-2026-08-22-part67-the-catalogue-column-that-was-doing-nothing]] and
+`sals3-portal` [#172](https://github.com/Sals3-Official/sals3-portal/pull/172).
+
+**Frontmatter `updated`** moved to 2026-08-22. `status` stays `approved`: this records a
+seller-facing wording decision against an approved decision and changes no state, gate, or rule.
