@@ -128,11 +128,11 @@ or the `FIREBASE_*` trio in `.env.local`.
 `/cart` sends buyers to `/checkout`. Checkout is **three routes**, grouped under
 `src/app/checkout/(flow)/`:
 
-| Route                | Step           | What it does                                                                                                                                                               |
-| -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.        |
-| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and one courier choice per fulfillment package. "Go to payment" creates the Portal intent and the Stripe session, then navigates. |
-| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                           |
+| Route                | Step           | What it does                                                                                                                                                                                                          |
+| -------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.                                                   |
+| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and one courier choice per fulfillment package, the first option per package pre-selected. "Go to payment" creates the Portal intent and the Stripe session, then navigates. |
+| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                                                                      |
 
 The `(flow)` route group exists so `/checkout/success` stays outside it: the
 receipt is not a step, has no stepper or order summary, and is Stripe's
@@ -189,9 +189,11 @@ offer satisfies its dropship conditions (published, `RESOLVED` price,
 that a product can be publishable and purchasable on the storefront while being
 unquotable — a buyer then discovers it only after entering a full address.
 
-Editing any address field clears the quote, so returning to delivery re-quotes;
-going back without editing reuses the live quote and keeps the selection (a
-"Refresh options" button re-quotes on demand). The server re-fetches each
+Every quote arrives with the first courier CJ returns already selected for each
+package, so "Go to payment" is live on arrival; the buyer can still pick any
+other option. Editing any address field clears the quote, so returning to
+delivery re-quotes; going back without editing reuses the live quote and keeps
+the selection (a "Refresh options" button re-quotes on demand). The server re-fetches each
 product and re-quotes the selected freight from the Sals3 Portal storefront API
 before creating a Stripe Embedded Checkout Session. Browser cart prices and
 browser freight prices are never trusted for payment.
