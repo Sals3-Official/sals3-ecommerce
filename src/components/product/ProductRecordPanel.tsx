@@ -223,12 +223,12 @@ export default function ProductRecordPanel({
       </CardSection>
 
       {/*
-        The panel's only tinted band, and the only one it should ever have. The
-        ledger is the element on this page a competitor cannot copy without
-        admitting their own data is stale, so it gets the one visual signal that
-        says "this part is different" — spent once, on that.
+        The ledger is the element on this page a competitor cannot copy without
+        admitting their own data is stale. It used to carry a tinted band to say
+        so; the tint is gone because the panel reads as one record only while
+        every band shares a ground, and its last position already separates it.
       */}
-      <CardSection className="bg-surface">
+      <CardSection>
         <ProductEvidenceLedger
           availability={availability}
           publishedAt={detail.publishedAt}

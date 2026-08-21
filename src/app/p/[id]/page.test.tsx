@@ -350,7 +350,9 @@ describe('Product page', () => {
     // `US$4.51` itself appears twice on purpose — once in the price block and
     // once on its own chip — so this asserts the qualifier and the count instead.
     expect(screen.getByText('From')).toBeVisible();
-    expect(screen.getByText(/two supplier options/i)).toBeVisible();
+    expect(
+      screen.getByText(/one of the two options cost more than this/i),
+    ).toBeVisible();
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
   });
 
@@ -387,7 +389,9 @@ describe('Product page', () => {
     );
 
     expect(screen.getByText('From')).toBeVisible();
-    expect(screen.getByText(/ten supplier options/i)).toBeVisible();
+    expect(
+      screen.getByText(/nine of the ten options cost more than this/i),
+    ).toBeVisible();
     // The floor appears twice on purpose: the price block, and its own chip.
     expect(screen.getAllByText('US$4.51')).toHaveLength(2);
     // The high price exists only as a chip. If it ever appears twice, it has
@@ -419,7 +423,7 @@ describe('Product page', () => {
     // qualifier would be false.
     expect(screen.queryByText('From')).not.toBeInTheDocument();
     expect(screen.getAllByText('US$20')).toHaveLength(2);
-    expect(screen.getByText(/one of ten/i)).toBeVisible();
+    expect(screen.getByText(/the exact price for this option/i)).toBeVisible();
   });
 
   it('switches same-page variants without another product read', async () => {
@@ -438,7 +442,7 @@ describe('Product page', () => {
     expect(window.location.search).toBe('?variant=v-9');
     expect(screen.queryByText('From')).not.toBeInTheDocument();
     expect(screen.getAllByText('US$20')).toHaveLength(2);
-    expect(screen.getByText(/one of ten/i)).toBeVisible();
+    expect(screen.getByText(/the exact price for this option/i)).toBeVisible();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -462,7 +466,9 @@ describe('Product page', () => {
     await waitFor(() => {
       expect(screen.getByText('From')).toBeVisible();
     });
-    expect(screen.getByText(/ten supplier options/i)).toBeVisible();
+    expect(
+      screen.getByText(/nine of the ten options cost more than this/i),
+    ).toBeVisible();
   });
 
   it('falls back to the default variant when ?variant= is unrecognised', async () => {
@@ -480,7 +486,9 @@ describe('Product page', () => {
     );
 
     expect(screen.getByText('From')).toBeVisible();
-    expect(screen.getByText(/ten supplier options/i)).toBeVisible();
+    expect(
+      screen.getByText(/nine of the ten options cost more than this/i),
+    ).toBeVisible();
   });
 
   /**
@@ -542,7 +550,13 @@ describe('Product page', () => {
     ).toContain('?variant=v-5');
   });
 
-  it('names the chosen variant by its supplier label, not its SKU', async () => {
+  /*
+   * The panel stopped printing a "label · count" line under the price when the
+   * default preselection landed, so the supplier's own words for the chosen
+   * variant now reach the buyer through the chips (and the cart line). A SKU
+   * digest still must not reach either.
+   */
+  it('marks the chosen variant by its supplier label, not its SKU', async () => {
     mockFetch({
       productOverrides: { priceMinor: 451, variants: griddedVariants() },
     });
@@ -554,7 +568,15 @@ describe('Product page', () => {
       }),
     );
 
-    expect(screen.getByText(/army green-xl · one of ten/i)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Army Green' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: 'XL' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(document.body.textContent).not.toMatch(/S3V-/);
   });
 
   it('links only Home in the breadcrumb and never guesses a BreadcrumbList URL', async () => {
