@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, taxonomy, cj-dropshipping, mapping]
 aliases: [ADR-002, Sals3 Taxonomy v0, CJ Category Mapping]
 created: 2026-08-06
-updated: 2026-08-14
+updated: 2026-08-21
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -270,3 +270,61 @@ written on the way to the refusal.
 **Still open**: the seller-facing path to *fix* an affected product is the Product Editor's category
 picker, which already restricts selection to `CAT-GGL-` rows. Nothing yet surfaces "this product
 cannot publish because its category is a supplier mirror" ahead of the publish attempt.
+
+## Amendment — 2026-08-21: this note is named v0, the application says v1, and both describe the same data
+
+Confirmed with the owner (Bogs, 2026-08-21) — the follow-up the "Active risks" entry in [[hot]]
+asked for. It turns out to be a smaller correction than that entry claimed, and the entry itself
+was wrong in a way worth recording.
+
+### What [[hot]] got wrong
+
+Its risk entry said "**ADR-002 still describes 'Sals3 Taxonomy v0' (a 1,345-row internal
+workbook) as the adopted, current taxonomy**" and asked for a dated follow-up section to be
+added. That is not accurate: the **2026-08-14 amendment above already documents the switch in
+full** — 5,595 Google-sourced rows, the `CAT-GGL-<Google numeric category ID>` code format, 21 L1
+departments, and the Gemini-generated-presets risk — and a `[!DANGER]` box at the top of this note
+routes a reader to it before any figure in the original section.
+
+So this ADR was not stale on the facts. It is stale on its **name**, which is a narrower problem
+and a real one.
+
+### The actual divergence
+
+| | Value |
+|---|---|
+| This note's title and alias | `Sals3 Taxonomy v0` |
+| §1's heading | "Adopt the hierarchy as Sals3 Taxonomy v0" |
+| The application constant | `ACTIVE_TAXONOMY_VERSION = 'sals3-taxonomy-v1'` |
+| Seed file the app actually reads | `src/lib/db/seed-data/sals3-taxonomy-v1.json` |
+
+Anyone grepping the vault for `sals3-taxonomy-v1` — the string the code uses — finds nothing in
+this ADR, which is how "v1 is undocumented" became a believable conclusion. The name is not
+renamed here: a filename and title change breaks every `[[ADR-002-...]]` link in the vault, and
+that is a vault-wide edit rather than a decision record correction. **Read `v0` in this note's
+title as the ADR's own identifier, not as the taxonomy version the code runs on.**
+
+### Two figures in the original section that are now wrong, stated plainly
+
+- "**All 1,345 taxonomy records**" and "`taxonomy_status` is `ADOPTED` for all 1,345 rows" —
+  the count is **5,595**. Verified 2026-08-21 against the committed extract at
+  `sals3-portal` `origin/develop`: 5,595 rows, 21 bare-L1 departments, every code matching
+  `CAT-GGL-<digits>`.
+- "**29 distinct L1 departments**" — that was the Shopee-derived set. It is **21** now, and all
+  21 carry Google's real top-level category IDs. Enumerated in
+  [[ADR-016-google-merchant-center-product-feed-compliance]]'s 2026-08-21 amendment, which uses
+  that fact to retire its own "no Google Product Category crosswalk exists" blocker.
+
+### Live in production, and what is still not approved
+
+The taxonomy is seeded in production and the seller-facing category picker works against it
+(see [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]);
+53,625 per-category attribute controls and a 149-entry attribute dictionary are seeded too, with
+`REQUIRED` attributes acting as real server-enforced publish blockers.
+
+Unchanged from §"Decision": **not one CJ→Sals3 mapping rule is approved**, no branch has earned
+`pilot_validated`, publication refuses a `CJ-<uuid>` mirror category outright, and no portal role
+— `admin` included — carries the authority to approve a mapping, because ADR-014 puts category
+governance in the Admin Portal. That remains the blocker for any mapping surface.
+
+**Frontmatter `updated`** moved to 2026-08-21. `status` stays `approved`.

@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, merchant-center, google-shopping, feed, seo, compliance]
 aliases: [Google Merchant Center Compliance, Merchant API Product Feed]
 created: 2026-08-11
-updated: 2026-08-12
+updated: 2026-08-21
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -20,6 +20,13 @@ related:
 ---
 
 # ADR-016 — Google Merchant Center product-feed compliance from the ground up
+
+> [!DANGER] Amended 2026-08-21 — confirmed gap #1 is no longer true
+> "No Google Product Category crosswalk exists" was correct on 2026-08-11 and became **false on
+> 2026-08-14**, when the taxonomy's reference data was replaced with Google's own. Sals3 category
+> codes now carry Google's numeric category IDs, so `googleProductCategory` is derivable today.
+> Read the amendment at the end of this note before citing gap #1 as a blocker. Gaps #2 and #3
+> stand unchanged.
 
 ## Status
 
@@ -130,3 +137,87 @@ This ADR does not move up [[ADR-010-catalog-decision-governance-and-shadow-enfor
 ## Supersession
 
 None. This ADR activates — rather than contradicts — [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] §7/§11's GTIN/MPN/channel-feed parking rule and the matching [[parked-ideas-backlog]] "Post-pilot catalogue sophistication" entry: those items remain parked for *implementation* (no channel integration ships today), but this ADR is the "approved external channel" event both already anticipated as their own unblock condition, so the *schema* preparation described in Decision §2 is no longer deferred.
+
+## Amendment — 2026-08-21: the Google Product Category crosswalk is no longer missing; it is the category code
+
+> [!WARNING] Supersedes confirmed gap #1
+> Gap #1 above says "**No Google Product Category crosswalk exists**... it has zero mapping to
+> Google's product taxonomy anywhere in the adopted workbook." That was true when written on
+> 2026-08-11. It became **false on 2026-08-14**, and this ADR has been carrying a stated blocker
+> that no longer exists for a week.
+
+### What changed
+
+The owner replaced the taxonomy's reference data the same week this ADR was written. Per
+[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]'s own 2026-08-14 amendment, the 1,345-row
+Shopee-derived set became **5,595 rows sourced from Google's official product taxonomy**
+(`Google_Product_Taxonomy_Version: 2021-09-21`), and the Universal Category Code format became
+`CAT-GGL-<Google numeric category ID>`.
+
+So Sals3 categories are not *mapped to* Google's taxonomy. **They are Google's taxonomy**, and
+each row's code carries Google's own category ID as its suffix.
+
+### Verified, 2026-08-21
+
+Against `sals3-portal`'s committed extract at `origin/develop`
+(`src/lib/db/seed-data/sals3-taxonomy-v1.json`), which is what the application actually seeds —
+not the workbook, which is never read at runtime:
+
+- 5,595 rows, 21 bare-L1 departments, and **every** code matches `CAT-GGL-<digits>`.
+- All 21 department codes carry Google's real top-level category IDs: `1` Animals & Pet
+  Supplies, `8` Arts & Entertainment, `111` Business & Industrial, `141` Cameras & Optics,
+  `166` Apparel & Accessories, `222` Electronics, `412` Food, Beverages & Tobacco, `436`
+  Furniture, `469` Health & Beauty, `536` Home & Garden, `537` Baby & Toddler, `632` Hardware,
+  `772` Mature, `783` Media, `888` Vehicles & Parts, `922` Office Supplies, `988` Sporting
+  Goods, `1239` Toys & Games, `2092` Software, `5181` Luggage & Bags, `5605` Religious &
+  Ceremonial.
+- `ACTIVE_TAXONOMY_VERSION` is `sals3-taxonomy-v1`, and the taxonomy is confirmed seeded in
+  production (see [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]).
+
+Worth recording how this was checked, because the first pass looked like it had found a defect:
+two sampled IDs appeared not to match the department names expected for them, which read as a
+data-quality problem in the extract. Re-checking against the full department list showed the
+extract was right and the **expectation** was wrong — the IDs had been recalled from memory
+rather than read. A spot-check against remembered values is not evidence; the enumeration is.
+
+### What this changes, and what it does not
+
+**Changes.** `googleProductCategory` is derivable **today**, for every categorised product, by
+stripping the `CAT-GGL-` prefix from `sals3_categories.code`. No crosswalk table, no mapping
+rules, no owner approval of per-category mappings, and no migration: the column added by this
+ADR's §"Decision" already exists and is nullable.
+
+**Does not change.** Nothing here authorizes populating it, and nothing here relaxes a gate:
+
+- Google's ID is the **numeric** category ID. Merchant accepts either the numeric ID or the full
+  category path string; which form Sals3 sends is an implementation choice this amendment does
+  not make.
+- The taxonomy version is **2021-09-21**. Google has published later revisions, and category IDs
+  can be retired between them. Populating `googleProductCategory` from this extract needs one
+  freshness check against Google's current published taxonomy first, and a decision about what
+  happens to a product sitting on a retired ID.
+- The **presets** on those 5,595 rows (variation architecture, tier 1-2 attributes, SKU format,
+  required attributes) are still the Gemini-generated, source-less data ADR-002's amendment flags
+  as its material risk. Only the *category identity* is Google's. Do not read this amendment as
+  validating anything else in the workbook.
+- Gaps **#2 (no GTIN/MPN/brand evidence pipeline)** and **#3 (no promotion/sale-period entity)**
+  stand unchanged, as does the feed/API wiring deferral. ADR-013 §7's rule against inventing
+  identifier values is untouched.
+
+### Two smaller corrections in this ADR's own scope
+
+**Brand.** A buyer-facing `Generic` now renders for a product whose workbook `Brand` attribute
+holds the `UNBRANDED` token — a display mapping in the portal
+(`categoryAttributeValueDisplayLabel`), with the raw token still stored. `Generic` is also what a
+Merchant feed expects for genuinely unbranded goods, so this is aligned with the unique-identifier
+rule in Evidence above rather than in tension with it. It is a *mapping*, not an invented brand.
+
+**Country of origin.** The storefront renders it only when a seller actually chose a value: the
+portal omits the row entirely for an unanswered attribute, and the editor's `Others` is a
+placeholder rather than a stored value. So a defaulted `Others` cannot reach JSON-LD, a
+`countryOfOrigin` field, or a Merchant feed — which is the guard the PDP v3.1 build spec asked
+for, enforced by absence rather than by a filter that could be forgotten. See
+`sals3-portal`'s `src/modules/catalog/storefront/specification.ts`.
+
+**Frontmatter `updated`** moved to 2026-08-21. `status` stays `approved`: this amendment removes a
+stated blocker and records two implemented details, and decides nothing new.

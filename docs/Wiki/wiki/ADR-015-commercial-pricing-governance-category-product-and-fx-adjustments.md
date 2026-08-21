@@ -2,7 +2,7 @@
 tags: [sals3, adr, pricing, margin, forex, admin-portal, governance, audit]
 aliases: [ADR-015, Commercial Pricing Governance, Category and Product Pricing Policy]
 created: 2026-08-10
-updated: 2026-08-14
+updated: 2026-08-21
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -205,3 +205,68 @@ Bogs, reviewing Market Rules on 2026-08-19, judged the per-category margin list 
 **Unchanged and still open**: overrides remain keyed to `supplier_candidates.id` (the 2026-08-14 amendment's open gap); no cross-currency reference-FX provider exists; margin values themselves remain provisional — no buyer payment rail or platform commission is configured, so any rate/floor set today is a conservative placeholder with its reasoning in the policy row's required `reason` field.
 
 **Frontmatter note**: `implementation_status` stays `phase-1-merged-not-launched`; production still has no seller using these policies. Offers priced before v3 are stamped `pricing-resolver-v2` on the offer row and are not re-priced by this change.
+
+## Amendment — 2026-08-21: a 2.5% retail markup floor on seller-entered prices (owner decision, Bogs)
+
+A third pricing rule now exists, and it governs the one path that bypasses this ADR's resolver
+entirely.
+
+### The problem it answers
+
+A seller can type a retail price directly on a variant row, which **skips the resolver** — so
+none of §3's inheritance chain, §1's contribution floor, or the funding buffer applies to it. The
+2026-08-15 `RETAIL_BELOW_SUPPLIER_COST` refusal caught the clearly-wrong end of that (a corduroy
+jacket live at US$4.51 against a US$5.80 cost — a real per-unit loss the storefront was
+advertising). It did not catch equal-to-cost: screenshots showed `$1.10` against `$1.10`, then
+`$4.29` against `$4.29`, both of which passed as publishable.
+
+### The decision
+
+Retail price must be at least **2.5% above** stored supplier cost for every listed variant, when
+both are in the same currency. Formally `ceil(supplierCost * 1.025)` in minor currency units — so
+a `$4.29` cost floors retail at `$4.40`.
+
+The owner's reasoning, recorded because it is the part a later reader will need: equal-to-cost is
+not a seller choice the platform should pass through as ready, and a one-cent spread is still too
+thin, because it records a near-zero-spread offer as publishable before fees, freight, refunds,
+payment rails, tax handling, or any operating cost.
+
+Enforced at **three layers**, deliberately: editor entry (a manual per-row edit clamps up, the
+bulk dialog disables Apply against the highest affected cost, and the draft text validates while
+the field is still focused), the readiness model's blockers, and `publishProduct` itself. The
+shared publish-gate copy names the 2.5% requirement rather than the older "above supplier cost".
+
+`sals3-portal` [#158](https://github.com/Sals3-Official/sals3-portal/pull/158)-[#162](https://github.com/Sals3-Official/sals3-portal/pull/162), merged. No CJ call was added — it reads supplier-cost evidence the editor already holds. Session note:
+[[sals3-session-2026-08-21-part60-retail-price-above-supplier-cost]], which lives in
+`sals3-portal`'s own `docs/Wiki/wiki/` rather than in this vault.
+
+### How it relates to §1's contribution floor
+
+They are different instruments and both apply:
+
+- §1's **minimum contribution profit** is an **absolute** per-item floor —
+  `max(cost/(1-margin), cost + floor)` — reached through the resolver, and deliberately not a
+  percentage, because two rules both proportional to cost never cross.
+- This is a **proportional** floor on a **seller-typed** price that never reaches the resolver at
+  all. It is a validity check on manual entry, not a second margin: it does not price anything,
+  it refuses a price.
+
+That distinction is worth keeping straight, because §1's own reasoning argues *against*
+percentage floors. It argues against a percentage floor **as a substitute for the absolute one
+inside the resolver**. Nothing in §1 addresses the manual-entry path, which had no floor at all.
+
+### Open
+
+- **2.5% is provisional**, on the same footing as every other rate in this ADR: no buyer payment
+  rail and no platform commission is configured, so the number is a conservative placeholder
+  rather than a derived one. It is not yet reconciled with §1's absolute floor — a variant priced
+  through the resolver and a variant priced by hand can still land on different sides of "thin",
+  and nothing today reports that.
+- **Currency mismatch is out of scope**, not solved: the rule applies only when retail and
+  supplier cost share a currency, and an incomparable pair still refuses through the older
+  `RETAIL_BELOW_SUPPLIER_COST` path.
+- **This ADR's own authorization boundary is unchanged** and this amendment does not widen it —
+  see the 2026-08-14 amendment for why that boundary and the code's existence have diverged.
+
+**Frontmatter `updated`** moved to 2026-08-21. `implementation_status` stays
+`phase-1-merged-not-launched`.
