@@ -224,11 +224,15 @@ export default function ProductOptionList({
                 "which colour did I pick" next to the question.
               */}
               <h2 id={axisLabelId} className={`mb-1.5 ${PRODUCT_MICRO_LABEL}`}>
-                {axis.name}
-                {chosenValue === undefined ? null : (
-                  <span className={PRODUCT_MICRO_LABEL_VALUE}>
-                    {chosenValue}
-                  </span>
+                {chosenValue === undefined ? (
+                  axis.name
+                ) : (
+                  <>
+                    {axis.name}:{' '}
+                    <span className={PRODUCT_MICRO_LABEL_VALUE}>
+                      {chosenValue}
+                    </span>
+                  </>
                 )}
               </h2>
               <ul
