@@ -236,13 +236,20 @@ The diff was exactly two lines changed in two files. Nothing else was swept in.
 
 ## 8. Still open
 
-- **The webfonts are not loaded.** The highest-value item here, and the actual
+- ~~**The webfonts are not loaded.** The highest-value item here, and the actual
   fix for the reported font defect. Site-wide typography change; needs its own
-  PR.
-- **The record panel's 95px of sticky travel.** Matches the approved mockup, so
+  PR.~~ **Fixed the same day** by
+  [#138](https://github.com/Sals3-Official/sals3-ecommerce/pull/138) — all three
+  families now load through `next/font/google`, self-hosted.
+- ~~**The record panel's 95px of sticky travel.** Matches the approved mockup, so
   changing it is a design decision the owner has not made. Three options were
   put up (follow the whole page / pin through the description only / leave as
-  designed) and none was chosen.
+  designed) and none was chosen.~~ **Decided the same day**, and the answer was
+  none of the three: remove the sticky entirely
+  ([#141](https://github.com/Sals3-Official/sals3-ecommerce/pull/141)). The
+  reported defect was the **drift**, not the short travel, and the option list
+  never contained the option the owner wanted. See
+  [[sals3-session-2026-08-21-part64-the-sticky-panel-the-spec-asked-for-and-the-owner-did-not-want]].
 - **`fix/pdp-gallery-sticky-and-supplier-font` is undeleted on the remote.**
 - The stale-`md:top-20` class is gone, but nothing prevents the next reordered
   PDP section from re-introducing a competing sticky. There is no test asserting
