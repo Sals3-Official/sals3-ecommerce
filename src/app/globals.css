@@ -3,11 +3,26 @@
 :root {
   --background: #f6f7f8;
   --foreground: #14181c;
+  /*
+    Each chain starts with the self-hosted file `next/font` emits (see
+    `layout.tsx`, which declares these `--font-*-webfont` variables on `html`).
+    The bare family name is kept as the `var()` fallback so a chain stays valid
+    even if the loader's class is ever missing from `html`, and the rest of the
+    stack is the same as before.
+
+    Without the webfont entry these families never loaded at all: the names alone
+    resolved to whatever the OS had, which is why `Outfit` and
+    `Plus Jakarta Sans` measured identically in production.
+  */
   --font-jakarta:
-    'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-outfit: 'Outfit', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+    var(--font-jakarta-webfont, 'Plus Jakarta Sans'), 'Inter', ui-sans-serif,
+    system-ui, sans-serif;
+  --font-outfit:
+    var(--font-outfit-webfont, 'Outfit'), 'Segoe UI', ui-sans-serif, system-ui,
+    sans-serif;
   --font-instrument:
-    'Instrument Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    var(--font-instrument-webfont, 'Instrument Sans'), 'Inter', ui-sans-serif,
+    system-ui, sans-serif;
 }
 
 @theme inline {
