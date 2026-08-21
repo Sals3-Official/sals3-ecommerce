@@ -59,7 +59,7 @@ describe('CategorySection', () => {
     expect(link).not.toHaveTextContent('HG');
   });
 
-  it('falls back to the line icon for a department with no photograph yet', () => {
+  it('photographs every department, Toys & Games included', () => {
     render(
       <CategorySection
         categories={[category('toys-games', 'TG', 'Toys & Games')]}
@@ -68,9 +68,10 @@ describe('CategorySection', () => {
 
     const link = screen.getByRole('link', { name: /Toys & Games/ });
 
-    expect(link.querySelector('img')).not.toBeInTheDocument();
-    expect(link.querySelector('svg')).toBeInTheDocument();
-    expect(link).not.toHaveTextContent('TG');
+    expect(
+      decodeURIComponent(link.querySelector('img')?.getAttribute('src') ?? ''),
+    ).toContain('/categories/toys-games.webp');
+    expect(link.querySelector('svg')).not.toBeInTheDocument();
   });
 
   it('falls back to the real feed code when it has neither photo nor icon', () => {
@@ -112,10 +113,12 @@ describe('CategorySection', () => {
     expect(plate).toHaveClass('bg-white');
   });
 
-  it('keeps the sunken plate where the media is an icon, not a photo', () => {
+  it('keeps the sunken plate where the media is an icon or initials, not a photo', () => {
+    // A leaf id: no photograph and no icon, so the plate stays grey behind the
+    // code initials.
     render(
       <CategorySection
-        categories={[category('toys-games', 'TG', 'Toys & Games')]}
+        categories={[category('aquarium-lighting', 'AL', 'Aquarium Lighting')]}
       />,
     );
 
@@ -259,12 +262,13 @@ describe('CategorySection', () => {
 });
 
 describe('department photographs', () => {
-  it('covers every department except the one whose asset is missing', () => {
+  it('covers all 21 departments, none missing', () => {
     const missing = placeholderCategories
       .map((department) => department.id)
       .filter((id) => categoryImageSrc(id) === undefined);
 
-    expect(missing).toEqual(['toys-games']);
+    expect(missing).toEqual([]);
+    expect(placeholderCategories).toHaveLength(21);
   });
 
   it('never claims a photo for a leaf category id', () => {
