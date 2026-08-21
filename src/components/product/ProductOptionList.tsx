@@ -42,27 +42,33 @@ type ProductOptionListProps = {
  * `role="radiogroup"` / `aria-checked` is the wrong contract for something that
  * navigates, so this is a list of links with `aria-current="page"`.
  *
- * ## Three presentations, best available first
+ * ## Four presentations, best available first
  *
- * 1. **Token rows** — when the supplier's labels form a provable cross-product
+ * 1. **Named axes** — the portal has mapped the supplier's values onto real
+ *    options, so each row is headed by its own name ("Colour", "Size") with the
+ *    chosen value beside it.
+ * 2. **Token rows** — when the supplier's labels form a provable cross-product
  *    (`deriveVariantLabelStructure`), one row of chips per position. On the real
  *    corduroy jacket that is `Black / Army Green` above `S / M / L / XL / XXL`:
  *    ten variants shown as seven chips.
- * 2. **Whole labels** — labels exist but do not encode a clean grid, so each
+ * 3. **Whole labels** — labels exist but do not encode a clean grid, so each
  *    variant is one chip carrying its label verbatim.
- * 3. **Positional** — no labels yet, so `Option 1 … Option n` in payload order.
+ * 4. **Positional** — no labels yet, so `Option 1 … Option n` in payload order.
  *    Payload order is deterministic (`ORDER BY sals3_sku`), so a given number
  *    keeps pointing at the same variant between requests.
  *
  * A SKU hash is never a label, a fallback, or a title attribute: it is a SHA-256
  * digest and means nothing to a buyer.
  *
- * ## The rows are unnamed, deliberately
+ * ## Only presentation 1 names its rows
  *
- * There is no heading above `Black / Army Green` saying "Colour". Nothing in the
- * supplier payload says it is one — CJ sends a single concatenated string and no
- * structured attributes — so a name here would be invented, and it would render to
- * a buyer as a product attribute. See `variant-label-structure.ts`.
+ * Named axes carry a visible heading — "Colour" above `Black / Pink / …` — because
+ * a person typed that name into the portal, so it is data.
+ *
+ * Presentations 2, 3 and 4 stay unnamed. Nothing in the supplier payload says
+ * `Black / Army Green` is a colour — CJ sends a single concatenated string and no
+ * structured attributes — so a heading there would be invented, and it would
+ * render to a buyer as a product attribute. See `variant-label-structure.ts`.
  *
  * ## Why token chips carry no price
  *
@@ -202,53 +208,77 @@ export default function ProductOptionList({
     }
 
     return (
-      <>
-        {heading('Options as published for this product.')}
-        <div className="flex flex-col gap-3">
-          {axes.map((axis) => (
-            <ul
-              key={axis.name}
-              aria-label={axis.name}
-              className="flex flex-wrap gap-2"
-            >
-              {axis.values.map((value) => {
-                const target = chipTarget(axis.name, value);
-                const isChosen = chosen[axis.name] === value;
-                const reachable =
-                  target !== undefined && target.availability !== 'UNAVAILABLE';
+      <div className="flex flex-col gap-3.5">
+        {axes.map((axis, axisIndex) => {
+          const axisLabelId = `product-option-axis-${axisIndex}`;
+          const chosenValue = chosen[axis.name];
 
-                if (!reachable) {
+          return (
+            <div key={axis.name}>
+              {/*
+                The axis is named because a person named it in the portal, so the
+                buyer reads "Colour" rather than inferring it from the chips. The
+                chosen value rides along on the same line: on a narrow screen the
+                selected chip can wrap out of sight, and this keeps the answer to
+                "which colour did I pick" next to the question.
+              */}
+              <h2
+                id={axisLabelId}
+                className="mb-1.5 text-[11px] font-bold tracking-[0.08em] text-ink-subtle uppercase"
+              >
+                {axis.name}
+                {chosenValue === undefined ? null : (
+                  <span className="ml-1.5 font-semibold tracking-normal text-ink normal-case">
+                    {chosenValue}
+                  </span>
+                )}
+              </h2>
+              <ul
+                aria-labelledby={axisLabelId}
+                className="flex flex-wrap gap-2"
+              >
+                {axis.values.map((value) => {
+                  const target = chipTarget(axis.name, value);
+                  const isChosen = chosen[axis.name] === value;
+                  const reachable =
+                    target !== undefined &&
+                    target.availability !== 'UNAVAILABLE';
+
+                  if (!reachable) {
+                    return (
+                      <li key={value}>
+                        <span className={CHIP_DEAD}>
+                          {value}
+                          <span className="ml-1 text-[11.5px] font-normal">
+                            Unavailable
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  }
+
                   return (
                     <li key={value}>
-                      <span className={CHIP_DEAD}>
+                      <Link
+                        href={hrefFor(target.id)}
+                        scroll={false}
+                        prefetch={false}
+                        onClick={(event) =>
+                          handleVariantClick(event, target.id)
+                        }
+                        aria-current={isChosen ? 'page' : undefined}
+                        className={`${CHIP} ${isChosen ? CHIP_ON : CHIP_OFF}`}
+                      >
                         {value}
-                        <span className="ml-1 text-[11.5px] font-normal">
-                          Unavailable
-                        </span>
-                      </span>
+                      </Link>
                     </li>
                   );
-                }
-
-                return (
-                  <li key={value}>
-                    <Link
-                      href={hrefFor(target.id)}
-                      scroll={false}
-                      prefetch={false}
-                      onClick={(event) => handleVariantClick(event, target.id)}
-                      aria-current={isChosen ? 'page' : undefined}
-                      className={`${CHIP} ${isChosen ? CHIP_ON : CHIP_OFF}`}
-                    >
-                      {value}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          ))}
-        </div>
-      </>
+                })}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
     );
   }
 
