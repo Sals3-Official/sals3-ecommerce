@@ -6,6 +6,7 @@ import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
 import ProductBreadcrumb from '@/components/product/ProductBreadcrumb';
 import ProductDescription from '@/components/product/ProductDescription';
+import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductRecordPanel from '@/components/product/ProductRecordPanel';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
@@ -18,6 +19,7 @@ import { SITE_NAME, getSiteUrl } from '@/lib/site';
 import type { Product as HomeProduct } from '@/lib/home-placeholder-data';
 import type { ProductDetail } from '@/lib/product-detail';
 import { breadcrumbTrail } from '@/lib/product-breadcrumb';
+import { fetchProductReviews } from '@/services/storefront/reviews';
 import { defaultVariantFor, variantById } from '@/lib/product-variants';
 import {
   fetchProductBySlug,
@@ -217,7 +219,14 @@ export default async function ProductPage({
   }
 
   const query = searchParams === undefined ? {} : await searchParams;
-  const relatedProducts = await getRelatedProducts(detail.category, detail.id);
+  // Fetched alongside the related products rather than before them: the
+  // section is below the fold, and a slow review read must not delay the buy
+  // box. `fetchProductReviews` answers `[]` on failure, so the page still
+  // renders its summary from the product payload if this cannot load.
+  const [relatedProducts, reviews] = await Promise.all([
+    getRelatedProducts(detail.category, detail.id),
+    fetchProductReviews(detail.id),
+  ]);
   const variants = detail.variants ?? [];
 
   // Resolved against real ids, so the payload is the allow-list. An unknown
@@ -326,6 +335,11 @@ export default async function ProductPage({
         />
         <div className="mx-auto w-full max-w-6xl px-6">
           <ProductDescription blocks={remainingBlocks} />
+          <ProductReviews
+            rating={detail.rating}
+            breakdown={detail.ratingBreakdown}
+            reviews={reviews}
+          />
           <ProductSupplierDetails specs={detail.specs} />
           <RelatedProducts products={relatedProducts} />
           <ProductSchema detail={detail} />

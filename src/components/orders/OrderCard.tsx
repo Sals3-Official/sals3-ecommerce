@@ -78,7 +78,11 @@ export default function OrderCard({ order }: OrderCardProps) {
       </p>
 
       {order.packages.map((pkg) => (
-        <OrderPackageBlock key={pkg.id} package={pkg} />
+        <OrderPackageBlock
+          key={pkg.id}
+          package={pkg}
+          orderNumber={order.number}
+        />
       ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3.5 border-t border-border px-4 py-3">

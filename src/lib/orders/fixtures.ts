@@ -119,6 +119,10 @@ function toLine(seed: SeedLine): BuyerOrderLine {
     lineTotalLabel: formatAmount(seed.unitMinor * seed.quantity, CURRENCY),
     acceptedOnLabel: formatOrderDate(seed.acceptedOn),
     imageUrl: null,
+    // Fixtures never offer the review control. Eligibility is a real parcel
+    // state on a real order, and a fixture that claimed it would put a button
+    // in front of a developer that no backend could honour.
+    reviewable: false,
   };
 }
 

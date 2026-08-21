@@ -182,6 +182,12 @@ function toLine(
     // other host renders as the placeholder square rather than being fetched.
     imageUrl: getAllowedProductImageUrl(line.imageUrl) ?? null,
     ...(listing === undefined ? {} : { listing }),
+    // `?? false` covers a portal older than this deployment: no review control
+    // rather than a crash or an offer that would be refused anyway.
+    reviewable: line.reviewable ?? false,
+    ...(line.review === undefined
+      ? {}
+      : { review: { id: line.review.id, rating: line.review.rating } }),
   };
 }
 

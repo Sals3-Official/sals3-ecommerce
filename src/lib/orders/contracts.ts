@@ -118,6 +118,17 @@ export type BuyerOrderLine = {
    * so the panel is additive and its absence is never an error a buyer sees.
    */
   listing?: OrderedListing;
+  /**
+   * Whether this buyer can review this line right now.
+   *
+   * The portal decides it — the line's own parcel delivered, inside the window,
+   * not already reviewed — and this side only renders the answer. Duplicating
+   * the rule here would give it two homes, and this one cannot see the parcel
+   * state it depends on.
+   */
+  reviewable: boolean;
+  /** This buyer's own review of this line, when they have written one. */
+  review?: { id: string; rating: number };
 };
 
 /**

@@ -30,6 +30,15 @@ export type Product = {
   tone: PlaceholderTone;
   imageUrl?: string;
   imageAlt?: string;
+  /**
+   * Real Sals3 buyer ratings, absent when nobody has reviewed the product.
+   *
+   * The fallback products below deliberately carry none — they are shown to a
+   * real visitor whenever the live feed fails, and an invented rating on a real
+   * page is the same class of fabrication as the was/now prices that were
+   * removed from them.
+   */
+  rating?: { average: number; count: number };
 };
 
 export type AdSlot = {
