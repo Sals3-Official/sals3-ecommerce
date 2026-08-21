@@ -55,6 +55,41 @@ homeViewports.forEach((viewport) => {
   });
 });
 
+test('pages the category carousel with the arrows', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const track = page.getByRole('navigation', { name: 'Categories' });
+
+  await expect(track).toBeVisible();
+
+  const forward = page.getByRole('button', { name: /show more categories/i });
+  const back = page.getByRole('button', { name: /show previous categories/i });
+
+  /*
+   * The arrows are state, not decoration: the forward one appears once the
+   * shell has measured a track wider than one page, and at the start there is
+   * nowhere to page back to, so that control must not exist at all. Waiting on
+   * `toBeVisible` rather than counting immediately is deliberate — the count
+   * races the client shell's first measurement, which is what made an earlier
+   * version of this test skip itself intermittently.
+   */
+  await expect(forward).toBeVisible();
+  await expect(back).toHaveCount(0);
+
+  const scrolled = () => track.evaluate((element) => element.scrollLeft);
+
+  expect(await scrolled()).toBe(0);
+
+  await forward.click();
+  await expect.poll(scrolled).toBeGreaterThan(0);
+  await expect(back).toBeVisible();
+
+  await back.click();
+  await expect.poll(scrolled).toBe(0);
+  await expect(back).toHaveCount(0);
+});
+
 test('opens the signed-in account menu and logs out', async ({ page }) => {
   let didDeleteSession = false;
 

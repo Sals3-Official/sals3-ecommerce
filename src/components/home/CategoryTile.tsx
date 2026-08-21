@@ -65,7 +65,8 @@ function categoryMedia(category: Category): ReactNode {
 }
 
 /**
- * One tile in the "Shop by category" grid. Server-rendered (build spec §11.4:
+ * One tile in the "Shop by category" carousel. Snapping lives on the page
+ * around it, not here — the track pages a whole page at a time. Server-rendered (build spec §11.4:
  * the brand colour stays off navigation affordances like this one; §11.7:
  * transitions carry an explicit duration).
  *
