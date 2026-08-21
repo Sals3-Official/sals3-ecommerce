@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, media, seller-upload, supplier-media, product-revision]
 aliases: [Product Media Source Selection, Seller Pictures and Supplier Fallback]
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-08-21
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -18,6 +18,12 @@ related:
 ---
 
 # ADR-011 — Product media source selection and supplier-original preservation
+
+> [!DANGER] Amended 2026-08-21 — "no upload/storage backend exists" is no longer true
+> Seller upload, Cloudflare R2 storage, the supplier-photo switch, and provenance-driven
+> `mediaStatus` all ship and reach buyers. Read the amendment at the end before citing the first
+> Evidence bullet. `MediaAsset` proper, a `NEEDS_MEDIA_REVIEW` reviewer, and the
+> Merchant-Center eligibility check ADR-016 asks for are still missing.
 
 ## Status
 
@@ -199,3 +205,50 @@ Implement in this order:
 ## Supersession
 
 None. This makes the media-source behavior implicit in ADR-001/007 and the implementation specification explicit.
+
+## Amendment — 2026-08-21: seller upload and storage exist, and reach buyers
+
+> [!WARNING] Supersedes the first Evidence bullet
+> "`Upload image` is disabled because no upload/storage backend exists" was true on 2026-08-10.
+> It is now false in both halves: the control works, and a durable object store backs it.
+
+### What shipped
+
+- **Storage** is Cloudflare R2, reached through `@aws-sdk/client-s3` (`r2-client.ts` /
+  `r2-url.ts`). Vercel Blob was the first backend for a few days and is **gone** — no
+  `@vercel/blob` dependency, no `blob-url.ts`. Do not reintroduce those imports.
+- **Upload** is real and validated: `sharp` re-encodes to WebP at q82 with a 2000px cap, with
+  magic-byte checks and hard 5MB / 2000×2000 limits, keyed under `seller-media/<productId>/`.
+  Description-body photos are a separate path under `description-media/` and are deliberately
+  **never** `product_media_sources` rows, so a size chart can never become a cover-photo
+  candidate — which is this ADR's own gallery/provenance boundary, enforced at the write side.
+- **Buyers see it.** A storefront `mediaVisibleToBuyers` predicate is shared by the card's
+  primary image and the PDP gallery: a seller upload always shows and outranks the supplier
+  original, and `products.show_supplier_photo` off hides the supplier photo **only once an
+  approved seller upload exists** — owner decision 2026-08-20, because an empty gallery falling
+  back to the supplier photo beats rendering a blank page.
+- **`mediaStatus` now reads provenance, not presence.** It was derived from `media.length > 0`,
+  so a product carrying only a projected `SUPPLIER_ORIGINAL` photo reported "Own pictures". It
+  now reads each row's `sourceType` and resolves to this ADR's own labels —
+  `OWN_PICTURES` / `MIXED_PICTURES` / `SUPPLIER_FALLBACK` / `NO_USABLE_PICTURES`.
+
+### Still open
+
+- **`MediaAsset` proper does not exist.** `product_media_sources` is a provenance table; the
+  checksum, revision-membership, and rights-basis machinery §"Decision" describes is only
+  partially represented. Published supplier media carries the owner-declared `SUPPLIER_TERMS`
+  basis and nothing richer.
+- **`NEEDS_MEDIA_REVIEW` has no reviewer.** The state exists in the vocabulary and in the
+  Product Catalogue's badge; no queue, no gate, and no person is assigned to clear it.
+- **No Merchant-Center eligibility check on supplier photos.** ADR-016 §"Evidence" is explicit
+  that CJ originals carry watermarks, logo overlays, and price text in practice, and asks for
+  that check to live *inside* this pipeline rather than as a later bolt-on filter. It does not
+  exist yet, in either place.
+- **`NEXT_PUBLIC_R2_IMAGE_BASE_URL` unset means seller uploads silently do not render** — no
+  error, no log. Documented behaviour rather than a defect, and a real trap when running the
+  storefront outside production.
+- **Runtime end-to-end is unproven.** Upload through a real signed-in seller session, all the way
+  to a buyer's PDP, has not been exercised.
+
+**Frontmatter `updated`** moved to 2026-08-21. `status` stays `approved`: this records what was
+built against an approved decision and decides nothing new.

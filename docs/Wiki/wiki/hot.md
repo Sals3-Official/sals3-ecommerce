@@ -368,18 +368,37 @@ now sits beside Product Name in the editor's Basic Information grid instead
 of as a separate block below it. See
 [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]].
 
-**This makes [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] stale.**
+~~**This makes [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] stale.**
 ADR-002 still describes "Sals3 Taxonomy v0" (a 1,345-row internal workbook)
-as the adopted, current taxonomy. The actual codebase has already moved to
-Taxonomy v1 as described above, and nothing in this wiki documents v1's
+as the adopted, current taxonomy... nothing in this wiki documents v1's
 existence at all outside part47 above (a full-vault grep for "Taxonomy v1",
-"CAT-GGL", "Google Product Taxonomy" found no other hits). Flagged, not yet
-corrected - Bogs asked for "one entry in the ecommerce wiki" to be fixed
-without naming it, and ADR-002 is the strongest candidate by inspection but
-has not been confirmed. Confirm with Bogs, then add a dated follow-up section
-to ADR-002 (do not silently rewrite it) before treating this as resolved.
-Item 8 under "Current build priorities" below (pilot/validate Taxonomy v0
-branches) is affected by the same staleness.
+"CAT-GGL", "Google Product Taxonomy" found no other hits).~~
+
+**Resolved 2026-08-21, and this entry was wrong.** ADR-002's own
+**2026-08-14 amendment already documented the switch in full** — 5,595
+Google-sourced rows, the `CAT-GGL-<Google numeric category ID>` code format,
+21 L1 departments, and the Gemini-generated-presets risk — behind a `[!DANGER]`
+box at the top of the note routing a reader to it before any figure in the
+original section. The grep that produced "no other hits" ran against the wrong
+strings: the amendment says "Google's official product taxonomy" and
+"`CAT-GGL-<Google numeric category ID>`", neither of which matches a search for
+`Taxonomy v1` or a bare `CAT-GGL`. **A grep that finds nothing is evidence
+about the query, not about the vault.**
+
+What was genuinely stale is narrower: ADR-002's **title and alias** still read
+`Sals3 Taxonomy v0` while the application constant is
+`ACTIVE_TAXONOMY_VERSION = 'sals3-taxonomy-v1'`, so the string the code uses
+appears nowhere in the ADR. Recorded in ADR-002's 2026-08-21 amendment, along
+with the two original figures that are now wrong (1,345 rows → 5,595; 29 L1
+departments → 21). The note is deliberately **not** renamed: that breaks every
+`[[ADR-002-...]]` link in the vault, which is a vault-wide edit rather than a
+decision-record correction. Read `v0` in its title as the ADR's identifier, not
+as the taxonomy version in production.
+
+Item 8 under "Current build priorities" below still says "Taxonomy v0
+branches"; the mechanism it describes is unchanged and still uncontented —
+no mapping rule approved, no branch `pilot_validated`, and no portal role with
+the authority to approve one (ADR-014).
 
 ### Category-driven Specification section is live in production, after a real 404 incident and fix
 
