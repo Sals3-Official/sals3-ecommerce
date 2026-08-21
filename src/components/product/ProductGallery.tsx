@@ -21,7 +21,7 @@ export default function ProductGallery({ images, tone }: ProductGalleryProps) {
   const selected = images[selectedIndex];
 
   return (
-    <div className="md:sticky md:top-20">
+    <div>
       {/*
         4:5 rather than square. Apparel is the catalogue's shape and a portrait
         frame gives a jacket more of the first screen without pushing the record
