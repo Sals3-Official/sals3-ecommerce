@@ -42,7 +42,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="font-display text-[22px] font-semibold tracking-tight text-ink">
           {formatMoney(product.price)}
         </div>
-        <div className="flex min-h-[16px] items-center gap-1.5">
+        {/* <div className="flex min-h-[16px] items-center gap-1.5">
           {off === null || oldPrice === undefined ? null : (
             <>
               <span className="text-xs text-ink-faint line-through">
@@ -51,12 +51,10 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-xs font-bold text-deal">{off}</span>
             </>
           )}
-        </div>
+        </div> */}
         <p className="line-clamp-2 min-h-[33px] text-xs text-ink-muted text-pretty">
           {product.title}
         </p>
-        <div className="text-xs text-ink-subtle">{product.ratingLine}</div>
-        <div className="text-xs text-ink-muted">{product.shipLine}</div>
       </div>
     </Link>
   );

@@ -27,8 +27,6 @@ export type Product = {
    * fabricated discount claim on a real page (ADR-003 prohibits this).
    */
   oldPrice?: Money;
-  ratingLine: string;
-  shipLine: string;
   tone: PlaceholderTone;
   imageUrl?: string;
   imageAlt?: string;
@@ -97,40 +95,30 @@ export const deals: Product[] = [
     id: 'deal-1',
     title: 'Solar wall lamp, motion sensor, 3 colour modes',
     price: usd(2299),
-    ratingLine: 'No reviews yet',
-    shipLine: 'Delivery quoted at checkout',
     tone: 'ocean',
   },
   {
     id: 'deal-2',
     title: 'Stainless steel insulated tumbler, 750 ml',
     price: usd(1899),
-    ratingLine: 'No reviews yet',
-    shipLine: 'Delivery quoted at checkout',
     tone: 'dusk',
   },
   {
     id: 'deal-3',
     title: 'Wireless earbuds, active noise cancelling',
     price: usd(4599),
-    ratingLine: 'No reviews yet',
-    shipLine: 'Delivery quoted at checkout',
     tone: 'meadow',
   },
   {
     id: 'deal-4',
     title: 'Non-stick cooking pan set, 3 pieces',
     price: usd(3299),
-    ratingLine: 'No reviews yet',
-    shipLine: 'Delivery quoted at checkout',
     tone: 'clay',
   },
   {
     id: 'deal-5',
     title: 'Ergonomic mesh office chair',
     price: usd(12900),
-    ratingLine: 'No reviews yet',
-    shipLine: 'Delivery quoted at checkout',
     tone: 'ocean',
   },
 ];
@@ -158,7 +146,5 @@ export const forYouProducts: Product[] = Array.from({ length: 10 }, (_, i) => ({
     'Anti-slip yoga mat',
   ][i]!,
   price: usd(899 + i * 640),
-  ratingLine: 'No reviews yet',
-  shipLine: 'Delivery quoted at checkout',
   tone: tonefor(i),
 }));
