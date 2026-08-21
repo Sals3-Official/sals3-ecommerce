@@ -1,12 +1,12 @@
 ---
 tags: [sals3, adr, supplier-sync, catalog, orders, notifications, audit]
-aliases: [Supplier Change Handling, Immutable Ordered Item Snapshot, Supplier Anomaly Attention]
+aliases: [Supplier Change Handling, Immutable Ordered Item Snapshot, Supplier Anomaly Attention, Seller Edit Order Protection]
 created: 2026-08-07
-updated: 2026-08-07
+updated: 2026-08-21
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: not-started
+implementation_status: partially-implemented
 related:
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
@@ -377,3 +377,40 @@ Costs:
 - price and anomaly thresholds require versioned business policy and calibration.
 
 These costs are accepted because catalog freshness and order integrity are core commerce controls, not optional polish.
+
+## Amendment — 2026-08-21: the seller is the other mutating actor, and the snapshot is one column
+
+> [!WARNING] Extends the Problem statement and supersedes `implementation_status: not-started`
+> This ADR is written entirely around one actor: *"A supplier product is mutable after Sals3 imports it."* The seller's own listing is mutable too, and by design — the Portal editor exists to make it so. Bogs ruled on 2026-08-21 that a seller edit **must apply to new orders only**, and that a customer must keep seeing the details of the thing they actually ordered even after the seller changes the name, the photos, or anything else. Same protection, different actor, and it needed saying because nothing here said it.
+
+### Why the seller half needs no detection
+
+`Supplier change detection` and `Required anomaly behavior` exist because a supplier changes things *behind* Sals3, asynchronously, and the platform has to notice. A seller edit is the opposite: it happens inside Sals3, by an authenticated actor, at a known moment. There is nothing to detect and nothing to notify — the order simply has to have taken its own copy already. So the seller half of this ADR is entirely a write-time obligation, and adds no queue, no polling, and no notification channel.
+
+### What shipped
+
+- **`sals3_order_lines.listing_snapshot`** — one nullable `jsonb` column, migration `0026_daily_blockbuster`, applied to production through the `CRON_SECRET` break-glass workflow rather than a laptop (`sals3-portal` [#166](https://github.com/Sals3-Official/sals3-portal/pull/166)).
+- **Frozen at intent creation, not at acceptance.** This ADR's `Order commitment boundary` puts the snapshot at acceptance. Acceptance runs *after* payment, on a Stripe webhook, so a seller edit landing during that round trip would decide what the order says was bought. Intent creation is before payment and is already where `variant_label` and `image_url` freeze, so the capture joined them there and acceptance only copies. Recorded here because it is a deliberate departure from the text above, not an implementation detail.
+- **Contents**: the option axes in the seller's own words and order, the whole gallery, the published description document, the seller's specification answers, the category path, the brand, the condition, and the physical facts. Sourced from `findPublishedProductBySlug` — the exact projection the storefront served the buyer — rather than a second set of joins that would drift from the page it is supposed to be a copy of (`sals3-portal` [#167](https://github.com/Sals3-Official/sals3-portal/pull/167)).
+- **`variant_label` was never the buyer's words.** It holds the supplier's own concatenated token (`army green-L`) while the buyer chose `Colour: Army Green` / `Size: L` from the seller's mapped axes. The snapshot carries the buyer-facing pairs and the storefront prefers them; the supplier token stays on the line because CJ fulfilment matches on it.
+- **Buyers can read it**: `GET /api/storefront/orders` returns an optional `listing` per line, and `sals3-ecommerce` renders a closed `Details as ordered` disclosure on each order line ([#133](https://github.com/Sals3-Official/sals3-ecommerce/pull/133)).
+
+### Where the as-built shape differs from the contract above
+
+The `Immutable snapshot contract` block lists an `OrderLineSnapshot` entity with its own id, two checksums, and `mediaSnapshotIds`. What exists is narrower, and the differences are choices rather than omissions in three cases and genuine gaps in the rest:
+
+- **One column on the order line, not an entity.** No `orderLineSnapshotId`, no `snapshotChecksum`, no `supplierSnapshotChecksum`. The line already carries the identity fields (`productId`, `variantId`, `supplierConnectionId`, `externalProductId`, `externalVariantId`, `sals3Sku`), so a second row keyed to it would duplicate them to gain an id nothing dereferences yet.
+- **Bytes, not `mediaSnapshotIds`.** A pointer to stored media is cheaper and was the plan here, but it makes a two-year-old order depend on a media row still existing — so a future cleanup would blank the very history this ADR protects. The snapshot copies the addresses instead.
+- **`OrderAmendment` does not exist.** Corrections after acceptance are unmodelled. The snapshot is append-only in the weak sense that nothing writes it twice, not in the strong sense of an audited amendment trail with customer consent.
+
+Not captured at all, and still to be designed: discount and price lines, tax and shipping allocation, `promisedDeliveryWindow`, `return/warranty terms version`, and the `offerId` / `offerSupplierBindingId` identity pair. Shipping and carrier facts live on `fulfillment_groups` today, which is where a buyer's page reads them from — so they are frozen, just not here.
+
+### One open risk this amendment does not close
+
+`Media locking` above promises that *"if a supplier later replaces or removes a file at the same URL, the order, receipt, return, dispute, and support surfaces continue showing the original accepted media."* **That is still not true for a supplier original.** Seller uploads live in Cloudflare R2 and are durable, but a `SUPPLIER_ORIGINAL` row holds a remote CJ address, and the snapshot freezes the *address*, not the bytes. If CJ deletes or replaces that file, an old order's frozen gallery breaks or silently changes — which is precisely the failure this section was written to prevent, surviving in the one case nobody notices until a dispute.
+
+Closing it means copying approved supplier media into Sals3 storage before publication, as this ADR already specifies. That is media-pipeline work (see [[ADR-011-product-media-source-selection-and-supplier-original-preservation]]'s own open `MediaAsset` item), not order work, and it is not started.
+
+### Status
+
+`implementation_status` moves from `not-started` to `partially-implemented`: the immutable ordered-item snapshot exists for the seller-edit case and is served and rendered. The supplier-change half of this ADR — detection, attention queues, anomaly thresholds, notification channels, active-order exception tooling, `OrderAmendment` — remains unbuilt.
