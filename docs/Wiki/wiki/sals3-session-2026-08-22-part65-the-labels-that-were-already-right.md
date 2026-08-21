@@ -18,7 +18,7 @@ updated: 2026-08-22
 status: current-state
 authority: session-record
 owner_approved: true
-implementation_status: open-pr
+implementation_status: merged
 related:
   - "[[hot]]"
   - "[[agent-operating-contract]]"
@@ -39,7 +39,7 @@ instruction: match the font with the designated font of the PDP.
 
 | PR | Repo | What |
 | --- | --- | --- |
-| [#144](https://github.com/Sals3-Official/sals3-ecommerce/pull/144) | ecommerce | The four PDP micro-labels move to the display face |
+| [#144](https://github.com/Sals3-Official/sals3-ecommerce/pull/144) | ecommerce | The four PDP micro-labels move to the display face (merged, `746745b`) |
 
 > [!IMPORTANT] The lesson this session actually taught
 > **"Fix this" can mean "change this", not "repair this".** The boxed labels
