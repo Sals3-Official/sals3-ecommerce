@@ -112,6 +112,12 @@ export default function PromoCarousel() {
           </button>
         </div>
       </div>
+      {/* The active dot wears `.bg-brand-gradient` — the same navy-to-brand-blue
+          run as the arrows and every primary action — and widens to a 24px
+          pill so that gradient has room to read; at 10px square it collapses
+          into a flat navy. Only the width animates: a gradient cannot
+          cross-fade to a flat colour, so the inactive slate is a straight
+          swap. */}
       <div
         className="mt-3 flex justify-center gap-2"
         aria-label="Featured deal slides"
@@ -123,11 +129,13 @@ export default function PromoCarousel() {
             onClick={() => emblaApi?.scrollTo(index)}
             aria-label={`Show featured deal ${index + 1}`}
             aria-current={index === selectedIndex ? 'true' : undefined}
-            className="min-h-11 min-w-11 rounded-full p-3"
+            className="group flex min-h-11 min-w-4 items-center justify-center"
           >
             <span
-              className={`block h-2.5 w-2.5 rounded-full ${
-                index === selectedIndex ? 'bg-brand-700' : 'bg-slate-300'
+              className={`block h-2.5 shrink-0 rounded-full transition-[width] duration-200 ease-out ${
+                index === selectedIndex
+                  ? 'bg-brand-gradient w-6'
+                  : 'w-2.5 bg-slate-300 group-hover:bg-slate-400'
               }`}
             />
           </button>
