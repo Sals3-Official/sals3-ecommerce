@@ -3,8 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('server-only', () => ({}));
 
 const { default: toBuyerOrder } = await import('./from-api');
-const { SPLIT_ORDER_PAYLOAD, CONFLICT_ORDER_PAYLOAD, UNSYNCED_ORDER_PAYLOAD } =
-  await import('../../../test/fixtures/buyer-order-payloads');
+const {
+  SPLIT_ORDER_PAYLOAD,
+  CONFLICT_ORDER_PAYLOAD,
+  UNSYNCED_ORDER_PAYLOAD,
+  FROZEN_LISTING_ORDER_PAYLOAD,
+} = await import('../../../test/fixtures/buyer-order-payloads');
 
 describe('toBuyerOrder', () => {
   it('rolls a split order up to its least-advanced package', () => {
@@ -109,5 +113,51 @@ describe('toBuyerOrder', () => {
     expect(order.shipTo.contact).toBe('aljon@example.com · 0927 173 9215');
     expect(order.stripeReferenceLabel).toMatch(/^Stripe reference cs_live_/);
     expect(order.stripeReferenceLabel).toContain('…');
+  });
+});
+
+/**
+ * Owner decision 2026-08-21: an order shows the listing as it was bought, so a
+ * seller who renames a product or replaces its photos afterwards changes nothing
+ * a past buyer sees.
+ */
+describe('toBuyerOrder - the listing as ordered', () => {
+  function frozenLine() {
+    return toBuyerOrder(FROZEN_LISTING_ORDER_PAYLOAD).packages[0]!.lines[0]!;
+  }
+
+  it('prefers the buyer-facing axes over the supplier token', () => {
+    // `variantLabel` is `army green-L` — the supplier's own concatenated string.
+    // The buyer chose `Colour: Army Green` and `Size: L`.
+    expect(frozenLine().variant).toBe('Colour: Army Green · Size: L');
+  });
+
+  it('carries the frozen gallery, description, specification and category', () => {
+    const { listing } = frozenLine();
+
+    expect(listing?.description).toHaveLength(2);
+    expect(listing?.specification).toHaveLength(2);
+    expect(listing?.categoryPath).toContain('Outerwear');
+    expect(listing?.specs?.brand).toBe('Generic');
+  });
+
+  /**
+   * A stored address is still an address this deployment is about to fetch. The
+   * portal checked the host on the way in; that is not a reason to skip the
+   * check on the way out.
+   */
+  it('re-checks every frozen image against the host allow-list', () => {
+    const { listing } = frozenLine();
+
+    expect(listing?.imageUrls).toHaveLength(2);
+    expect(listing?.imageUrls.join(' ')).not.toContain('untrusted.example.com');
+  });
+
+  it('falls back to the supplier token for an order with no snapshot', () => {
+    const order = toBuyerOrder(SPLIT_ORDER_PAYLOAD);
+    const line = order.packages[0]!.lines[0]!;
+
+    expect(line.listing).toBeUndefined();
+    expect(line.variant).toBe('Warm white-EU plug');
   });
 });

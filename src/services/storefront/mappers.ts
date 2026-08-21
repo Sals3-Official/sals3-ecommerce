@@ -172,7 +172,7 @@ function toProductImages(
  * words around it. `alt` falls back to the product title, the same non-claim
  * the gallery uses when the portal supplies no per-image text.
  */
-function toDescriptionBlocks(
+export function toDescriptionBlocks(
   blocks: ProductDescriptionBlockPayload[],
   title: string,
 ): ProductDescriptionBlock[] {

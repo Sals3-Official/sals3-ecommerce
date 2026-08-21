@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { BuyerOrderLine } from '@/lib/orders/contracts';
+import OrderedListingPanel from './OrderedListingPanel';
 
 /**
  * One ordered item, as it was accepted.
@@ -21,6 +22,14 @@ import type { BuyerOrderLine } from '@/lib/orders/contracts';
  * routes through the repository's CJ CDN loader rather than Vercel's metered
  * optimizer. A line with no snapshot renders the sunken square instead of a
  * broken frame, and the square is `aria-hidden` because it says nothing.
+ *
+ * ## Details as ordered
+ *
+ * The rest of the frozen listing — the option axes, the whole gallery, the
+ * description, the specifications — hangs off `OrderedListingPanel`, collapsed.
+ * An order line's job is still the arithmetic; the record is there for the buyer
+ * who needs to check what they actually chose against what the listing says
+ * today. Absent on orders placed before the portal froze it.
  */
 
 type OrderLineRowProps = {
@@ -81,6 +90,9 @@ export default function OrderLineRow({
         <p className="mt-1.5 text-xs text-ink-muted">
           Accepted as ordered on {line.acceptedOnLabel}
         </p>
+        {line.listing === undefined ? null : (
+          <OrderedListingPanel listing={line.listing} title={line.title} />
+        )}
       </div>
 
       {compact ? null : (

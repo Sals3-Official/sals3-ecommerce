@@ -26,6 +26,12 @@
  * the thing with one courier, one tracking number and one status.
  */
 
+import type {
+  ProductDescriptionBlock,
+  ProductSpecification,
+  ProductSpecs,
+} from '@/lib/product-detail';
+
 /**
  * Mirrored from `sals3-portal/src/modules/orders/contracts.ts`. Order matters:
  * `leastAdvancedState` reads it as a progression, primary states first.
@@ -103,6 +109,33 @@ export type BuyerOrderLine = {
   acceptedOnLabel: string;
   /** The line's own snapshot media. `null` renders the sunken placeholder. */
   imageUrl: string | null;
+  /**
+   * The listing as it was when this order was placed.
+   *
+   * Absent for an order accepted before the portal froze it, and absent when the
+   * stored document is one this deployment cannot read. Both cases fall back to
+   * `title`, `variant` and `imageUrl`, which are frozen on the line regardless —
+   * so the panel is additive and its absence is never an error a buyer sees.
+   */
+  listing?: OrderedListing;
+};
+
+/**
+ * What the buyer saw on the product page, at the moment they bought it.
+ *
+ * A seller may rename a product, replace every photo and rewrite the
+ * description afterwards — they are entitled to, and it applies to new orders.
+ * This is why it does not reach back: the order carries its own copy.
+ */
+export type OrderedListing = {
+  /** The option axes in the seller's own words, as chosen. */
+  options: { name: string; value: string }[];
+  /** Host-checked, in the order the gallery showed them. */
+  imageUrls: string[];
+  description?: ProductDescriptionBlock[];
+  specification?: ProductSpecification[];
+  specs?: ProductSpecs;
+  categoryPath?: string;
 };
 
 /** Who reported a tracking event. Never Sals3 — it reports nothing of its own. */

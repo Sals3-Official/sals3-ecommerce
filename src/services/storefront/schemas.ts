@@ -60,7 +60,7 @@ export const ProductsPaginationSchema = z.object({
  * that row. Truncate instead of rejecting, so display length is still
  * bounded without one long real title taking the rest of the page down.
  */
-function truncatedText(maxLength: number) {
+export function truncatedText(maxLength: number) {
   return z
     .string()
     .min(1)
@@ -72,7 +72,10 @@ function truncatedText(maxLength: number) {
  * same reasoning as `truncatedText`, applied one level up: a malformed variant
  * should cost that variant, not the product page.
  */
-function salvagedArray<Schema extends z.ZodTypeAny>(item: Schema, max: number) {
+export function salvagedArray<Schema extends z.ZodTypeAny>(
+  item: Schema,
+  max: number,
+) {
   return z
     .array(z.unknown())
     .max(max)
@@ -148,7 +151,7 @@ const ProductImageSchema = z.object({
  * even though the producer always sends it; the mapper falls back to the
  * product title.
  */
-const DescriptionBlockSchema = z.discriminatedUnion('type', [
+export const DescriptionBlockSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('paragraph'), text: truncatedText(4000) }),
   z.object({
     type: z.literal('heading'),
@@ -205,7 +208,7 @@ const ProductVariantSchema = z.object({
  * Supplier-reported facts. No `quantity` field anywhere, on purpose: a count we
  * do not have must not become a field somebody later fills with an estimate.
  */
-const ProductSpecsSchema = z.object({
+export const ProductSpecsSchema = z.object({
   sku: truncatedText(80).optional(),
   weightGrams: z.number().int().nonnegative().optional(),
   lengthMillimeters: z.number().int().nonnegative().optional(),
@@ -229,7 +232,7 @@ const ProductSpecsSchema = z.object({
  * within a row — a labelless value or a valueless label is not a fact — and a
  * bad row is dropped by `salvagedArray` rather than costing the page.
  */
-const ProductSpecificationSchema = z.object({
+export const ProductSpecificationSchema = z.object({
   label: truncatedText(80),
   value: truncatedText(300),
 });
