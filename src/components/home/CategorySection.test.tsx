@@ -5,6 +5,7 @@ import {
   type Category,
 } from '@/lib/home-placeholder-data';
 import CATEGORY_ICON_PATHS from './category-icons';
+import categoryImageSrc from './category-images';
 import CategorySection from './CategorySection';
 
 /** The grid's own links, excluding the section's "See all categories". */
@@ -40,25 +41,50 @@ describe('CategorySection', () => {
     expect(screen.getByText('1 category')).toBeInTheDocument();
   });
 
-  it('renders an SVG icon for a mapped category id, not its code initials', () => {
+  it("renders the department's photograph when there is one", () => {
     render(<CategorySection categories={[liveCategories[0]!]} />);
 
     const link = screen.getByRole('link', { name: /Home & Garden/ });
+    const photo = link.querySelector('img');
 
-    expect(link.querySelector('svg')).toBeInTheDocument();
+    // Substring, not equality: this render path uses Next's default loader
+    // (vitest does not read `next.config.ts`), while production goes through
+    // the custom loader, which returns a local `/public` path untouched.
+    expect(decodeURIComponent(photo?.getAttribute('src') ?? '')).toContain(
+      '/categories/home-garden.webp',
+    );
+    // Decorative: the tile prints the name below it.
+    expect(photo).toHaveAttribute('alt', '');
+    expect(link.querySelector('svg')).not.toBeInTheDocument();
     expect(link).not.toHaveTextContent('HG');
   });
 
-  it('falls back to the real feed code when the category id has no icon', () => {
-    // `mature` is one of the two main categories left unmapped on purpose.
+  it('falls back to the line icon for a department with no photograph yet', () => {
     render(
-      <CategorySection categories={[category('mature', 'MA', 'Mature')]} />,
+      <CategorySection
+        categories={[category('toys-games', 'TG', 'Toys & Games')]}
+      />,
     );
 
-    const link = screen.getByRole('link', { name: /Mature/ });
+    const link = screen.getByRole('link', { name: /Toys & Games/ });
 
+    expect(link.querySelector('img')).not.toBeInTheDocument();
+    expect(link.querySelector('svg')).toBeInTheDocument();
+    expect(link).not.toHaveTextContent('TG');
+  });
+
+  it('falls back to the real feed code when it has neither photo nor icon', () => {
+    render(
+      <CategorySection
+        categories={[category('aquarium-lighting', 'AL', 'Aquarium Lighting')]}
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: /Aquarium Lighting/ });
+
+    expect(link.querySelector('img')).not.toBeInTheDocument();
     expect(link.querySelector('svg')).not.toBeInTheDocument();
-    expect(link).toHaveTextContent('MA');
+    expect(link).toHaveTextContent('AL');
   });
 
   it('clamps a long category name at 2 lines instead of truncating line 1', () => {
@@ -79,10 +105,23 @@ describe('CategorySection', () => {
   it('keeps the brand colour off the tile — navigation, not an action (spec §11.4)', () => {
     render(<CategorySection categories={[liveCategories[0]!]} />);
 
-    const iconHolder = tiles()[0]?.querySelector('span');
+    const plate = tiles()[0]?.querySelector('span');
 
-    expect(iconHolder?.className).not.toMatch(/brand-600/);
-    expect(iconHolder).toHaveClass('bg-surface-sunken', 'text-ink-muted');
+    expect(plate?.className).not.toMatch(/brand-600/);
+    // White behind a photograph shot on white, not the sunken grey plate.
+    expect(plate).toHaveClass('bg-white');
+  });
+
+  it('keeps the sunken plate where the media is an icon, not a photo', () => {
+    render(
+      <CategorySection
+        categories={[category('toys-games', 'TG', 'Toys & Games')]}
+      />,
+    );
+
+    const plate = tiles()[0]?.querySelector('span');
+
+    expect(plate).toHaveClass('bg-surface-sunken', 'text-ink-muted');
   });
 
   it('lays the tiles out as a 5-column grid at md and 3 columns below it', () => {
@@ -166,5 +205,20 @@ describe('CategorySection', () => {
       .filter((id) => CATEGORY_ICON_PATHS[id] === undefined);
 
     expect(unmapped).toEqual(['mature', 'religious-ceremonial']);
+  });
+});
+
+describe('department photographs', () => {
+  it('covers every department except the one whose asset is missing', () => {
+    const missing = placeholderCategories
+      .map((department) => department.id)
+      .filter((id) => categoryImageSrc(id) === undefined);
+
+    expect(missing).toEqual(['toys-games']);
+  });
+
+  it('never claims a photo for a leaf category id', () => {
+    expect(categoryImageSrc('aquarium-lighting')).toBeUndefined();
+    expect(categoryImageSrc('cat-ggl-5079')).toBeUndefined();
   });
 });
