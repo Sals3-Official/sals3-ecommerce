@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/home-placeholder-data';
 import { formatMoney } from '@/lib/money';
+import StarRating from '@/components/product/StarRating';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 
 type ProductCardProps = {
@@ -39,6 +40,24 @@ export default function ProductCard({ product }: ProductCardProps) {
         <p className="line-clamp-2 min-h-[33px] text-xs text-ink-muted text-pretty">
           {product.title}
         </p>
+        {/*
+          Rendered only when a real rating exists, and the row is absent
+          otherwise rather than reserving space or showing nought stars. An
+          unreviewed product is new, not bad, and a greyed-out star row on every
+          card would say the opposite of that all over the home page.
+        */}
+        {product.rating === undefined ? null : (
+          <div className="flex items-center gap-1.5">
+            <StarRating
+              rating={Math.round(product.rating.average)}
+              size="sm"
+              label={`${product.rating.average.toFixed(1)} out of 5`}
+            />
+            <span className="text-[11px] text-ink-subtle tabular-nums">
+              {product.rating.average.toFixed(1)} ({product.rating.count})
+            </span>
+          </div>
+        )}
       </div>
     </Link>
   );

@@ -40,6 +40,11 @@
   --color-brand-blue-900: #002b53;
   --color-teal-500: #157f7f;
   --color-red-600: #d92d20;
+  /* Buyer-rating stars. Same value the Seller Center uses, so one thing has one
+     colour on both sides. 4.9:1 on white and 4.6:1 on --color-surface, so it
+     clears AA as text as well as a fill — and it is deliberately not the
+     marketplace orange the design was asked not to copy. */
+  --color-rating: #9a6200;
 
   /* Semantic */
   --color-ink: #14181c;

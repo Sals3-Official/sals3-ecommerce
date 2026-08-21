@@ -105,6 +105,25 @@ const orderLineSchema = z.object({
    * order page of a buyer who has already paid and wants to read their receipt.
    */
   listing: orderedListingSchema.optional().catch(undefined),
+  /**
+   * Whether the buyer can review this line right now. The portal decides it
+   * (delivered parcel, inside the window, not already reviewed) and this side
+   * only renders the answer — duplicating the rule here would give it two homes
+   * that could disagree.
+   *
+   * `.catch(false)` so a portal older than this deployment simply shows no
+   * review control, rather than costing the buyer their whole order page.
+   */
+  reviewable: z.boolean().optional().catch(false),
+  /** This buyer's own review of this line, when they have written one. */
+  review: z
+    .object({
+      id: z.string(),
+      rating: z.number().int().min(1).max(5),
+      createdAt: z.string(),
+    })
+    .optional()
+    .catch(undefined),
 });
 
 const trackingEventSchema = z.object({

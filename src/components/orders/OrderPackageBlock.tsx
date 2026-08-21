@@ -36,11 +36,17 @@ type OrderPackageBlockProps = {
   package: BuyerOrderPackage;
   /** The detail page adds the tracking feed; the list card does not. */
   showEvents?: boolean;
+  /** Needed for the per-line review link, which lives under the order. */
+  orderNumber: string;
+  /** Detail page only — see `OrderLineRow`'s own note. */
+  showReviewControl?: boolean;
 };
 
 export default function OrderPackageBlock({
   package: pkg,
   showEvents = false,
+  orderNumber,
+  showReviewControl = false,
 }: OrderPackageBlockProps) {
   const headingId = `package-${pkg.id}`;
 
@@ -72,7 +78,17 @@ export default function OrderPackageBlock({
 
       <ul aria-labelledby={headingId} className="divide-y divide-border">
         {pkg.lines.map((line) => (
-          <OrderLineRow key={line.id} line={line} compact={showEvents} />
+          <OrderLineRow
+            key={line.id}
+            line={line}
+            compact={showEvents}
+            orderNumber={orderNumber}
+            // The package's own state, not the order's rollup: one order can
+            // hold a delivered package beside one still moving, and the review
+            // control belongs to the item that actually arrived.
+            parcelDelivered={pkg.state === 'DELIVERED'}
+            showReviewControl={showReviewControl}
+          />
         ))}
       </ul>
 

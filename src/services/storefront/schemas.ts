@@ -91,6 +91,18 @@ export function salvagedArray<Schema extends z.ZodTypeAny>(
 }
 
 /** Identity, money, and category — shared by the card and the detail page. */
+/**
+ * A product's buyer rating.
+ *
+ * Never CJ's. The supplier's own `listedNum` and review counts describe CJ's
+ * marketplace, and presenting them as a Sals3 rating is the fabrication the
+ * corrected external facts in the wiki exist to prevent.
+ */
+export const RatingSummarySchema = z.object({
+  average: z.number().min(0).max(5),
+  count: z.number().int().nonnegative(),
+});
+
 const StorefrontProductBaseSchema = z.object({
   id: z.string().min(1).max(120),
   slug: z.string().regex(CATEGORY_SLUG_PATTERN),
@@ -116,6 +128,16 @@ const StorefrontProductBaseSchema = z.object({
    */
   ratingLine: z.string().min(1).max(80).optional(),
   shipLine: z.string().min(1).max(120).optional(),
+  /**
+   * Real Sals3 buyer ratings, absent when nobody has reviewed the product.
+   *
+   * Absent rather than a zeroed object: `{average: 0, count: 0}` renders as a
+   * nought-star product unless every consumer special-cases it, while an absent
+   * key cannot be mistaken for a verdict. `.catch(undefined)` for the same
+   * reason `listing` on an order line has it — a malformed aggregate must cost
+   * the stars, never the product.
+   */
+  rating: RatingSummarySchema.optional().catch(undefined),
 });
 
 /** The card feed. Deliberately does not grow. */
@@ -255,12 +277,56 @@ export const StorefrontProductDetailSchema = StorefrontProductBaseSchema.extend(
      * never rendered in the page body, and it is not the visible description.
      */
     metaDescription: truncatedText(320).optional(),
+    /**
+     * The star distribution behind `rating.average`, index 0 being one star.
+     * Detail only — a card shows an average, a page shows the shape.
+     */
+    ratingBreakdown: z
+      .tuple([
+        z.number().int().nonnegative(),
+        z.number().int().nonnegative(),
+        z.number().int().nonnegative(),
+        z.number().int().nonnegative(),
+        z.number().int().nonnegative(),
+      ])
+      .optional()
+      .catch(undefined),
   },
 );
 
 export const StorefrontProductResponseSchema = z.object({
   product: StorefrontProductDetailSchema,
 });
+
+/**
+ * One buyer review, as the product page renders it.
+ *
+ * `displayName` absent means the buyer chose to stay anonymous — the wording
+ * for that is this side's to choose, which is why the portal stores no
+ * placeholder string for it.
+ */
+export const ProductReviewSchema = z.object({
+  id: z.string().min(1).max(120),
+  rating: z.number().int().min(1).max(5),
+  body: truncatedText(1000).nullable(),
+  displayName: truncatedText(60).nullable(),
+  variantLabel: truncatedText(120).nullable(),
+  createdAt: z.string(),
+  reply: z
+    .object({ body: truncatedText(1000), createdAt: z.string() })
+    .nullable(),
+});
+
+/**
+ * `salvagedArray`, so one malformed review is dropped rather than emptying the
+ * whole section — the same call the description blocks make.
+ */
+export const ProductReviewsResponseSchema = z.object({
+  reviews: salvagedArray(ProductReviewSchema, 50),
+});
+
+export type ProductReview = z.infer<typeof ProductReviewSchema>;
+export type RatingSummary = z.infer<typeof RatingSummarySchema>;
 
 export const CheckoutFreightQuoteSchema = z.object({
   quoteId: z.string().min(1).max(120),

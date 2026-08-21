@@ -144,7 +144,12 @@ export default async function OrderDetailPage({
                 key={pkg.id}
                 className="overflow-hidden rounded-xl border border-border bg-white"
               >
-                <OrderPackageBlock package={pkg} showEvents />
+                <OrderPackageBlock
+                  package={pkg}
+                  showEvents
+                  orderNumber={order.number}
+                  showReviewControl
+                />
               </section>
             ))}
           </div>

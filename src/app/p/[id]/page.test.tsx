@@ -769,9 +769,15 @@ describe('Product page', () => {
       await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
     );
 
-    const productReads = fetchMock.mock.calls.filter((call) =>
-      String(call[0]).includes(`${STOREFRONT_PRODUCTS_PATH}/air-cooler`),
-    );
+    // Ends at the slug: `/products/air-cooler/reviews` is a different read on
+    // a nested path, and counting it here would make this assert "one request
+    // under the product path" rather than "one product read", which is not what
+    // it is for.
+    const productReads = fetchMock.mock.calls.filter((call) => {
+      const url = new URL(String(call[0]), 'https://portal.example.com');
+
+      return url.pathname === `${STOREFRONT_PRODUCTS_PATH}/air-cooler`;
+    });
 
     expect(productReads).toHaveLength(1);
   });

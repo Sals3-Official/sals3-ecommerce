@@ -19,6 +19,7 @@ export const STOREFRONT_FREIGHT_QUOTES_PATH =
 export const STOREFRONT_CHECKOUT_INTENTS_PATH =
   '/api/storefront/checkout/intents';
 export const STOREFRONT_ORDERS_PATH = '/api/storefront/orders';
+export const STOREFRONT_REVIEWS_PATH = '/api/storefront/reviews';
 export const STOREFRONT_CHECKOUT_ORDERS_ACCEPT_PATH =
   '/api/storefront/checkout/orders/accept';
 

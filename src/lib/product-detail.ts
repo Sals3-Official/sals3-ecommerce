@@ -114,8 +114,20 @@ export type ProductDetail = {
   price: Money;
   /** Only ever evidence-backed. Absent means no comparison price exists. */
   oldPrice?: Money;
-  /** Absent once the portal stops sending the deprecated non-claim. */
+  /**
+   * Absent once the portal stops sending the deprecated non-claim. It is no
+   * longer a non-claim: the portal now derives it from `rating`, so the two can
+   * never disagree. Prefer `rating` in anything new — this stays only so an
+   * older payload still renders.
+   */
   ratingLine?: string;
+  /**
+   * Real Sals3 buyer ratings. Absent means nobody has reviewed this product,
+   * which is not a verdict about it and must not render as nought stars.
+   */
+  rating?: { average: number; count: number };
+  /** The star distribution behind `rating.average`, index 0 being one star. */
+  ratingBreakdown?: [number, number, number, number, number];
   shipLine?: string;
   imageUrl?: string;
   imageAlt: string;

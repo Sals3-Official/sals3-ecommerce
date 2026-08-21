@@ -96,6 +96,9 @@ export function toHomeProduct(product: Product, index: number): HomeProduct {
     tone: toneFor(index),
     imageUrl: getAllowedProductImageUrl(product.imageUrl),
     imageAlt: product.imageAlt,
+    ...(product.rating === undefined || product.rating.count === 0
+      ? {}
+      : { rating: product.rating }),
   };
 }
 
@@ -256,5 +259,15 @@ export function toProductDetail(
     ...(product.metaDescription === undefined
       ? {}
       : { metaDescription: product.metaDescription }),
+    // A zero-count aggregate is dropped here rather than passed through: the
+    // portal already omits it, and re-checking means a future producer that
+    // starts sending `{average: 0, count: 0}` cannot make every unreviewed
+    // product render as nought stars.
+    ...(product.rating === undefined || product.rating.count === 0
+      ? {}
+      : { rating: product.rating }),
+    ...(product.ratingBreakdown === undefined
+      ? {}
+      : { ratingBreakdown: product.ratingBreakdown }),
   };
 }

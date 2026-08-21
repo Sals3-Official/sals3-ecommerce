@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import type { BuyerOrderLine } from '@/lib/orders/contracts';
 import OrderedListingPanel from './OrderedListingPanel';
+import OrderLineReviewControl from './OrderLineReviewControl';
 
 /**
  * One ordered item, as it was accepted.
@@ -36,11 +37,37 @@ type OrderLineRowProps = {
   line: BuyerOrderLine;
   /** Three columns and a combined meta line, for the detail page. */
   compact?: boolean;
+  /** Needed to link to the review form, which lives under the order. */
+  orderNumber: string;
+  /**
+   * Detail page only.
+   *
+   * `OrderCard.test.tsx` asserts the list card prints no "review" and no
+   * "rating" anywhere, and that is a real decision rather than an oversight: the
+   * card is a payment-and-fulfilment statement a buyer scans, and it already
+   * links to the detail page for anything that needs doing. So the control lives
+   * one click in, where the buyer is looking at the item rather than at the
+   * arithmetic.
+   */
+  showReviewControl?: boolean;
+  /**
+   * Whether the package carrying this line has been delivered.
+   *
+   * Passed in rather than read from the line, because the control has three
+   * states and only the parcel knows which: delivered and unreviewed offers the
+   * button, delivered and reviewed shows the rating, and anything else has to
+   * say *why* there is no button. Without this a not-yet-delivered line and a
+   * closed window would look identical, and they are not the same news.
+   */
+  parcelDelivered: boolean;
 };
 
 export default function OrderLineRow({
   line,
   compact = false,
+  orderNumber,
+  parcelDelivered,
+  showReviewControl = false,
 }: OrderLineRowProps) {
   const metaLine = [
     line.variant,
@@ -93,6 +120,13 @@ export default function OrderLineRow({
         {line.listing === undefined ? null : (
           <OrderedListingPanel listing={line.listing} title={line.title} />
         )}
+        {showReviewControl ? (
+          <OrderLineReviewControl
+            line={line}
+            orderNumber={orderNumber}
+            parcelDelivered={parcelDelivered}
+          />
+        ) : null}
       </div>
 
       {compact ? null : (

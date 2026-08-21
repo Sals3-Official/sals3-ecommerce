@@ -63,10 +63,19 @@ function describe(detail: ProductDetail): string | undefined {
  * that does not match the page, so every field here is one the portal actually
  * sent. What is deliberately absent, and why:
  *
- * - **`aggregateRating` / `review`** — Sals3 has no buyer reviews. CJ's
- *   supplier-platform review counts are supplier evidence, not Sals3 ratings,
- *   and presenting them as either would be a fabricated rating in the one place
- *   search engines treat as a machine-readable promise.
+ * - **`aggregateRating` / `review`** — Sals3 now *has* buyer reviews (the
+ *   product payload carries `rating`, and `ProductReviews` renders them), so the
+ *   old reason for this omission — that there was nothing real to emit — no
+ *   longer holds. It stays omitted for a different and narrower reason: emitting
+ *   a review snippet is governed by Google's own structured-data policy for
+ *   them, that policy has not been read against this implementation, and a
+ *   review snippet that breaches it risks a manual action against the whole
+ *   domain rather than one page. This is a real ADR-016 unlock waiting on that
+ *   reading, not a missing input.
+ *
+ *   What has not changed: CJ's supplier-platform review counts are supplier
+ *   evidence about CJ's marketplace and are never eligible here, whatever is
+ *   decided about our own.
  * - **`offers.availability`** — emitted only for an explicit `AVAILABLE` or
  *   `UNAVAILABLE`. `UNKNOWN` (the common case) emits no field at all. Defaulting
  *   to `InStock` is the single most damaging fabrication available here.
