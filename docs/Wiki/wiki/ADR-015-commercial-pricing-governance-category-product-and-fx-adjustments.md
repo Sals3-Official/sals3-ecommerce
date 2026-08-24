@@ -2,7 +2,7 @@
 tags: [sals3, adr, pricing, margin, forex, admin-portal, governance, audit]
 aliases: [ADR-015, Commercial Pricing Governance, Category and Product Pricing Policy]
 created: 2026-08-10
-updated: 2026-08-21
+updated: 2026-08-25
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -270,3 +270,109 @@ inside the resolver**. Nothing in §1 addresses the manual-entry path, which had
 
 **Frontmatter `updated`** moved to 2026-08-21. `implementation_status` stays
 `phase-1-merged-not-launched`.
+
+## Amendment — 2026-08-25: margins and the contribution floor become per-destination (owner decision, Bogs)
+
+Both merchant commercial levers gain a market dimension. This **reverses a deferral this ADR
+made of its own accord**, so the reversal is recorded before any of it is built.
+
+### What is reversed
+
+The 2026-08-14 amendment scoped several things down as "deliberately unbuilt until the org grows
+into them", and destination scoping was among them:
+
+> per-currency-pair / funding-rail / destination FX-adjustment scoping (the single seller funding
+> buffer stays, unchanged)
+
+That deferral is **withdrawn for margin and for the contribution floor**. It stands for the
+funding buffer's own FX scoping, which is a different instrument and is not touched here.
+
+### The owner's reasoning, in the owner's terms
+
+Operational expense is not the same number in every country, so a single global commercial rule
+cannot be right in more than one of them. The freight measurements taken for the free-shipping
+plan on 2026-08-24 (CJ Shipping Calculator, origin China, "Ordinary", cheapest option) make the
+size of the gap concrete on one 300 g basket:
+
+| Destination | Delivery, 300 g |
+|---|---|
+| Philippines | $3.70 |
+| Canada | $6.81 |
+| USA | $7.62 |
+| Australia | $8.10 |
+| New Zealand | $8.38 |
+| Fiji | $16.01 |
+
+Against a 25% category margin on a $4.29 supplier cost — roughly $1.07 of contribution — none of
+those destinations is covered, and the cheapest and dearest differ by more than four times. One
+rate cannot serve six countries.
+
+### The decision
+
+1. **`pricing_category_policies` and `pricing_store_defaults` each gain a market scope.** A row
+   scoped to no market remains the "all destinations" rule, so every policy that exists today
+   keeps its exact current meaning and no backfill is required to preserve behaviour.
+2. **Resolution becomes two-dimensional.** The existing least-to-most-specific category walk
+   (§3) is preserved and a market preference is applied at each rung: an exactly-scoped rule
+   beats an all-destinations rule **at the same category depth**, and depth still beats market.
+   A deeper category with no market-specific rule must outrank a shallower one that has one —
+   otherwise setting a single country rate on a department would silently override every
+   product-level decision beneath it.
+3. **The contribution floor stays absolute and becomes per-market too.** It does **not** become a
+   percentage. §1's reasoning is unchanged and the owner's own justification is the strongest
+   argument for it: operational expense is what does not shrink when an item is cheap. A
+   percentage floor would scale with cost and therefore never cross the margin line — it would be
+   a second margin wearing a floor's name.
+4. **The resolver's market input is required, not defaulted.** A caller that cannot say which
+   destination it is pricing for must refuse rather than silently resolve the all-destinations
+   rule, for the same reason `minContributionCurrency` is explicit per §1: an inferred commercial
+   input is one nobody can audit later.
+
+### What this does not solve, and must not be read as solving
+
+**Within one destination, weight moves the cost further than the destination itself does.**
+Australia is $8.10 at 300 g and $27.14 at 2 kg on the same measurements — a wider spread than
+Australia to Canada at a fixed weight. A per-destination margin is still a flat markup; it is six
+flat markups instead of one, and it is blind to what is actually in the basket.
+
+This amendment is therefore a **step, not the destination**. ADR-003 remains controlling for
+landed cost and contribution economics, and `resolveProductPricing` still says so in its own
+seller-facing copy: *"This is product-only price guidance; checkout freight is not included."*
+The end state is destination freight inside the resolution, not a per-country constant standing
+in for it.
+
+**A related measurement is recorded here because it bears directly on every rate in this ADR**:
+on 2026-08-25 a live CJ per-product freight quote returned **$8.12 for 65 g to the USA**, while
+the table above — built from the generic weight-based Shipping Calculator — carries **$7.62 for
+300 g**. The two are not contradictory (the calculator returns a generic cheapest lane by weight;
+a real product's quote depends on its warehouse, category and available carriers) but it means a
+calculator figure **can understate what a real listing costs to ship**. Any rate derived from the
+table above inherits that gap.
+
+### Required before this is implemented
+
+- **The DDL runs before the code that reads it.** Migrations do not run on deploy; they reach
+  production through the sanctioned break-glass endpoint. Shipping a reader ahead of its column
+  is the failure that took the Product Catalogue down (PR #102) and nearly took order history
+  down on 2026-08-22.
+- **The CSV import/export shape is part of the decision, not a detail.** It is one line per
+  category today. If it stays that way while the table gains a market dimension, an import
+  becomes a silent way to erase five destinations out of six.
+- **Compare-and-set must key on the scope actually edited**, so two people setting different
+  destinations on the same category do not overwrite each other through a version token that
+  cannot tell them apart.
+
+### Open
+
+- **No destination rate is approved by this amendment.** It authorizes the dimension, not the
+  numbers. Every rate remains provisional on the same footing as §1's, since no buyer payment
+  rail and no platform commission is configured.
+- **Interaction with the 2026-08-21 manual-entry floor is unresolved.** That rule is a flat 2.5%
+  over supplier cost with no market scope at all, so a hand-typed price and a resolved price can
+  still land on different sides of "thin" in the same destination, and nothing reports it.
+- **`seller_market_profiles` already governs which destinations a seller may offer.** A pricing
+  rule scoped to a destination the seller has not configured must be representable but inert;
+  which of the two governs is not decided here.
+
+**Frontmatter `updated`** moves to 2026-08-25. `implementation_status` stays
+`phase-1-merged-not-launched` — nothing in this amendment is built.
