@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import Link from 'next/link';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CategoryCarousel from './CategoryCarousel';
 
@@ -13,7 +14,7 @@ const TRACK_WIDTH = PAGE_WIDTH * 3;
 function renderCarousel(scrollLeft = 0, pageCount = 3) {
   const view = render(
     <CategoryCarousel label="Categories" pageCount={pageCount}>
-      <a href="/c/electronics">Electronics</a>
+      <Link href="/c/electronics">Electronics</Link>
     </CategoryCarousel>,
   );
   const track = screen.getByRole('navigation', { name: 'Categories' });

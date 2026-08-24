@@ -153,6 +153,66 @@ export function UserIcon({ width = 18, height = 18, className }: IconProps) {
   );
 }
 
+export function GridIcon({ width = 18, height = 18, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+export function ListIcon({ width = 18, height = 18, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
+export function FilterIcon({ width = 18, height = 18, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18M6 12h12M10 18h4" />
+    </svg>
+  );
+}
+
 export function CheckBadgeIcon({
   width = 18,
   height = 18,
