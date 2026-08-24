@@ -35,12 +35,14 @@ export {
 } from './storefront/schemas';
 
 export {
+  fetchCategoryProducts,
   fetchProductBySlug,
   fetchProductCategories,
   fetchProducts,
   fetchProductsByCategory,
   getProductsTotalPages,
   parseProductsPagination,
+  type CategoryProductsSort,
 } from './storefront/products';
 
 export {

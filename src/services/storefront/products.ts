@@ -42,6 +42,17 @@ type FetchProductsByCategoryOptions = FetchOptions & {
   limit?: unknown;
 };
 
+export type CategoryProductsSort = 'newest' | 'price-asc' | 'price-desc';
+
+type FetchCategoryProductsOptions = FetchOptions & {
+  sort?: CategoryProductsSort;
+  page?: unknown;
+  limit?: unknown;
+  /** Inclusive card-price bounds, in minor units. */
+  minPriceMinor?: number;
+  maxPriceMinor?: number;
+};
+
 export function parseProductsPagination(
   input: Partial<Record<'page' | 'limit', unknown>> = {},
 ): ProductsPagination {
@@ -242,4 +253,77 @@ export async function fetchProductsByCategory(
   return products
     .filter((product) => product.category === parsedCategory.data)
     .slice(0, parsedLimit);
+}
+
+function getCategoryProductsApiUrl(
+  category: string,
+  options: FetchCategoryProductsOptions,
+  pagination: ProductsPagination,
+): string {
+  const url = getStorefrontApiUrl(
+    `${STOREFRONT_CATEGORIES_PATH}/${encodeURIComponent(category)}/products`,
+  );
+
+  url.searchParams.set('page', String(pagination.page));
+  url.searchParams.set('limit', String(pagination.limit));
+
+  // Only sent when narrowing. The producer defaults each of these, and an
+  // explicit default would needlessly split its cache key.
+  if (options.sort !== undefined && options.sort !== 'newest') {
+    url.searchParams.set('sort', options.sort);
+  }
+  if (options.minPriceMinor !== undefined) {
+    url.searchParams.set('minPriceMinor', String(options.minPriceMinor));
+  }
+  if (
+    options.maxPriceMinor !== undefined &&
+    options.maxPriceMinor !== Infinity
+  ) {
+    url.searchParams.set('maxPriceMinor', String(options.maxPriceMinor));
+  }
+
+  return url.toString();
+}
+
+/**
+ * One department's published products, filtered, sorted and paged **by the
+ * portal**.
+ *
+ * Replaces `fetchProductsByCategory` for the `/c/[slug]` listing. That function
+ * scanned two feed sections, deduped them, and filtered on `product.category`
+ * in JavaScript — which could never match, because the feed's `category` is the
+ * *leaf* taxonomy row (`cat-ggl-5079`) while a browse URL names an *L1
+ * department* (`animals-pet-supplies`). The rollup that reconciles the two
+ * lives in the portal, so the filter now runs there, in SQL, against the same
+ * `publishedScope()` the rest of the catalogue is gated by.
+ *
+ * `undefined` means the slug is not one of the 21 departments — the producer
+ * answers 404 for that, and the page renders its own not-found rather than an
+ * empty department that would imply the address was real.
+ */
+export async function fetchCategoryProducts(
+  category: unknown,
+  options: FetchCategoryProductsOptions = {},
+): Promise<ProductsResponse | undefined> {
+  const parsedCategory =
+    StorefrontProductSchema.shape.category.safeParse(category);
+
+  if (!parsedCategory.success) {
+    return undefined;
+  }
+
+  const pagination = parseProductsPagination({
+    page: options.page,
+    limit: options.limit ?? MAX_PRODUCTS_PAGE_SIZE,
+  });
+
+  return requestStorefrontJson(
+    {
+      url: getCategoryProductsApiUrl(parsedCategory.data, options, pagination),
+      schema: ProductsResponseSchema,
+      subject: 'category products API',
+      notFoundStatuses: [404],
+    },
+    { fetcher: options.fetcher, signal: options.signal },
+  );
 }

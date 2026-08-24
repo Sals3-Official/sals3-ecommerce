@@ -801,6 +801,71 @@ CJ image hosts from the portal feed (see [Image loading](#image-loading)).
 Money values follow the build spec's minor-unit convention
 (`src/lib/money.ts`).
 
+## Category Listing (`/c/[slug]`)
+
+`src/app/c/[slug]/page.tsx` renders every published product filed under one of
+the taxonomy's 21 main departments, with a left-side filter sidebar. It was
+the one route every `/c/<slug>` link on the site (home category tiles, the
+`/categories` list, the footer) pointed at while it did not exist; those links
+are now real.
+
+**Sidebar facets are limited to fields the card feed actually publishes.**
+Category (a link list, not a filter — each entry navigates to that
+department) and Price (five preset bands plus free-typed min/max, reading
+`priceMinor`). **There is no buyer-rating filter, and no longer an
+availability filter either** (owner decision, 2026-08-24 — the availability
+checkboxes were removed after the page shipped). The rating omission is a
+data-honesty call: the design this page was built from included one, but
+`ratingLine` is deprecated on the storefront contract and no product on the
+live feed carries a rating — a "4 stars & up" control with nothing behind it
+would be a fabricated claim. `Buyer rating` instead appears in the sidebar's
+"Not filterable yet" note alongside `Brand`, `Ships from`, and `Discount`,
+each with the real reason it is absent (`src/lib/catalog/blocked-facets.ts`).
+`AvailabilityKey`/`AVAILABILITY_LABELS` (`src/lib/catalog/availability.ts`)
+still exist and are still real, evidence-backed data — they now drive only
+the per-product availability line in list view (`ProductListRow.tsx`), not a
+sidebar filter.
+
+**All list state is the URL, not client state** — `src/lib/catalog/query.ts`
+parses and builds it (`band`, `priceMin`, `priceMax`, `sort`, `view`, `page`,
+`allCats`), the same allow-list-not-sanitize discipline
+`src/lib/orders/query.ts` uses for `/orders`. Filtering, sorting, and paging
+are pure functions in `src/lib/catalog/filter-products.ts`, run server-side in
+`page.tsx`. The price radios and the sort `<select>`
+(`src/components/catalog/CategoryFilterForm.tsx`, `SortSelect.tsx`) are the
+only client components, and they navigate instantly on change inside a real
+`<form method="get">` that still narrows the list with JavaScript off; grid/
+list view and every filter chip's clear action are plain `next/link` anchors
+needing no client JS at all. Below the `lg` breakpoint the sidebar collapses
+behind a "Filters" button into a bottom sheet
+(`src/components/catalog/MobileFilterSheet.tsx`) that renders the exact same
+`CategoryFilterPanel` the desktop `<aside>` does, not a second filter set.
+
+**Known limitation: the live product feed cannot be filtered by department
+yet.** `fetchProductsByCategory` (`src/services/storefront/products.ts`) is a
+pre-existing stopgap that matches on `Product.category`, but the portal's
+`/api/storefront/categories` endpoint has been rolled up to the taxonomy's 21
+L1 slugs (`electronics`, `home-garden`, …) while every live product's own
+`category`/`categoryName` fields are still the CJ/Google-taxonomy **leaf**
+category (e.g. `cat-ggl-212`, "Shirts & Tops") — confirmed against the live
+`sals3-portal.vercel.app` API on 2026-08-24. No `/c/[slug]` page can match a
+real product against any L1 slug until the portal maps a product's category
+to its L1 department the same way the categories endpoint already does. Every
+UI state on this page (filters, chips, counts, empty/filtered-empty panels,
+pagination) is verified working against that real API; the panel correctly
+shows "Nothing published in `<department>` yet" for every department today
+because of this gap, not because of a bug in this page.
+
+Three states beyond the normal grid/list: an unknown slug (not one of the 21
+departments) is a real `404` via `notFound()` and its own
+`src/app/c/[slug]/not-found.tsx`, not a soft 404; a valid, empty department
+shows "Nothing published … yet"; a valid department whose products are all
+excluded by the active filters shows "No product here matches all of those
+filters" with per-filter "Remove" chips. `CategoryBreadcrumbSchema` emits
+`BreadcrumbList` JSON-LD (gated on `NEXT_PUBLIC_SITE_URL`, unset in this repo
+today) — safe now that `Home` → `All categories` → the category are all real,
+linkable routes, unlike the PDP breadcrumb.
+
 ## Primary actions: gradient and loaders
 
 Every primary call to action — the PDP's **Buy Now**, the cart's **Proceed to

@@ -5,17 +5,23 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons/Icon';
 type ProductPaginationProps = {
   currentPage: number;
   totalPages: number;
+  /** Defaults to the home "For You" section's own address. A caller with a
+   * different base path (e.g. `/c/[slug]`) passes its own builder rather
+   * than this component growing route-specific knowledge. */
+  getPageHref?: (page: number) => string;
 };
 
-function getPageHref(page: number): string {
+function defaultPageHref(page: number): string {
   return page === 1 ? '/#for-you' : `/?page=${page}#for-you`;
 }
 
 function PageNumberLink({
   page,
+  href,
   isCurrent,
 }: {
   page: number;
+  href: string;
   isCurrent: boolean;
 }) {
   if (isCurrent) {
@@ -31,7 +37,7 @@ function PageNumberLink({
 
   return (
     <Link
-      href={getPageHref(page)}
+      href={href}
       scroll={false}
       aria-label={`Go to page ${page}`}
       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border-strong bg-white text-sm font-bold text-ink hover:border-brand-600 hover:no-underline"
@@ -43,16 +49,18 @@ function PageNumberLink({
 
 function StepControl({
   page,
+  href,
   direction,
   ariaLabel,
 }: {
   page: number | null;
+  href: string | null;
   direction: 'previous' | 'next';
   ariaLabel: string;
 }) {
   const Icon = direction === 'previous' ? ChevronLeftIcon : ChevronRightIcon;
 
-  if (page === null) {
+  if (page === null || href === null) {
     return (
       <span
         aria-disabled="true"
@@ -65,7 +73,7 @@ function StepControl({
 
   return (
     <Link
-      href={getPageHref(page)}
+      href={href}
       scroll={false}
       aria-label={ariaLabel}
       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border-strong bg-white text-ink hover:border-brand-600 hover:no-underline"
@@ -78,6 +86,7 @@ function StepControl({
 export default function ProductPagination({
   currentPage,
   totalPages,
+  getPageHref = defaultPageHref,
 }: ProductPaginationProps) {
   const pageItems = buildPageList(currentPage, totalPages);
 
@@ -91,6 +100,7 @@ export default function ProductPagination({
         <li>
           <StepControl
             page={currentPage > 1 ? currentPage - 1 : null}
+            href={currentPage > 1 ? getPageHref(currentPage - 1) : null}
             direction="previous"
             ariaLabel="Go to previous product page"
           />
@@ -98,7 +108,11 @@ export default function ProductPagination({
         {pageItems.map((item) =>
           typeof item === 'number' ? (
             <li key={item}>
-              <PageNumberLink page={item} isCurrent={item === currentPage} />
+              <PageNumberLink
+                page={item}
+                href={getPageHref(item)}
+                isCurrent={item === currentPage}
+              />
             </li>
           ) : (
             <li
@@ -113,6 +127,9 @@ export default function ProductPagination({
         <li>
           <StepControl
             page={currentPage < totalPages ? currentPage + 1 : null}
+            href={
+              currentPage < totalPages ? getPageHref(currentPage + 1) : null
+            }
             direction="next"
             ariaLabel="Go to next product page"
           />

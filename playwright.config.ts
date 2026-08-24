@@ -1,7 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const port = Number(process.env.PORT ?? 3000);
-const baseURL = `http://127.0.0.1:${port}`;
+/**
+ * `127.0.0.1` by default, which is what the suite's own `webServer` binds to.
+ *
+ * Overridable because `reuseExistingServer` is on locally: a `next dev` started
+ * by hand binds `localhost`, and Next serves the document over `127.0.0.1`
+ * while its RSC stream and HMR socket do not — so the suite would drive a page
+ * that renders blank and never hydrates, and every interaction assertion would
+ * fail for a reason that has nothing to do with the app.
+ */
+const host = process.env.PLAYWRIGHT_HOST ?? '127.0.0.1';
+const baseURL = `http://${host}:${port}`;
 
 export default defineConfig({
   testDir: './e2e',
