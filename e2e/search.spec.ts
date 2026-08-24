@@ -28,6 +28,25 @@ async function hasResults(page: Page): Promise<boolean> {
   return (await page.locator('a[href^="/p/"]').count()) > 0;
 }
 
+/**
+ * Whether the catalogue answered at all.
+ *
+ * `/search` reaches the portal, and this suite's `webServer` starts only this
+ * app — so in a normal local or CI run the upstream is simply not there and
+ * `SearchResults` renders its `isUnavailable` panel. A test that asserts
+ * empty-state copy without checking this is really asserting that the portal
+ * happened to be running, which is why the case below failed on a green
+ * branch.
+ *
+ * Matched on the heading rather than the body copy: the body names the search
+ * term, and a term is exactly the thing these tests vary.
+ */
+async function catalogueIsUnavailable(page: Page): Promise<boolean> {
+  return (
+    (await page.getByRole('heading', { name: /search can't run/i }).count()) > 0
+  );
+}
+
 test('the header box searches from the home page', async ({ page }) => {
   await page.goto('/', { timeout: UPSTREAM_TIMEOUT });
 
@@ -133,7 +152,21 @@ test('a term nothing can match says so without blaming filters', async ({
 
   test.skip(await hasResults(page), 'catalogue unexpectedly matched');
 
-  await expect(page.getByText(/no products match/i)).toBeVisible();
+  /**
+   * Branch rather than skip, the same way `category.spec.ts` handles its four
+   * result states. The invariant this test exists for holds in both: **nothing
+   * may blame filters when no filter was applied.** Skipping the unreadable
+   * case would drop that assertion in exactly the run where it is cheapest to
+   * make.
+   */
+  if (await catalogueIsUnavailable(page)) {
+    // An unreadable catalogue must not be reported as an empty one — the same
+    // distinction `SearchResults` draws between its own two panels.
+    await expect(page.getByText(/no products match/i)).toHaveCount(0);
+  } else {
+    await expect(page.getByText(/no products match/i)).toBeVisible();
+  }
+
   await expect(page.getByText(/with these filters/i)).toHaveCount(0);
 });
 
