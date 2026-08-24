@@ -123,6 +123,33 @@ describe('StorefrontProductDetailSchema', () => {
     expect(parsed.variants?.[0].sku).toBe('GOOD');
   });
 
+  it('keeps a variant whose photo address is malformed, minus the photo', () => {
+    const parsed = StorefrontProductDetailSchema.parse(
+      detail({
+        variants: [
+          {
+            id: 'v1',
+            sku: 'GOOD',
+            priceMinor: 4299,
+            currency: 'USD',
+            availability: 'AVAILABLE',
+            imageUrl: 'not-a-url',
+          },
+        ],
+      }),
+    );
+
+    /**
+     * `variants` is a `salvagedArray`, so without `.catch` on `imageUrl` this
+     * whole variant would vanish - costing a buyer a size they can no longer
+     * choose, to avoid a missing thumbnail. A decorative field must not be able
+     * to delete a commercial row.
+     */
+    expect(parsed.variants).toHaveLength(1);
+    expect(parsed.variants?.[0].sku).toBe('GOOD');
+    expect(parsed.variants?.[0].imageUrl).toBeUndefined();
+  });
+
   it('drops an image whose url is not a url', () => {
     const parsed = StorefrontProductDetailSchema.parse(
       detail({

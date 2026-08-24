@@ -238,9 +238,14 @@ const ProductVariantSchema = z.object({
    *
    * `z.string().url()` rather than `truncatedText`: an address is not display
    * text, and a truncated URL is a broken image rather than a shortened one.
-   * A malformed one drops this variant from `salvagedArray` rather than the page.
+   *
+   * **`.catch` is load-bearing.** `variants` is a `salvagedArray`, so without it
+   * a malformed address would drop the whole variant — costing a buyer a size
+   * they can no longer choose, to avoid a missing thumbnail. Salvaging at the
+   * field keeps the variant purchasable and lets the gallery fall back, which is
+   * the right granularity for a decorative field on a commercial row.
    */
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().url().optional().catch(undefined),
 });
 
 /**
