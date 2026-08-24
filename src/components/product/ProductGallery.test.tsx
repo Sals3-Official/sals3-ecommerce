@@ -108,6 +108,27 @@ describe('ProductGallery following the selected variant', () => {
     expect(shownPhotoAlt()).toBe('Jacket in black');
   });
 
+  it('follows browser back, which the record panel answers without the event', () => {
+    render(
+      <ProductGallery
+        images={IMAGES}
+        tone="ocean"
+        variants={VARIANTS}
+        selectedVariantId="black-s"
+      />,
+    );
+
+    // `handlePopState` in ProductRecordPanel updates its own state and does not
+    // dispatch PRODUCT_VARIANT_CHANGE_EVENT. A gallery listening only to the
+    // event would sit on Black while the panel returned to White.
+    window.history.pushState({}, '', '/p/jacket?variant=white-s');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    expect(shownPhotoAlt()).toBe('Jacket in white');
+  });
+
   it('leaves the gallery where it is for a variant with no photo', () => {
     render(
       <ProductGallery

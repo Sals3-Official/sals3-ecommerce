@@ -79,21 +79,44 @@ export default function ProductGallery({
    * place.
    */
   useEffect(() => {
-    function handleVariantChange(event: Event) {
-      const { variantId } = (event as CustomEvent<ProductVariantChangeDetail>)
-        .detail;
+    function showVariant(variantId: string | undefined) {
       const index = galleryIndexOfVariant(images, variants, variantId);
 
       if (index !== -1) setSelectedIndex(index);
     }
 
-    window.addEventListener(PRODUCT_VARIANT_CHANGE_EVENT, handleVariantChange);
+    function handleVariantChange(event: Event) {
+      showVariant(
+        (event as CustomEvent<ProductVariantChangeDetail>).detail.variantId,
+      );
+    }
 
-    return () =>
+    /**
+     * Back and forward, for the same reason the record panel listens to them.
+     *
+     * `handlePopState` there updates the panel's own state without dispatching
+     * `PRODUCT_VARIANT_CHANGE_EVENT`, so a gallery listening only to the event
+     * would sit on the previous colour while the panel returned to the one the
+     * URL names - two halves of one page disagreeing about what is selected.
+     * Reading the query string is what the panel does, so both halves answer to
+     * the same source rather than to each other.
+     */
+    function handlePopState() {
+      showVariant(
+        new URLSearchParams(window.location.search).get('variant') ?? undefined,
+      );
+    }
+
+    window.addEventListener(PRODUCT_VARIANT_CHANGE_EVENT, handleVariantChange);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
       window.removeEventListener(
         PRODUCT_VARIANT_CHANGE_EVENT,
         handleVariantChange,
       );
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [images, variants]);
 
   return (
