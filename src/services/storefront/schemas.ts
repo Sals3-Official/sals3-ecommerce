@@ -224,6 +224,28 @@ const ProductVariantSchema = z.object({
    * token is a colour, and a wrong guess becomes a customer-facing attribute.
    */
   label: truncatedText(60).optional(),
+  /**
+   * The photo to show while this variant is the buyer's selection.
+   *
+   * Optional like every field added after 2026-08-13, so either repository can
+   * ship first. Absent for most variants and that is the ordinary case, not a
+   * degraded one: the gallery is what renders when it is missing.
+   *
+   * The producer has already resolved this per option group, so every variant
+   * sharing a leading option value reports the same address. **Do not re-derive
+   * that here** — a second grouping rule in this repository is a second answer
+   * that can disagree with the portal's.
+   *
+   * `z.string().url()` rather than `truncatedText`: an address is not display
+   * text, and a truncated URL is a broken image rather than a shortened one.
+   *
+   * **`.catch` is load-bearing.** `variants` is a `salvagedArray`, so without it
+   * a malformed address would drop the whole variant — costing a buyer a size
+   * they can no longer choose, to avoid a missing thumbnail. Salvaging at the
+   * field keeps the variant purchasable and lets the gallery fall back, which is
+   * the right granularity for a decorative field on a commercial row.
+   */
+  imageUrl: z.string().url().optional().catch(undefined),
 });
 
 /**
