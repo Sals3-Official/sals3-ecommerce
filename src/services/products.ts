@@ -13,6 +13,7 @@ export {
   STOREFRONT_CATEGORIES_PATH,
   STOREFRONT_FREIGHT_QUOTES_PATH,
   STOREFRONT_PRODUCTS_PATH,
+  STOREFRONT_SEARCH_PATH,
 } from './storefront/client';
 
 export {
@@ -40,6 +41,7 @@ export {
   fetchProductCategories,
   fetchProducts,
   fetchProductsByCategory,
+  fetchSearchProducts,
   getProductsTotalPages,
   parseProductsPagination,
   type CategoryProductsSort,

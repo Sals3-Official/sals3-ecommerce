@@ -1,12 +1,22 @@
 import { useState } from 'react';
 import { PRICE_BANDS, type PriceBandId } from '@/lib/catalog/price-bands';
-import type { CategoryQuery } from '@/lib/catalog/query';
+
+/**
+ * The three fields this actually reads, named structurally rather than as one
+ * page's query type — `/c/[slug]` and `/search` both carry them, and neither
+ * should have to know about the other's fields to reuse this control.
+ */
+export type PriceFacetQuery = {
+  band: PriceBandId;
+  priceMin: string;
+  priceMax: string;
+};
 
 const ROW =
   'flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink cursor-pointer';
 
 type PriceFacetFieldsProps = {
-  query: CategoryQuery;
+  query: PriceFacetQuery;
   counts: Record<PriceBandId, number>;
   rangeIsTyped: boolean;
   /**
@@ -18,7 +28,7 @@ type PriceFacetFieldsProps = {
    * nothing.
    */
   idPrefix: string;
-  go: (changes: Partial<CategoryQuery>) => void;
+  go: (changes: Partial<PriceFacetQuery>) => void;
 };
 
 /** The price band radios plus the custom min/max text pair. Min/max commit

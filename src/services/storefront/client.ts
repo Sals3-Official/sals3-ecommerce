@@ -14,6 +14,7 @@ import type { z } from 'zod';
 export const DEFAULT_STOREFRONT_API_URL = 'http://localhost:3001';
 export const STOREFRONT_PRODUCTS_PATH = '/api/storefront/products';
 export const STOREFRONT_CATEGORIES_PATH = '/api/storefront/categories';
+export const STOREFRONT_SEARCH_PATH = '/api/storefront/search';
 export const STOREFRONT_FREIGHT_QUOTES_PATH =
   '/api/storefront/checkout/freight-quotes';
 export const STOREFRONT_CHECKOUT_INTENTS_PATH =
