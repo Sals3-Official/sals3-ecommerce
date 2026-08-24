@@ -47,6 +47,15 @@ export type ProductVariant = {
    * it verbatim and **never parse it into option axes**.
    */
   label?: string;
+  /**
+   * The photo to show while this variant is the buyer's selection.
+   *
+   * Absent for most variants, which is the ordinary case rather than a
+   * degraded one — the gallery renders as it always did. Already resolved per
+   * option group by the portal, so every variant sharing a leading option value
+   * carries the same address; this app must not re-derive that grouping.
+   */
+  imageUrl?: string;
 };
 
 /**

@@ -269,7 +269,12 @@ export default async function ProductPage({
               unitPrice={detail.price}
               category={detail.category}
             />
-            <ProductGallery images={detail.images} tone={detail.tone} />
+            <ProductGallery
+              images={detail.images}
+              tone={detail.tone}
+              variants={detail.variants}
+              selectedVariantId={selectedVariant?.id}
+            />
             {/*
               Neither column sticks. Owner's call, 2026-08-21, after seeing it
               on production twice.

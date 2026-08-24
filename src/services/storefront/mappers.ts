@@ -120,6 +120,7 @@ function toProductVariant(variant: ProductVariantPayload): ProductVariant {
       ? {}
       : { options: variant.options }),
     ...(variant.label === undefined ? {} : { label: variant.label }),
+    ...(variant.imageUrl === undefined ? {} : { imageUrl: variant.imageUrl }),
   };
 }
 

@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
-import type { ProductImage } from '@/lib/product-detail';
+import type { ProductImage, ProductVariant } from '@/lib/product-detail';
+import {
+  PRODUCT_VARIANT_CHANGE_EVENT,
+  type ProductVariantChangeDetail,
+} from '@/lib/product-variant-events';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 
 type ProductGalleryProps = {
@@ -14,11 +18,83 @@ type ProductGalleryProps = {
    */
   images: ProductImage[];
   tone: PlaceholderTone;
+  /**
+   * Every variant, so a chip click can be answered with that variant's own
+   * photo. Omitted for a product with no axes, where nothing can change.
+   */
+  variants?: ProductVariant[];
+  /** The variant the page arrived on, so the gallery opens on its photo. */
+  selectedVariantId?: string;
 };
 
-export default function ProductGallery({ images, tone }: ProductGalleryProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+/**
+ * Which gallery photo a variant points at.
+ *
+ * Matched by address rather than carried as an index: `imageUrl` is the same
+ * string the gallery was built from (both come from `product_media_sources`
+ * through one projection), and an index would be a second ordering that can
+ * disagree with the first. A variant whose photo is not in the gallery — a race
+ * between the two cached payloads — resolves to `-1` and simply leaves the
+ * gallery where it was, which is why this returns a *found* index rather than
+ * clamping to 0 and silently jumping to the lead photo.
+ */
+function galleryIndexOfVariant(
+  images: ProductImage[],
+  variants: ProductVariant[],
+  variantId: string | undefined,
+): number {
+  const url = variants.find((variant) => variant.id === variantId)?.imageUrl;
+
+  if (url === undefined) return -1;
+
+  return images.findIndex((image) => image.url === url);
+}
+
+export default function ProductGallery({
+  images,
+  tone,
+  variants = [],
+  selectedVariantId,
+}: ProductGalleryProps) {
+  const [selectedIndex, setSelectedIndex] = useState(() => {
+    const index = galleryIndexOfVariant(images, variants, selectedVariantId);
+
+    return index === -1 ? 0 : index;
+  });
   const selected = images[selectedIndex];
+
+  /**
+   * Follow the buyer's variant choice, over the same event the record panel
+   * already listens to.
+   *
+   * Not lifted state and not a provider: `PRODUCT_VARIANT_CHANGE_EVENT` is the
+   * seam this page already has between the option chips and the panel, and a
+   * second mechanism for the same fact is a second thing that can disagree
+   * about which variant is selected. The gallery is a third subscriber to one
+   * broadcast.
+   *
+   * A chip whose variant has no photo of its own leaves the gallery alone
+   * rather than resetting it to the lead image — the buyer chose a size, not a
+   * new picture, and yanking the view back would read as the page losing their
+   * place.
+   */
+  useEffect(() => {
+    function handleVariantChange(event: Event) {
+      const { variantId } = (event as CustomEvent<ProductVariantChangeDetail>)
+        .detail;
+      const index = galleryIndexOfVariant(images, variants, variantId);
+
+      if (index !== -1) setSelectedIndex(index);
+    }
+
+    window.addEventListener(PRODUCT_VARIANT_CHANGE_EVENT, handleVariantChange);
+
+    return () =>
+      window.removeEventListener(
+        PRODUCT_VARIANT_CHANGE_EVENT,
+        handleVariantChange,
+      );
+  }, [images, variants]);
 
   return (
     <div>
