@@ -138,9 +138,7 @@ describe('Home page', () => {
 
     renderWithCart(await Home());
 
-    expect(
-      screen.getByPlaceholderText(/search 1,500,000 products/i),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search products/i)).toBeInTheDocument();
   });
 
   it('renders the guest utility bar with Log In and Sign Up links', async () => {

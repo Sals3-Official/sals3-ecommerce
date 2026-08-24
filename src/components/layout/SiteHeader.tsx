@@ -8,14 +8,19 @@ import { HeaderAuthProvider } from '@/components/layout/HeaderAuthContext';
 import CartCountBadge from '@/components/cart/CartCountBadge';
 import { CartIcon } from '@/components/icons/Icon';
 
-export default function SiteHeader() {
+type SiteHeaderProps = {
+  /** Seeds the search box — `/search` passes its current keyword. */
+  searchTerm?: string;
+};
+
+export default function SiteHeader({ searchTerm }: SiteHeaderProps = {}) {
   return (
     <SiteHeaderShell>
       <HeaderAuthProvider>
         <GuestUtilityBar />
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-[var(--header-row-py)] transition-[padding] duration-250 ease-out sm:gap-4 sm:px-6">
           <Logo />
-          <SearchBox />
+          <SearchBox initialTerm={searchTerm} />
           <Link
             href="/cart"
             aria-label="Cart"

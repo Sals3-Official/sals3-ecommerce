@@ -4,6 +4,7 @@ import {
   ProductsApiError,
   requestStorefrontJson,
   STOREFRONT_CATEGORIES_PATH,
+  STOREFRONT_SEARCH_PATH,
   STOREFRONT_PRODUCTS_PATH,
 } from './client';
 import {
@@ -326,4 +327,65 @@ export async function fetchCategoryProducts(
     },
     { fetcher: options.fetcher, signal: options.signal },
   );
+}
+
+type FetchSearchOptions = FetchOptions & {
+  category?: string | null;
+  sort?: CategoryProductsSort;
+  page?: unknown;
+  limit?: unknown;
+  minPriceMinor?: number;
+  maxPriceMinor?: number;
+};
+
+/**
+ * Search the published catalogue.
+ *
+ * The term is sent as a parameter and never interpolated into the path, so a
+ * slash or a question mark in it is a character the producer matches rather
+ * than a route it changes. An empty term is answered by the producer as an
+ * empty feed rather than an error, so the caller does not have to special-case
+ * it before asking — though the page avoids the round trip anyway.
+ */
+export async function fetchSearchProducts(
+  term: string,
+  options: FetchSearchOptions = {},
+): Promise<ProductsResponse> {
+  const pagination = parseProductsPagination({
+    page: options.page,
+    limit: options.limit ?? MAX_PRODUCTS_PAGE_SIZE,
+  });
+  const url = getStorefrontApiUrl(STOREFRONT_SEARCH_PATH);
+
+  url.searchParams.set('q', term);
+  url.searchParams.set('page', String(pagination.page));
+  url.searchParams.set('limit', String(pagination.limit));
+
+  if (options.category !== undefined && options.category !== null) {
+    url.searchParams.set('category', options.category);
+  }
+  if (options.sort !== undefined && options.sort !== 'newest') {
+    url.searchParams.set('sort', options.sort);
+  }
+  if (options.minPriceMinor !== undefined) {
+    url.searchParams.set('minPriceMinor', String(options.minPriceMinor));
+  }
+  if (
+    options.maxPriceMinor !== undefined &&
+    options.maxPriceMinor !== Infinity
+  ) {
+    url.searchParams.set('maxPriceMinor', String(options.maxPriceMinor));
+  }
+
+  const payload = await requestStorefrontJson(
+    {
+      url: url.toString(),
+      schema: ProductsResponseSchema,
+      subject: 'search API',
+    },
+    { fetcher: options.fetcher, signal: options.signal },
+  );
+
+  // No `notFoundStatuses`, so this cannot be undefined.
+  return payload as ProductsResponse;
 }
