@@ -84,6 +84,11 @@ const CLIENT_ENTRY_POINTS = [
   // a missing file rather than degrade quietly — which is the right direction,
   // and the reason the list is hand-maintained.
   'components/product/ProductGallery.tsx',
+  // The review filter chips. Client because a chip narrows a list already on the
+  // page rather than changing what is fetched — and deliberately not behind
+  // `next/dynamic` with `ssr: false`, so the review text stays in the initial
+  // HTML for crawlers and answer engines.
+  'components/product/ProductReviewList.tsx',
   'lib/klaviyo/client.ts',
   'lib/auth/password-login.ts',
   'lib/auth/password-signup.ts',
