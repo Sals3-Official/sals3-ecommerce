@@ -99,6 +99,57 @@ describe('StorefrontProductDetailSchema', () => {
     expect(parsed.specs).toBeUndefined();
   });
 
+  it("keeps a paragraph's inline emphasis instead of stripping it", () => {
+    // Zod drops unknown keys, so a paragraph schema that named only `text`
+    // silently discarded every `runs` array the portal sent. The bold a seller
+    // applied never reached the page and nothing reported it.
+    const parsed = StorefrontProductDetailSchema.parse(
+      detail({
+        description: {
+          blocks: [
+            {
+              type: 'paragraph',
+              text: 'Machine washable at 30°C.',
+              runs: [
+                { text: 'Machine washable' },
+                { text: ' at 30°C.', marks: ['strong'] },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    const block = parsed.description?.blocks[0];
+
+    expect(block).toMatchObject({
+      type: 'paragraph',
+      runs: [
+        { text: 'Machine washable' },
+        { text: ' at 30°C.', marks: ['strong'] },
+      ],
+    });
+  });
+
+  it('keeps the paragraph when the emphasis itself is malformed', () => {
+    // Salvage, not rejection: an unknown mark costs the emphasis, never the
+    // sentence — the same rule a malformed variant follows.
+    const parsed = StorefrontProductDetailSchema.parse(
+      detail({
+        description: {
+          blocks: [
+            {
+              type: 'paragraph',
+              text: 'Still readable.',
+              runs: [{ text: 'Still readable.', marks: ['blink'] }],
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(parsed.description?.blocks).toEqual([]);
+  });
+
   /**
    * Per-row salvage: one malformed variant costs that variant, not the product,
    * and not the page. The generalised form of the `truncatedText` lesson.
@@ -203,6 +254,17 @@ describe('the committed contract fixture', () => {
     expect(parsed.product.description?.blocks[4]).toMatchObject({
       type: 'image',
       alt: 'Size chart for the shell jacket',
+    });
+    // Same discipline as the image assertion above, for the same reason: the
+    // emphasis a seller applied is a block field that once vanished silently.
+    // A fixture that carried it while the schema dropped it would read as
+    // "shipped" when nothing reached the page.
+    expect(parsed.product.description?.blocks[1]).toMatchObject({
+      type: 'paragraph',
+      runs: [
+        { text: 'A short-cut shell jacket' },
+        { text: ' with a fleece lining.', marks: ['strong'] },
+      ],
     });
     expect(parsed.product.variants).toHaveLength(2);
     expect(parsed.product.specs?.brand).toBe('Sals3 Basics');

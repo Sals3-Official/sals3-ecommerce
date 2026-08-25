@@ -976,6 +976,18 @@ adjacency rule the portal's description studio previews. Each image block's
 URL passes the same `getAllowedProductImageUrl` gate; a disallowed address
 costs that photo, never the text around it.
 
+**Inline emphasis renders too.** A paragraph carries an optional `runs` array —
+the bold and italic a seller applied inside a sentence in the portal's designed
+layout. It had the same shape of defect the `image` block had before it:
+authored in the Portal, dropped here, with no error anywhere, because the
+paragraph schema named only `text` and Zod drops unknown keys. `runs` are used
+only when they join back to exactly `text`; when they disagree — an older
+payload, or one that drifted — the stored `text` wins, because putting
+different words on the page is a worse failure than losing the emphasis. A run
+with an unrecognised mark costs that paragraph under the usual per-block
+salvage, never the whole description. `strong` and `em` render as elements, so
+the emphasis is heard by a screen reader rather than merely seen.
+
 ## Product Page (PDP)
 
 `src/app/p/[id]/page.tsx` renders a product detail page at `/p/<slug>`. Every
