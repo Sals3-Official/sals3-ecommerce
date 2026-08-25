@@ -13,6 +13,7 @@ import MobileFilterSheet from '@/components/catalog/MobileFilterSheet';
 import ProductPagination from '@/components/home/ProductPagination';
 import { isDepartmentId } from '@/lib/departments';
 import { categories } from '@/lib/home-placeholder-data';
+import { categoryAdSeed } from '@/lib/catalog/ad-slots';
 import { buildFilterChips, clearAllHref } from '@/lib/catalog/chips';
 import {
   activePriceRange,
@@ -303,6 +304,7 @@ export default async function CategoryPage({
               totalCount={departmentTotal}
               chips={chips}
               clearAllHref={clearHref}
+              adSeed={categoryAdSeed(slug, query)}
             />
 
             {!result.unavailable && !isEmptyCategory && !isFilteredEmpty ? (

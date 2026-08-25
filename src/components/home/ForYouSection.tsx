@@ -1,10 +1,9 @@
-import type { AdSlot, Product } from '@/lib/home-placeholder-data';
+import type { Product } from '@/lib/home-placeholder-data';
 import ProductGrid from '@/components/home/ProductGrid';
 import ProductPagination from '@/components/home/ProductPagination';
 
 type ForYouSectionProps = {
   products: Product[];
-  ad: AdSlot;
   regionNote: string;
   pagination?: {
     currentPage: number;
@@ -12,9 +11,13 @@ type ForYouSectionProps = {
   };
 };
 
+/** The same cadence the category listing uses: the slot follows a run of real
+ * products rather than opening the grid, and a grid too short to have a run
+ * carries no slot at all. */
+const AD_SLOT_AFTER = 3;
+
 export default function ForYouSection({
   products,
-  ad,
   regionNote,
   pagination,
 }: ForYouSectionProps) {
@@ -23,11 +26,11 @@ export default function ForYouSection({
     product,
   }));
   const items =
-    products.length > 3
+    products.length > AD_SLOT_AFTER
       ? [
-          ...productItems.slice(0, 3),
-          { kind: 'ad' as const, ad },
-          ...productItems.slice(3),
+          ...productItems.slice(0, AD_SLOT_AFTER),
+          { kind: 'ad' as const, slotKey: 'for-you-ad' },
+          ...productItems.slice(AD_SLOT_AFTER),
         ]
       : productItems;
 

@@ -41,14 +41,6 @@ export type Product = {
   rating?: { average: number; count: number };
 };
 
-export type AdSlot = {
-  id: string;
-  badge: string;
-  headline: string;
-  brand: string;
-  sub: string;
-};
-
 /**
  * The main categories — the 21 L1 departments of the Sals3 taxonomy, verbatim
  * and in the taxonomy's own order.
@@ -131,14 +123,6 @@ export const deals: Product[] = [
     tone: 'ocean',
   },
 ];
-
-export const adSlot: AdSlot = {
-  id: 'ad-1',
-  badge: 'Sponsored',
-  headline: 'Save more on kitchen essentials',
-  brand: 'Casa Home',
-  sub: 'Cookware, storage, and small appliances in one shop.',
-};
 
 export const forYouProducts: Product[] = Array.from({ length: 10 }, (_, i) => ({
   id: `fy-${i + 1}`,

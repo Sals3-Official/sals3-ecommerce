@@ -910,6 +910,82 @@ pagination) is verified working against that real API; the panel correctly
 shows "Nothing published in `<department>` yet" for every department today
 because of this gap, not because of a bug in this page.
 
+**In-feed sponsored carousel (`src/components/ads/`, `src/lib/catalog/ad-slots.ts`).**
+One sponsored slot is interleaved into the product results in both grid and
+list view, and it cycles the advertiser's three creatives rather than taking
+three cells — three cards from one advertiser reads as three ads; one slot
+that rotates reads as one placement, which is what it is. The same slot runs
+on the home page's "For you" grid (`ForYouSection.tsx`), so both surfaces
+carry the identical component.
+
+_Placement is random between listings, fixed for a listing._
+`categoryAdSeed(slug, query)` hashes the slug, sort, price band, typed price
+pair, and page number into a mulberry-free modular PRNG, so the slot sits in a
+different cell on every department, page, and sort, but always the same cell
+for the same URL. A live `Math.random()` would move it on every re-render and
+revalidation of one URL, make the page untestable, and gain nothing a visitor
+can perceive. The draw picks a gap of 8–10 products (the cadence
+`sals3-marketing-banner-integration-proposal` item 2 proposes), **clamped to
+the number of products actually on the page** — most departments hold far
+fewer than eight published products today, and an unclamped cadence would mean
+the slot never rendered anywhere in the live catalogue.
+
+_The creative is the advertiser's artwork._ `public/ads/psf/*.webp` are
+Premium Select Finance's finished 1528×2048 comps, resized to 800×1072 and
+re-encoded to WebP (34–74 KB each; `sharp`, already present as a Next
+dependency). They are rendered with `object-contain` at their own aspect ratio
+and never cropped — these are finished layouts, and a crop that trimmed the
+dead space under the refinance creative would also take the call-to-action
+button off the home-loan one. An earlier pass rebuilt the comps as HTML so the
+type could reflow; that was dropped, because re-setting an advertiser's
+artwork is editing someone else's ad. Local `/public` images are served
+untouched by the custom image loader (see **Image loading**), so the files in
+the repository are the files the browser gets — hence the resize at build
+input rather than at request time.
+
+_The frame is empty, on purpose._ No label above the artwork and no slide
+indicator below it — the owner removed both (2026-08-26), so the slot is the
+three creatives and nothing else. Two things survive that removal because they
+were never visible chrome: every creative links with
+`rel="sponsored noopener noreferrer"` and `target="_blank"`, which is what
+Google reads to classify a paid link, and the carousel keeps its
+`aria-label="Sponsored placement"`, which is what a screen reader announces
+before the advertisement starts.
+
+> **Disclosure is now the artwork's job alone.** A machine can still tell this
+> is an advertisement; a sighted reader has only Premium Select Finance's own
+> branding to go on, and none of the three creatives carries the word
+> "Sponsored". Under ACCC guidance the disclosure duty sits with the platform
+> as well as the advertiser, so this is a deliberate owner decision recorded
+> here rather than an oversight — restoring the label is a five-line change in
+> `SponsoredCarousel.tsx`.
+
+_Autoplay is unattended._ Six-second interval, hand-rolled from one
+`setInterval` rather than by adding `embla-carousel-autoplay`. Pointer and
+keyboard focus still pause it, and under `prefers-reduced-motion` it never
+starts at all — that setting is read through `useSyncExternalStore`, so the
+server's "no preference" is corrected during hydration instead of by a second
+render. What went with the indicator is the explicit pause button, and with it
+**WCAG 2.2.2**: a visitor who wants the rotation to stop can now only hover it.
+Recorded rather than quietly accepted.
+
+_Sponsored slots never render in the unavailable, empty-department, or
+filtered-empty states_ — those panels are the page explaining itself, and an
+ad on top of an explanation is noise.
+
+> **Not yet cleared for production.** Three items in
+> `src/lib/ads/sponsored-slides.ts` are marked `TODO(owner)` and each is a
+> real-money or real-law gap, not a polish item. (1) The refinance creative's
+> comparison-rate warning still reads `[loan type and amount details, e.g.,
+$150,000 car loan]` — an unfilled template field inside a warning ASIC
+> requires to be complete. It was left exactly as supplied rather than filled
+> with a plausible example, because a guessed comparison-rate basis is a
+> fabricated financial claim. (2) The creatives say "Australian Credit
+> Representative" with no ACL or ACR number; an unnumbered licence claim is a
+> claim with nothing behind it. (3) Every call to action lands on
+> `premiumselectfinance.com.au/` because no landing-page URLs were supplied,
+> and a guessed `/car-loans` path that 404s costs the advertiser the click.
+
 Three states beyond the normal grid/list: an unknown slug (not one of the 21
 departments) is a real `404` via `notFound()` and its own
 `src/app/c/[slug]/not-found.tsx`, not a soft 404; a valid, empty department
