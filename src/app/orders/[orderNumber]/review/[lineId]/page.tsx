@@ -17,11 +17,19 @@ import { SITE_NAME } from '@/lib/site';
  * `/orders/[orderNumber]/review/[lineId]` — write a review for one purchased
  * item.
  *
- * ## Its own route, not a modal
+ * ## A route *and* a modal (owner decision 2026-08-25)
  *
- * A buyer arrives here from a link as often as from a click, and a review is
- * long enough to lose to an accidental dismissal. A route also means the
- * back button behaves and the page can be reopened.
+ * This page's earlier note claimed the route existed *instead of* a modal,
+ * because a review is long enough to lose to an accidental dismissal. The modal
+ * now exists on the order list — `RateReviewButton` — and it answers that
+ * objection by holding the draft outside the dialog, so a dismissal costs
+ * nothing.
+ *
+ * The route did not become dead code. It is the only path that works with
+ * JavaScript off, the only one a link can point at, the one the order detail
+ * page's per-line control uses, and the one whose back button behaves. Both post
+ * through the same `reviewItemSchema` and the same portal endpoint, so neither
+ * can accept a review the other would refuse.
  *
  * ## Holding the ids is not authorisation
  *

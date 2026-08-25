@@ -51,10 +51,26 @@ const CLIENT_ENTRY_POINTS = [
   // Owns the header's scroll state; every child it wraps stays server-rendered.
   'components/layout/SiteHeaderShell.tsx',
   // The buyer orders surface. Everything else on `/orders` and
-  // `/orders/[orderNumber]` is a Server Component; these two are the whole
-  // client boundary — a filter form that routes, and a clipboard button.
+  // `/orders/[orderNumber]` is a Server Component; this is the whole client
+  // boundary — a filter form that routes, a clipboard button, the success toast
+  // the review redirect lands on, and the review controls.
+  //
+  // `RateReviewButton` reaches `ReviewModalForm` through `next/dynamic`, which
+  // this walk cannot follow (the specifier is inside a call, not an import), so
+  // the lazy half is listed as its own entry point rather than trusted to be
+  // covered by its parent.
   'components/orders/OrdersToolbar.tsx',
   'components/orders/CopyOrderNumber.tsx',
+  'components/orders/OrdersFlashToast.tsx',
+  'components/orders/RateReviewButton.tsx',
+  'components/orders/ReviewModalForm.tsx',
+  'components/orders/ReviewModal.tsx',
+  'components/orders/ReviewDraftItem.tsx',
+  'components/orders/StarRatingInput.tsx',
+  // The route form at `/orders/[orderNumber]/review/[lineId]`, which was a
+  // client component before this list knew about it.
+  'components/orders/WriteReviewForm.tsx',
+  'components/ui/SuccessToast.tsx',
   'app/orders/error.tsx',
   'components/product/ProductAddToCartButtons.tsx',
   'components/product/ProductOptionList.tsx',
