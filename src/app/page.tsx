@@ -18,7 +18,6 @@ import { departmentsOrTaxonomy, isDepartmentId } from '@/lib/departments';
 import {
   deals,
   forYouProducts,
-  adSlot,
   type Category,
   type Product as HomeProduct,
 } from '@/lib/home-placeholder-data';
@@ -216,7 +215,6 @@ export default async function Home({ searchParams }: HomeProps = {}) {
         <DealsSection deals={homeProducts.deals} />
         <ForYouSection
           products={homeProducts.products}
-          ad={adSlot}
           regionNote={homeProducts.regionNote}
           pagination={homeProducts.pagination}
         />

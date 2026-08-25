@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import SponsoredCarousel from '@/components/ads/SponsoredCarousel';
 import ProductGrid from '@/components/home/ProductGrid';
+import { withAdSlots } from '@/lib/catalog/ad-slots';
 import type { FilterChip } from '@/lib/catalog/chips';
 import type { CategoryProduct } from '@/lib/catalog/filter-products';
 import type { ViewKey } from '@/lib/catalog/query';
@@ -16,6 +18,12 @@ type CategoryProductResultsProps = {
   totalCount: number;
   chips: FilterChip[];
   clearAllHref: string;
+  /**
+   * Identity of this exact listing, from `categoryAdSeed`. It decides where the
+   * sponsored card lands, so the placement is stable for a URL and different
+   * between listings — see `lib/catalog/ad-slots.ts`.
+   */
+  adSeed: string;
 };
 
 /**
@@ -114,6 +122,7 @@ export default function CategoryProductResults({
   totalCount,
   chips,
   clearAllHref,
+  adSeed,
 }: CategoryProductResultsProps) {
   if (isUnavailable) return <UnavailablePanel categoryName={categoryName} />;
 
@@ -130,21 +139,25 @@ export default function CategoryProductResults({
     );
   }
 
+  const items = withAdSlots(products, adSeed);
+
   if (view === 'list') {
     return (
       <div className="mt-3.5 flex flex-col gap-2.5">
-        {products.map((product) => (
-          <ProductListRow key={product.id} product={product} />
-        ))}
+        {items.map((item) =>
+          item.kind === 'product' ? (
+            <ProductListRow key={item.product.id} product={item.product} />
+          ) : (
+            <SponsoredCarousel key={item.slotKey} variant="row" />
+          ),
+        )}
       </div>
     );
   }
 
   return (
     <div className="mt-3.5">
-      <ProductGrid
-        items={products.map((product) => ({ kind: 'product', product }))}
-      />
+      <ProductGrid items={items} />
     </div>
   );
 }

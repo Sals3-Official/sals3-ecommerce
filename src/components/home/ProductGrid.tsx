@@ -1,9 +1,14 @@
-import type { AdSlot, Product } from '@/lib/home-placeholder-data';
-import AdCard from '@/components/home/AdCard';
+import type { Product } from '@/lib/home-placeholder-data';
+import SponsoredCarousel from '@/components/ads/SponsoredCarousel';
 import ProductCard from '@/components/home/ProductCard';
 
+/**
+ * `slotKey` is a property of the slot, not of what fills it. The slot's content
+ * is now a carousel over the whole campaign rather than one creative, so there
+ * is nothing creative-shaped left to key on.
+ */
 type GridItem =
-  { kind: 'product'; product: Product } | { kind: 'ad'; ad: AdSlot };
+  { kind: 'product'; product: Product } | { kind: 'ad'; slotKey: string };
 
 type ProductGridProps = {
   items: GridItem[];
@@ -16,7 +21,7 @@ export default function ProductGrid({ items }: ProductGridProps) {
         item.kind === 'product' ? (
           <ProductCard key={item.product.id} product={item.product} />
         ) : (
-          <AdCard key={item.ad.id} ad={item.ad} />
+          <SponsoredCarousel key={item.slotKey} variant="card" />
         ),
       )}
     </div>

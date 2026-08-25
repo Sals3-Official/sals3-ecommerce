@@ -187,6 +187,68 @@ test('always renders one of its four honest result states', async ({
   }
 });
 
+/**
+ * The in-feed sponsored carousel.
+ *
+ * Asserted against any catalogue, the way the rest of this file is: the slot is
+ * interleaved into the *product* results, so it exists in exactly the state
+ * where products do and in none of the other three.
+ *
+ * The three things checked beyond that are the three that would each be a real
+ * failure on a live page. Its links must carry `rel="sponsored"` and must not
+ * look like product links. The placement must keep its accessible name, which
+ * since the visible label was removed (owner, 2026-08-26) is the only thing
+ * announcing an advertisement to a screen reader. And every creative must
+ * actually resolve — the artwork is the whole advertisement now, so a 404 here
+ * is a blank navy box where an ad was sold.
+ */
+test('carries the sponsored carousel wherever products are', async ({
+  page,
+}) => {
+  await page.goto('/c/animals-pet-supplies', { timeout: UPSTREAM_TIMEOUT });
+
+  const state = await resultState(page);
+  const placement = page.getByRole('region', { name: /sponsored placement/i });
+
+  if (state !== 'products') {
+    // An empty department, an unreadable catalogue, and a filter that excluded
+    // everything are the page explaining itself. No ad goes on top of that.
+    await expect(placement).toHaveCount(0);
+
+    return;
+  }
+
+  await expect(placement).toHaveCount(1);
+
+  // One slot, every creative in rotation — the campaign cycles in place rather
+  // than taking a cell each. Two today: the third is held back until its
+  // comparison-rate warning is complete (`sponsored-slides.test.ts` owns that
+  // rule, so this asserts the count the rotation actually has).
+  const creatives = placement.locator('img[src*="/ads/psf/"]');
+  await expect(creatives).toHaveCount(2);
+  await expect(placement.locator('img[src*="psf-refinance"]')).toHaveCount(0);
+
+  // A paid link is marked as one, and is not mistakable for a product link.
+  const adLinks = placement.locator('a');
+  await expect(adLinks.first()).toHaveAttribute('rel', /sponsored/);
+  await expect(placement.locator('a[href^="/p/"]')).toHaveCount(0);
+
+  // Every creative resolves. `naturalWidth` is 0 for an image that 404ed, which
+  // a visibility assertion would not catch.
+  const decoded = await creatives.evaluateAll((images) =>
+    images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
+  );
+  expect(decoded).toBe(true);
+
+  // The list view carries the same slot, still labelled.
+  await page.goto('/c/animals-pet-supplies?view=list', {
+    timeout: UPSTREAM_TIMEOUT,
+  });
+  await expect(
+    page.getByRole('region', { name: /sponsored placement/i }),
+  ).toHaveCount(1);
+});
+
 test('a filtered-empty result blames the filters, not the catalogue', async ({
   page,
 }) => {
