@@ -134,9 +134,26 @@ export default function DescriptionBlockList({
 
         if (block.type === 'paragraph') {
           return (
+            /*
+              `whitespace-pre-line` because a paragraph's single newlines are
+              the seller's, deliberately. The portal keeps them inside the block
+              rather than splitting on them — its own comment gives the reason,
+              "a heading line, then one line per feature" — so the `
+` survives
+              the editor, the document, and the database, and HTML collapsing it
+              to a space here was the only place the seller's layout was lost. A
+              features list rendered as one run-on line while a size chart on the
+              same page came out right, because that one is written with blank
+              lines and becomes separate blocks.
+
+              `pre-line` rather than `pre-wrap`: it honours newlines and still
+              collapses runs of spaces, which is exactly the contract the portal
+              describes. `pre-wrap` would also publish accidental double spaces
+              and leading indentation nobody typed on purpose.
+            */
             <p
               key={key}
-              className="max-w-[70ch] text-[15px] leading-[1.7] text-ink-muted text-pretty"
+              className="max-w-[70ch] text-[15px] leading-[1.7] whitespace-pre-line text-ink-muted text-pretty"
             >
               {paragraphContent(block.text, block.runs)}
             </p>
