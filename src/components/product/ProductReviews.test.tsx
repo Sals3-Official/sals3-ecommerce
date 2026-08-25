@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ProductReview } from '@/services/storefront/reviews';
 import ProductReviews from './ProductReviews';
@@ -155,5 +155,129 @@ describe('ProductReviews', () => {
     );
 
     expect(screen.getByText('4.6 out of 5')).toBeInTheDocument();
+  });
+
+  /**
+   * The Shopee chip row, over the reviews already on the page. A band with
+   * nothing in it is not offered at all — see `lib/reviews/filters.ts`.
+   */
+  it('narrows the list to the band the buyer pressed', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 4, count: 2 }}
+        breakdown={[0, 0, 0, 1, 1]}
+        reviews={[
+          REVIEW,
+          { ...REVIEW, id: 'review-2', rating: 4, body: 'Warm enough.' },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByText('Fits exactly like the size chart said.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Warm enough.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /4 star/i }));
+
+    expect(screen.getByText('Warm enough.')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Fits exactly like the size chart said.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('marks the pressed chip for a screen reader, not by colour alone', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 4.5, count: 2 }}
+        reviews={[REVIEW, { ...REVIEW, id: 'review-2', rating: 4 }]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /^All/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /4 star/i }));
+
+    expect(screen.getByRole('button', { name: /4 star/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /^All/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  /**
+   * The invariant that makes an empty state unnecessary: every chip drawn
+   * matches at least one review, so no press can produce a blank list. Asserted
+   * through the rendered component rather than only in the filter unit test,
+   * because it is the component that would have to grow an empty state if the
+   * invariant were ever broken.
+   */
+  it('never draws a chip that empties the list', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 3.7, count: 3 }}
+        reviews={[
+          REVIEW,
+          { ...REVIEW, id: 'review-2', rating: 4, body: 'Warm enough.' },
+          { ...REVIEW, id: 'review-3', rating: 2, body: null },
+        ]}
+      />,
+    );
+
+    const chips = screen.getAllByRole('button');
+
+    expect(chips.length).toBeGreaterThan(1);
+
+    chips.forEach((chip) => {
+      fireEvent.click(chip);
+
+      expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('filters to the reviews that carry words', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 4.5, count: 2 }}
+        reviews={[REVIEW, { ...REVIEW, id: 'review-2', rating: 4, body: null }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /with comments/i }));
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText(REVIEW.body ?? '')).toBeInTheDocument();
+  });
+
+  /** One review has nothing to filter by, so no chip row is drawn at all. */
+  it('draws no chip row for a single review', () => {
+    render(
+      <ProductReviews rating={{ average: 5, count: 1 }} reviews={[REVIEW]} />,
+    );
+
+    expect(screen.queryByRole('group', { name: /filter reviews/i })).toBeNull();
+  });
+
+  /**
+   * Shopee's most prominent chip, and the one thing this section must not copy:
+   * no review on the wire carries an image or a video.
+   */
+  it('offers no media filter', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 4.5, count: 2 }}
+        reviews={[REVIEW, { ...REVIEW, id: 'review-2', rating: 4 }]}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /media|photo|video/i }),
+    ).toBeNull();
   });
 });

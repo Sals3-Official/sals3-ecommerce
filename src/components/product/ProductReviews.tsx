@@ -1,11 +1,7 @@
 import type { ProductReview } from '@/services/storefront/reviews';
+import ProductRatingBreakdown from './ProductRatingBreakdown';
+import ProductReviewList from './ProductReviewList';
 import StarRating from './StarRating';
-
-const DATE_FORMAT = new Intl.DateTimeFormat('en-AU', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-});
 
 type ProductReviewsProps = {
   rating?: { average: number; count: number };
@@ -16,25 +12,47 @@ type ProductReviewsProps = {
 /**
  * Ratings and reviews on the product page.
  *
- * ## The provenance line is the point of the summary block
+ * Rebuilt 2026-08-26 from the Shopee "Product Ratings" pattern the owner
+ * supplied. What was adopted: the score panel reading as one horizontal band,
+ * the **filter chips**, and a per-review row that leads with who and how they
+ * scored it rather than spreading the two across a wide line.
  *
- * Every review here comes from a delivered Sals3 order — the portal will not
- * accept one otherwise. So a per-review "verified purchase" badge would be
- * noise on every single row; the guarantee is stated once, where a buyer
- * deciding whether to trust the number is actually looking.
+ * What was not adopted, and why it is not an oversight:
  *
- * It also says what is *not* here: no supplier ratings. CJ's own review counts
- * describe CJ's marketplace, and presenting them as a Sals3 rating is the
- * fabrication the wiki's corrected external facts exist to prevent.
+ * - **"With Media" chip** — the most prominent one on Shopee. No review here
+ *   carries an image or a video, because the form has never accepted an upload
+ *   and `ProductReviewSchema` has no field for one.
+ * - **Avatars** — no buyer avatar exists on the wire. The row shows the initial
+ *   of the name already published, or `UserIcon` for an anonymous review.
+ * - **Helpful votes and the report menu** — no vote table, no buyer-facing
+ *   report route.
+ * - **Per-attribute sub-scores** ("Material Quality: 10") — the wire carries one
+ *   rating per line, not a rubric.
+ *
+ * Each of those would be a control or a claim with nothing behind it, which is
+ * the one thing this section cannot afford: it is the part of the page whose
+ * whole value is that a buyer can trust what it says.
+ *
+ * ## The provenance line is still the point of the summary block
+ *
+ * Every review comes from a delivered Sals3 order — the portal will not accept
+ * one otherwise. So a per-review "verified purchase" badge would be noise on
+ * every single row; the guarantee is stated once, where a buyer deciding whether
+ * to trust the number is looking. It also says what is *not* here: no supplier
+ * ratings. CJ's own review counts describe CJ's marketplace, and presenting them
+ * as a Sals3 rating is the fabrication the wiki's corrected external facts exist
+ * to prevent.
  *
  * ## No reviews means no section
  *
- * The page renders nothing here rather than an empty state. That is this repo's
- * standing rule — `page.test.tsx`'s "renders no section for data the portal did
- * not send" — and the description, specifications and variant sections all
- * follow it. A heading reading "Ratings and reviews" above a sentence saying
- * there are none is a section about an absence, which on a catalogue where most
- * products have no reviews yet would be noise on almost every page.
+ * The page renders nothing here rather than an empty state — this repo's
+ * standing rule, which `page.test.tsx` asserts for the page as a whole. A
+ * heading reading "Ratings and reviews" above a sentence saying there are none
+ * is a section about an absence, which on a catalogue where most products have
+ * no reviews yet would be noise on almost every page.
+ *
+ * A filter the buyer *chose* returning nothing is the opposite case and does get
+ * a sentence; that one lives in `ProductReviewList`.
  *
  * Consequence, accepted: a product whose rating exists but whose list could not
  * be fetched shows nothing here. The card's stars still carry the number, and a
@@ -49,6 +67,8 @@ export default function ProductReviews({
 
   const hasRating = rating !== undefined && rating.count > 0;
 
+  if (!hasRating) return null;
+
   return (
     <section
       aria-labelledby="reviews-heading"
@@ -61,132 +81,44 @@ export default function ProductReviews({
         >
           Ratings and reviews
         </h2>
-        {hasRating ? (
-          <span className="text-[13.5px] font-medium text-ink-muted">
-            {rating.count} {rating.count === 1 ? 'review' : 'reviews'}
-          </span>
-        ) : null}
+        <span className="text-[13.5px] font-medium text-ink-muted">
+          {rating.count} {rating.count === 1 ? 'review' : 'reviews'}
+        </span>
       </div>
 
-      {hasRating ? (
-        <>
-          <div className="mt-6 grid grid-cols-1 gap-8 rounded-[10px] border border-border bg-surface p-5 sm:grid-cols-[12.5rem_1fr]">
-            <div className="flex flex-col gap-2">
-              <span className="font-display text-[40px] leading-none font-semibold tracking-[-0.03em] text-ink tabular-nums">
-                {rating.average.toFixed(1)}
-              </span>
-              <StarRating
-                rating={Math.round(rating.average)}
-                size="lg"
-                label={`${rating.average.toFixed(1)} out of 5`}
-              />
-              <span className="text-xs leading-normal text-ink-subtle">
-                Out of 5, from {rating.count}{' '}
-                {rating.count === 1 ? 'review' : 'reviews'} of this product.
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {breakdown === undefined ? null : (
-                <div className="flex flex-col gap-1.5">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const total = breakdown[star - 1] ?? 0;
-                    const share =
-                      rating.count === 0
-                        ? 0
-                        : Math.round((total / rating.count) * 100);
-
-                    return (
-                      <div key={star} className="flex items-center gap-2.5">
-                        <span className="flex w-[2.125rem] shrink-0 items-center gap-1 text-xs font-medium text-ink-muted">
-                          {star}
-                          <StarRating rating={1} size="sm" label="" />
-                        </span>
-                        <div className="h-[7px] flex-grow overflow-hidden rounded-full bg-surface-sunken-strong">
-                          <div
-                            className="h-[7px] rounded-full bg-rating"
-                            style={{ width: `${share}%` }}
-                          />
-                        </div>
-                        <span className="w-6 shrink-0 text-right text-xs text-ink-subtle tabular-nums">
-                          {total}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <p className="border-t border-border pt-3 text-[12.5px] leading-relaxed text-ink-muted">
-                Every review here was written by a customer after Sals3
-                delivered this item to them. We do not accept reviews from
-                anyone else, and we do not carry ratings from our supplier.
-              </p>
-            </div>
+      <div className="mt-5 rounded-[10px] border border-border bg-surface p-5">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[12.5rem_1fr]">
+          <div className="flex flex-col gap-2">
+            <span className="font-display text-[40px] leading-none font-semibold tracking-[-0.03em] text-ink tabular-nums">
+              {rating.average.toFixed(1)}
+            </span>
+            <StarRating
+              rating={Math.round(rating.average)}
+              size="lg"
+              label={`${rating.average.toFixed(1)} out of 5`}
+            />
+            <span className="text-xs leading-normal text-ink-subtle">
+              Out of 5, from {rating.count}{' '}
+              {rating.count === 1 ? 'review' : 'reviews'} of this product.
+            </span>
           </div>
 
-          <ul className="mt-2">
-            {reviews.map((review) => (
-              <li
-                key={review.id}
-                className="flex flex-col gap-2.5 border-t border-border py-5"
-              >
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="text-[13.5px] font-semibold text-ink">
-                    {review.displayName ?? 'A Sals3 customer'}
-                  </span>
-                  <span className="text-xs text-ink-subtle">
-                    {DATE_FORMAT.format(new Date(review.createdAt))}
-                  </span>
-                  <span className="ml-auto">
-                    <StarRating
-                      rating={review.rating}
-                      label={`${review.rating} out of 5`}
-                    />
-                  </span>
-                </div>
+          {breakdown === undefined ? null : (
+            <ProductRatingBreakdown
+              breakdown={breakdown}
+              total={rating.count}
+            />
+          )}
+        </div>
 
-                {review.variantLabel === null ? null : (
-                  // From the order line's frozen snapshot, not the listing as
-                  // it stands today — a renamed variant must not rewrite what
-                  // a past buyer says they bought (ADR-007).
-                  <span className="text-[12.5px] text-ink-subtle">
-                    Bought{' '}
-                    <strong className="font-semibold text-ink-muted">
-                      {review.variantLabel}
-                    </strong>
-                  </span>
-                )}
+        <p className="mt-5 border-t border-border pt-3.5 text-[12.5px] leading-relaxed text-ink-muted">
+          Every review here was written by a customer after Sals3 delivered this
+          item to them. We do not accept reviews from anyone else, and we do not
+          carry ratings from our supplier.
+        </p>
+      </div>
 
-                {review.body === null ? null : (
-                  <p className="max-w-[66ch] text-sm leading-relaxed text-ink">
-                    {review.body}
-                  </p>
-                )}
-
-                {review.reply === null ? null : (
-                  <div className="mt-0.5 ml-6 rounded-r-lg border-l-2 border-border-strong bg-surface px-3.5 py-3">
-                    <div className="mb-1 flex flex-wrap items-center gap-2">
-                      <span className="text-[12.5px] font-semibold text-ink">
-                        Sals3 Official
-                      </span>
-                      <span className="rounded bg-surface-sunken-strong px-1.5 py-0.5 text-[10.5px] font-semibold tracking-[0.02em] text-brand-900">
-                        SELLER
-                      </span>
-                      <span className="text-xs text-ink-subtle">
-                        {DATE_FORMAT.format(new Date(review.reply.createdAt))}
-                      </span>
-                    </div>
-                    <p className="max-w-[62ch] text-[13px] leading-relaxed text-ink-muted">
-                      {review.reply.body}
-                    </p>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
+      <ProductReviewList reviews={reviews} />
     </section>
   );
 }
