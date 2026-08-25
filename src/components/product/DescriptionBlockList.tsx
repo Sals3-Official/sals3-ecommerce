@@ -1,4 +1,8 @@
-import type { ProductDescriptionBlock } from '@/lib/product-detail';
+import type { ReactNode } from 'react';
+import type {
+  ProductDescriptionBlock,
+  ProductDescriptionRun,
+} from '@/lib/product-detail';
 import DescriptionImageRow from './DescriptionImageRow';
 
 type DescriptionBlockListProps = {
@@ -32,6 +36,51 @@ function groupBlocks(
 
     return [...groups, [block]];
   }, []);
+}
+
+/**
+ * A paragraph's text, with the emphasis the seller applied inside it.
+ *
+ * `runs` are used only when they join back to exactly `text`. The portal
+ * enforces that join on write, but this is a read path over payloads written
+ * by older deployments, and a run list that disagrees with `text` would put
+ * different words on the page than the ones stored — a worse failure than
+ * losing the bold. `text` is the canonical value; the runs are how it is
+ * marked up, so when the two disagree the canonical one wins.
+ *
+ * `strong` and `em` are the only marks in the union, and both render as
+ * elements rather than styles: a buyer using a screen reader should hear the
+ * emphasis the seller wrote, not see it silently become plain prose.
+ */
+function paragraphContent(
+  text: string,
+  runs?: ProductDescriptionRun[],
+): ReactNode {
+  if (runs === undefined || runs.length === 0) return text;
+
+  if (runs.map((run) => run.text).join('') !== text) return text;
+
+  return runs.map((run, index) => {
+    // Index keys: runs are positional by definition and this list is
+    // re-rendered whole, never reordered.
+    const key = `run-${index}`;
+    const marks = run.marks ?? [];
+    const strong = marks.includes('strong');
+    const em = marks.includes('em');
+
+    if (strong && em) {
+      return (
+        <strong key={key}>
+          <em>{run.text}</em>
+        </strong>
+      );
+    }
+
+    if (strong) return <strong key={key}>{run.text}</strong>;
+    if (em) return <em key={key}>{run.text}</em>;
+
+    return <span key={key}>{run.text}</span>;
+  });
 }
 
 /**
@@ -89,7 +138,7 @@ export default function DescriptionBlockList({
               key={key}
               className="max-w-[70ch] text-[15px] leading-[1.7] text-ink-muted text-pretty"
             >
-              {block.text}
+              {paragraphContent(block.text, block.runs)}
             </p>
           );
         }

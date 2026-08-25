@@ -68,8 +68,26 @@ export type ProductOptionAxis = {
   values: string[];
 };
 
+/**
+ * One stretch of a paragraph, with the emphasis the seller applied to it.
+ *
+ * The portal has let sellers bold and italicise inside a paragraph since the
+ * designed layout shipped, and stores it as `runs` alongside the paragraph's
+ * plain `text`. Nothing here read them, so every emphasis a seller applied was
+ * flattened on the way to the product page — the same silent-drop shape as the
+ * `image` block before it (`ProductDescription`'s own history).
+ *
+ * `text` remains the canonical value: it is what a paragraph means, and `runs`
+ * is how it is marked up. A renderer that cannot use the runs still has the
+ * whole sentence.
+ */
+export type ProductDescriptionRun = {
+  text: string;
+  marks?: ('strong' | 'em')[];
+};
+
 export type ProductDescriptionBlock =
-  | { type: 'paragraph'; text: string }
+  | { type: 'paragraph'; text: string; runs?: ProductDescriptionRun[] }
   | { type: 'heading'; level: 2 | 3; text: string }
   | { type: 'bulletList'; items: string[] }
   | { type: 'keyValueList'; entries: { label: string; value: string }[] }

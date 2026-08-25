@@ -174,7 +174,31 @@ const ProductImageSchema = z.object({
  * product title.
  */
 export const DescriptionBlockSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('paragraph'), text: truncatedText(4000) }),
+  z.object({
+    type: z.literal('paragraph'),
+    text: truncatedText(4000),
+    /**
+     * Inline emphasis, optional on the wire like every post-2026-08-13 field.
+     * Absent on a legacy document and on any paragraph with nothing marked —
+     * the portal drops the field rather than storing unmarked runs, so its
+     * absence means "no emphasis", never "unknown".
+     *
+     * `MAX_RUNS_PER_BLOCK` is 200 in the portal; the cap here matches so a
+     * document it accepts is never truncated on arrival.
+     */
+    runs: z
+      .array(
+        z.object({
+          text: truncatedText(4000),
+          marks: z
+            .array(z.enum(['strong', 'em']))
+            .max(2)
+            .optional(),
+        }),
+      )
+      .max(200)
+      .optional(),
+  }),
   z.object({
     type: z.literal('heading'),
     level: z.union([z.literal(2), z.literal(3)]),
