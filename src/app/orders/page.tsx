@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import SiteFooter from '@/components/layout/SiteFooter';
 import SiteHeader from '@/components/layout/SiteHeader';
+import OrdersFlashToast from '@/components/orders/OrdersFlashToast';
 import OrdersHonestyNote from '@/components/orders/OrdersHonestyNote';
 import OrdersLaneTabs from '@/components/orders/OrdersLaneTabs';
 import OrdersPageHeader from '@/components/orders/OrdersPageHeader';
@@ -22,6 +23,10 @@ import {
   type RawSearchParams,
 } from '@/lib/orders/query';
 import { listBuyerOrders } from '@/lib/orders/read';
+import {
+  REVIEW_POSTED_PARAM,
+  parsePostedCount,
+} from '@/lib/orders/review-form';
 import { SITE_NAME } from '@/lib/site';
 
 /**
@@ -45,10 +50,14 @@ import { SITE_NAME } from '@/lib/site';
  *
  * ## Everything on this page is a Server Component
  *
- * except the toolbar and the copy button. Lanes, filter chips and paging are
- * links, the data is read on the server, and the money strings arrive already
- * formatted — so the list ships almost no JavaScript and cannot disagree with
- * the receipt.
+ * except the toolbar, the copy button, the review trigger and the flash toast.
+ * Lanes, filter chips and paging are links, the data is read on the server, and
+ * the money strings arrive already formatted — so the list ships almost no
+ * JavaScript and cannot disagree with the receipt.
+ *
+ * The review dialog itself is not in that bundle either: `RateReviewButton`
+ * imports it dynamically, so a page of twelve orders downloads the form once,
+ * on the first press, and never on a list where nothing is reviewable.
  */
 
 export function generateMetadata(): Metadata {
@@ -69,7 +78,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
     redirect(withPostLoginKey(AUTH_LINKS.signIn, 'orders'));
   }
 
-  const query = parseOrdersQuery((await searchParams) ?? {});
+  const raw = (await searchParams) ?? {};
+  const query = parseOrdersQuery(raw);
+  const posted = parsePostedCount(raw[REVIEW_POSTED_PARAM]);
   const now = new Date();
 
   const all = await listBuyerOrders(session.email ?? '');
@@ -129,6 +140,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
         {page.total === 0 ? null : <OrdersHonestyNote />}
       </main>
+      <OrdersFlashToast posted={posted} />
       <SiteFooter />
     </div>
   );

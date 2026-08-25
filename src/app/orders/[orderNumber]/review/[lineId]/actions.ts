@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getBuyerSession } from '@/lib/auth/dal';
+import { REVIEW_MESSAGES, reviewItemSchema } from '@/lib/orders/review-schema';
 import { submitProductReview } from '@/services/storefront/reviews';
 
 /**
@@ -27,35 +28,20 @@ import { submitProductReview } from '@/services/storefront/reviews';
  * usability measure, not the authorisation (rule 19).
  */
 
-const MAX_BODY = 1000;
-
-const submitReviewSchema = z.object({
+/**
+ * One line, plus the order it belongs to. The item half is `reviewItemSchema`,
+ * shared with the order list's batch action in `src/app/orders/review-actions.ts`
+ * — the body limit and the two attribution words must be the same rule on both
+ * surfaces, and two copies is one that drifts.
+ */
+const submitReviewSchema = reviewItemSchema.extend({
   orderNumber: z.string().min(1).max(40),
-  orderLineId: z.string().min(1).max(120),
-  rating: z.coerce.number().int().min(1).max(5),
-  body: z.string().trim().max(MAX_BODY).optional(),
-  /**
-   * `named` credits the buyer; `anonymous` publishes no name. Deliberately not
-   * a free-text field: the portal derives the published string from the order's
-   * own ship-to name, so this cannot become a place where anybody types
-   * anybody's name.
-   */
-  attribution: z.enum(['named', 'anonymous']),
 });
 
 export type SubmitReviewFormState = {
   status: 'idle' | 'error';
   message?: string;
 };
-
-const MESSAGES = {
-  invalid: 'Choose a rating from 1 to 5 and try again.',
-  signed_out: 'Sign in again to post your review.',
-  not_eligible:
-    'You can review this item once the package that carried it is delivered.',
-  already_reviewed: 'You have already reviewed this item.',
-  failed: 'Your review could not be posted. Try again in a moment.',
-} as const;
 
 export default async function submitReviewAction(
   _previous: SubmitReviewFormState,
@@ -70,14 +56,14 @@ export default async function submitReviewAction(
   });
 
   if (!parsed.success) {
-    return { status: 'error', message: MESSAGES.invalid };
+    return { status: 'error', message: REVIEW_MESSAGES.invalid };
   }
 
   const session = await getBuyerSession();
   const verifiedEmail = session?.email ?? '';
 
   if (verifiedEmail === '') {
-    return { status: 'error', message: MESSAGES.signed_out };
+    return { status: 'error', message: REVIEW_MESSAGES.signed_out };
   }
 
   const outcome = await submitProductReview({
@@ -94,13 +80,7 @@ export default async function submitReviewAction(
   });
 
   if (!outcome.ok) {
-    return {
-      status: 'error',
-      message:
-        outcome.reason === 'invalid'
-          ? MESSAGES.invalid
-          : MESSAGES[outcome.reason],
-    };
+    return { status: 'error', message: REVIEW_MESSAGES[outcome.reason] };
   }
 
   // The order page's review control and the product page's rating both change.

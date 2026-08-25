@@ -5,24 +5,8 @@ import { useActionState, useState } from 'react';
 import submitReviewAction, {
   type SubmitReviewFormState,
 } from '@/app/orders/[orderNumber]/review/[lineId]/actions';
-
-const MAX_BODY = 1000;
-
-const VERDICTS: Record<number, string> = {
-  0: 'Choose a rating',
-  1: 'Not what I expected',
-  2: 'Less than I hoped',
-  3: 'It is acceptable',
-  4: 'Good',
-  5: 'Very good',
-};
-
-/** Extracted so the branch is not three conditions deep inside a class string. */
-function verdictTone(rating: number): string {
-  if (rating === 0) return 'text-ink-subtle';
-
-  return rating <= 2 ? 'text-red-600' : 'text-ink';
-}
+import StarRatingInput from '@/components/orders/StarRatingInput';
+import { MAX_BODY } from '@/lib/orders/review-form';
 
 type WriteReviewFormProps = {
   orderNumber: string;
@@ -39,10 +23,10 @@ type WriteReviewFormProps = {
  * ## The rating is the only genuinely interactive part
  *
  * Everything else is a plain field. The stars need state because a rating you
- * cannot see yourself choosing is a rating people get wrong — so the row is
- * five real radio inputs with the visual fill driven off the checked one, which
- * keeps keyboard and screen-reader behaviour for free rather than reimplementing
- * it on `div`s.
+ * cannot see yourself choosing is a rating people get wrong, and the row itself
+ * is `StarRatingInput` — shared with the order list's modal, and still five real
+ * radio inputs, so this form keeps posting `rating` as ordinary form data and
+ * keeps working with JavaScript off.
  *
  * ## The name is a choice between two known strings
  *
@@ -85,42 +69,12 @@ export default function WriteReviewForm({
         <legend className="text-[13.5px] font-semibold text-ink">
           Your rating <span className="text-red-600">*</span>
         </legend>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <label
-                key={value}
-                htmlFor={`rating-${value}`}
-                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg transition hover:bg-surface-sunken has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-600"
-              >
-                <input
-                  id={`rating-${value}`}
-                  type="radio"
-                  name="rating"
-                  value={value}
-                  checked={rating === value}
-                  onChange={() => setRating(value)}
-                  className="sr-only"
-                />
-                <span className="sr-only">{value} out of 5</span>
-                <svg
-                  viewBox="0 0 16 16"
-                  width={30}
-                  height={30}
-                  aria-hidden="true"
-                  className={
-                    value <= rating ? 'fill-rating' : 'fill-border-strong'
-                  }
-                >
-                  <path d="M8 1.6l1.9 3.9 4.3.6-3.1 3 .8 4.3L8 11.4l-3.9 2 .8-4.3-3.1-3 4.3-.6z" />
-                </svg>
-              </label>
-            ))}
-          </div>
-          <span className={`text-sm font-semibold ${verdictTone(rating)}`}>
-            {VERDICTS[rating]}
-          </span>
-        </div>
+        <StarRatingInput
+          name="rating"
+          idPrefix="rating"
+          value={rating}
+          onChange={setRating}
+        />
       </fieldset>
 
       <label className="flex flex-col gap-1.5" htmlFor="review-body">

@@ -4,6 +4,9 @@ import CopyOrderNumber from '@/components/orders/CopyOrderNumber';
 import OrderActions from '@/components/orders/OrderActions';
 import OrderPackageBlock from '@/components/orders/OrderPackageBlock';
 import OrderStatusPill from '@/components/orders/OrderStatusPill';
+import RateReviewButton from '@/components/orders/RateReviewButton';
+import maskBuyerName from '@/lib/orders/buyer-name';
+import reviewableLinesOf from '@/lib/orders/reviewable';
 
 /**
  * One order, as a ledger.
@@ -26,6 +29,31 @@ import OrderStatusPill from '@/components/orders/OrderStatusPill';
  * is it". Putting the charged total in the header strip means the answer is one
  * glance rather than an expand, and it is the same string the detail page's
  * payment card prints, produced once on the server.
+ *
+ * ## The one review control the card carries (owner decision 2026-08-25)
+ *
+ * This card used to print nothing about reviews at all — the argument being that
+ * a payment-and-fulfilment statement should stay one, with the review control a
+ * click away on the detail page. The owner asked for it here, on the Completed
+ * lane, and that is the right call for the actual job: a buyer who has just had
+ * three parcels arrive is on this list, not on three detail pages.
+ *
+ * It is **one** order-level button and never a per-line rating. The footer is a
+ * row of order actions and three review buttons in it would read as three
+ * different things to do, so the count goes in the label and the dialog holds
+ * the items. Nothing about the card's arithmetic moved.
+ *
+ * `reviewableLinesOf` returns nothing unless the portal marked a line
+ * reviewable, so the button is absent on every order that has not been
+ * delivered, is past its window, or is already reviewed — and this component
+ * re-derives none of those rules.
+ *
+ * **A delivered order can still show no button, and that is not a bug here.**
+ * The portal answers `reviewable: false` for every line while
+ * `sals3_product_reviews` does not exist (its DDL arrives through a
+ * `workflow_dispatch`, not through a deploy), because it would rather hide a
+ * control that would have worked than offer one that cannot. Drawing the button
+ * anyway would open a dialog whose `Submit` could only fail.
  */
 
 type OrderCardProps = {
@@ -34,9 +62,23 @@ type OrderCardProps = {
 
 export default function OrderCard({ order }: OrderCardProps) {
   const detailHref = `/orders/${order.number}`;
-  const actions = order.actions.map((action) =>
-    action.id === 'details' ? { ...action, href: detailHref } : action,
-  );
+  const reviewable = reviewableLinesOf(order);
+  const actions = order.actions.map((action) => {
+    if (action.id !== 'details') return action;
+
+    // Two filled buttons side by side compete, and the one with a deadline
+    // should win: a review closes after the window, while the detail page is
+    // there for as long as the order is. So `View order details` steps down to
+    // the outline treatment exactly when the review button is present, and
+    // takes the fill back on every other card.
+    const demoted = reviewable.length > 0 && action.kind === 'primary';
+
+    return {
+      ...action,
+      href: detailHref,
+      ...(demoted ? { kind: 'secondary' as const } : {}),
+    };
+  });
 
   return (
     <article
@@ -87,7 +129,14 @@ export default function OrderCard({ order }: OrderCardProps) {
 
       <div className="flex flex-wrap items-center justify-between gap-3.5 border-t border-border px-4 py-3">
         <p className="text-xs text-ink-muted">{order.footNote}</p>
-        <OrderActions actions={actions} />
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <RateReviewButton
+            orderNumber={order.number}
+            lines={reviewable}
+            maskedName={maskBuyerName(order.shipTo.name)}
+          />
+          <OrderActions actions={actions} />
+        </div>
       </div>
     </article>
   );

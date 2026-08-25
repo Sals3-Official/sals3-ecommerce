@@ -359,8 +359,11 @@ red-edged card inside the lane the order already sits in, plus one page notice.
 - The grouping unit is the **package**, never a store or a supplier. No supplier
   name, connection name or `S3V-` hash appears in any buyer-facing string —
   carrier name only.
-- No rating, review, star or "write a review" anywhere; there is no review
-  entity in either repository, and the honesty note says so out loud.
+- Reviews are the one exception to "no ratings on a buyer surface", and they are
+  the buyer's **own** — see [Rating and reviewing a delivered
+  item](#rating-and-reviewing-a-delivered-item). No aggregate rating, no star on
+  a card, and no supplier-platform review count appears anywhere on this
+  surface.
 - Every status renders a **label and a sentence**. Never a bare pill.
 - A blocked action stays visible and disabled with **the reason as its label** —
   "Cannot be cancelled — one package has shipped", "Locked while the payment
@@ -382,11 +385,62 @@ information in one column with 44px actions, not a reduced feature set.
 
 ### What ships to the browser
 
-Two client components only: `OrdersToolbar` (the filter form, which routes
-instead of submitting so defaults stay out of the URL) and `CopyOrderNumber`.
-Lanes, filter chips and paging are `next/link` anchors, so navigation costs no
-JavaScript. Both are registered by hand in `CLIENT_ENTRY_POINTS` in
-`test/client-bundle-boundary.test.ts` — that array has no auto-discovery.
+`OrdersToolbar` (the filter form, which routes instead of submitting so defaults
+stay out of the URL), `CopyOrderNumber`, `RateReviewButton` and
+`OrdersFlashToast`. Lanes, filter chips and paging are `next/link` anchors, so
+navigation costs no JavaScript.
+
+The review dialog is **not** in that bundle: `RateReviewButton` pulls
+`ReviewModalForm` through `next/dynamic` (`ssr: false`), so a list of twelve
+orders downloads the form once, on the first press, and never at all on a list
+where nothing is reviewable.
+
+Every one of them is registered by hand in `CLIENT_ENTRY_POINTS` in
+`test/client-bundle-boundary.test.ts` — that array has no auto-discovery, and
+the dynamically imported half is listed separately because the walk cannot
+follow a specifier inside a call.
+
+### Rating and reviewing a delivered item
+
+Two ways in, one write path:
+
+| Surface                                 | Control                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| `/orders`, order card footer            | One `Rate & review` button per order, opening a modal over every open line |
+| `/orders/[orderNumber]`, per line       | `OrderLineReviewControl` — four states, linking to the route form          |
+| `/orders/[orderNumber]/review/[lineId]` | The route form. The only path that works with JavaScript off               |
+
+The modal (owner decision 2026-08-25, from the Shopee "Rate Product" pattern):
+press → dialog with a photo, a required 1–5 star rating and an optional 1,000
+character body per item, plus one "show my name" tick → `Submit` → redirect to
+`/orders?lane=completed&posted=n` → the same success toast the cart shows.
+
+- **The draft lives in `RateReviewButton`, not the dialog**, so Escape and a
+  backdrop tap cost the buyer nothing and reopening restores what they typed.
+  That was the objection that originally kept this form on a route of its own.
+- **The count crosses the redirect in the URL**, not in `sessionStorage`:
+  `parsePostedCount` allow-lists it to an integer inside the submit cap, and
+  `OrdersFlashToast` strips the parameter with `history.replaceState` once shown
+  so a refresh does not re-announce it.
+- **Eligibility is never decided here.** `line.reviewable` is the portal's answer
+  (the line's own parcel `DELIVERED`, inside the window, not already reviewed);
+  `reviewableLinesOf` only reads it, and a written review wins over a stale flag.
+  The portal re-decides in a single `WHERE` on submit and answers `404` for
+  anything it refuses — a hand-made payload naming somebody else's line reaches
+  the action and is refused there, not by a hidden button.
+- **The wire carries a choice, not a name.** `attribution` is
+  `named`/`anonymous`; the published string is derived portal-side from the
+  order's own checkout ship-to. There is no name field and no email field on
+  either action.
+- **`submitOrderReviewsAction` posts one order's lines in one request**, capped
+  at `MAX_REVIEW_ITEMS` before the fan-out starts. Partial success has its own
+  outcome: the dialog stays open, says which refusal happened, and refreshes the
+  list underneath rather than claiming success or inviting a duplicate attempt.
+- **Not exercised end to end locally.** There is no reachable `sals3-portal`
+  session on a dev machine, so the e2e suite can only reach the signed-out guard
+  — the same limitation the rest of this surface has. The portal's
+  `Reviews Migrate Product Reviews` workflow also still has to run before any
+  review row can exist in production.
 
 ### Details as ordered
 

@@ -40,14 +40,14 @@ type OrderLineRowProps = {
   /** Needed to link to the review form, which lives under the order. */
   orderNumber: string;
   /**
-   * Detail page only.
+   * Detail page only — the **per-line** control, with its four states.
    *
-   * `OrderCard.test.tsx` asserts the list card prints no "review" and no
-   * "rating" anywhere, and that is a real decision rather than an oversight: the
-   * card is a payment-and-fulfilment statement a buyer scans, and it already
-   * links to the detail page for anything that needs doing. So the control lives
-   * one click in, where the buyer is looking at the item rather than at the
-   * arithmetic.
+   * The list card carries no per-line rating and still prints none: it is a
+   * payment-and-fulfilment statement a buyer scans, and a rating inside a row of
+   * unit price, quantity and line total reads as another number to check. Since
+   * 2026-08-25 the card footer does carry one order-level `Rate & review`
+   * button, which is a different thing — an action on the order, in the row of
+   * order actions, rather than a fact printed against a line.
    */
   showReviewControl?: boolean;
   /**
