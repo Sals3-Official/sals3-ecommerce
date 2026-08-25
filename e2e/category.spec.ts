@@ -220,10 +220,13 @@ test('carries the sponsored carousel wherever products are', async ({
 
   await expect(placement).toHaveCount(1);
 
-  // One slot, three creatives — the campaign cycles in place rather than
-  // taking three cells.
+  // One slot, every creative in rotation — the campaign cycles in place rather
+  // than taking a cell each. Two today: the third is held back until its
+  // comparison-rate warning is complete (`sponsored-slides.test.ts` owns that
+  // rule, so this asserts the count the rotation actually has).
   const creatives = placement.locator('img[src*="/ads/psf/"]');
-  await expect(creatives).toHaveCount(3);
+  await expect(creatives).toHaveCount(2);
+  await expect(placement.locator('img[src*="psf-refinance"]')).toHaveCount(0);
 
   // A paid link is marked as one, and is not mistakable for a product link.
   const adLinks = placement.locator('a');

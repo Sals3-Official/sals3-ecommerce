@@ -47,14 +47,14 @@ export const PSF_BRAND = {
  */
 
 /**
- * Verbatim from the third creative, bracket and all.
+ * Verbatim from the refinance creative, bracket and all.
  *
  * TODO(owner): the bracket is an unfilled template field inside a warning ASIC
  * requires to be complete. It is left exactly as supplied rather than quietly
  * filled with a plausible loan example, because a guessed comparison-rate
  * basis is a fabricated financial claim and this campaign must not carry one.
- * Replace `[loan type and amount details, e.g., $150,000 car loan]` with the
- * real basis before this goes live.
+ * The creative carrying it is held back from the live rotation until the real
+ * basis is in the artwork — see `PSF_HELD_BACK_SLIDES`.
  */
 export const PSF_RATE_DISCLOSURE =
   'Terms and conditions apply. Comparison rate based on a [loan type and amount details, e.g., $150,000 car loan] over 5 years. WARNING: This comparison rate applies only to the example or examples given and may not include all fees and charges. Different terms, fees or other loan amounts might result in a different comparison rate.';
@@ -84,6 +84,7 @@ export type SponsoredSlide = {
 
 export const CREATIVE_ASPECT = `${CREATIVE_WIDTH}/${CREATIVE_HEIGHT}`;
 
+/** The creatives actually in rotation. See `PSF_HELD_BACK_SLIDES` for the third. */
 export const PSF_SLIDES: readonly SponsoredSlide[] = [
   {
     id: 'psf-car-loans',
@@ -97,6 +98,25 @@ export const PSF_SLIDES: readonly SponsoredSlide[] = [
     alt: "Premium Select Finance. Ready to stop paying your landlord's mortgage? First home buyer grants and low-deposit options made simple. Check my eligibility.",
     href: PSF_HOME,
   },
+];
+
+/**
+ * Bought, built, and deliberately not on the storefront yet.
+ *
+ * The refinance creative is the only one of the three that advertises a rate,
+ * and the comparison-rate warning composed into it still reads `[loan type and
+ * amount details, e.g., $150,000 car loan]`. An incomplete warning beside a
+ * live rate is the one failure in this campaign that is a legal problem rather
+ * than a design one, so the owner's call (2026-08-26) was to run the two
+ * creatives that carry no rate and hold this one back.
+ *
+ * It stays here rather than being deleted because nothing is wrong with the
+ * placement, the artwork, or the code — only with one bracket in the image.
+ * `sponsored-slides.test.ts` fails if it reappears in `PSF_SLIDES` while its
+ * disclosure still carries the bracket, so re-exporting the artwork with the
+ * real loan example is what unlocks it, not remembering to.
+ */
+export const PSF_HELD_BACK_SLIDES: readonly SponsoredSlide[] = [
   {
     id: 'psf-refinance',
     src: '/ads/psf/psf-refinance.webp',

@@ -969,22 +969,30 @@ render. What went with the indicator is the explicit pause button, and with it
 **WCAG 2.2.2**: a visitor who wants the rotation to stop can now only hover it.
 Recorded rather than quietly accepted.
 
+_Two of the three creatives are live._ The refinance one — the only one that
+advertises a rate — is held back in `PSF_HELD_BACK_SLIDES` rather than
+deleted, because nothing is wrong with the placement, the artwork, or the
+code: the comparison-rate warning composed into the image still reads `[loan
+type and amount details, e.g., $150,000 car loan]`, and an incomplete warning
+beside a live rate is a legal problem rather than a design one (owner decision,
+2026-08-26). `src/lib/ads/sponsored-slides.test.ts` fails if it reappears in
+`PSF_SLIDES` while that bracket is still in `PSF_RATE_DISCLOSURE`, so
+re-exporting the artwork with the real loan example is what promotes it — not
+remembering to.
+
 _Sponsored slots never render in the unavailable, empty-department, or
 filtered-empty states_ — those panels are the page explaining itself, and an
 ad on top of an explanation is noise.
 
-> **Not yet cleared for production.** Three items in
-> `src/lib/ads/sponsored-slides.ts` are marked `TODO(owner)` and each is a
-> real-money or real-law gap, not a polish item. (1) The refinance creative's
-> comparison-rate warning still reads `[loan type and amount details, e.g.,
-$150,000 car loan]` — an unfilled template field inside a warning ASIC
-> requires to be complete. It was left exactly as supplied rather than filled
-> with a plausible example, because a guessed comparison-rate basis is a
-> fabricated financial claim. (2) The creatives say "Australian Credit
-> Representative" with no ACL or ACR number; an unnumbered licence claim is a
-> claim with nothing behind it. (3) Every call to action lands on
+> **Two items still outstanding, neither blocking the live pair.** Both live in
+> the artwork rather than the code, so both need a re-export to fix. (1) The
+> creatives say "Australian Credit Representative" with no ACL or ACR number;
+> Australian credit advertising has to carry one, and it is omitted here rather
+> than invented. (2) Every call to action lands on
 > `premiumselectfinance.com.au/` because no landing-page URLs were supplied,
-> and a guessed `/car-loans` path that 404s costs the advertiser the click.
+> and a guessed `/car-loans` path that 404s costs the advertiser the click. The
+> third item — the unfilled comparison-rate basis — is why the refinance
+> creative is held back, above.
 
 Three states beyond the normal grid/list: an unknown slug (not one of the 21
 departments) is a real `404` via `notFound()` and its own
