@@ -1077,8 +1077,9 @@ Rebuilt 2026-08-21 to the approved **PDP Redesign v3.1** shell.
 | 2   | Gallery 4:5 + the sticky record panel        | surface           |
 | 3   | **Product specifications** — seller-declared | white, full-bleed |
 | 4   | **About this product** — description, 70ch   | surface           |
-| 5   | **Supplier details** — technical, demoted    | surface           |
-| 6   | Related products                             | surface           |
+| 5   | **Ratings and reviews** — buyer reviews only | surface           |
+| 6   | **Supplier details** — technical, demoted    | surface           |
+| 7   | Related products                             | surface           |
 
 Two background colours in total. The one white full-bleed band at 3 is the
 page's only rhythm break; a third would stop reading as structure and start
@@ -1109,9 +1110,54 @@ Composed from small single-purpose components under `src/components/product/`:
 | `ProductSpecifications`       | The **seller's own** declarations against their category's attribute set                             |
 | `ProductDescription`          | The seller-authored allow-listed blocks; text at 70ch, image rows breaking out wider                 |
 | `DescriptionImageRow`         | One adjacency group of description photos: 16:9 alone, 4:3 paired                                    |
+| `ProductReviews`              | The score panel: average, star bars, and the one provenance line                                     |
+| `ProductRatingBreakdown`      | The five bars — presentational, because the chips above them already filter                          |
+| `ProductReviewList` (client)  | The filter chips, and the list they narrow                                                           |
+| `ProductReviewCard`           | One review: monogram, name, stars, date, variation, body, seller reply                               |
 | `ProductSupplierDetails`      | Physical and identifier facts, labelled supplier-reported, deliberately demoted                      |
 | `RelatedProducts`             | Same-category products, reusing the home grid                                                        |
 | `ProductSchema`               | `Product`/`Offer` JSON-LD                                                                            |
+
+### Ratings and reviews
+
+Rebuilt 2026-08-26 from the Shopee "Product Ratings" pattern. Adopted: the filter
+chips, and a per-review row that leads with who wrote it and how they scored it.
+
+**One rule governs every chip: it is offered when it matches _some but not all_
+of the list.** A band holding every review selects the same set as `All`, and
+"With comments" when every review has one partitions nothing. So a product with
+one review — or five all at five stars — draws no chip row at all. It also means
+no chip can ever empty the list, which is why there is no "nothing matches" state
+to find: a test presses every chip and asserts the list still has rows.
+
+The bars stay **alongside** the chips rather than being replaced by them, which is
+where this diverges from Shopee on purpose. A chip says how many two-star reviews
+exist; a bar shows the shape of the distribution, which is what a buyer reads an
+average to find out.
+
+Four things Shopee has that this deliberately does not, because each would be a
+control or a claim with nothing behind it:
+
+| Not built                       | Why                                                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **"With Media" chip**           | No review carries an image or video — the form accepts no upload and `ProductReviewSchema` has no field    |
+| **Avatars**                     | Nothing on the wire; the row shows the initial of the already-published name, or `UserIcon` when anonymous |
+| **Helpful votes / report menu** | No vote table, no buyer-facing report route                                                                |
+| **Per-attribute sub-scores**    | The wire carries one rating per line, not a rubric                                                         |
+
+**`ProductReviewList` filters in the browser, not through the URL.** Everything
+else that narrows a list in this storefront is a `next/link`, because those change
+which rows are fetched. This does not: the whole list is already on the page
+(capped at 50 by `ProductReviewsResponseSchema`), so a chip is a lens on data in
+hand, and routing it would re-render an entire product page to hide items that
+never left. It is registered in `CLIENT_ENTRY_POINTS` and is **not** behind
+`next/dynamic` with `ssr: false`, so the review prose stays in the initial HTML
+for crawlers and answer engines.
+
+Known gap: **the filter is not deep-linkable.** Doing it properly means threading
+`searchParams` from the page down into the section; doing it with
+`history.replaceState` alone would write `?reviews=5` into a URL whose server
+render says `All`.
 
 ### Two spec sections, two provenance lines
 
