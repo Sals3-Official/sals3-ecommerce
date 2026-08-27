@@ -1,0 +1,49 @@
+'use server';
+
+import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
+import { isKnownDestinationCode } from './destinations';
+import {
+  DESTINATION_COOKIE_NAME,
+  DESTINATION_COOKIE_MAX_AGE_SECONDS,
+} from './resolve';
+
+export type SetDestinationResult = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Records the destination the buyer picked.
+ *
+ * **Not `httpOnly`, unlike `sals3_session`.** The session cookie is a
+ * credential and must be unreadable by scripts; this is a display preference
+ * whose worst case is a wrong label on a header button. Marking it `httpOnly`
+ * would buy nothing and cost the ability to read it client-side later.
+ *
+ * Validated against the allow list rather than stored as given, so a crafted
+ * value cannot put arbitrary text into a cookie that the header then renders.
+ *
+ * `revalidatePath('/', 'layout')` covers the whole subtree in one call rather
+ * than naming routes. `sals3-portal` learned that the expensive way — nine
+ * action files each carried a literal `revalidatePath('/listings')` while the
+ * editor had moved to a child route, so every one of them silently invalidated
+ * nothing. A list of literal paths is a list that goes stale without saying so.
+ */
+export async function setDestinationAction(
+  code: string,
+): Promise<SetDestinationResult> {
+  if (typeof code !== 'string' || !isKnownDestinationCode(code)) {
+    return { ok: false, reason: 'unknown_destination' };
+  }
+
+  const cookieStore = await cookies();
+
+  cookieStore.set(DESTINATION_COOKIE_NAME, code, {
+    path: '/',
+    maxAge: DESTINATION_COOKIE_MAX_AGE_SECONDS,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  });
+
+  revalidatePath('/', 'layout');
+
+  return { ok: true };
+}

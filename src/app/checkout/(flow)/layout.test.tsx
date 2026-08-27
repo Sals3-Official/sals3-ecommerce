@@ -13,6 +13,19 @@ vi.mock('@/lib/auth/dal', () => ({
   getBuyerSession: vi.fn(),
 }));
 
+/*
+  The layout now also seeds the address form's country from the buyer's
+  destination, which means reading `cookies()` — and jsdom has no request. What
+  the seed does with the value is asserted in `useCheckoutAddress`; here it only
+  has to not take the guard's tests down with it.
+*/
+vi.mock('@/lib/destination/resolve', () => ({
+  resolveDestination: vi.fn().mockResolvedValue({
+    destination: { code: 'PH', label: 'Philippines', isGlobal: false },
+    source: 'chosen',
+  }),
+}));
+
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
   redirect: vi.fn(() => {

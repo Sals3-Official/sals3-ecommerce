@@ -50,6 +50,10 @@ const CLIENT_ENTRY_POINTS = [
   'components/layout/HeaderOrdersLink.tsx',
   // Owns the header's scroll state; every child it wraps stays server-rendered.
   'components/layout/SiteHeaderShell.tsx',
+  // The utility bar's destination control, added 2026-08-27. Its server half,
+  // `HeaderDestination`, is deliberately not an entry point: it reads
+  // `cookies()` and stays on the server, and only this half reaches the browser.
+  'components/layout/DestinationPicker.tsx',
   // The buyer orders surface. Everything else on `/orders` and
   // `/orders/[orderNumber]` is a Server Component; this is the whole client
   // boundary — a filter form that routes, a clipboard button, the success toast

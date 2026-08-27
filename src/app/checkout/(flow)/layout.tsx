@@ -7,6 +7,8 @@ import { CheckoutFlowProvider } from '@/components/checkout/CheckoutFlowProvider
 import AUTH_LINKS from '@/lib/auth/auth-links';
 import { getBuyerSession } from '@/lib/auth/dal';
 import { withPostLoginKey } from '@/lib/auth/post-login-redirect';
+import { isCheckoutCountry } from '@/lib/checkout/locations';
+import { resolveDestination } from '@/lib/destination/resolve';
 
 /**
  * Shared shell for the three checkout steps — `/checkout`,
@@ -35,11 +37,23 @@ export default async function CheckoutFlowLayout({
     redirect(withPostLoginKey(AUTH_LINKS.signIn, 'checkout'));
   }
 
+  /*
+    The destination the buyer has been shopping to, if checkout can take an
+    address there. `isCheckoutCountry` is the narrowing: Global and the four
+    priced-but-not-orderable countries fall through to `undefined`, and the form
+    keeps its own default. Seeding a country the form would then refuse is the
+    one outcome worth ruling out here rather than downstream.
+  */
+  const { destination } = await resolveDestination();
+  const initialCountry = isCheckoutCountry(destination.code)
+    ? destination.code
+    : undefined;
+
   return (
     <div className="flex flex-1 flex-col bg-surface">
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-5 pb-16">
-        <CheckoutFlowProvider>
+        <CheckoutFlowProvider initialCountry={initialCountry}>
           <CheckoutFlowChrome>{children}</CheckoutFlowChrome>
         </CheckoutFlowProvider>
       </main>

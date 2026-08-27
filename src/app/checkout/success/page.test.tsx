@@ -15,6 +15,17 @@ import { retrieveStripeCheckoutSession } from '@/services/stripe/checkout';
 import renderWithCart from '../../../../test/render-with-cart';
 import CheckoutSuccessPage, { generateMetadata } from './page';
 
+/*
+  `HeaderDestination` reads `cookies()` to resolve the buyer's shipping
+  destination, so it is an async Server Component and React refuses to render it
+  outside RSC. Left alone it would log an error into every assertion in this
+  file without failing one, which is the worst of both. The picker it renders
+  has its own tests.
+*/
+vi.mock('@/components/layout/HeaderDestination', () => ({
+  default: () => null,
+}));
+
 vi.mock('server-only', () => ({}));
 
 vi.mock('@/lib/auth/dal', () => ({
