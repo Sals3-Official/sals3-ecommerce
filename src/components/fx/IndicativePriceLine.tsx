@@ -7,6 +7,17 @@ type IndicativePriceLineProps = {
   price: Money;
   /** Resolved once per page render on the server, and passed down. */
   rate: IndicativeRate | null;
+  /**
+   * Mirrors the qualifier on the USD price above, e.g. `'From'`.
+   *
+   * Required so the two figures cannot disagree about what they are. When the
+   * USD price is a range floor ("From US$19.99") and this line rendered a bare
+   * `≈ A$27.83`, the **approximate** number claimed more precision than the
+   * charged one it mirrors — the exact "the approximate one looked like the
+   * real one" reading this display exists to prevent. Caught in review,
+   * 2026-08-28.
+   */
+  fromLabel?: string;
   /** Spacing from whatever sits above it; the type scale is fixed here. */
   className?: string;
 };
@@ -47,6 +58,7 @@ type IndicativePriceLineProps = {
 export default function IndicativePriceLine({
   price,
   rate,
+  fromLabel,
   className,
 }: IndicativePriceLineProps) {
   const indicative =
@@ -64,7 +76,8 @@ export default function IndicativePriceLine({
           the first thing that distinguishes this figure from the price above it
           for someone scanning rather than reading.
         */}
-        ≈ {indicative.formatted}
+        {fromLabel === undefined ? null : `${fromLabel} `}≈{' '}
+        {indicative.formatted}
       </p>
       <p className="mt-0.5 text-xs leading-relaxed text-ink-faint">
         {indicative.note}

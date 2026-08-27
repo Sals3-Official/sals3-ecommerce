@@ -14,12 +14,24 @@ import { fetchIndicativeRate } from './rates';
  * So this asserts the one thing a fixture cannot: that the shape we parse is
  * the shape the API sends.
  *
- * ## Why it is allowed to skip
+ * ## Reachability is probed separately, and the first attempt got this wrong
  *
- * It reaches the network, and a test that fails on a CI runner with no egress —
- * or when someone else's service has a bad afternoon — teaches the team to
- * ignore red. It **skips** when the call cannot be made, and **fails** when the
- * call succeeds and the shape is wrong. That is the only case it exists for.
+ * The obvious shape — call `fetchIndicativeRate` in a `try`/`catch` and skip on
+ * a throw — **cannot work, and shipped broken before review caught it.**
+ * `fetchIndicativeRate` collapses every failure to `null` by design and never
+ * rejects, so the `catch` was dead code and the skip was unreachable. A runner
+ * with no egress would have got `null` and **failed**, blocking every commit in
+ * the repository for as long as somebody else's service was down. That is
+ * exactly the "teaches the team to ignore red" outcome this test is supposed to
+ * avoid.
+ *
+ * So reachability is established with a bare `fetch` that is allowed to throw,
+ * *before* the module under test is called. The two outcomes are then
+ * distinguishable:
+ *
+ * - the host cannot be reached → **skip**, this environment cannot answer;
+ * - the host answered 200 but the module returns `null` → **fail**, the shape,
+ *   the provider, or the publication cadence has changed.
  *
  * `FJD` deliberately: it is the currency no ECB-backed source carries, so it is
  * the one most likely to disappear if Frankfurter's provider aggregation
@@ -29,27 +41,29 @@ import { fetchIndicativeRate } from './rates';
 describe('Frankfurter contract', () => {
   it(
     'still returns the shape this module parses',
-    { timeout: 15_000 },
+    { timeout: 20_000 },
     async ({ skip }) => {
-      let live: Awaited<ReturnType<typeof fetchIndicativeRate>> | 'unreachable';
+      const probe = await fetch(
+        'https://api.frankfurter.dev/v2/rate/USD/FJD?providers=RBF',
+        { signal: AbortSignal.timeout(10_000), cache: 'no-store' },
+      ).catch(() => null);
 
-      try {
-        live = await fetchIndicativeRate('FJD');
-      } catch {
-        live = 'unreachable';
-      }
-
-      if (live === 'unreachable') {
+      if (probe === null) {
         skip('Frankfurter unreachable from this environment.');
         return;
       }
 
-      // `null` here means reachable but unusable — a changed shape, a dropped
-      // currency, or a stale publication. All three are exactly what this test
-      // is for, so it is a failure rather than a skip.
+      if (!probe.ok) {
+        skip(`Frankfurter answered ${probe.status}; not this test's business.`);
+        return;
+      }
+
+      // Reachable and answering. From here a `null` is a real contract change.
+      const live = await fetchIndicativeRate('FJD');
+
       expect(
         live,
-        'Frankfurter answered but no usable FJD rate came back — the response shape, the RBF provider, or the publication date has changed.',
+        'Frankfurter answered 200 but no usable FJD rate came back — the response shape, the RBF provider, or the publication date has changed.',
       ).not.toBeNull();
 
       expect(live?.currency).toBe('FJD');

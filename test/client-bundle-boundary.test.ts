@@ -110,31 +110,6 @@ const IMPORT_PATTERN = /(?:from|import)\s+'([^']+)'/g;
 
 const CANDIDATE_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
 
-/**
- * Comments, removed before the import scan.
- *
- * `IMPORT_PATTERN` is a regex over raw source, and it cannot tell code from
- * prose. This repository's modules carry long explanatory docblocks, and one of
- * them is specifically *about* this rule: `lib/fx/rates.ts` opens with a section
- * headed "No `import 'server-only'`, deliberately", setting out why that module
- * leaves the marker off and how the boundary is held here instead. Scanning the
- * prose reported it as a violation of the rule it was documenting its
- * compliance with — and the module it was reached from was reported too, which
- * is a failure that points at the wrong file entirely.
- *
- * The guard itself is unchanged: it still fails on a real `node:` or
- * `server-only` import, and `detects a violation when one exists` below is the
- * control that proves the walk still finds one.
- *
- * `//` preceded by `:` is left alone, so a `'https://…'` literal does not eat
- * the rest of its line.
- */
-function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
-}
-
 function resolveModule(specifier: string, fromFile: string) {
   const base = specifier.startsWith('@/')
     ? resolve(SOURCE_ROOT, specifier.slice(2))
@@ -179,7 +154,7 @@ function findServerOnlyImports(entry: string) {
     }
 
     const specifiers = Array.from(
-      stripComments(source).matchAll(IMPORT_PATTERN),
+      source.matchAll(IMPORT_PATTERN),
       (m) => m[1]!,
     );
 

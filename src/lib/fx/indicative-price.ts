@@ -96,7 +96,13 @@ export function toIndicativePrice(
   usdAmountMinor: number,
   rate: IndicativeRate | null,
 ): IndicativePrice | null {
-  if (rate === null) return null;
+  /*
+    Falsy, not `=== null`. The type says null is the only absent case, but this
+    sits at a boundary where a mock reset between tests, a serialisation that
+    dropped a key, or an `any` at a call site can hand over `undefined` — and
+    then `rate.currency` throws mid-render on a product page. Costs nothing.
+  */
+  if (!rate) return null;
   if (!Number.isFinite(usdAmountMinor) || usdAmountMinor < 0) return null;
 
   const converted = Math.round(usdAmountMinor * rate.rate);

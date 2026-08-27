@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchIndicativeRate } from './rates';
+import { fetchIndicativeRate, resetRateMemoForTests } from './rates';
 
 /**
  * Every case here is a way to be handed a wrong number, and the answer to all
@@ -38,6 +38,8 @@ function rateBody(quote: string, rate: number, date = '2026-08-27') {
 describe('fetchIndicativeRate', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
+    // A failure in one case must not silence the next one.
+    resetRateMemoForTests();
   });
 
   afterEach(() => {
@@ -54,16 +56,31 @@ describe('fetchIndicativeRate', () => {
     });
   });
 
-  it('pins each currency to its own central bank', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(rateBody('PHP', 61.65)));
+  it.each([
+    ['AUD', 'RBA'],
+    ['PHP', 'BSP'],
+    ['FJD', 'RBF'],
+  ] as const)('pins %s to %s, its own central bank', async (currency, bank) => {
+    // Every currency, not just one: the number a buyer sees should be the one
+    // their own central bank published, and a single-currency assertion left
+    // the other two pinned nowhere but the live contract test.
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(rateBody(currency, 1.5)));
 
-    await fetchIndicativeRate('PHP', NOW);
+    await fetchIndicativeRate(currency, NOW);
 
-    // Bangko Sentral ng Pilipinas, not the default aggregate — the number a
-    // buyer sees should be the one their own central bank published.
-    expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain(
-      'providers=BSP',
+    const url = String(vi.mocked(fetch).mock.calls[0][0]);
+
+    expect(url).toContain(`/rate/USD/${currency}`);
+    expect(url).toContain(`providers=${bank}`);
+  });
+
+  it('refuses a rate dated one day beyond the stale window', async () => {
+    // The boundary, which the 33-days-in-the-future case could not pin.
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(rateBody('AUD', 1.3922, '2026-08-20')),
     );
+
+    await expect(fetchIndicativeRate('AUD', NOW)).resolves.toBeNull();
   });
 
   it('refuses a body quoting a different currency than the one asked for', async () => {
@@ -138,5 +155,46 @@ describe('fetchIndicativeRate', () => {
     vi.mocked(fetch).mockRejectedValue(new Error('ECONNRESET'));
 
     await expect(fetchIndicativeRate('AUD', NOW)).resolves.toBeNull();
+  });
+
+  it('remembers a failure instead of asking again on every render', async () => {
+    /*
+      The reason this memo exists. `next: { revalidate }` caches responses and
+      Next writes that cache only for a 200, so without this every render during
+      an outage would issue a live request and wait for it — on a page with no
+      loading boundary, which makes it time-to-first-byte for every visitor.
+    */
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ status: 404, message: 'not found' }, false),
+    );
+
+    await fetchIndicativeRate('FJD', NOW);
+    await fetchIndicativeRate('FJD', NOW);
+    await fetchIndicativeRate('FJD', NOW);
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries again once the failure memo expires', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ status: 404, message: 'not found' }, false),
+    );
+    await fetchIndicativeRate('FJD', NOW);
+
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(rateBody('FJD', 2.2148)));
+    const later = new Date(NOW.getTime() + 6 * 60 * 1000);
+
+    await expect(fetchIndicativeRate('FJD', later)).resolves.not.toBeNull();
+  });
+
+  it('keeps one currency failure from silencing another', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ status: 404, message: 'not found' }, false),
+    );
+    await fetchIndicativeRate('FJD', NOW);
+
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(rateBody('AUD', 1.3922)));
+
+    await expect(fetchIndicativeRate('AUD', NOW)).resolves.not.toBeNull();
   });
 });

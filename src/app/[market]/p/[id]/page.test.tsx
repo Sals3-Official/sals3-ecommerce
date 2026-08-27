@@ -1,9 +1,10 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
+import { resetRateMemoForTests } from '@/lib/fx/rates';
 import renderWithCart from '../../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
 
@@ -142,6 +143,18 @@ afterEach(() => {
 });
 
 describe('Product page', () => {
+  /*
+    The rate module remembers a failure for five minutes so an outage does not
+    cost a live request per render. That state is module-scoped, so a case here
+    that stubs a 404 would otherwise silence every case after it in this file —
+    which is exactly how the two FX cases below started failing once the memo
+    landed. Test-order coupling is the price of the memo, and this is where it
+    is paid.
+  */
+  beforeEach(() => {
+    resetRateMemoForTests();
+  });
+
   function acceptAnalytics() {
     window.localStorage.setItem(
       'sals3_klaviyo_consent_v1',

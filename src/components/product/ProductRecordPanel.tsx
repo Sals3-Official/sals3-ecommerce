@@ -221,6 +221,7 @@ export default function ProductRecordPanel({
         <IndicativePriceLine
           price={price}
           rate={indicativeRate}
+          fromLabel={showFrom ? 'From' : undefined}
           className="mt-2.5"
         />
       </CardSection>

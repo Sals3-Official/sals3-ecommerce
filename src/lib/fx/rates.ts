@@ -1,19 +1,29 @@
 /**
  * The indicative exchange rate behind the approximate local price.
  *
- * ## No `import 'server-only'`, deliberately
+ * ## The server-only marker package is deliberately not used here
  *
- * This module is server-only in fact — it is called from Server Components and
- * nothing imports it into a client bundle. The guard is still left out, because
- * `server-only`'s default export throws outside Next's bundler condition, which
- * means every test file that imports this one dies at module load with
- * *"This module cannot be imported from a Client Component module."* That is
- * not a hypothetical: it took out this file's own tests on first run, and it is
- * the same reason `read-model.ts` refuses the guard.
+ * This module is server-side in fact — it is called from Server Components and
+ * nothing pulls it into a client bundle. The marker package is still left out,
+ * because its default export throws outside Next's bundler condition, so every
+ * test file that reaches this one dies at module load with *"This module cannot
+ * be imported from a Client Component module."* That is not hypothetical: it
+ * took out this file's own tests on first run, and it is the same reason
+ * `read-model.ts` refuses the marker.
  *
  * The boundary is held by `test/client-bundle-boundary.test.ts` instead, which
- * checks what actually ends up in the client bundle rather than asking a
- * module to police itself.
+ * checks what actually reaches the client bundle rather than asking a module to
+ * police itself.
+ *
+ * **Note for whoever edits this comment:** that guard scans raw source with a
+ * regex and cannot tell code from prose. Writing the marker's name here as a
+ * quoted import statement makes the scan report this module — and everything
+ * that reaches it — as violating the very rule this paragraph documents
+ * compliance with. It happened on 2026-08-28. The first fix was to teach the
+ * guard to strip comments; that was withdrawn, because a comment-stripping
+ * regex can be fooled by a string containing a comment token, and a security
+ * check that can be fooled by ordinary code is worse than an inconvenient one.
+ * The guard stays strict. Describe the marker; do not spell it.
  *
  * ## What this is for, and what it must never become
  *
@@ -102,15 +112,19 @@ const PROVIDERS: Record<IndicativeCurrency, string> = {
 const MAX_RATE_AGE_DAYS = 7;
 
 /**
- * How long a fetched rate is reused before refetching.
+ * How long a successful response is reused, across instances.
  *
- * Six hours. These rates move daily at most, so this is generous, and it means
- * a product page never waits on a third party — the fetch happens on one
- * request in a few thousand and every other render is served from the cache.
+ * Six hours, via `next: { revalidate }` on the fetch. These rates move daily at
+ * most, so this is generous. Failures are handled separately and differently —
+ * see `FAILURE_MEMO_MS`, and the reason there is the important one.
+ *
+ * The timeout is 1.5s rather than 4s so the one render that does pay for a
+ * refresh cannot be held up for long. Both surfaces sit on the render path with
+ * no `loading.tsx`, so anything spent here is time-to-first-byte.
  */
 const CACHE_SECONDS = 6 * 60 * 60;
 
-const REQUEST_TIMEOUT_MS = 4_000;
+const REQUEST_TIMEOUT_MS = 1_500;
 
 /**
  * A sanity bound on the rate itself.
@@ -136,8 +150,19 @@ function isFresh(asOf: string, now: Date): boolean {
 
   const ageDays = (now.getTime() - published.getTime()) / 86_400_000;
 
-  // A future date means the upstream clock or our own is wrong; either way it
-  // is not a number to show a buyer.
+  /*
+    One day of future tolerance, not zero, and the comment used to claim
+    otherwise — review caught the contradiction on 2026-08-28.
+
+    The slack is for clock skew between this server and the publisher, which is
+    ordinary. Anything further ahead is a broken clock somewhere and not a
+    number to show a buyer.
+
+    The cost of that slack, stated so it is not rediscovered: a server whose own
+    clock is a day slow will accept a rate that is genuinely eight days old.
+    That is the widest this window can be wrong, and eight-day-old is still
+    approximately right for a currency that moves a fraction of a percent a day.
+  */
   return ageDays >= -1 && ageDays <= MAX_RATE_AGE_DAYS;
 }
 
@@ -149,7 +174,7 @@ function isFresh(asOf: string, now: Date): boolean {
  * purpose: there is exactly one correct response to all of them, which is to
  * show no local price.
  */
-export async function fetchIndicativeRate(
+async function fetchUncached(
   currency: IndicativeCurrency,
   now: Date = new Date(),
 ): Promise<IndicativeRate | null> {
@@ -187,4 +212,61 @@ export async function fetchIndicativeRate(
   } catch {
     return null;
   }
+}
+
+/**
+ * How long a **failure** is remembered before trying again.
+ *
+ * Five minutes, in this process only.
+ *
+ * `next: { revalidate }` above caches the *response*, and Next writes that
+ * cache only for a `200`. So the fetch layer caches successes and nothing else:
+ * while the upstream is failing — a 404 because a provider stopped publishing,
+ * a 5xx, a DNS failure — **every render would issue a live request and wait for
+ * it.** Both surfaces that use this sit on the render path with no
+ * `loading.tsx`, so that is straight time-to-first-byte for every visitor, for
+ * as long as the outage lasts. Review caught this on 2026-08-28.
+ *
+ * `unstable_cache` would cache the return value including `null`, but it
+ * requires Next's incremental-cache context and throws outside it, which makes
+ * the whole module untestable — tried, reverted. A plain map is per-instance
+ * rather than shared, which is a weaker guarantee and an honest one: it turns
+ * "a request per render" into "a request per instance per five minutes", and it
+ * can be tested.
+ *
+ * Successes are deliberately not memoised here. They are already cached across
+ * instances by the fetch layer, and a second TTL over the top would only add a
+ * window where two callers disagree about the rate.
+ */
+const FAILURE_MEMO_MS = 5 * 60 * 1000;
+
+const failureMemo = new Map<IndicativeCurrency, number>();
+
+/** Clears the failure memo. Tests only — each case starts from a clean slate. */
+export function resetRateMemoForTests(): void {
+  failureMemo.clear();
+}
+
+/**
+ * The indicative rate for one currency, with recent failures remembered.
+ *
+ * `now` is threaded rather than read inside so freshness stays testable.
+ */
+export async function fetchIndicativeRate(
+  currency: IndicativeCurrency,
+  now: Date = new Date(),
+): Promise<IndicativeRate | null> {
+  const failedUntil = failureMemo.get(currency);
+
+  if (failedUntil !== undefined && failedUntil > now.getTime()) return null;
+
+  const value = await fetchUncached(currency, now);
+
+  if (value === null) {
+    failureMemo.set(currency, now.getTime() + FAILURE_MEMO_MS);
+  } else {
+    failureMemo.delete(currency);
+  }
+
+  return value;
 }
