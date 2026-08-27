@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
 import { findDestination } from '@/lib/destination/destinations';
+import { fetchIndicativeRate } from '@/lib/fx/rates';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { usd } from '@/lib/money';
 import renderWithCart from '../../../../test/render-with-cart';
@@ -27,6 +28,17 @@ vi.mock('@/lib/destination/resolve', () => ({
 */
 vi.mock('@/components/layout/HeaderDestination', () => ({
   default: () => null,
+}));
+
+/*
+  The FX fetch. Mocked rather than left to run: unmocked it would put a real
+  request to a third party into every assertion in this file, and the rate it
+  returned would change what the page renders from one day to the next. `null`
+  is the default because it is the state that must render nothing extra — the
+  tests that want a rate opt in.
+*/
+vi.mock('@/lib/fx/rates', () => ({
+  fetchIndicativeRate: vi.fn().mockResolvedValue(null),
 }));
 
 describe('Cart page', () => {
@@ -131,5 +143,76 @@ describe('Cart page', () => {
       'Cart Item Removed',
       expect.objectContaining({ ProductID: '1', Quantity: 2 }),
     );
+  });
+
+  /**
+   * The approximate local total. USD is what is charged and stays present and
+   * prominent in every case below; the local figure is the extra that is either
+   * right or absent.
+   */
+  describe('the approximate local total', () => {
+    function seedOneLine() {
+      const seeded = addCartItem(
+        EMPTY_CART,
+        {
+          productId: '1',
+          title: 'Essence Mascara Lash Princess',
+          imageAlt: 'Essence Mascara Lash Princess product image',
+          tone: 'ocean',
+          unitPrice: usd(99900),
+        },
+        2,
+      );
+
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
+    }
+
+    it('renders the local total and its note beside the USD subtotal', async () => {
+      vi.mocked(fetchIndicativeRate).mockResolvedValueOnce({
+        currency: 'AUD',
+        rate: 2,
+        asOf: '2026-08-27',
+      });
+      seedOneLine();
+
+      renderWithCart(
+        await CartPage({ params: Promise.resolve({ market: 'au' }) }),
+      );
+
+      // The line total and the subtotal, unchanged: the charge is still USD.
+      expect(await screen.findAllByText('US$1,998')).toHaveLength(2);
+      // One conversion, against the subtotal only — never per line.
+      expect(screen.getByText(/A\$3,996\.00/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/you are charged in us dollars/i),
+      ).toBeInTheDocument();
+    });
+
+    it('asks for the market’s own currency', async () => {
+      seedOneLine();
+
+      renderWithCart(
+        await CartPage({ params: Promise.resolve({ market: 'ph' }) }),
+      );
+
+      expect(fetchIndicativeRate).toHaveBeenCalledWith('PHP');
+    });
+
+    /** No rate means nothing extra — not a dash, not a placeholder. */
+    it('renders nothing extra when there is no rate', async () => {
+      seedOneLine();
+
+      const { container } = renderWithCart(
+        await CartPage({ params: Promise.resolve({ market: 'au' }) }),
+      );
+
+      expect(await screen.findAllByText('US$1,998')).toHaveLength(2);
+
+      const text = container.textContent ?? '';
+
+      expect(text).not.toMatch(/approximate/i);
+      expect(text).not.toMatch(/A\$/);
+      expect(text).not.toMatch(/≈/);
+    });
   });
 });

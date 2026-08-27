@@ -9,8 +9,11 @@ import {
   isMarketSegment,
   marketCanCheckOut,
   marketDestination,
+  marketToDestinationCode,
   type MarketSegment,
 } from '@/lib/destination/markets';
+import marketToIndicativeCurrency from '@/lib/fx/market-currency';
+import { fetchIndicativeRate } from '@/lib/fx/rates';
 import { SITE_NAME } from '@/lib/site';
 
 export function generateMetadata(): Metadata {
@@ -59,7 +62,28 @@ export default async function CartPage({
   const market: MarketSegment = isMarketSegment(rawMarket)
     ? rawMarket
     : DEFAULT_MARKET;
-  const { destination } = await resolveDestination();
+  /*
+    The cart total is computed in the browser from localStorage, so the
+    approximate figure beside it has to be too. The **rate** is not: it is
+    fetched here, once, and passed down as a prop. A client-side fetch would put
+    a third-party request on every cart view, lose the six-hour server cache,
+    and paint the number in after hydration beside a price that was already
+    correct — which is the exact shape of "the approximate one looked like the
+    real one" this display is built to avoid.
+  */
+  /*
+    The market is passed to `resolveDestination` for the same reason the header
+    passes it, and leaving it out here was a real defect found in the browser on
+    2026-08-28: `/ph/cart` showed "Ship to: Philippines" in the header and, two
+    inches below, a banner saying orders could not be placed to the buyer's
+    destination — because the header had the market and this call did not, so it
+    fell through to Global. One page, two answers, neither of them wrong on its
+    own. Every `resolveDestination` call inside a market must name it.
+  */
+  const [{ destination }, indicativeRate] = await Promise.all([
+    resolveDestination(marketToDestinationCode(market)),
+    fetchIndicativeRate(marketToIndicativeCurrency(market)),
+  ]);
   const noticeDestination = marketCanCheckOut(market)
     ? destination
     : marketDestination(market);
@@ -69,7 +93,7 @@ export default async function CartPage({
       <SiteHeader market={market} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-5 pb-16">
         <DestinationNotice destination={noticeDestination} />
-        <CartPageClient market={market} />
+        <CartPageClient market={market} indicativeRate={indicativeRate} />
       </main>
       <SiteFooter market={market} />
     </div>
