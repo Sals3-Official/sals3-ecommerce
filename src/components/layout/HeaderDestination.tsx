@@ -31,6 +31,26 @@ import { resolveDestination } from '@/lib/destination/resolve';
  * threading it through `SiteHeader`. That is a second call, not a second read:
  * Next caches `cookies()` and `headers()` per request, so both calls see the
  * same values and neither does I/O.
+ *
+ * ## The cost, measured rather than assumed
+ *
+ * Reading `cookies()` here opts every route rendering `SiteHeader` into dynamic
+ * rendering. Comparing `next build` route tables across this change, **exactly
+ * two flipped from static to dynamic: `/cart` and `/categories`.** Every other
+ * route was already `ƒ`, because `StorefrontCachePolicy` is `no-store` and any
+ * page that fetches the catalogue was dynamic already.
+ *
+ * That is the correct trade rather than a regression to fix. A statically
+ * generated page would serve one visitor's header to everyone — every buyer
+ * would read `Ship to: Somewhere else` no matter what they had chosen, which is
+ * worse than a wrong price because it is the control that is supposed to fix a
+ * wrong price. Rendering the picker on the client instead would keep the two
+ * pages static at the cost of a flash of the wrong destination on every load,
+ * and of a header that says nothing without JavaScript.
+ *
+ * **The thing to watch:** any *new* route that renders `SiteHeader` is dynamic
+ * from birth. If a genuinely static page is ever wanted, the picker has to move
+ * out of the shared header, not lose its server value.
  */
 export default async function HeaderDestination() {
   const { destination, source } = await resolveDestination();
