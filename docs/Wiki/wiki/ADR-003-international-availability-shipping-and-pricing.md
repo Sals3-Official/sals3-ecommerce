@@ -2,7 +2,7 @@
 tags: [sals3, adr, shipping, pricing, international, seo, currency]
 aliases: [ADR-003, International Availability and Pricing, Destination Pricing]
 created: 2026-08-06
-updated: 2026-08-11
+updated: 2026-08-27
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -11,6 +11,8 @@ related:
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
   - "[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]"
   - "[[sals3-geo-aeo-seo-strategy-proposal]]"
+  - "[[sals3-session-2026-08-27-part81-the-site-learns-where-it-is-shipping]]"
+  - "[[cross-border-rest-of-world-selling-reference]]"
 ---
 
 # ADR-003 - International availability, shipping, currency, and pricing
@@ -114,3 +116,66 @@ Start conservatively, distinguish QPS throttling from points exhaustion, reserve
 - Pricing fixtures cover percentage fees, fixed fees, rounding, returns allowance, and loss prevention.
 - Search/structured-data review for each enabled market presentation.
 - Actual fee, tax, duty, refund, and consumer-law review before launch in a market.
+
+## Amendment — 2026-08-27: the storefront gains a destination context, and Global is its default (owner decision, Bogs)
+
+§1 required a versioned allow-list of enabled destinations and copy saying "ships to supported
+countries" rather than "ships worldwide". Until now the storefront had **no notion of a
+destination at all** outside the checkout address form, so it said neither. This amendment
+records what it now does. Built and merged the same day —
+`sals3-ecommerce` [#170](https://github.com/Sals3-Official/sals3-ecommerce/pull/170) — with no
+schema, migration or API contract change. See
+[[sals3-session-2026-08-27-part81-the-site-learns-where-it-is-shipping]].
+
+### Decision
+
+1. **The storefront resolves a buyer destination**, in this order: the buyer's stored choice, then
+   a geo-IP hint, then **Global**. Global is the default, because the site's shape is a global one
+   (owner decision 2026-08-27) and a neutral state must not name a country nobody picked.
+2. **§1's geo-IP rule is implemented literally.** A geo hint is *never* written to the cookie on
+   the buyer's behalf, so a stored value always means a person chose it, and the resolver reports
+   `chosen | suggested | default` so no interface can present a guess as a decision. There is
+   deliberately **no middleware**: stamping a cookie on first request is the one thing that would
+   make a guess indistinguishable from a choice.
+3. **The destination vocabulary is the six measured countries plus Global** — the same seven
+   scopes as ADR-015's pricing, deliberately not a list of every country. Offering ~190 countries
+   would be the "ships worldwide" claim §1 forbids, made in a dropdown instead of a sentence.
+4. **The gap between pricing and ordering is disclosed, not hidden.** Where an order may be
+   *priced* (seven scopes) and where it may be *placed* (`CHECKOUT_ALLOWED_COUNTRIES`, two
+   countries) are separate lists, and the storefront now names the second before a buyer reaches
+   the sign-in wall.
+
+### What this does not change
+
+**No destination is enabled by this amendment.** Checkout still accepts Australia and the
+Philippines. A buyer's destination changes no price either: prices are frozen onto
+`product_offers` at publish and the storefront read model has no `market_code` filter, so this is
+a context and a disclosure, not a pricing mechanism.
+
+### Consequence for §2's cache guidance
+
+Reading the destination in shared chrome converts every route that renders the site header from
+static to dynamic. Measured across the change: exactly two routes flipped, `/cart` and
+`/categories`. That is accepted — a static page would serve one visitor's header to all of them —
+but it means **any new route rendering the header is dynamic from birth**.
+
+The portal's `unstable_cache` catalogue cache is keyed without a country and is barred from
+reading request APIs. It is safe **only while the destination changes no price**. The day a price
+becomes destination-dependent, the destination must be threaded into that cache key as an
+explicit argument; nothing will report it if that is missed.
+
+### Open
+
+- **Widening checkout is two pieces of work, not one**: the freight-quote country enum, and an
+  address form that is currently dropdown-driven from closed region and city lists per country
+  and does not generalise beyond them.
+- **Before Global can take an order**: a duty model, a restricted-category deny-list, a sanctions
+  country deny-list, and terms naming the buyer as importer of record — see
+  [[cross-border-rest-of-world-selling-reference]].
+- **`sals3.com` does not serve this storefront.** It resolves to SiteGround behind a captcha
+  challenge with `X-Robots-Tag: noindex`; the storefront is on Vercel. The domain is referenced
+  nowhere in either codebase and `NEXT_PUBLIC_SITE_URL` is unset, so every canonical URL and the
+  Organization JSON-LD `url` are omitted rather than guessed. §6's international-SEO guidance
+  cannot be satisfied until a real domain is configured.
+
+**Frontmatter `updated`** moves to 2026-08-27.
