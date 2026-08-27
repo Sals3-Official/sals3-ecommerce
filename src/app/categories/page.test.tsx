@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { categories as fallbackDepartments } from '@/lib/home-placeholder-data';
-import renderWithCart from '../../../../test/render-with-cart';
+import renderWithCart from '../../../test/render-with-cart';
 import CategoriesPage, { generateMetadata } from './page';
 
 /*
@@ -84,9 +84,7 @@ describe('All departments page', () => {
       })),
     );
 
-    renderWithCart(
-      await CategoriesPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CategoriesPage());
 
     const list = screen.getByRole('navigation', { name: /all departments/i });
 
@@ -111,9 +109,7 @@ describe('All departments page', () => {
       ),
     );
 
-    renderWithCart(
-      await CategoriesPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CategoriesPage());
 
     const list = screen.getByRole('navigation', { name: /all departments/i });
 
@@ -131,9 +127,7 @@ describe('All departments page', () => {
   it('asks the portal for every department, not only the stocked ones', async () => {
     const fetchMock = mockDepartmentsFetch();
 
-    renderWithCart(
-      await CategoriesPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CategoriesPage());
 
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:3001/api/storefront/categories?scope=all',
@@ -144,24 +138,20 @@ describe('All departments page', () => {
   it('lists each department as a link to its category page', async () => {
     mockDepartmentsFetch();
 
-    renderWithCart(
-      await CategoriesPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CategoriesPage());
 
     const list = screen.getByRole('navigation', { name: /all departments/i });
 
     expect(within(list).getAllByRole('link')).toHaveLength(3);
     expect(
       within(list).getByRole('link', { name: /apparel & accessories/i }),
-    ).toHaveAttribute('href', '/au/c/apparel-accessories');
+    ).toHaveAttribute('href', '/c/apparel-accessories');
   });
 
   it('counts the departments it actually shows', async () => {
     mockDepartmentsFetch();
 
-    renderWithCart(
-      await CategoriesPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CategoriesPage());
 
     expect(screen.getByText('3 departments')).toBeInTheDocument();
   });
@@ -179,9 +169,7 @@ describe('All departments page', () => {
       ),
     );
 
-    renderWithCart(
-      await CategoriesPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CategoriesPage());
 
     const list = screen.getByRole('navigation', { name: /all departments/i });
 
@@ -190,6 +178,6 @@ describe('All departments page', () => {
     );
     expect(
       within(list).getByRole('link', { name: /^religious & ceremonial$/i }),
-    ).toHaveAttribute('href', '/au/c/religious-ceremonial');
+    ).toHaveAttribute('href', '/c/religious-ceremonial');
   });
 });

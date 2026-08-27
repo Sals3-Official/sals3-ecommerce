@@ -34,27 +34,19 @@ import {
   fetchCategoryProducts,
   type CategoryProductsSort,
 } from '@/services/products';
-import {
-  DEFAULT_MARKET,
-  isMarketSegment,
-  marketHref,
-  type MarketSegment,
-} from '@/lib/destination/markets';
 
 type CategoryPageProps = {
-  params: Promise<{ market: string; slug: string }>;
+  params: Promise<{ slug: string }>;
   searchParams?: Promise<RawSearchParams>;
 };
 
 /**
- * The canonical is **per market**, and self-referential.
+ * The canonical is self-referential, and now there is one of it.
  *
- * `/au/c/electronics` and `/ph/c/electronics` list the same products at the
- * same prices today, so they look like the duplicate a canonical exists to
- * collapse. They are not: they are localized versions of one listing, which is
- * what the `hreflang` set in the market layout says. Pointing both at one
- * canonical would tell Google to drop the other version outright, contradicting
- * the alternates emitted one level up and removing a shopfront from the index.
+ * Between 2026-08-27 and 2026-08-28 this listing had one address per market and
+ * a canonical each, because `/au/c/electronics` and `/ph/c/electronics` were
+ * localized versions of one listing rather than duplicates of it. One storefront
+ * means one address, so the reasoning collapses back to the ordinary case.
  *
  * Still `undefined` when `NEXT_PUBLIC_SITE_URL` is unset — `getSiteUrl()`
  * returns `undefined` rather than guessing a domain, and this omits the field
@@ -63,19 +55,17 @@ type CategoryPageProps = {
 export async function generateMetadata({
   params,
 }: CategoryPageProps): Promise<Metadata> {
-  const { market, slug } = await params;
+  const { slug } = await params;
   const category = categories.find((entry) => entry.id === slug);
 
-  if (category === undefined || !isMarketSegment(market)) {
+  if (category === undefined) {
     return { robots: { index: false, follow: true } };
   }
 
   const title = `${category.name} — ${SITE_NAME}`;
   const description = `Browse every ${category.name} product published in the ${SITE_NAME} catalogue, with one clear US dollar price per item.`;
   const siteUrl = getSiteUrl();
-  const canonical = siteUrl
-    ? `${siteUrl}${marketHref(market, `/c/${category.id}`)}`
-    : undefined;
+  const canonical = siteUrl ? `${siteUrl}/c/${category.id}` : undefined;
 
   return {
     title,
@@ -223,11 +213,7 @@ export default async function CategoryPage({
   params,
   searchParams,
 }: CategoryPageProps) {
-  const { market: rawMarket, slug } = await params;
-  // The layout above 404s an unrecognised segment; this only narrows the type.
-  const market: MarketSegment = isMarketSegment(rawMarket)
-    ? rawMarket
-    : DEFAULT_MARKET;
+  const { slug } = await params;
 
   if (!isDepartmentId(slug)) {
     notFound();
@@ -254,27 +240,18 @@ export default async function CategoryPage({
     !result.unavailable && result.total === 0 && !filtering;
   const isFilteredEmpty =
     !result.unavailable && result.total === 0 && filtering;
-  /*
-    `lib/catalog/chips.ts` builds query state and knows nothing about which
-    market is asking — deliberately, since the same functions serve all three
-    shopfronts. The market is applied here, once, on the way out.
-  */
-  const chips = buildFilterChips(slug, query).map((chip) => ({
-    ...chip,
-    clearHref: marketHref(market, chip.clearHref),
-  }));
-  const clearHref = marketHref(market, clearAllHref(slug, query));
+  const chips = buildFilterChips(slug, query);
+  const clearHref = clearAllHref(slug, query);
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
       <CategoryBreadcrumbSchema
         categoryName={category.name}
         categorySlug={category.id}
-        market={market}
       />
-      <SiteHeader market={market} />
+      <SiteHeader />
       <main className="mx-auto w-full max-w-6xl px-6 py-4 pb-16">
-        <CategoryBreadcrumb categoryName={category.name} market={market} />
+        <CategoryBreadcrumb categoryName={category.name} />
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
           <aside className="hidden lg:sticky lg:top-4 lg:flex lg:flex-col">
@@ -284,7 +261,6 @@ export default async function CategoryPage({
               counts={facts.counts}
               rangeIsTyped={range.typed}
               idPrefix="sidebar"
-              market={market}
             />
           </aside>
 
@@ -312,7 +288,6 @@ export default async function CategoryPage({
                   counts={facts.counts}
                   rangeIsTyped={range.typed}
                   idPrefix="sheet"
-                  market={market}
                 />
               </MobileFilterSheet>
             </div>
@@ -325,7 +300,6 @@ export default async function CategoryPage({
                 departmentTotal,
                 category.name,
               )}
-              market={market}
             />
 
             {filtering ? (
@@ -342,7 +316,6 @@ export default async function CategoryPage({
               totalCount={departmentTotal}
               chips={chips}
               clearAllHref={clearHref}
-              market={market}
               adSeed={categoryAdSeed(slug, query)}
             />
 
@@ -352,10 +325,7 @@ export default async function CategoryPage({
                   currentPage={currentPage}
                   totalPages={result.totalPages}
                   getPageHref={(target) =>
-                    marketHref(
-                      market,
-                      categoryHref(slug, query, { page: target }),
-                    )
+                    categoryHref(slug, query, { page: target })
                   }
                 />
                 <CategoryHonestyNote />
@@ -364,7 +334,7 @@ export default async function CategoryPage({
           </div>
         </div>
       </main>
-      <SiteFooter market={market} />
+      <SiteFooter />
     </div>
   );
 }

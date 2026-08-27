@@ -8,12 +8,9 @@ import type { CartLineVariant } from '@/lib/cart';
 import { useCart } from '@/components/cart/CartProvider';
 import Button from '@/components/ui/Button';
 import { trackKlaviyoBuyNowClicked } from '@/lib/klaviyo/client';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type ProductAddToCartButtonsProps = {
   productId: string;
-  /** The market whose cart Buy Now lands in. */
-  market: MarketSegment;
   title: string;
   category: string;
   imageUrl?: string;
@@ -32,7 +29,6 @@ type ProductAddToCartButtonsProps = {
 
 export default function ProductAddToCartButtons({
   productId,
-  market,
   title,
   category,
   imageUrl,
@@ -81,13 +77,9 @@ export default function ProductAddToCartButtons({
      * The push is wrapped so the button can show it is working. Navigating to
      * the cart is not instant — the route is server-rendered — and without this
      * the buyer gets an unchanged page after a click that did do something.
-     *
-     * It lands in *this* market's cart. A bare `/cart` would be redirected to
-     * Australia's by `next.config.ts`, quietly moving a buyer out of the market
-     * they were shopping in between the click and the page.
      */
     startNavigation(() => {
-      router.push(marketHref(market, '/cart'));
+      router.push('/cart');
     });
   }
 

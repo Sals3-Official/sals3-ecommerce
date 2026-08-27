@@ -6,11 +6,9 @@ import CATEGORY_ICON_PATHS from '@/components/home/category-icons';
 import categoryImageSrc, {
   CATEGORY_IMAGE_PX,
 } from '@/components/home/category-images';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type CategoryTileProps = {
   category: Category;
-  market: MarketSegment;
 };
 
 /**
@@ -80,12 +78,12 @@ function categoryMedia(category: Category): ReactNode {
  * shell clips to a rounded rectangle, so the global +2px offset ring in
  * globals.css would be cut off on every edge and corner tile.
  */
-export default function CategoryTile({ category, market }: CategoryTileProps) {
+export default function CategoryTile({ category }: CategoryTileProps) {
   const hasPhoto = categoryImageSrc(category.id) !== undefined;
 
   return (
     <Link
-      href={marketHref(market, `/c/${category.id}`)}
+      href={`/c/${category.id}`}
       title={category.name}
       className="group flex flex-col items-center gap-2 bg-white px-2 pt-3.5 pb-3 transition duration-200 ease-out hover:bg-surface hover:no-underline focus-visible:-outline-offset-2 md:gap-2.5 md:px-3.5 md:pt-4.5 md:pb-4"
     >

@@ -14,7 +14,6 @@ import {
   PRODUCT_VARIANT_CHANGE_EVENT,
   type ProductVariantChangeDetail,
 } from '@/lib/product-variant-events';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import {
   PRODUCT_MICRO_LABEL,
   PRODUCT_MICRO_LABEL_VALUE,
@@ -23,8 +22,6 @@ import {
 type ProductOptionListProps = {
   /** The product's public slug — `detail.id`. */
   productId: string;
-  /** The market these variant links stay inside. */
-  market: MarketSegment;
   variants: ProductVariant[];
   selectedVariantId?: string;
   /**
@@ -87,7 +84,6 @@ type ProductOptionListProps = {
  */
 export default function ProductOptionList({
   productId,
-  market,
   variants,
   selectedVariantId,
   axes = [],
@@ -97,10 +93,7 @@ export default function ProductOptionList({
   const selected = variants.find((variant) => variant.id === selectedVariantId);
 
   function hrefFor(variantId: string): string {
-    return marketHref(
-      market,
-      `/p/${productId}?variant=${encodeURIComponent(variantId)}`,
-    );
+    return `/p/${productId}?variant=${encodeURIComponent(variantId)}`;
   }
 
   function handleVariantClick(

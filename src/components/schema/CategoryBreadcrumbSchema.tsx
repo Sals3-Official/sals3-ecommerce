@@ -1,10 +1,8 @@
 import { getSiteUrl } from '@/lib/site';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type CategoryBreadcrumbSchemaProps = {
   categoryName: string;
   categorySlug: string;
-  market: MarketSegment;
 };
 
 /** Mirrors `OrganizationSchema`'s convention: gated on a confirmed site URL,
@@ -19,7 +17,6 @@ type CategoryBreadcrumbSchemaProps = {
 export default function CategoryBreadcrumbSchema({
   categoryName,
   categorySlug,
-  market,
 }: CategoryBreadcrumbSchemaProps) {
   const siteUrl = getSiteUrl();
 
@@ -33,19 +30,19 @@ export default function CategoryBreadcrumbSchema({
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: `${siteUrl}${marketHref(market, '/')}`,
+        item: `${siteUrl}${'/'}`,
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'All categories',
-        item: `${siteUrl}${marketHref(market, '/categories')}`,
+        item: `${siteUrl}${'/categories'}`,
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: categoryName,
-        item: `${siteUrl}${marketHref(market, `/c/${categorySlug}`)}`,
+        item: `${siteUrl}${`/c/${categorySlug}`}`,
       },
     ],
   };

@@ -1,16 +1,13 @@
 import Link from 'next/link';
 import type { Category } from '@/lib/home-placeholder-data';
 import { ChevronRightIcon } from '@/components/icons/Icon';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type FooterCategoryLinksProps = {
   categories: Category[];
-  market: MarketSegment;
 };
 
 export default function FooterCategoryLinks({
   categories,
-  market,
 }: FooterCategoryLinksProps) {
   return (
     <div className="grid grid-cols-1 gap-8 border-t border-white/10 py-8 sm:grid-cols-[minmax(260px,1.15fr)_minmax(0,2.85fr)] sm:gap-8">
@@ -23,7 +20,7 @@ export default function FooterCategoryLinks({
           shows a count.
         </p>
         <Link
-          href={marketHref(market, '/categories')}
+          href="/categories"
           className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-footer-accent hover:text-white hover:no-underline"
         >
           See all {categories.length} categories
@@ -34,7 +31,7 @@ export default function FooterCategoryLinks({
         {categories.map((category) => (
           <Link
             key={category.id}
-            href={marketHref(market, `/c/${category.id}`)}
+            href={`/c/${category.id}`}
             className="py-1.5 text-sm leading-snug text-footer-link hover:text-white hover:no-underline"
           >
             {category.name}

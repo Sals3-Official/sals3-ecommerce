@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { marketHref } from '@/lib/destination/markets';
-import useMarket from '@/lib/destination/use-market';
 
 /**
  * The catalogue could not be reached.
@@ -22,10 +20,6 @@ import useMarket from '@/lib/destination/use-market';
  * offer for one and not the other.
  */
 export default function ProductError({ reset }: { reset: () => void }) {
-  // An error boundary receives `error` and `reset` and nothing else — no
-  // `params` — so the way out is resolved from the client router.
-  const market = useMarket();
-
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-6 py-20 text-center">
       <h1 className="text-xl font-bold text-ink">
@@ -44,7 +38,7 @@ export default function ProductError({ reset }: { reset: () => void }) {
           Try again
         </button>
         <Link
-          href={marketHref(market, '/')}
+          href="/"
           className="inline-flex min-h-11 items-center justify-center rounded-lg border border-brand-600 px-6 text-sm font-bold text-brand-600 transition-all duration-200 hover:bg-brand-600/10 active:scale-[0.98]"
         >
           Browse products

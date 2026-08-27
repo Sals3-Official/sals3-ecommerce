@@ -58,7 +58,7 @@ async function resultState(
 test('renders the department shell with its filter sidebar', async ({
   page,
 }) => {
-  await page.goto('/au/c/animals-pet-supplies', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/animals-pet-supplies', { timeout: UPSTREAM_TIMEOUT });
 
   await expect(
     page.getByRole('heading', { name: 'Animals & Pet Supplies', level: 1 }),
@@ -87,7 +87,7 @@ test('renders the department shell with its filter sidebar', async ({
  * load-bearing: a rating filter would have nothing real behind it.
  */
 test('names the facets it cannot offer, and why', async ({ page }) => {
-  await page.goto('/au/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
 
   await expect(page.getByText(/buyer rating/i).first()).toBeVisible();
   await expect(page.getByText(/sals3 has no reviews yet/i)).toBeVisible();
@@ -97,7 +97,7 @@ test('names the facets it cannot offer, and why', async ({ page }) => {
 test('an unknown department is a real 404, not an empty page', async ({
   page,
 }) => {
-  const response = await page.goto('/au/c/not-a-department', {
+  const response = await page.goto('/c/not-a-department', {
     timeout: UPSTREAM_TIMEOUT,
   });
 
@@ -112,7 +112,7 @@ test('an unknown department is a real 404, not an empty page', async ({
 test('a price band navigates and is reflected back in the URL and a chip', async ({
   page,
 }) => {
-  await page.goto('/au/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
 
   const band = page.getByRole('radio', { name: /under us\$15/i });
   await expect(band).toBeVisible();
@@ -139,7 +139,7 @@ test('a price band navigates and is reflected back in the URL and a chip', async
 });
 
 test('sorting is a navigation, so it survives a reload', async ({ page }) => {
-  await page.goto('/au/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
 
   const sort = page.getByLabel(/sort/i);
 
@@ -154,7 +154,7 @@ test('sorting is a navigation, so it survives a reload', async ({ page }) => {
 
 test('the list view is a link, not client state', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/au/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
 
   const listView = page.getByRole('link', { name: /list view/i });
   await expect(listView).toBeVisible();
@@ -171,7 +171,7 @@ test('the list view is a link, not client state', async ({ page }) => {
 test('always renders one of its four honest result states', async ({
   page,
 }) => {
-  await page.goto('/au/c/electronics', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/electronics', { timeout: UPSTREAM_TIMEOUT });
 
   const state = await resultState(page);
 
@@ -205,7 +205,7 @@ test('always renders one of its four honest result states', async ({
 test('carries the sponsored carousel wherever products are', async ({
   page,
 }) => {
-  await page.goto('/au/c/animals-pet-supplies', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/animals-pet-supplies', { timeout: UPSTREAM_TIMEOUT });
 
   const state = await resultState(page);
   const placement = page.getByRole('region', { name: /sponsored placement/i });
@@ -241,7 +241,7 @@ test('carries the sponsored carousel wherever products are', async ({
   expect(decoded).toBe(true);
 
   // The list view carries the same slot, still labelled.
-  await page.goto('/au/c/animals-pet-supplies?view=list', {
+  await page.goto('/c/animals-pet-supplies?view=list', {
     timeout: UPSTREAM_TIMEOUT,
   });
   await expect(
@@ -254,7 +254,7 @@ test('a filtered-empty result blames the filters, not the catalogue', async ({
 }) => {
   // A window no real product can sit in, so this state is reachable without
   // depending on what happens to be published.
-  await page.goto('/au/c/apparel-accessories?priceMin=999990', {
+  await page.goto('/c/apparel-accessories?priceMin=999990', {
     timeout: UPSTREAM_TIMEOUT,
   });
 
@@ -273,7 +273,7 @@ test('the mobile sheet carries the same filters as the sidebar', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/au/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
 
   // The sidebar is hidden below `lg`; the trigger replaces it.
   await expect(page.getByRole('button', { name: /^filters/i })).toBeVisible();
@@ -292,7 +292,7 @@ test('the mobile sheet carries the same filters as the sidebar', async ({
 
 test('does not scroll sideways on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/au/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/c/apparel-accessories', { timeout: UPSTREAM_TIMEOUT });
 
   await expect
     .poll(() =>

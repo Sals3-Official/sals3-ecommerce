@@ -79,20 +79,19 @@ describe('next.config header rules', () => {
 });
 
 /**
- * The old shopping URLs were live on the deployed storefront before the markets
- * split, so they are in browser history and in the owner's own notes. They
- * redirect rather than 404 — and the redirects are asserted here rather than
- * end-to-end because `permanent` is the load-bearing part and a browser makes
- * a 307 and a 308 look identical.
+ * The market segments were live URLs for a day, so they redirect back to the one
+ * storefront rather than 404. Asserted here rather than end to end because
+ * `permanent` is the load-bearing part and a browser makes a 307 and a 308 look
+ * identical.
  */
-describe('next.config market redirects', () => {
+describe('next.config retired market redirects', () => {
   async function getRedirects() {
     return (await nextConfig.redirects?.()) ?? [];
   }
 
   /**
    * Next's own matcher rather than a hand-written stand-in. The defect this
-   * block guards against lived entirely in how `path-to-regexp` reads a
+   * block first guarded against lived entirely in how `path-to-regexp` reads a
    * `source`, so a stand-in built from the same reading as the config would
    * have agreed with the config and seen nothing.
    */
@@ -120,11 +119,12 @@ describe('next.config market redirects', () => {
   }
 
   it.each([
-    ['/p/:path([^/.]+)*', '/au/p/:path*'],
-    ['/c/:path([^/.]+)*', '/au/c/:path*'],
-    ['/search/:path([^/.]+)*', '/au/search/:path*'],
-    ['/categories/:path([^/.]+)*', '/au/categories/:path*'],
-    ['/cart/:path([^/.]+)*', '/au/cart/:path*'],
+    ['/au', '/'],
+    ['/ph', '/'],
+    ['/fj', '/'],
+    ['/au/:path([^/.]+)*', '/:path*'],
+    ['/ph/:path([^/.]+)*', '/:path*'],
+    ['/fj/:path([^/.]+)*', '/:path*'],
   ])('sends %s to %s', async (source, destination) => {
     const redirects = await getRedirects();
 
@@ -133,31 +133,55 @@ describe('next.config market redirects', () => {
     );
   });
 
+  /*
+    The bare segment has an entry of its own, and the reason is worth keeping:
+    `/au` matches the prefix pattern too, with an empty `path`, and `/:path*`
+    then compiles to the **empty string** rather than to `/`. An empty
+    `Location` is not a redirect, so `/au` answered 200 and stayed where it was.
+    An e2e test caught it; a matcher-only assertion could not have, which is why
+    both are here.
+  */
   it.each([
-    ['/cart', '/au/cart/:path*'],
-    ['/categories', '/au/categories/:path*'],
-    ['/search', '/au/search/:path*'],
-    ['/p/blue-cotton-shirt', '/au/p/:path*'],
-    ['/c/health-beauty', '/au/c/:path*'],
+    ['/au', '/'],
+    ['/ph', '/'],
+    ['/fj', '/'],
+    ['/au/cart', '/:path*'],
+    ['/ph/p/blue-cotton-shirt', '/:path*'],
+    ['/fj/c/health-beauty', '/:path*'],
+    ['/ph/search', '/:path*'],
   ])(
-    'still carries the moved link %s into a market',
+    'carries the retired market URL %s back to one storefront',
     async (pathname, destination) => {
       await expect(destinationFor(pathname)).resolves.toBe(destination);
     },
   );
 
   /*
-    The regression this exists for. A redirect `source` is a claim over a
-    namespace and `public/` shares that namespace with the router:
-    `/categories/:path*` matched the asset directory `public/categories/` as
-    readily as the route, and answered all 21 department photographs with a 307
-    into `/au`, where no file exists. Redirects run before the static-file
+    Nothing may redirect *into* a market again. This is the assertion that fails
+    if the split is reintroduced by half — a source or destination naming `/au`
+    is how a buyer who chose the Philippines ended up on Australia's cart.
+  */
+  it('sends nothing into a market', async () => {
+    const redirects = await getRedirects();
+
+    expect(redirects.length).toBeGreaterThan(0);
+    redirects.forEach((redirect) => {
+      expect(redirect.destination).not.toMatch(/^\/(au|ph|fj)(\/|$)/);
+    });
+  });
+
+  /*
+    A redirect `source` is a claim over a namespace and `public/` shares that
+    namespace with the router. In the other direction this cost a day of broken
+    images: `/categories/:path*` matched the asset directory `public/categories/`
+    as readily as the route, and answered all 21 department photographs with a
+    307 into `/au`, where no file exists. Redirects run before the static-file
     handler, so nothing downstream could rescue them.
   */
   it('redirects no file that public/ serves', async () => {
     const assets = publicAssetPaths();
 
-    // A walk that returned nothing would pass the assertion below for free.
+    // A walk that returned nothing would satisfy the assertion below for free.
     expect(assets).toContain('/categories/electronics.webp');
     expect(assets.length).toBeGreaterThan(20);
 
@@ -171,24 +195,11 @@ describe('next.config market redirects', () => {
   });
 
   /*
-    An unknown market is a 404, not a redirect to Australia — otherwise every
-    typo "works" and a crawler gets unbounded duplicate URLs.
+    Temporary, never permanent. The owner's word was `muna` — for now — so the
+    markets may come back, and a 308 is cached by every browser and proxy for as
+    long as it takes someone to notice.
   */
-  it.each(['/xx', '/xx/p/blue-cotton-shirt', '/xx/cart'])(
-    'leaves %s alone so an unknown market can 404',
-    async (pathname) => {
-      await expect(destinationFor(pathname)).resolves.toBeUndefined();
-    },
-  );
-
-  /*
-    Temporary, never permanent, and that is the whole point. A 308 would assert
-    that this content now lives at `/au` — but the same product also lives at
-    `/ph`, and every browser and proxy would cache the claim, pinning a
-    market-less link to Australia forever and taking the choice away from the
-    next visitor.
-  */
-  it('never makes a market redirect permanent', async () => {
+  it('never makes a retired-market redirect permanent', async () => {
     const redirects = await getRedirects();
 
     expect(redirects.length).toBeGreaterThan(0);
@@ -197,7 +208,7 @@ describe('next.config market redirects', () => {
     });
   });
 
-  it('redirects no account route into a market', async () => {
+  it('redirects no account route', async () => {
     const redirects = await getRedirects();
     const accountPaths = ['/login', '/signup', '/checkout', '/orders', '/api'];
 

@@ -34,7 +34,7 @@ function seedCartItem(page: import('@playwright/test').Page) {
 // doesn't depend on the product API, so this still exercises real cart code.
 test('adjust quantity and remove an item from the cart', async ({ page }) => {
   await seedCartItem(page);
-  await page.goto('/au/cart');
+  await page.goto('/cart');
 
   await expect(
     page.getByRole('heading', { level: 1, name: /cart \(1 item\)/i }),
@@ -66,7 +66,7 @@ test('the checkout call to action renders readable white text', async ({
   page,
 }) => {
   await seedCartItem(page);
-  await page.goto('/au/cart');
+  await page.goto('/cart');
 
   const cta = page.getByRole('link', { name: /proceed to checkout/i });
 
@@ -87,7 +87,7 @@ test('a signed-out visitor is sent to sign in, and pointed back at checkout', as
   page,
 }) => {
   await seedCartItem(page);
-  await page.goto('/au/cart');
+  await page.goto('/cart');
 
   await page.getByRole('link', { name: /proceed to checkout/i }).click();
 
@@ -147,7 +147,7 @@ test('a legacy v1 cart is discarded, not converted', async ({ page }) => {
     },
   );
 
-  await page.goto('/au/cart');
+  await page.goto('/cart');
 
   await expect(page.getByText(/your cart is empty/i)).toBeVisible();
   await expect

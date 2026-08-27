@@ -34,10 +34,10 @@ const baseProduct: CatalogProductCardProduct = {
 
 describe('ProductCard', () => {
   it('renders the price as the heaviest, largest text and links to the PDP', () => {
-    render(<ProductCard market="au" product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
 
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/au/p/tactical-pants');
+    expect(link).toHaveAttribute('href', '/p/tactical-pants');
     expect(link).toHaveAttribute('data-prefetch', 'false');
 
     const price = screen.getByText('US$850');
@@ -45,7 +45,7 @@ describe('ProductCard', () => {
   });
 
   it('keeps the title regular-weight, quiet, and clamped to 2 lines', () => {
-    render(<ProductCard market="au" product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
 
     const title = screen.getByText(baseProduct.cardTitle);
     expect(title).toHaveClass('font-normal', 'line-clamp-2', 'text-ink-muted');
@@ -59,35 +59,28 @@ describe('ProductCard', () => {
    * and an `oldPrice` reaching the card must not resurrect them.
    */
   it('shows no comparison price and no percent-off badge', () => {
-    render(
-      <ProductCard
-        market="au"
-        product={{ ...baseProduct, oldPrice: usd(120000) }}
-      />,
-    );
+    render(<ProductCard product={{ ...baseProduct, oldPrice: usd(120000) }} />);
 
     expect(screen.queryByText('US$1,200')).not.toBeInTheDocument();
     expect(screen.queryByText(/^-\d+%$/)).not.toBeInTheDocument();
   });
 
   it('renders the price on its own with no old price present', () => {
-    render(<ProductCard market="au" product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
 
     expect(screen.getByText('US$850')).toBeInTheDocument();
     expect(screen.queryByText(/^-\d+%$/)).not.toBeInTheDocument();
   });
 
   it('falls back to the tone placeholder when there is no product image', () => {
-    const { container } = render(
-      <ProductCard market="au" product={baseProduct} />,
-    );
+    const { container } = render(<ProductCard product={baseProduct} />);
 
     expect(container.querySelector('img')).not.toBeInTheDocument();
     expect(container.querySelector('.aspect-square')).toBeInTheDocument();
   });
 
   it('renders rating, review count, and shipping line in the footer', () => {
-    render(<ProductCard market="au" product={baseProduct} />);
+    render(<ProductCard product={baseProduct} />);
 
     expect(screen.getByText('★ 4.5 (128)')).toBeInTheDocument();
     expect(

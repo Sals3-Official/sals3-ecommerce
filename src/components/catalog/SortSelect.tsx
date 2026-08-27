@@ -6,7 +6,6 @@ import {
   isSortKey,
   type CategoryQuery,
 } from '@/lib/catalog/query';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 const SORT_OPTIONS = [
   { value: 'best', label: 'Best match' },
@@ -17,10 +16,9 @@ const SORT_OPTIONS = [
 type SortSelectProps = {
   slug: string;
   query: CategoryQuery;
-  market: MarketSegment;
 };
 
-export default function SortSelect({ slug, query, market }: SortSelectProps) {
+export default function SortSelect({ slug, query }: SortSelectProps) {
   const router = useRouter();
 
   return (
@@ -36,9 +34,7 @@ export default function SortSelect({ slug, query, market }: SortSelectProps) {
         onChange={(event) => {
           const { value } = event.target;
           if (isSortKey(value))
-            router.push(
-              marketHref(market, categoryHref(slug, query, { sort: value })),
-            );
+            router.push(categoryHref(slug, query, { sort: value }));
         }}
         className="rounded-lg border border-border-strong bg-white px-2.5 py-2 text-[13px] text-ink outline-none"
       >

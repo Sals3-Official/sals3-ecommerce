@@ -3,10 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
 import { findDestination } from '@/lib/destination/destinations';
+import { resolveDestination } from '@/lib/destination/resolve';
 import { fetchIndicativeRate } from '@/lib/fx/rates';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { usd } from '@/lib/money';
-import renderWithCart from '../../../../test/render-with-cart';
+import renderWithCart from '../../../test/render-with-cart';
 import CartPage, { generateMetadata } from './page';
 
 /*
@@ -53,9 +54,7 @@ describe('Cart page', () => {
   }
 
   it('shows an empty-cart message with no saved items', async () => {
-    renderWithCart(
-      await CartPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CartPage());
 
     expect(
       screen.getByRole('heading', { level: 1, name: /your cart is empty/i }),
@@ -76,9 +75,7 @@ describe('Cart page', () => {
     );
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
 
-    renderWithCart(
-      await CartPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CartPage());
 
     expect(
       await screen.findByText(/essence mascara lash princess/i),
@@ -118,9 +115,7 @@ describe('Cart page', () => {
     window.klaviyo = { track };
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
 
-    renderWithCart(
-      await CartPage({ params: Promise.resolve({ market: 'au' }) }),
-    );
+    renderWithCart(await CartPage());
 
     await screen.findByText(/essence mascara lash princess/i);
     await waitFor(() => {
@@ -175,9 +170,7 @@ describe('Cart page', () => {
       });
       seedOneLine();
 
-      renderWithCart(
-        await CartPage({ params: Promise.resolve({ market: 'au' }) }),
-      );
+      renderWithCart(await CartPage());
 
       // The line total and the subtotal, unchanged: the charge is still USD.
       expect(await screen.findAllByText('US$1,998')).toHaveLength(2);
@@ -188,23 +181,51 @@ describe('Cart page', () => {
       ).toBeInTheDocument();
     });
 
-    it('asks for the market’s own currency', async () => {
+    /*
+      The currency follows the destination the buyer chose. Until 2026-08-28 it
+      followed the shopfront in the URL, which showed AUD to a reader in Manila
+      because `/au` said so; there is no shopfront in a URL any more, and the
+      buyer's own choice is the only honest answer to "local to whom".
+    */
+    it("asks for the currency of the buyer's destination", async () => {
+      vi.mocked(resolveDestination).mockResolvedValueOnce({
+        destination: findDestination('PH'),
+        source: 'chosen',
+      });
       seedOneLine();
 
-      renderWithCart(
-        await CartPage({ params: Promise.resolve({ market: 'ph' }) }),
-      );
+      renderWithCart(await CartPage());
 
       expect(fetchIndicativeRate).toHaveBeenCalledWith('PHP');
+    });
+
+    /*
+      `rates.ts` pins each currency to a named central bank, and New Zealand, the
+      United States, Canada and Global have no such entry. No provider means no
+      figure — never one converted through a rate nobody named.
+    */
+    it('asks for no rate at all where none can be sourced', async () => {
+      vi.mocked(resolveDestination).mockResolvedValueOnce({
+        destination: findDestination('NZ'),
+        source: 'chosen',
+      });
+      seedOneLine();
+      // Nothing resets this mock between tests in this file, and "was never
+      // called" is the whole assertion.
+      vi.mocked(fetchIndicativeRate).mockClear();
+
+      const { container } = renderWithCart(await CartPage());
+
+      expect(await screen.findAllByText('US$1,998')).toHaveLength(2);
+      expect(fetchIndicativeRate).not.toHaveBeenCalled();
+      expect(container.textContent ?? '').not.toMatch(/approximate/i);
     });
 
     /** No rate means nothing extra — not a dash, not a placeholder. */
     it('renders nothing extra when there is no rate', async () => {
       seedOneLine();
 
-      const { container } = renderWithCart(
-        await CartPage({ params: Promise.resolve({ market: 'au' }) }),
-      );
+      const { container } = renderWithCart(await CartPage());
 
       expect(await screen.findAllByText('US$1,998')).toHaveLength(2);
 

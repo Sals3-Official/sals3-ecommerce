@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from 'react';
 import { SearchIcon } from '@/components/icons/Icon';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import { SEARCH_PATH } from '@/lib/search/query';
 
 /**
@@ -46,24 +45,11 @@ import { SEARCH_PATH } from '@/lib/search/query';
  * input.
  */
 type SearchBoxProps = {
-  /**
-   * The market the results page belongs to.
-   *
-   * A prop rather than `useParams()` for the same reason the keyword is one:
-   * this box renders in the header of *every* page, including the account
-   * routes that have no market segment and the tests that mount a page with no
-   * app router at all. `SiteHeader` already knows the answer, so it is passed
-   * rather than looked up in a hook that would have to guess in both cases.
-   */
-  market: MarketSegment;
   /** What the box starts with — the current keyword on `/search`, else empty. */
   initialTerm?: string;
 };
 
-export default function SearchBox({
-  market,
-  initialTerm = '',
-}: SearchBoxProps) {
+export default function SearchBox({ initialTerm = '' }: SearchBoxProps) {
   const [query, setQuery] = useState(initialTerm);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -74,7 +60,7 @@ export default function SearchBox({
   return (
     <form
       method="get"
-      action={marketHref(market, SEARCH_PATH)}
+      action={SEARCH_PATH}
       onSubmit={submit}
       role="search"
       className="relative min-w-0 flex-1"

@@ -38,12 +38,46 @@ Do not put application code in `docs/`. Do not put vault notes in `src/`.
 `public/` shares one namespace with the router, so a redirect or rewrite whose
 `source` is a path prefix claims the matching asset directory as well. That is
 how all 21 category photographs in `public/categories/` came to 404 in
-production: the `/categories/:path*` redirect that carries market-less links
-into `/au` matched those files as readily as it matched the route. Redirects run
-before the static-file handler, so nothing downstream can rescue a swallowed
-asset. Both sides are asserted in `test/next-config-headers.test.ts` — read
-`MOVED_ROUTE_SEGMENTS` in `next.config.ts` before adding a prefix rule or a
-`public/` directory.
+production: a `/categories/:path*` redirect matched those files as readily as it
+matched the route. Redirects run before the static-file handler, so nothing
+downstream can rescue a swallowed asset. Both sides are asserted in
+`test/next-config-headers.test.ts` — read `RETIRED_SEGMENT_PATHS` in
+`next.config.ts` before adding a prefix rule or a `public/` directory.
+
+## One storefront, and one place a country is chosen
+
+Every shopping route lives at the root: `/`, `/p/[id]`, `/c/[slug]`, `/search`,
+`/categories`, `/cart`. **No URL names a country.**
+
+For one day — 2026-08-27 to 2026-08-28 — there was a shopfront per country at
+`/au`, `/ph` and `/fj`, and every shopping link carried the segment. The owner
+removed it: with the country in the URL _and_ in a cookie, the two could
+disagree, and they did. A buyer with the Philippines chosen, reading
+`Ship to: Philippines` in the header on `/checkout`, was moved to `/au` by
+clicking the logo.
+
+So the buyer's destination now lives in exactly one place — the
+`sals3_destination` cookie, written only by the `Ship to` picker in the header
+(`src/components/layout/DestinationPicker.tsx`) and read by
+`resolveDestination()` (`src/lib/destination/resolve.ts`). Nothing else states a
+country, so nothing else can contradict it. What reads it:
+
+- the header's `Ship to` label;
+- the cart's "where orders can be placed" notice, when checkout cannot take that
+  destination;
+- the approximate local price beside the USD one, whose currency comes from
+  `src/lib/fx/destination-currency.ts` — AUD, PHP and FJD only, because those are
+  the currencies `src/lib/fx/rates.ts` can source from a named central bank. Any
+  other destination shows no approximate figure at all;
+- the checkout address form's initial country.
+
+**The buyer is still charged in USD** (ADR-003 §3). The local figure is display
+only and is deliberately not a `Money`.
+
+`/au`, `/ph` and `/fj` were live URLs for a day, so `next.config.ts` redirects
+them and everything under them back to the root — **temporarily (307)**, because
+the removal was `muna` (for now) and a permanent redirect would outlive the
+decision. `/xx` is still a 404 rather than a redirect.
 
 ## API Services
 
