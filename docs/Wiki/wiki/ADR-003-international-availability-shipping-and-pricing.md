@@ -2,7 +2,7 @@
 tags: [sals3, adr, shipping, pricing, international, seo, currency]
 aliases: [ADR-003, International Availability and Pricing, Destination Pricing]
 created: 2026-08-06
-updated: 2026-08-27
+updated: 2026-08-28
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -179,3 +179,77 @@ explicit argument; nothing will report it if that is missed.
   cannot be satisfied until a real domain is configured.
 
 **Frontmatter `updated`** moves to 2026-08-27.
+
+## Amendment — 2026-08-28: the shopfront per country and the buyer's choice are both withdrawn (owner decision, Bogs)
+
+The amendment above, and the shopfront-per-country that followed it a day later, are **reverted**
+by owner decision. `sals3-ecommerce` [#177](https://github.com/Sals3-Official/sals3-ecommerce/pull/177)
+and [#178](https://github.com/Sals3-Official/sals3-ecommerce/pull/178), both merged and live, no
+schema, migration or API contract change. See
+[[sals3-session-2026-08-28-part85-one-storefront-again-and-the-country-that-stopped-being-asked]].
+
+### What the owner said, and why
+
+> "kung ano ang current selected country ay kahit anong pindotin ay di mag spill over sa ibang
+> country" — 2026-08-28, after finding that `/checkout` read `Ship to: Philippines` while its own
+> logo linked to `/au`.
+
+Then, when offered the choice between patching that and removing the split: **remove the split**,
+and the `Ship to` picker with it. "Revert talaga sa original."
+
+The reasoning is worth keeping because it is not the obvious one. The defect was not that a link
+was wrong; it was that **one fact — the buyer's country — was stated in two places that could
+disagree.** A patch keeps both places and teaches them to agree, which lasts until the next
+surface forgets. Removing one of them ends the class of defect.
+
+### Decision
+
+1. **There is one storefront.** No market segment in any URL: `/`, `/p/[id]`, `/c/[slug]`,
+   `/search`, `/categories`, `/cart`. `/au`, `/ph` and `/fj` redirect back, **temporarily (307)** —
+   the owner's word was `muna`, for now, and a permanent redirect would outlive the decision. An
+   unrecognised segment is still a 404.
+2. **Point 1 of the 2026-08-27 amendment survives; its first step has no control.** The resolution
+   order is still stored choice → geo-IP → Global, but the `Ship to` picker was the only writer of
+   the cookie and it is deleted, along with `setDestinationAction`. The read is kept so a buyer who
+   chose a country on 2026-08-27 keeps it rather than silently losing it.
+3. **Point 2's `chosen | suggested | default` reporting is withdrawn.** Its only readers were the
+   picker and the wrapper that fed it. Nothing now presents a destination to the buyer, so nothing
+   needs to distinguish a guess from a decision on screen.
+4. **Points 3 and 4 stand.** The vocabulary is unchanged, and the gap between "priced" and
+   "orderable" is still disclosed — by the cart's notice, which now speaks to the geo-or-Global
+   answer rather than to a chosen one.
+
+### The cost, stated plainly
+
+**§1's silence is back.** A buyer cannot tell the site where they are shipping until the checkout
+address form — which is the exact failure the 2026-08-27 amendment was written to end, quoted in
+its own opening paragraph. In practice geo-IP is now the only live signal, and `x-vercel-ip-country`
+is absent locally and on any non-Vercel host, so **every visitor without it is treated as Global**:
+the cannot-ship notice on the cart, and no approximate local price.
+
+This is a deliberate owner trade, not an oversight, and it is recorded here so nobody re-derives it
+as a bug. The cheapest way back, if it is wanted, is the **checkout address form writing the cookie
+it already reads** — one call, no change to the read path.
+
+### What did not change
+
+- **USD remains what is charged** (§3). The approximate local price survives, re-keyed from the
+  market in the URL to the destination the buyer is shopping to — the only honest answer to "local
+  to whom" once no URL names a country. AUD, PHP and FJD only, because those are the three
+  currencies `rates.ts` can source from a named central bank; every other destination shows no
+  figure rather than one from an unnamed rate.
+- **No destination is enabled or disabled.** Checkout still takes Australia and the Philippines.
+- **§6's international-SEO guidance is again unsatisfiable for a different reason**: the `hreflang`
+  set went with the markets, correctly, because there are no alternates to be reciprocal with. The
+  home page now emits a self-referential canonical — still omitted in production, because
+  `NEXT_PUBLIC_SITE_URL` is unset.
+
+### Consequence for §2's cache guidance
+
+The 2026-08-27 note that "any new route rendering the header is dynamic from birth" **no longer
+holds for that reason**: the header no longer reads `cookies()`. The routes that resolve a
+destination are now the cart, the PDP and the checkout flow, each of which was dynamic already.
+The `unstable_cache` warning stands unchanged and for the same reason: it is keyed without a
+country and is safe only while the destination changes no price.
+
+**Frontmatter `updated`** moves to 2026-08-28.
