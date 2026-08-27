@@ -58,7 +58,6 @@ const CLIENT_ENTRY_POINTS = [
   // (`not-found.tsx`, `error.tsx`), added with the market URL segments on
   // 2026-08-27. It reaches `useMarket`, and through it `markets.ts` and the
   // whole destination vocabulary, so the walk has something real to check.
-  'components/layout/MarketLink.tsx',
   // The buyer orders surface. Everything else on `/orders` and
   // `/orders/[orderNumber]` is a Server Component; this is the whole client
   // boundary — a filter form that routes, a clipboard button, the success toast

@@ -29,6 +29,19 @@ describe('DestinationNotice', () => {
     expect(screen.getByText(/new zealand/i)).toBeInTheDocument();
   });
 
+  /*
+    `proseLabel` carries its own article, so "does not take a ${proseLabel}
+    delivery address" rendered "a **the** United States delivery address". Found
+    in a browser, on the cart, 2026-08-28 — no unit test looked at the sentence
+    as a sentence.
+  */
+  it('reads as English for a destination whose name takes an article', () => {
+    renderNotice('US');
+
+    expect(screen.getByText(/in the united states/i)).toBeInTheDocument();
+    expect(screen.queryByText(/a the united states/i)).not.toBeInTheDocument();
+  });
+
   it('renders nothing for a destination orders can be placed to', () => {
     const { container } = renderNotice('AU');
 

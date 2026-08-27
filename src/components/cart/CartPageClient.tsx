@@ -11,23 +11,22 @@ import {
   trackKlaviyoCartQuantityChanged,
   trackKlaviyoCartViewed,
 } from '@/lib/klaviyo/client';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import IndicativePriceLine from '@/components/fx/IndicativePriceLine';
 import type { IndicativeRate } from '@/lib/fx/rates';
 
 type CartPageClientProps = {
-  market: MarketSegment;
   /**
-   * The market's indicative FX rate, resolved on the server by the cart page.
+   * The indicative FX rate for the buyer's destination, resolved on the server
+   * by the cart page.
    * `null` means no usable rate, and then no local figure renders at all.
    */
   indicativeRate: IndicativeRate | null;
 };
 
 /**
- * `market` scopes "Continue shopping" back into the shopfront the buyer came
- * from. `Proceed to Checkout` deliberately stays a bare `/checkout`: checkout
- * belongs to a person, not to a country.
+ * "Continue shopping" goes to `/`, and `Proceed to Checkout` to `/checkout`.
+ * Neither carries a country: checkout belongs to a person, and there is one
+ * storefront to continue shopping in.
  *
  * The subtotal is the only figure here that gets an approximate local twin. Not
  * the line rows: one conversion per page, beside the number the buyer is
@@ -39,7 +38,6 @@ type CartPageClientProps = {
  * checkout, unchanged and in USD.
  */
 export default function CartPageClient({
-  market,
   indicativeRate,
 }: CartPageClientProps) {
   const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
@@ -59,7 +57,7 @@ export default function CartPageClient({
           like.
         </p>
         <Link
-          href={marketHref(market, '/')}
+          href="/"
           className="inline-block rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
         >
           Continue shopping

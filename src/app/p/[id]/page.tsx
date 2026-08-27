@@ -27,20 +27,31 @@ import {
   toHomeProduct,
   toProductDetail,
 } from '@/services/products';
-import {
-  DEFAULT_MARKET,
-  isMarketSegment,
-  marketHref,
-  type MarketSegment,
-} from '@/lib/destination/markets';
-import marketToIndicativeCurrency from '@/lib/fx/market-currency';
+import destinationToIndicativeCurrency from '@/lib/fx/destination-currency';
+import { resolveDestination } from '@/lib/destination/resolve';
 import { fetchIndicativeRate } from '@/lib/fx/rates';
 
 const RELATED_PRODUCT_COUNT = 6;
+
+/**
+ * The approximate local price beside the USD one, for the destination the buyer
+ * is shopping to rather than for a market's own currency.
+ *
+ * `null` covers three different absences on purpose — no currency we can source
+ * a rate for, a rate that failed, and a rate we recently failed to fetch — and
+ * the panel renders nothing for all three. A figure is either sourced from a
+ * named central bank or it is not shown.
+ */
+async function indicativeRateFor() {
+  const { destination } = await resolveDestination();
+  const currency = destinationToIndicativeCurrency(destination.code);
+
+  return currency === undefined ? null : fetchIndicativeRate(currency);
+}
 const META_DESCRIPTION_MAX_LENGTH = 155;
 
 type ProductPageProps = {
-  params: Promise<{ market: string; id: string }>;
+  params: Promise<{ id: string }>;
   /**
    * Optional so a unit test can render the page without one. Next always passes
    * it in the app; treating its absence as "no variant chosen" is the same branch
@@ -99,7 +110,7 @@ const getProductDetail = cache(
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
-  const { market, id } = await params;
+  const { id } = await params;
   const detail = await getProductDetail(id);
 
   if (!detail) {
@@ -148,21 +159,12 @@ export async function generateMetadata({
       description,
     },
     /*
-      One market deep, and self-referential per market — same reasoning as the
-      category listing. `/au/p/x` and `/ph/p/x` are localized versions of one
-      product, declared as such by the `hreflang` set in the market layout;
-      collapsing them onto a single canonical would tell Google to drop a
-      shopfront it was just told to index.
-
-      Still omitted entirely when `NEXT_PUBLIC_SITE_URL` is unset — a canonical
-      is never guessed.
+      Self-referential, and there is one address to refer to since the markets
+      were removed. Omitted entirely when `NEXT_PUBLIC_SITE_URL` is unset — a
+      canonical is never guessed.
     */
-    ...(siteUrl && isMarketSegment(market)
-      ? {
-          alternates: {
-            canonical: `${siteUrl}${marketHref(market, `/p/${detail.id}`)}`,
-          },
-        }
+    ...(siteUrl
+      ? { alternates: { canonical: `${siteUrl}/p/${detail.id}` } }
       : {}),
   };
 }
@@ -233,11 +235,7 @@ export default async function ProductPage({
   params,
   searchParams,
 }: ProductPageProps) {
-  const { market: rawMarket, id } = await params;
-  // The layout above 404s an unrecognised segment; this only narrows the type.
-  const market: MarketSegment = isMarketSegment(rawMarket)
-    ? rawMarket
-    : DEFAULT_MARKET;
+  const { id } = await params;
   const detail = await getProductDetail(id);
 
   if (!detail) {
@@ -257,7 +255,7 @@ export default async function ProductPage({
   const [relatedProducts, reviews, indicativeRate] = await Promise.all([
     getRelatedProducts(detail.category, detail.id),
     fetchProductReviews(detail.id),
-    fetchIndicativeRate(marketToIndicativeCurrency(market)),
+    indicativeRateFor(),
   ]);
   const variants = detail.variants ?? [];
 
@@ -273,7 +271,7 @@ export default async function ProductPage({
   // it. Preselecting cannot move the lead price off the feed price (ADR-016)
   // because the base-price match is what the default prefers.
   const selectedVariant = fromUrl ?? defaultVariantFor(variants, detail.price);
-  const trail = breadcrumbTrail(detail, market);
+  const trail = breadcrumbTrail(detail);
   const summary = answerSummary(detail);
   // The lead is promoted out of the description so it renders once, not twice.
   const remainingBlocks =
@@ -281,7 +279,7 @@ export default async function ProductPage({
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
-      <SiteHeader market={market} />
+      <SiteHeader />
       {/*
         `main` carries no width of its own any more, and each region owns its
         container instead. That is what lets Product specifications run a white
@@ -349,7 +347,6 @@ export default async function ProductPage({
                 detail={detail}
                 selectedVariant={selectedVariant}
                 selectedFromUrl={fromUrl !== undefined}
-                market={market}
                 indicativeRate={indicativeRate}
               />
             </div>
@@ -380,15 +377,12 @@ export default async function ProductPage({
             reviews={reviews}
           />
           <ProductSupplierDetails specs={detail.specs} />
-          <RelatedProducts products={relatedProducts} market={market} />
+          <RelatedProducts products={relatedProducts} />
           <ProductSchema detail={detail} />
-          <BreadcrumbSchema
-            trail={trail}
-            productPath={marketHref(market, `/p/${detail.id}`)}
-          />
+          <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
         </div>
       </main>
-      <SiteFooter market={market} />
+      <SiteFooter />
     </div>
   );
 }

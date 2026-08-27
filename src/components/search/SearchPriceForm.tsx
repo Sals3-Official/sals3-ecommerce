@@ -7,7 +7,6 @@ import PriceFacetFields, {
 } from '@/components/catalog/PriceFacetFields';
 import type { PriceBandId } from '@/lib/catalog/price-bands';
 import { searchHref, type SearchQuery } from '@/lib/search/query';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 /**
  * The price control on `/search`, reusing `/c/[slug]`'s own fields.
@@ -21,7 +20,6 @@ type SearchPriceFormProps = {
   counts: Record<PriceBandId, number>;
   rangeIsTyped: boolean;
   idPrefix: string;
-  market: MarketSegment;
 };
 
 export default function SearchPriceForm({
@@ -29,15 +27,14 @@ export default function SearchPriceForm({
   counts,
   rangeIsTyped,
   idPrefix,
-  market,
 }: SearchPriceFormProps) {
   const router = useRouter();
 
   const go = useCallback(
     (changes: Partial<PriceFacetQuery>) => {
-      router.push(marketHref(market, searchHref(query, changes)));
+      router.push(searchHref(query, changes));
     },
-    [router, market, query],
+    [router, query],
   );
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -47,7 +44,7 @@ export default function SearchPriceForm({
   }
 
   return (
-    <form method="get" action={marketHref(market, '/search')} onSubmit={submit}>
+    <form method="get" action="/search" onSubmit={submit}>
       <input type="hidden" name="q" value={query.q} />
       {query.category === null ? null : (
         <input type="hidden" name="category" value={query.category} />

@@ -1,5 +1,4 @@
 import type { ProductDetail } from '@/lib/product-detail';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 /**
  * The breadcrumb trail, as data, so the visible `<nav>` and the
@@ -58,10 +57,7 @@ function pathSegments(categoryPath: string): string[] {
  * cross-market URL into the `BreadcrumbList` JSON-LD built from this same
  * trail, which is a worse version of the same mistake.
  */
-export function breadcrumbTrail(
-  detail: ProductDetail,
-  market: MarketSegment,
-): BreadcrumbEntry[] {
+export function breadcrumbTrail(detail: ProductDetail): BreadcrumbEntry[] {
   const middle =
     detail.categoryPath !== undefined &&
     pathSegments(detail.categoryPath).length > 0
@@ -69,7 +65,7 @@ export function breadcrumbTrail(
       : [detail.categoryName ?? detail.category];
 
   return [
-    { name: 'Home', href: marketHref(market, '/') },
+    { name: 'Home', href: '/' },
     ...middle.map((name) => ({ name })),
     { name: detail.title },
   ];

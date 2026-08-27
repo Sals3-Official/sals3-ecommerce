@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ChevronDownIcon } from '@/components/icons/Icon';
 import { setDestinationAction } from '@/lib/destination/actions';
 import {
@@ -9,12 +9,6 @@ import {
   canCheckOutTo,
   type Destination,
 } from '@/lib/destination/destinations';
-import {
-  destinationCodeToMarket,
-  isMarketSegment,
-  marketHref,
-  type MarketSegment,
-} from '@/lib/destination/markets';
 
 type DestinationPickerProps = {
   destination: Destination;
@@ -36,16 +30,14 @@ type DestinationPickerProps = {
  * cannot ship to browsed, added to a cart, and created an account before
  * anything told them so. This control moves that fact to the first screen.
  *
- * ## It is also the market switcher
+ * ## It is the only place a country is chosen
  *
- * Since the shopfronts split into `/au`, `/ph` and `/fj`, choosing a
- * destination that has a market of its own moves the buyer into it as well as
- * recording the choice. The two halves are separate on purpose and both are
- * needed: the cookie is what the `/` dispatcher reads on a later visit, and the
- * navigation is what stops a buyer who picked the Philippines from standing on
- * `/au/...` under a header that says Philippines. See `choose` below for what
- * happens when a destination has no market, and for why an account route is
- * left where it is.
+ * For one day (2026-08-27 to 2026-08-28) this was also a market switcher:
+ * picking a destination with a shopfront of its own navigated into it, because
+ * otherwise a buyer who chose the Philippines stood on `/au/...` under a header
+ * saying Philippines. With the markets removed there is no second place a
+ * country can be stated, so there is nothing to keep in step and nowhere to
+ * navigate — the choice is a cookie and a refresh.
  *
  * ## Why the list is seven entries and not a country list
  *
@@ -90,37 +82,6 @@ const UNAVAILABLE_NOTE = 'Ordering not available yet';
 
 const SAVE_FAILED_MESSAGE = 'That did not save. Try again.';
 
-/**
- * The same page, one market over — or `undefined` when there is no such page.
- *
- * ## Why the sub-path is carried across
- *
- * The markets serve one catalogue, so `/au/p/air-cooler` and `/ph/p/air-cooler`
- * are the same product. Dropping a buyer on the home page after they changed
- * destination halfway down a product would make the control feel like a reset
- * rather than a switch, and they would have to find the item again.
- *
- * ## Why an account route returns `undefined` instead of the market home
- *
- * `/login`, `/checkout/*` and `/orders/*` are deliberately not market-scoped —
- * they belong to a person, not to a country. There is no "equivalent path" for
- * them, and sending a buyer from a half-filled checkout to `/ph` because they
- * corrected their shipping destination would destroy work in order to honour a
- * preference the cookie has already recorded. On those routes the choice is
- * saved and nothing moves.
- */
-function equivalentPathIn(
-  pathname: string | null,
-  target: MarketSegment,
-): string | undefined {
-  const [first, ...rest] = (pathname ?? '').split('/').filter(Boolean);
-
-  if (first === undefined || !isMarketSegment(first)) return undefined;
-  if (first === target) return undefined;
-
-  return marketHref(target, rest.length === 0 ? '/' : `/${rest.join('/')}`);
-}
-
 const TRIGGER_CLASSES =
   'flex min-h-6 items-center gap-1 rounded-md px-1.5 font-bold text-[color:var(--header-fg)] transition-colors duration-200 hover:text-[color:var(--header-fg-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--header-focus-ring)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -129,7 +90,6 @@ export default function DestinationPicker({
   source,
 }: DestinationPickerProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -163,27 +123,14 @@ export default function DestinationPicker({
   }, [isOpen]);
 
   /*
-    Since the markets split, this control does two things rather than one, and
-    the order matters.
+    Write the cookie, then re-render the page that read it.
 
-    **The cookie is always written**, market or no market. It is what the `/`
-    dispatcher reads, and it is the only record that the buyer chose rather than
-    that geo guessed — a destination with no shopfront of its own (`US`, `NZ`,
-    `CA`, Global) has nowhere to navigate to, and for those the write *is* the
-    whole action.
-
-    **Then, when the destination has a market, the buyer is moved into it.** A
-    cookie alone would leave someone who picked the Philippines standing on
-    `/au/...`, reading a header that says Philippines — the control would look
-    like it had failed. `equivalentPathIn` decides where, and answers
-    `undefined` when the current URL has no counterpart (an account route, or
-    already the target market); then the refresh below does the work instead.
-
-    The refresh is not a nicety in that case: the action writes a cookie the
-    server read to render this page, so without it the header — and anything
-    else that resolved the old destination — keeps showing the previous answer
-    until the next navigation. A `push` re-renders the destination route on the
-    server anyway, so the two are alternatives rather than a pair.
+    The refresh is not a nicety: the action writes a cookie the server used to
+    render this page, so without it the header — and the cart notice, and the
+    approximate price — keep showing the previous answer until the next
+    navigation. Nothing moves the buyer to a different URL any more; between
+    2026-08-27 and 2026-08-28 this also navigated into the chosen country's
+    shopfront, and that shopfront no longer exists.
 
     The panel is closed only on success; a failed save leaves the list open with
     the message under it, so the buyer can retry without reopening.
@@ -200,17 +147,7 @@ export default function DestinationPicker({
       }
 
       setIsOpen(false);
-
-      const market = destinationCodeToMarket(code);
-      const target =
-        market === undefined ? undefined : equivalentPathIn(pathname, market);
-
-      if (target === undefined) {
-        router.refresh();
-        return;
-      }
-
-      router.push(target);
+      router.refresh();
     });
   }
 

@@ -2,7 +2,6 @@ import Link from 'next/link';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
 import { formatMoney, type Money } from '@/lib/money';
 import ProductCardImage from '@/components/catalog/ProductCardImage';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 /**
  * Decoupled from `src/components/home/ProductCard.tsx` on purpose: the live
@@ -29,13 +28,12 @@ export type CatalogProductCardProduct = {
 
 type ProductCardProps = {
   product: CatalogProductCardProduct;
-  market: MarketSegment;
 };
 
-export default function ProductCard({ product, market }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
-      href={marketHref(market, `/p/${product.id}`)}
+      href={`/p/${product.id}`}
       prefetch={false}
       className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-white transition hover:-translate-y-1 hover:border-brand-600 hover:no-underline hover:shadow-[0_16px_34px_rgba(11,44,77,0.15)] active:scale-[0.98]"
     >

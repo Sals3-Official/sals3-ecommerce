@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { GridIcon, ListIcon } from '@/components/icons/Icon';
 import { searchHref, type SearchQuery } from '@/lib/search/query';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 function toggleClass(active: boolean): string {
   return `flex h-9 w-9 items-center justify-center rounded-lg border ${
@@ -11,13 +10,7 @@ function toggleClass(active: boolean): string {
   } hover:no-underline`;
 }
 
-export default function SearchViewToggle({
-  query,
-  market,
-}: {
-  query: SearchQuery;
-  market: MarketSegment;
-}) {
+export default function SearchViewToggle({ query }: { query: SearchQuery }) {
   return (
     <div
       className="hidden items-center gap-1 lg:flex"
@@ -25,7 +18,7 @@ export default function SearchViewToggle({
       aria-label="Result layout"
     >
       <Link
-        href={marketHref(market, searchHref(query, { view: 'grid' }))}
+        href={searchHref(query, { view: 'grid' })}
         aria-label="Grid view"
         aria-current={query.view === 'grid' ? 'true' : undefined}
         className={toggleClass(query.view === 'grid')}
@@ -33,7 +26,7 @@ export default function SearchViewToggle({
         <GridIcon width={16} height={16} />
       </Link>
       <Link
-        href={marketHref(market, searchHref(query, { view: 'list' }))}
+        href={searchHref(query, { view: 'list' })}
         aria-label="List view"
         aria-current={query.view === 'list' ? 'true' : undefined}
         className={toggleClass(query.view === 'list')}

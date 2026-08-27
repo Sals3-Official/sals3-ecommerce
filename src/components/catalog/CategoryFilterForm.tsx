@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, type FormEvent } from 'react';
 import type { PriceBandId } from '@/lib/catalog/price-bands';
 import { categoryHref, type CategoryQuery } from '@/lib/catalog/query';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import PriceFacetFields from './PriceFacetFields';
 
 /**
@@ -24,10 +23,9 @@ type CategoryFilterFormProps = {
   idPrefix: string;
   /**
    * A prop rather than `useParams()`: the only caller is `CategoryFilterPanel`,
-   * a Server Component one step above that already has the market. One hop is
+   * a Server Component one step above. One hop is
    * not worth a hook.
    */
-  market: MarketSegment;
 };
 
 export default function CategoryFilterForm({
@@ -36,15 +34,14 @@ export default function CategoryFilterForm({
   counts,
   rangeIsTyped,
   idPrefix,
-  market,
 }: CategoryFilterFormProps) {
   const router = useRouter();
 
   const go = useCallback(
     (changes: Partial<CategoryQuery>) => {
-      router.push(marketHref(market, categoryHref(slug, query, changes)));
+      router.push(categoryHref(slug, query, changes));
     },
-    [router, market, slug, query],
+    [router, slug, query],
   );
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -56,7 +53,7 @@ export default function CategoryFilterForm({
   return (
     <form
       method="get"
-      action={marketHref(market, `/c/${slug}`)}
+      action={`/c/${slug}`}
       onSubmit={submit}
       className="flex flex-col gap-3"
     >

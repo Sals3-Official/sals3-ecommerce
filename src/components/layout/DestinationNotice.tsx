@@ -15,6 +15,15 @@ import {
  * while there is one, and `canCheckOutTo` is the same gate the address form
  * enforces rather than a second copy of the rule.
  *
+ * ## Why the sentence puts the country after "in"
+ *
+ * `proseLabel` carries its own article — "the United States", "the
+ * Philippines" — so the earlier wording ("does not take a ${proseLabel}
+ * delivery address") rendered **"a the United States delivery address"**. Seen
+ * in a browser on 2026-08-28, on the cart, in production wording. Putting the
+ * country after "in" lets a label with an article and one without ("Fiji") both
+ * read correctly, and it matches the Global branch above it.
+ *
  * ## Why the countries are not written out
  *
  * `describeCheckoutReadyDestinations()` builds the sentence from
@@ -47,7 +56,7 @@ export default function DestinationNotice({
       <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
         {destination.isGlobal
           ? `Checkout takes a delivery address in ${describeCheckoutReadyDestinations()}. No other destination can be entered yet.`
-          : `Checkout does not take a ${destination.proseLabel ?? destination.label} delivery address yet. Orders can be placed to ${describeCheckoutReadyDestinations()}.`}
+          : `Checkout does not take a delivery address in ${destination.proseLabel ?? destination.label} yet. Orders can be placed to ${describeCheckoutReadyDestinations()}.`}
       </p>
     </section>
   );

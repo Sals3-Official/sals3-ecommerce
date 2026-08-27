@@ -27,7 +27,7 @@ const liveCategories: Category[] = [
 
 describe('CategorySection', () => {
   it('heads the block with "Shop by category" and the live count', () => {
-    render(<CategorySection market="au" categories={liveCategories} />);
+    render(<CategorySection categories={liveCategories} />);
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'Shop by category' }),
@@ -36,13 +36,13 @@ describe('CategorySection', () => {
   });
 
   it('says "1 category", not "1 categories", when the feed publishes one', () => {
-    render(<CategorySection market="au" categories={[liveCategories[0]!]} />);
+    render(<CategorySection categories={[liveCategories[0]!]} />);
 
     expect(screen.getByText('1 category')).toBeInTheDocument();
   });
 
   it("renders the department's photograph when there is one", () => {
-    render(<CategorySection market="au" categories={[liveCategories[0]!]} />);
+    render(<CategorySection categories={[liveCategories[0]!]} />);
 
     const link = screen.getByRole('link', { name: /Home & Garden/ });
     const photo = link.querySelector('img');
@@ -62,7 +62,6 @@ describe('CategorySection', () => {
   it('photographs every department, Toys & Games included', () => {
     render(
       <CategorySection
-        market="au"
         categories={[category('toys-games', 'TG', 'Toys & Games')]}
       />,
     );
@@ -78,7 +77,6 @@ describe('CategorySection', () => {
   it('falls back to the real feed code when it has neither photo nor icon', () => {
     render(
       <CategorySection
-        market="au"
         categories={[category('aquarium-lighting', 'AL', 'Aquarium Lighting')]}
       />,
     );
@@ -93,7 +91,6 @@ describe('CategorySection', () => {
   it('clamps a long category name at 2 lines instead of truncating line 1', () => {
     render(
       <CategorySection
-        market="au"
         categories={[
           category('food-beverages-tobacco', 'FB', 'Food, Beverages & Tobacco'),
         ]}
@@ -107,7 +104,7 @@ describe('CategorySection', () => {
   });
 
   it('keeps the brand colour off the tile — navigation, not an action (spec §11.4)', () => {
-    render(<CategorySection market="au" categories={[liveCategories[0]!]} />);
+    render(<CategorySection categories={[liveCategories[0]!]} />);
 
     const plate = tiles()[0]?.querySelector('span');
 
@@ -121,7 +118,6 @@ describe('CategorySection', () => {
     // code initials.
     render(
       <CategorySection
-        market="au"
         categories={[category('aquarium-lighting', 'AL', 'Aquarium Lighting')]}
       />,
     );
@@ -132,7 +128,7 @@ describe('CategorySection', () => {
   });
 
   it('scrolls one snapped page at a time', () => {
-    render(<CategorySection market="au" categories={liveCategories} />);
+    render(<CategorySection categories={liveCategories} />);
 
     expect(screen.getByRole('navigation')).toHaveClass(
       'flex',
@@ -144,7 +140,7 @@ describe('CategorySection', () => {
 
   it('fills each page row-major: 3 columns below md, 6 above, always 12 cells', () => {
     const { container } = render(
-      <CategorySection market="au" categories={liveCategories} />,
+      <CategorySection categories={liveCategories} />,
     );
     const page = container.querySelector('nav > div');
 
@@ -167,17 +163,15 @@ describe('CategorySection', () => {
       category(`live-${index}`, `L${index}`, `Live category ${index}`),
     );
 
-    const { container } = render(
-      <CategorySection market="au" categories={many} />,
-    );
+    const { container } = render(<CategorySection categories={many} />);
     const pages = container.querySelectorAll('nav > div');
 
     expect(pages).toHaveLength(2);
     expect(pages[0]?.querySelectorAll('a')[0]?.getAttribute('href')).toBe(
-      '/au/c/live-0',
+      '/c/live-0',
     );
     expect(pages[1]?.querySelectorAll('a')[0]?.getAttribute('href')).toBe(
-      '/au/c/live-12',
+      '/c/live-12',
     );
   });
 
@@ -186,9 +180,7 @@ describe('CategorySection', () => {
       category(`live-${index}`, `L${index}`, `Live category ${index}`),
     );
 
-    const { container } = render(
-      <CategorySection market="au" categories={many} />,
-    );
+    const { container } = render(<CategorySection categories={many} />);
     const lastPage = [...container.querySelectorAll('nav > div')].at(-1);
 
     // 21 categories: 12 on page one, 9 on page two, so three blanks.
@@ -203,9 +195,7 @@ describe('CategorySection', () => {
       category(`live-${index}`, `L${index}`, `Live category ${index}`),
     );
 
-    const { container } = render(
-      <CategorySection market="au" categories={exact} />,
-    );
+    const { container } = render(<CategorySection categories={exact} />);
 
     expect(container.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(
       0,
@@ -217,14 +207,14 @@ describe('CategorySection', () => {
       category(`live-${index}`, `L${index}`, `Live category ${index}`),
     );
 
-    render(<CategorySection market="au" categories={many} />);
+    render(<CategorySection categories={many} />);
 
     expect(tiles()).toHaveLength(21);
     expect(screen.getByText('21 categories')).toBeInTheDocument();
   });
 
   it('states the empty catalogue plainly instead of dropping the heading', () => {
-    render(<CategorySection market="au" categories={[]} />);
+    render(<CategorySection categories={[]} />);
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'Shop by category' }),
@@ -237,7 +227,7 @@ describe('CategorySection', () => {
   });
 
   it('offers no "see all" link — the carousel already reaches every category', () => {
-    render(<CategorySection market="au" categories={liveCategories} />);
+    render(<CategorySection categories={liveCategories} />);
 
     expect(
       screen.queryByRole('link', { name: /see all/i }),
@@ -246,19 +236,19 @@ describe('CategorySection', () => {
   });
 
   it('exposes the grid as a labelled navigation region', () => {
-    render(<CategorySection market="au" categories={liveCategories} />);
+    render(<CategorySection categories={liveCategories} />);
 
     expect(screen.getByRole('navigation')).toHaveAccessibleName('Categories');
   });
 
   it('shows all 21 of the real fallback departments', () => {
-    render(<CategorySection market="au" categories={placeholderCategories} />);
+    render(<CategorySection categories={placeholderCategories} />);
 
     expect(placeholderCategories.length).toBe(21);
     expect(tiles()).toHaveLength(21);
     expect(screen.getByRole('link', { name: /Electronics/ })).toHaveAttribute(
       'href',
-      '/au/c/electronics',
+      '/c/electronics',
     );
   });
 

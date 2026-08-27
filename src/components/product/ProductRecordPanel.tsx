@@ -20,7 +20,6 @@ import ProductOptionList from '@/components/product/ProductOptionList';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
 import IndicativePriceLine from '@/components/fx/IndicativePriceLine';
 import type { IndicativeRate } from '@/lib/fx/rates';
-import type { MarketSegment } from '@/lib/destination/markets';
 
 type ProductRecordPanelProps = {
   detail: ProductDetail;
@@ -29,13 +28,8 @@ type ProductRecordPanelProps = {
   /** Whether the selection came from the URL rather than from the default. */
   selectedFromUrl: boolean;
   /**
-   * The market this product page belongs to, threaded on to the variant links
-   * and the Buy Now navigation. A prop rather than `useParams()`: the PDP hands
-   * it straight down and this is the only hop.
-   */
-  market: MarketSegment;
-  /**
-   * The market's indicative FX rate, fetched once by the page and handed down.
+   * The indicative FX rate for the buyer's destination, fetched once by the
+   * page and handed down.
    *
    * A prop rather than a fetch here, and required rather than optional: this
    * panel is a client component, the rate resolves on the server, and the
@@ -84,7 +78,6 @@ export default function ProductRecordPanel({
   detail,
   selectedVariant,
   selectedFromUrl,
-  market,
   indicativeRate,
 }: ProductRecordPanelProps) {
   const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
@@ -233,7 +226,6 @@ export default function ProductRecordPanel({
             variants={variants}
             selectedVariantId={selected?.id}
             axes={axes}
-            market={market}
           />
         </CardSection>
       ) : null}
@@ -241,7 +233,6 @@ export default function ProductRecordPanel({
       <CardSection>
         <ProductAddToCartButtons
           productId={detail.id}
-          market={market}
           title={detail.title}
           category={detail.category}
           imageUrl={detail.imageUrl}

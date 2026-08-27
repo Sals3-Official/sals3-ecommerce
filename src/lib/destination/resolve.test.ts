@@ -33,38 +33,33 @@ describe('resolveDestination', () => {
     headerStore.get.mockReturnValue(null);
   });
 
-  it('agrees with the market when the buyer has chosen nothing', async () => {
-    const result = await resolveDestination('AU');
-
-    expect(result.destination.code).toBe('AU');
-    expect(result.source).toBe('suggested');
-  });
-
-  it("lets the buyer's own choice outrank the market they are browsing", async () => {
-    // Being in a market is not consent to ship there. Someone who picked
-    // "Somewhere else" keeps it on /au, and the cart tells them what it means.
+  /*
+    The `marketDestinationCode` parameter these tests used to cover was added on
+    2026-08-27 and removed with the markets on 2026-08-28. It existed so a
+    shopfront's own country could stand in when the buyer had chosen nothing —
+    `/au` was showing a first-time visitor "Ship to: Somewhere else". With one
+    storefront there is no country in the URL to disagree with, so what is left
+    is the buyer's choice, then geo, then Global.
+  */
+  /*
+    The rule everything else rests on, and the one the owner asked for in plain
+    words on 2026-08-28: whatever country is selected, nothing overrides it.
+    ADR-003 §1 — "Geo-IP is only a default suggestion. The user's selected
+    shipping country is the browsing source of truth."
+  */
+  it("keeps the buyer's own choice over a geo hint that disagrees", async () => {
     cookieStore.get.mockImplementation((name: string) =>
-      name === DESTINATION_COOKIE_NAME ? { value: 'GLOBAL' } : undefined,
+      name === DESTINATION_COOKIE_NAME ? { value: 'PH' } : undefined,
     );
+    headerStore.get.mockReturnValue('AU');
 
-    const result = await resolveDestination('AU');
+    const result = await resolveDestination();
 
-    expect(result.destination.isGlobal).toBe(true);
+    expect(result.destination.code).toBe('PH');
     expect(result.source).toBe('chosen');
   });
 
-  it('ignores geo once a market is in play', async () => {
-    // Geo's job is choosing a market at `/`. By the time a market page renders
-    // it has done that job, and a second bite would let an IP override the
-    // segment the buyer can see in the address bar.
-    headerStore.get.mockReturnValue('PH');
-
-    const result = await resolveDestination('AU');
-
-    expect(result.destination.code).toBe('AU');
-  });
-
-  it('still uses geo where there is no market, as the account routes have none', async () => {
+  it('uses geo when the buyer has chosen nothing', async () => {
     headerStore.get.mockReturnValue('PH');
 
     const result = await resolveDestination();

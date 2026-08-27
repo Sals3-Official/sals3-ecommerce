@@ -139,3 +139,45 @@ test('opens the signed-in account menu and logs out', async ({ page }) => {
   await expect(page.getByRole('link', { name: /my account/i })).toHaveCount(0);
   expect(didDeleteSession).toBe(true);
 });
+
+/*
+  The market URLs were live for a day (2026-08-27 to 2026-08-28), so they are in
+  browser history and possibly in an index. They carry back to the one storefront
+  rather than 404 — the same courtesy the market split extended to the URLs it
+  replaced, in the other direction.
+
+  Temporary, not permanent: the owner's word was `muna`, for now, and a 308 is
+  cached by every browser and proxy for as long as it takes someone to notice.
+*/
+test.describe('the retired market URLs', () => {
+  [
+    { from: '/au', to: '/' },
+    { from: '/ph', to: '/' },
+    { from: '/fj', to: '/' },
+    { from: '/au/cart', to: '/cart' },
+    { from: '/ph/categories', to: '/categories' },
+  ].forEach(({ from, to }) => {
+    test(`${from} lands on ${to}`, async ({ page }) => {
+      const response = await page.goto(from);
+
+      expect(new URL(page.url()).pathname).toBe(to);
+      expect(response?.status()).toBe(200);
+
+      const chain = response?.request().redirectedFrom();
+
+      // 307, never 308: a permanent redirect would outlive the decision.
+      expect(chain?.response().then((first) => first?.status())).resolves.toBe(
+        307,
+      );
+    });
+  });
+
+  test('an unknown segment is still a 404, not a redirect', async ({
+    page,
+  }) => {
+    const response = await page.goto('/xx');
+
+    expect(response?.status()).toBe(404);
+    expect(new URL(page.url()).pathname).toBe('/xx');
+  });
+});

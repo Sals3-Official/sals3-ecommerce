@@ -5,7 +5,7 @@ import DestinationPicker from './DestinationPicker';
 
 const routerRefresh = vi.hoisted(() => vi.fn());
 const routerPush = vi.hoisted(() => vi.fn());
-const currentPathname = vi.hoisted(() => ({ value: '/au' }));
+const currentPathname = vi.hoisted(() => ({ value: '/' }));
 const setDestinationAction = vi.hoisted(() =>
   vi.fn<
     (code: string) => Promise<{ ok: true } | { ok: false; reason: string }>
@@ -36,7 +36,7 @@ vi.mock('@/lib/destination/actions', () => ({
 beforeEach(() => {
   routerRefresh.mockClear();
   routerPush.mockClear();
-  currentPathname.value = '/au';
+  currentPathname.value = '/';
   setDestinationAction.mockReset();
   setDestinationAction.mockResolvedValue({ ok: true });
 });
@@ -127,26 +127,18 @@ describe('DestinationPicker', () => {
     );
   });
 
-  it('moves the buyer into the market they chose', async () => {
-    renderPicker('AU');
-    openPicker();
-
-    fireEvent.click(screen.getByRole('button', { name: /^philippines$/i }));
-
-    await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/ph'));
-    // The navigation re-renders the target route on the server with the new
-    // cookie, so a refresh on top of it would be a second round trip for the
-    // same answer.
-    expect(routerRefresh).not.toHaveBeenCalled();
-  });
-
   /*
-    The markets serve one catalogue, so the same product exists in each of them.
-    Landing the buyer on the home page after they corrected their destination
-    halfway down a product would read as a reset rather than a switch.
+    Choosing a country no longer moves the buyer anywhere.
+
+    For one day (2026-08-27 to 2026-08-28) this control was also a market
+    switcher: picking the Philippines pushed the buyer to `/ph`, or to the same
+    page one market over, because otherwise they stood on `/au/...` under a
+    header saying Philippines. With one storefront there is no second place a
+    country is stated, so the choice is a cookie and a re-render — and the URL
+    the buyer is reading never changes under them.
   */
-  it('keeps the buyer on the same page one market over', async () => {
-    currentPathname.value = '/au/p/air-cooler';
+  it('moves the buyer nowhere, whatever they choose', async () => {
+    currentPathname.value = '/p/air-cooler';
 
     renderPicker('AU');
     openPicker();
@@ -154,8 +146,10 @@ describe('DestinationPicker', () => {
     fireEvent.click(screen.getByRole('button', { name: /^philippines$/i }));
 
     await waitFor(() =>
-      expect(routerPush).toHaveBeenCalledWith('/ph/p/air-cooler'),
+      expect(setDestinationAction).toHaveBeenCalledWith('PH'),
     );
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1));
+    expect(routerPush).not.toHaveBeenCalled();
   });
 
   /*

@@ -4,23 +4,19 @@ import type { Product } from '@/lib/home-placeholder-data';
 import { formatMoney } from '@/lib/money';
 import StarRating from '@/components/product/StarRating';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
-import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type ProductCardProps = {
   product: Product;
-  /** The market this card links into. Never absent: a market-less `/p/…` does
-   * not 404, it silently redirects to Australia. */
-  market: MarketSegment;
 };
 
-export default function ProductCard({ product, market }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
   // No comparison price and no percent-off badge on the card. Sals3 publishes
   // no evidence-backed `oldPrice` (ADR-003), and one must never be derived from
   // the current price, so `product.oldPrice` is deliberately read by nothing.
 
   return (
     <Link
-      href={marketHref(market, `/p/${product.id}`)}
+      href={`/p/${product.id}`}
       prefetch={false}
       className="flex flex-col overflow-hidden rounded-xl border border-border bg-white transition hover:-translate-y-1 hover:border-brand-600 hover:no-underline hover:shadow-[0_16px_34px_rgba(11,44,77,0.15)]"
     >

@@ -82,52 +82,64 @@ function r2RemotePatterns() {
 }
 
 /**
- * The shopping routes that moved under `/[market]` on 2026-08-27.
+ * The market segments the storefront had between 2026-08-27 and 2026-08-28.
  *
- * Every one of these was a live URL on `sals3-ecommerce.vercel.app` before the
- * move, so they redirect rather than 404 — the deployed site is in use and its
- * links are in browser history and in the owner's own notes.
+ * `/au`, `/ph` and `/fj` were live URLs on `sals3-ecommerce.vercel.app` for a
+ * day: they are in browser history, in the owner's notes, and possibly in a
+ * crawler's index. They redirect back to the single storefront rather than
+ * 404ing, in the same spirit as the redirects that carried the market-less URLs
+ * *into* `/au` when the split shipped — the direction reversed, the reason did
+ * not.
  *
- * **Temporary, not permanent, and that is load-bearing.** A 308 would assert
- * that this content now lives at `/au` — but the same product also lives at
- * `/ph`, and which one a person belongs on depends on who is asking. A
- * permanent redirect is cached by every browser and proxy, so it would pin a
- * market-less link to Australia forever and take the choice away from the next
- * visitor. Same reasoning as the dispatcher at `/`.
- *
- * A prefix rather than a literal list of routes, so a route added under a
- * market later needs no matching entry here.
+ * **Temporary (307), not permanent.** The owner's word was `muna` — for now —
+ * so the markets may come back. A 308 is cached by every browser and proxy and
+ * is exactly what would make reinstating them a support problem rather than a
+ * deploy. The previous redirects were temporary for a different reason (which
+ * market a person belongs on is a function of who is asking) and the conclusion
+ * is the same either way.
  */
-const MARKET_MOVED_ROUTES = ['/p', '/c', '/search', '/categories', '/cart'];
+const RETIRED_MARKET_SEGMENTS = ['/au', '/ph', '/fj'];
 
 /**
- * What each moved prefix matches under: any number of path segments, none of
+ * What each retired segment matches under: any number of path segments, none of
  * which may contain a dot. Deliberately not a bare `:path*`.
  *
  * **A redirect `source` is a claim over a namespace, and `public/` shares that
- * namespace with the router.** `/categories/:path*` matched the static asset
- * directory `public/categories/` as readily as the route, so all 21 department
+ * namespace with the router.** In the other direction this rule cost a day of
+ * broken images: `/categories/:path*` matched the static asset directory
+ * `public/categories/` as readily as the route, so all 21 department
  * photographs were answered with `307 -> /au/categories/<file>.webp`, where no
  * file exists, and every one of them 404ed in production. Redirects are
  * evaluated before the static-file handler, so nothing downstream could rescue
  * them.
  *
- * Excluding a dot rather than naming the one colliding directory keeps the
- * guard over all five prefixes and over assets nobody has added yet. What it
- * costs is a redirect for any route segment containing a dot, and none exists:
- * a product or category slug is `^[a-z0-9]+(?:-[a-z0-9]+)*$`, refused by
- * `isPublicSlug` in `sals3-portal` before it can ever be written. `*` keeps the
- * bare prefix (`/cart`, `/categories`) matching on zero segments.
+ * Nothing in `public/` sits under `/au`, `/ph` or `/fj` today, and the guard is
+ * kept anyway: it costs one character class and it is the only thing standing
+ * between a future `public/au/` and the same outage. What it gives up is a
+ * redirect for a route segment containing a dot, and none exists — a product or
+ * category slug is `^[a-z0-9]+(?:-[a-z0-9]+)*$`, refused by `isPublicSlug` in
+ * `sals3-portal` before it can ever be written. `*` keeps the bare segment
+ * (`/au`) matching on zero further segments.
  */
-const MOVED_ROUTE_SEGMENTS = ':path([^/.]+)*';
+const RETIRED_SEGMENT_PATHS = ':path([^/.]+)*';
 
 const nextConfig: NextConfig = {
   async redirects() {
-    return MARKET_MOVED_ROUTES.map((source) => ({
-      source: `${source}/${MOVED_ROUTE_SEGMENTS}`,
-      destination: `/au${source}/:path*`,
-      permanent: false,
-    }));
+    return RETIRED_MARKET_SEGMENTS.flatMap((segment) => [
+      /*
+        The bare segment needs its own entry, and finding out why cost a failing
+        e2e test: `/au` *does* match the pattern below, with an empty `path`, and
+        `/:path*` then compiles to the **empty string** rather than to `/`. An
+        empty `Location` is not a redirect, so `/au` answered 200 and stayed
+        where it was. Ordered first so it wins.
+      */
+      { source: segment, destination: '/', permanent: false },
+      {
+        source: `${segment}/${RETIRED_SEGMENT_PATHS}`,
+        destination: '/:path*',
+        permanent: false,
+      },
+    ]);
   },
   async headers() {
     return [

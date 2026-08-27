@@ -9,9 +9,9 @@ type ProductPaginationProps = {
    * Required, with no default any more.
    *
    * It used to default to the home "For You" section's own address, `/`. Every
-   * shopping route now lives one market deep, so there is no route-independent
+   * shopping route once lived one market deep, so there was no route-independent
    * address left to fall back to — and a default that quietly meant "Australia"
-   * is exactly the market-less link this refactor exists to remove. Each caller
+   * was exactly the market-less link that refactor existed to remove. Each caller
    * builds its own, which is what kept route knowledge out of here to begin
    * with.
    */
