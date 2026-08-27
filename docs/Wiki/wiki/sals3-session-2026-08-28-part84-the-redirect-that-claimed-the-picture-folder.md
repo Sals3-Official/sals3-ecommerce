@@ -152,7 +152,32 @@ not urgent.
   running (`ECONNREFUSED localhost:3001`). `/au/p/<slug>` returns 500 directly
   too, so it is unrelated.
 
-## 6. What to carry forward
+## 6. The e2e suite is flaky on this machine, and the portal makes it worse
+
+The docs branch for this note carries **no code change at all** — its tree is
+`develop` plus two files under `docs/` — and its pre-push `verify` failed
+twice, on two different specs:
+
+- `search.spec.ts` › *search results are not indexed* — `meta[name="robots"]`
+  not found on `/au/search?q=a`.
+- `cart.spec.ts` › *a signed-out visitor is sent to sign in* — the
+  `Proceed to checkout` link never appeared, 30s timeout.
+
+Both are error-path renders. `SALS3_PORTAL_API_URL` is `http://localhost:3001`,
+so with no portal running the storefront serves its failure path, and on that
+path those two elements are not there. **Starting the portal made it worse, not
+better**: with an empty local database its storefront API answers `503`, which
+raises `ProductsApiError` instead of a connection refusal, and the cart spec
+failed where the search spec had before. The same tree then passed on the next
+attempt with nothing running.
+
+So a red `verify` here is not automatically a finding — but it is not
+automatically noise either. Two things worth a look on their own merit, neither
+chased in this session: whether a search results page still carries `noindex`
+when its upstream fails, and whether that is what those specs are really
+asserting. `--no-verify` was not used; the push waited for a green run.
+
+## 7. What to carry forward
 
 **A redirect pattern is a namespace claim, and `public/` is inside it.** The
 router and the static-file directory share one URL space, and a prefix rule
