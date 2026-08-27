@@ -35,6 +35,16 @@ sals3-ecommerce/
 
 Do not put application code in `docs/`. Do not put vault notes in `src/`.
 
+`public/` shares one namespace with the router, so a redirect or rewrite whose
+`source` is a path prefix claims the matching asset directory as well. That is
+how all 21 category photographs in `public/categories/` came to 404 in
+production: the `/categories/:path*` redirect that carries market-less links
+into `/au` matched those files as readily as it matched the route. Redirects run
+before the static-file handler, so nothing downstream can rescue a swallowed
+asset. Both sides are asserted in `test/next-config-headers.test.ts` — read
+`MOVED_ROUTE_SEGMENTS` in `next.config.ts` before adding a prefix rule or a
+`public/` directory.
+
 ## API Services
 
 The storefront service layer lives in `src/services/storefront/` and is
