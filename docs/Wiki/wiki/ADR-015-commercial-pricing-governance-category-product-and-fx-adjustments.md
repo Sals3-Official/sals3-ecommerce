@@ -2,13 +2,15 @@
 tags: [sals3, adr, pricing, margin, forex, admin-portal, governance, audit]
 aliases: [ADR-015, Commercial Pricing Governance, Category and Product Pricing Policy]
 created: 2026-08-10
-updated: 2026-08-25
+updated: 2026-08-27
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: phase-1-merged-not-launched
+implementation_status: phase-1-merged-not-launched, per-destination scope built
 related:
   - "[[hot]]"
+  - "[[sals3-session-2026-08-27-part77-a-margin-per-destination-and-two-hours-of-refused-saves]]"
+  - "[[sals3-session-2026-08-27-part78-the-floor-that-became-a-percentage]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
@@ -376,3 +378,91 @@ table above inherits that gap.
 
 **Frontmatter `updated`** moves to 2026-08-25. `implementation_status` stays
 `phase-1-merged-not-launched` — nothing in this amendment is built.
+
+## Amendment — 2026-08-27: the contribution floor gains a percentage form, and the per-destination dimension is built (recorded after the fact)
+
+**How this amendment came to be written matters, so it is stated first.** It is not the record of
+a decision meeting. It was written on 2026-08-27 during a vault backfill, from merged code, five
+source comments, and a commit message authored by the owner. The decision it records is genuinely
+the owner's — `d3656e6` is authored by Bogs and opens *"Owner rule: a margin must never fall below
+what it costs to operate, set either as a percentage or as a fixed amount — never both — and set
+per country"*, and five code sites carry "Owner decision 2026-08-26" — but **for two days the
+shipped behaviour contradicted the standing text of this ADR and no amendment said so.** See
+[[sals3-session-2026-08-27-part78-the-floor-that-became-a-percentage]].
+
+### What is reversed
+
+The 2026-08-25 amendment's decision point 3 said:
+
+> The contribution floor stays absolute and becomes per-market too. It does **not** become a
+> percentage. §1's reasoning is unchanged…
+
+That is now **partially withdrawn**. `pricing_store_defaults.min_contribution_rate`
+(`numeric(8,6)`, migration `0030_lean_blizzard`) exists and is resolved.
+
+### Why the earlier reasoning was half right
+
+The refusal rested on: *two rules both proportional to cost never cross, so a percentage floor
+would silently be a second margin.* **The arithmetic is correct and still is.** The rate is a
+gross margin on revenue — the floor price is `cost / (1 − rate)`, computed by the same function as
+the target margin — so floor price and margin price are both lines through the origin in cost.
+They never cross, and their order is fixed by whether `rate > margin` at every supplier cost. The
+screen states this about itself: *"This holds at every supplier cost."*
+
+**What was wrong was the scope of the conclusion.** The comparison is not against the store
+default's own margin. The resolver floors *whichever layer won* — product override, variant
+override, category, or store default — while the floor always comes from the store default. A
+category margin set below the store minimum is precisely the case the rule exists for, and there
+the floor does fire. So the percentage form is **not a second margin at the same layer; it is a
+cross-layer clamp on the margin itself** — a floor under the resolved margin rate rather than
+under contribution. The absolute floor cannot express that.
+
+A second, independent property: the rate needs no currency, while the amount form fails closed on
+`CONTRIBUTION_FLOOR_CURRENCY_MISMATCH`.
+
+### Decision
+
+1. **The contribution floor may be expressed as a rate or as an amount, never both on one rule.**
+   Enforced in the database (`CHECK (NOT (min_contribution_rate IS NOT NULL AND
+   min_contribution_minor > 0))`), in the save schema, and in the editor, which disables one field
+   while the other is in use.
+2. **The rate is bounded `0 < rate < 1`**, stored as a decimal, collected as whole percent.
+3. **The rate lives on `pricing_store_defaults` only**, not on category policies. The floor stays a
+   store-level instrument that clamps category and override decisions from underneath.
+4. **§1's absolute floor is not withdrawn.** It remains the instrument for per-order costs that do
+   not scale with supplier cost, and remains the correct choice where those dominate.
+5. **The per-destination dimension approved on 2026-08-25 is built**, for margins and for both
+   floor forms. `market_code` is nullable on `pricing_category_policies` and
+   `pricing_store_defaults`, `null` meaning "all destinations", and **depth beats market** in
+   resolution — a deeper category with only an all-destinations rule outranks a shallower one
+   carrying a rule for the exact destination. The market input to the resolver is required and
+   never defaulted.
+
+### Consequence this ADR must not lose
+
+**Choosing the percentage turns the absolute floor off for that rule.** Because the two forms are
+mutually exclusive, a rule using a rate has no protection for the fixed per-order costs §1 exists
+to answer. On a US$2 supplier cost an 18% rate floors the price at US$2.44 — about 44 cents of
+contribution against freight this ADR's own 2026-08-24 table puts between $3.70 and $16.01.
+
+Neither form is wrong; they answer different questions. The hazard is a screen that presents them
+as two spellings of one idea. **Nothing in the code, the PRs, or this ADR addressed the trade-off
+before this amendment.**
+
+### Open
+
+- **No destination rate or floor value is approved by this amendment.** As with 2026-08-25, it
+  authorizes the instrument, not the numbers.
+- **The 2026-08-21 flat 2.5% manual-entry floor remains unreconciled** with either form of §1's
+  floor. Unchanged from the previous amendment.
+- **The resolver's estimate cannot say which floor fired.** It reports `minContribution` as an
+  amount and currency only, so a price set by the rate form appears with `amountMinor: 0` and
+  `contributionFloorApplied: true`. Any audit trail built on that payload cannot distinguish the
+  two, which matters for ADR-010's reproducibility requirement.
+- **`0030_lean_blizzard` is applied to production but unrecorded in `__drizzle_migrations`** — the
+  code that writes the ledger row shipped in the PR after the only run.
+
+**Frontmatter `updated`** moves to 2026-08-27. `implementation_status` moves to
+`phase-1-merged-not-launched, per-destination scope built` — the dimension and both floor forms
+are merged and applied to production; no destination rate is approved and publication still binds
+a single destination from `seller_market_profiles`.
