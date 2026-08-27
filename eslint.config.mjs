@@ -121,6 +121,13 @@ const eslintConfig = defineConfig([
     // docs/ is the Obsidian vault (notes + a vendored community plugin
     // bundle), not project source - never lint it.
     'docs/**',
+    // outputs/ is generated artifact output - spreadsheets, screenshots, and
+    // the throwaway scripts that produced them, each with its own vendored
+    // node_modules. Same category as build/ and coverage/ above, and it has to
+    // be ignored for the same reason: the pre-commit hook runs the whole
+    // `verify`, so an unignored scratch script importing a tool that is not a
+    // project dependency makes every commit in this repository fail.
+    'outputs/**',
   ]),
   prettierConfig,
 ]);
