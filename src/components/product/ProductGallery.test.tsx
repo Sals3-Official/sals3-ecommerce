@@ -170,3 +170,170 @@ describe('ProductGallery following the selected variant', () => {
     expect(shownPhotoAlt()).toBe('Jacket, front');
   });
 });
+
+/**
+ * A variation photo is no longer a gallery slide, and the gallery has to show it
+ * anyway.
+ *
+ * The Portal's `loadApprovedImages` served product-level rows only from
+ * 2026-08-28, because a product using variation photos properly turned its
+ * gallery into twenty-one near-identical close-ups of the option the buyer had
+ * not chosen yet. This component found the variant's picture with
+ * `images.findIndex(...)`, so the moment that stopped being a slide the lookup
+ * returned `-1` and **every** design fell back to one generic supplier cover —
+ * observed live on `Knitted Tam Beanie`, 8 of 8 designs clicked.
+ *
+ * The strip and the picture are two different things now: the strip is the
+ * curated gallery, and the frame shows the variation's own photograph whether or
+ * not it is in the strip.
+ */
+describe('ProductGallery when the variant photo is not a gallery slide', () => {
+  const FLAG_UK = 'https://media.example.com/seller-media/p/flag-uk.webp';
+  const FLAG_PERU = 'https://media.example.com/seller-media/p/flag-peru.webp';
+
+  /** Product-level photos only, exactly what the Portal now serves. */
+  const CURATED = [
+    { url: LEAD, alt: 'Beanie, front' },
+    { url: WHITE, alt: 'Beanie, worn' },
+  ];
+
+  function design(id: string, value: string, imageUrl?: string) {
+    return {
+      ...variant(id, imageUrl),
+      options: [{ name: 'Design', value }],
+    };
+  }
+
+  const DESIGNS = [
+    design('uk', 'United Kingdom', FLAG_UK),
+    design('peru', 'Peru', FLAG_PERU),
+    design('plain', 'Plain'),
+  ];
+
+  function shownAlt(): string | null {
+    return screen.getByRole('img', { name: /Beanie/ }).getAttribute('alt');
+  }
+
+  it('shows the variation"s own photo even though no thumbnail carries it', () => {
+    render(
+      <ProductGallery
+        images={CURATED}
+        tone="ocean"
+        variants={DESIGNS}
+        selectedVariantId="uk"
+      />,
+    );
+
+    expect(shownAlt()).toBe('Beanie, front — United Kingdom');
+  });
+
+  it('follows a chip to another design that is also not a slide', () => {
+    render(
+      <ProductGallery
+        images={CURATED}
+        tone="ocean"
+        variants={DESIGNS}
+        selectedVariantId="uk"
+      />,
+    );
+
+    chooseVariant('peru');
+
+    expect(shownAlt()).toBe('Beanie, front — Peru');
+  });
+
+  /**
+   * The alt names the option, not the product. On a product whose whole purpose
+   * is telling twenty-one designs apart, the same product title on every one of
+   * them is the announcement a screen-reader user cannot navigate by.
+   */
+  it('names the chosen design in the alt text', () => {
+    render(
+      <ProductGallery
+        images={CURATED}
+        tone="ocean"
+        variants={DESIGNS}
+        selectedVariantId="peru"
+      />,
+    );
+
+    expect(shownAlt()).toContain('Peru');
+  });
+
+  it('leaves the view alone for a design with no photo of its own', () => {
+    render(
+      <ProductGallery
+        images={CURATED}
+        tone="ocean"
+        variants={DESIGNS}
+        selectedVariantId="uk"
+      />,
+    );
+
+    chooseVariant('plain');
+
+    // Not reset to the lead image: the buyer picked an option, not a picture.
+    expect(shownAlt()).toBe('Beanie, front — United Kingdom');
+  });
+
+  it('hands control back to the strip when the buyer picks a thumbnail', () => {
+    render(
+      <ProductGallery
+        images={CURATED}
+        tone="ocean"
+        variants={DESIGNS}
+        selectedVariantId="uk"
+      />,
+    );
+
+    act(() => {
+      screen.getByRole('button', { name: 'Show photo 2 of 2' }).click();
+    });
+
+    expect(shownAlt()).toBe('Beanie, worn');
+  });
+
+  /**
+   * While an off-strip variation photo is showing, no thumbnail may claim to be
+   * the one on screen — `aria-pressed` would be announcing a picture the frame
+   * is not displaying.
+   */
+  it('marks no thumbnail as pressed while an off-strip photo is showing', () => {
+    render(
+      <ProductGallery
+        images={CURATED}
+        tone="ocean"
+        variants={DESIGNS}
+        selectedVariantId="uk"
+      />,
+    );
+
+    const pressed = screen
+      .getAllByRole('button', { name: /Show photo/ })
+      .filter((b) => b.getAttribute('aria-pressed') === 'true');
+
+    expect(pressed).toHaveLength(0);
+  });
+
+  /**
+   * The old path still has to work: when a variant"s photo *is* a slide, the
+   * index drives it and the strip highlight stays honest.
+   */
+  it('still uses the strip when the variant photo is one of the slides', () => {
+    render(
+      <ProductGallery
+        images={IMAGES}
+        tone="ocean"
+        variants={VARIANTS}
+        selectedVariantId="white-s"
+      />,
+    );
+
+    const pressed = screen
+      .getAllByRole('button', { name: /Show photo/ })
+      .filter((b) => b.getAttribute('aria-pressed') === 'true');
+
+    expect(pressed).toHaveLength(1);
+    expect(pressed[0]?.getAttribute('aria-label')).toBe('Show photo 3 of 3');
+  });
+});

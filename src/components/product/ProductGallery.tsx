@@ -28,26 +28,97 @@ type ProductGalleryProps = {
 };
 
 /**
- * Which gallery photo a variant points at.
+ * A variant's own photograph, if it has one.
  *
- * Matched by address rather than carried as an index: `imageUrl` is the same
- * string the gallery was built from (both come from `product_media_sources`
- * through one projection), and an index would be a second ordering that can
- * disagree with the first. A variant whose photo is not in the gallery — a race
- * between the two cached payloads — resolves to `-1` and simply leaves the
- * gallery where it was, which is why this returns a *found* index rather than
- * clamping to 0 and silently jumping to the lead photo.
+ * Matched by address rather than carried as an index: both this and the gallery
+ * come from `product_media_sources` through one projection, and an index would
+ * be a second ordering that can disagree with the first.
+ */
+function variantPhotoUrl(
+  variants: ProductVariant[],
+  variantId: string | undefined,
+): string | undefined {
+  return variants.find((variant) => variant.id === variantId)?.imageUrl;
+}
+
+/**
+ * Which gallery slide a variant's photo is, or `-1` when it is not one.
+ *
+ * ## Why `-1` is the ordinary case now, not a race
+ *
+ * This used to be the *only* way a variant photo reached the screen, and its
+ * own comment explained a `-1` as "a race between the two cached payloads".
+ * That was true while the Portal served variation photos as gallery slides —
+ * and that was exactly the defect the Portal fixed on 2026-08-28: a product
+ * using variation photos properly turned its gallery into twenty-one
+ * near-identical close-ups of the option the buyer had not chosen yet.
+ *
+ * The Portal's `loadApprovedImages` now serves product-level rows only, so a
+ * variation photo is **never** a gallery slide. Leaving the lookup as the only
+ * path made the storefront worse than before: on the 21-design
+ * `Knitted Tam Beanie` every design fell back to one generic supplier cover,
+ * because `findIndex` could no longer find anything.
+ *
+ * So the index is now only about the thumbnail strip — highlighting a slide
+ * when the variant's photo happens to be one. The picture the buyer sees is
+ * decided by `variantPhotoUrl` above, gallery membership or not, which is the
+ * same separation the marketplace editors make: a curated strip of product
+ * photos, plus a per-variation picture that is not one of them.
  */
 function galleryIndexOfVariant(
   images: ProductImage[],
   variants: ProductVariant[],
   variantId: string | undefined,
 ): number {
-  const url = variants.find((variant) => variant.id === variantId)?.imageUrl;
+  const url = variantPhotoUrl(variants, variantId);
 
   if (url === undefined) return -1;
 
   return images.findIndex((image) => image.url === url);
+}
+
+/**
+ * The variation's own photograph as something the frame can render, or `null`
+ * when the strip should stay in charge.
+ *
+ * Returns `null` in two different-looking cases that want the same answer: the
+ * variant has no photo (the buyer picked a size, not a picture), and the
+ * variant's photo is already a slide (so `selectedIndex` can point at it and
+ * the strip highlight stays honest).
+ *
+ * ## The alt text
+ *
+ * Named after the option the buyer actually chose — `Argentina`, not the
+ * product title — because on a product whose whole purpose is telling
+ * twenty-one designs apart, "Knitted Tam Beanie" on every one of them is the
+ * announcement a screen-reader user cannot navigate by. Falls back to the
+ * gallery's own alt when the variant carries no options, which is the single
+ * implicit variant of an axis-less product, where the design-name idea does not
+ * apply.
+ */
+function offGalleryVariantPhoto(
+  images: ProductImage[],
+  variants: ProductVariant[],
+  variantId: string | undefined,
+): ProductImage | null {
+  const url = variantPhotoUrl(variants, variantId);
+
+  if (url === undefined) return null;
+  if (images.some((image) => image.url === url)) return null;
+
+  const variant = variants.find((item) => item.id === variantId);
+  const optionLabel = variant?.options
+    ?.map((option) => option.value)
+    .join(', ');
+  const productAlt = images[0]?.alt ?? '';
+
+  return {
+    url,
+    alt:
+      optionLabel === undefined || optionLabel === ''
+        ? productAlt
+        : `${productAlt} — ${optionLabel}`,
+  };
 }
 
 export default function ProductGallery({
@@ -61,7 +132,20 @@ export default function ProductGallery({
 
     return index === -1 ? 0 : index;
   });
-  const selected = images[selectedIndex];
+  /**
+   * A variation photo that is not in the strip, shown in place of the slide.
+   *
+   * `null` whenever the strip is authoritative — no variant chosen, the variant
+   * has no photo of its own, the buyer picked a thumbnail, or the variant's
+   * photo *is* a slide (in which case `selectedIndex` already points at it and
+   * a second copy here could only disagree).
+   */
+  const [variantPhoto, setVariantPhoto] = useState<ProductImage | null>(() =>
+    offGalleryVariantPhoto(images, variants, selectedVariantId),
+  );
+  // The variation's own picture wins: it is the more specific answer to "what
+  // does the thing I picked look like".
+  const selected = variantPhoto ?? images[selectedIndex];
 
   /**
    * Follow the buyer's variant choice, over the same event the record panel
@@ -80,9 +164,21 @@ export default function ProductGallery({
    */
   useEffect(() => {
     function showVariant(variantId: string | undefined) {
+      // No photo of its own — the buyer chose a size, not a new picture, so
+      // leave the view exactly where it is rather than yanking it back to the
+      // lead image.
+      if (variantPhotoUrl(variants, variantId) === undefined) return;
+
       const index = galleryIndexOfVariant(images, variants, variantId);
 
-      if (index !== -1) setSelectedIndex(index);
+      if (index === -1) {
+        setVariantPhoto(offGalleryVariantPhoto(images, variants, variantId));
+
+        return;
+      }
+
+      setSelectedIndex(index);
+      setVariantPhoto(null);
     }
 
     function handleVariantChange(event: Event) {
@@ -158,9 +254,15 @@ export default function ProductGallery({
             <button
               key={image.url}
               type="button"
-              onClick={() => setSelectedIndex(index)}
+              onClick={() => {
+                setSelectedIndex(index);
+                // Picking a thumbnail is the buyer overriding the variation's
+                // own picture; leaving it set would make the strip highlight a
+                // slide the frame above is not showing.
+                setVariantPhoto(null);
+              }}
               aria-label={`Show photo ${index + 1} of ${images.length}`}
-              aria-pressed={index === selectedIndex}
+              aria-pressed={variantPhoto === null && index === selectedIndex}
               /* `min-w-11` as well as `min-h-11`: a 44px-tall target that is
                  only 30px wide is not a 44x44 target. */
               className={`relative aspect-square min-h-11 min-w-11 cursor-pointer overflow-hidden rounded-lg border-2 bg-white transition-all duration-200 active:scale-95 ${

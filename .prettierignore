@@ -12,3 +12,7 @@ package-lock.json
 
 # Obsidian vault (notes + vendored community plugin) - not project source
 docs
+
+# Generated artifact output (spreadsheets, screenshots, throwaway scripts
+# with their own vendored node_modules) - same category as build/ above.
+outputs

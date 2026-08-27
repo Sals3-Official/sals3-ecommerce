@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, media, seller-upload, supplier-media, product-revision]
 aliases: [Product Media Source Selection, Seller Pictures and Supplier Fallback]
 created: 2026-08-10
-updated: 2026-08-22
+updated: 2026-08-28
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -24,6 +24,12 @@ related:
 > `mediaStatus` all ship and reach buyers. Read the amendment at the end before citing the first
 > Evidence bullet. `MediaAsset` proper, a `NEEDS_MEDIA_REVIEW` reviewer, and the
 > Merchant-Center eligibility check ADR-016 asks for are still missing.
+
+> [!DANGER] Amended 2026-08-28 — §3's supplier set is no longer read-only in the gallery
+> A seller now arranges **every** photo of their product, the supplier's originals included,
+> and the first one is the cover. §3's "read-only source set" still describes Supplier Details'
+> evidence panel, which is unchanged; it no longer describes the gallery. Read
+> `Amendment — 2026-08-28` at the end before quoting §3 on what a seller may not touch.
 
 > [!DANGER] Amended 2026-08-22 — §4's `SUPPLIER_FALLBACK` label is not what the seller reads
 > The catalogue shows **`Supplier photo`** for that state. The code, the derivation, and this
@@ -313,3 +319,91 @@ See [[sals3-session-2026-08-22-part67-the-catalogue-column-that-was-doing-nothin
 
 **Frontmatter `updated`** moved to 2026-08-22. `status` stays `approved`: this records a
 seller-facing wording decision against an approved decision and changes no state, gate, or rule.
+
+## Amendment — 2026-08-28: the seller arranges every photo, and the first one is the cover
+
+> [!WARNING] Supersedes §3's "read-only" for the gallery, not for the evidence panel
+> §3 asked for two things and got one word applied to both. **Original supplier pictures** as a
+> provenance panel is unchanged and still read-only. The supplier's photo *as a slide in the
+> product's gallery* is now editorial: it can be reordered, and it can be made the cover.
+
+Owner decision, 2026-08-28, pointing at a marketplace seller centre's own product editor: one
+`Product Images` grid, every image in it draggable, the first tile badged `Cover`.
+
+### What §3 said, and what was actually true
+
+§3 lists **Original supplier pictures** as an *"always-visible read-only source set"*. The Product
+Editor implemented that literally: `SupplierMediaGallery` renders small thumbnails that are, in the
+repository's own README words, *"never reorderable, never a cover choice, never replaced"*.
+
+Two problems with that in practice:
+
+1. **The seller could not choose their own lead photo.** Cover choice was never persisted at all
+   — owner decision 2026-08-20 left it unstored — so "make this the cover" survived until the next
+   render. For nearly every product in production the buyer's lead photo was whatever
+   `sellerUploadsFirst` and observation time happened to pick.
+2. **The rule was already inconsistent with itself.** `assign-variant-media.ts` has written
+   `variant_id` onto a `SUPPLIER_ORIGINAL` row since 2026-08-20, on the explicit reasoning that
+   *saying which variant a photo depicts is a Sals3 editorial fact about supplier evidence rather
+   than a change to the evidence*. A supplier row was therefore assignable to a variant while being
+   unmovable in the gallery. That was an inconsistency, not a rule.
+
+### The decision
+
+- **One gallery grid, both origins.** Basic Information's `Product media` renders every
+  product-level `product_media_sources` row — `SELLER_UPLOAD` and `SUPPLIER_ORIGINAL` alike — in
+  the seller's stored order, and every tile can be dragged.
+- **The cover is position 0.** There is no `is_cover` column and there must not be one. "What order
+  do these appear in" and "which one leads" are one question, and two columns holding one answer are
+  two columns that can disagree — invisibly, until a buyer is served a lead photo nobody chose.
+  `Set as cover` moves a photo to the front, which is the same write as any other reorder.
+- **Arranging is not deleting.** `delete-seller-media.ts` keeps `sourceType = 'SELLER_UPLOAD'`
+  inside its `WHERE`, so a supplier's photo remains structurally impossible to delete through the
+  editor. The amendment widens what a seller may *arrange* without widening what they may destroy.
+- **Provenance is untouched.** A reorder writes `position` and nothing else. `source_url`,
+  `stored_url`, `checksum`, `observed_at`, `rights_basis`, `review_state`, and every observed
+  dimension are exactly as recorded, and Supplier Details' read-only evidence gallery still shows
+  the supplier's own set in the supplier's own order.
+
+### Schema
+
+`product_media_sources.position integer` (nullable), migration `0031_unusual_gargoyle`.
+
+Null means **never arranged**, which is the honest state of every row written before the column
+existed. Read paths order `position asc nulls last` and fall through to the previous rule — seller
+uploads first, then oldest observation — so a product nobody has arranged is served exactly as it
+was. Nothing is backfilled, because a backfill would have to invent an order the seller never chose
+and would destroy the null/not-null distinction that makes the change safe.
+
+The column sorts **ahead of** the seller-uploads-first rule. That is deliberate: a seller who drags
+a supplier photo to the front means it, and a rule that silently promoted their own upload above it
+would be the editor overruling the control it had just offered.
+
+### Deployment order, which is not optional
+
+Drizzle names every column of the schema in an `INSERT`, and `product_media_sources` is written by
+draft creation, by publication, and by every seller upload. A deployment carrying `position` before
+the database has it breaks importing and publishing, not one page — the 2026-08-18 shape of
+incident. So:
+
+1. Run `Products Migrate Media Position`
+   (`POST /api/internal/catalog/products/migrate-media-position`) and confirm
+   `columnExistsAfter: true`.
+2. Only then deploy the schema change and the feature.
+
+### Known limits, stated rather than discovered
+
+- **The arrangement cannot be changed on a touchscreen.** Native HTML drag fires from neither
+  keyboard nor touch, and WCAG 2.5.7's single-pointer alternative is absent — the same accepted
+  cost recorded for the Variant Matrix grip on 2026-08-22. `Set as cover` stays a real button, so
+  the one arrangement decision that matters most has a non-drag path.
+- **The grid can be longer than the gallery a buyer sees.** Twelve seller uploads plus the
+  supplier's projected set can exceed the storefront's `MAX_DETAIL_IMAGES` of 12, so the editor
+  fades the tiles past that line and says so. Deciding which ones make the cut is now the seller's,
+  which is what the arranging is for.
+- **An order-line's frozen image (ADR-007) is unaffected**, because it froze an address at
+  acceptance and this changes no address.
+
+**Frontmatter `updated`** moved to 2026-08-28. `status` stays `approved`: this records an
+owner-approved change to §3's scope and adds one column, and decides nothing about the resolver,
+the rights gates, or the media statuses.
