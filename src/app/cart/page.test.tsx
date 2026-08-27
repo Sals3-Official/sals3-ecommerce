@@ -2,10 +2,32 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
+import { findDestination } from '@/lib/destination/destinations';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { usd } from '@/lib/money';
 import renderWithCart from '../../../test/render-with-cart';
 import CartPage, { generateMetadata } from './page';
+
+/*
+  `resolveDestination` reads `cookies()`, and jsdom has no request. Australia is
+  a destination checkout accepts, so `DestinationNotice` renders nothing here
+  and these assertions stay about the cart; the notice has its own tests.
+*/
+vi.mock('@/lib/destination/resolve', () => ({
+  resolveDestination: vi.fn().mockResolvedValue({
+    destination: findDestination('AU'),
+    source: 'chosen',
+  }),
+}));
+
+/*
+  The header's half of the same feature. It is an async Server Component, which
+  React refuses to render outside RSC — left alone it would log an error into
+  every assertion below without failing one, which is the worst of both.
+*/
+vi.mock('@/components/layout/HeaderDestination', () => ({
+  default: () => null,
+}));
 
 describe('Cart page', () => {
   function acceptAnalytics() {
@@ -18,8 +40,8 @@ describe('Cart page', () => {
     );
   }
 
-  it('shows an empty-cart message with no saved items', () => {
-    renderWithCart(<CartPage />);
+  it('shows an empty-cart message with no saved items', async () => {
+    renderWithCart(await CartPage());
 
     expect(
       screen.getByRole('heading', { level: 1, name: /your cart is empty/i }),
@@ -40,7 +62,7 @@ describe('Cart page', () => {
     );
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
 
-    renderWithCart(<CartPage />);
+    renderWithCart(await CartPage());
 
     expect(
       await screen.findByText(/essence mascara lash princess/i),
@@ -80,7 +102,7 @@ describe('Cart page', () => {
     window.klaviyo = { track };
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
 
-    renderWithCart(<CartPage />);
+    renderWithCart(await CartPage());
 
     await screen.findByText(/essence mascara lash princess/i);
     await waitFor(() => {

@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import useCheckout from '@/components/checkout/useCheckout';
 import type { CartLineItem } from '@/lib/cart';
+import type { CheckoutCountry } from '@/lib/checkout/locations';
 import type { Money } from '@/lib/money';
 
 type CheckoutFlowValue = ReturnType<typeof useCheckout> & {
@@ -29,10 +30,20 @@ const CheckoutFlowContext = createContext<CheckoutFlowValue | undefined>(
  * It does not survive a full reload, which is deliberate rather than a gap —
  * the alternative was persisting a name, phone, email, and street address into
  * web storage, and the steps bounce to the start of checkout instead.
+ *
+ * `initialCountry` is the buyer's resolved destination, already narrowed to a
+ * country checkout accepts. The layout reads it because only a Server Component
+ * can, and hands it down here — this provider is the boundary it has to cross.
  */
-export function CheckoutFlowProvider({ children }: { children: ReactNode }) {
+export function CheckoutFlowProvider({
+  children,
+  initialCountry,
+}: {
+  children: ReactNode;
+  initialCountry?: CheckoutCountry;
+}) {
   const { items, itemCount, subtotal } = useCart();
-  const checkout = useCheckout(items, subtotal);
+  const checkout = useCheckout(items, subtotal, initialCountry);
 
   const value = useMemo<CheckoutFlowValue>(
     () => ({ ...checkout, items, itemCount, subtotal }),

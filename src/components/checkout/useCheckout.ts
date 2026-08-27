@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState, useTransition } from 'react';
 import type { CartState } from '@/lib/cart';
 import type { CheckoutAddress } from '@/lib/checkout/schema';
+import type { CheckoutCountry } from '@/lib/checkout/locations';
 import { money, type Money } from '@/lib/money';
 import useCheckoutAddress from '@/components/checkout/useCheckoutAddress';
 import useShippingQuote, {
@@ -46,10 +47,16 @@ function paymentSignature(
  *
  * Mounted once by `CheckoutFlowProvider` in the flow layout, which is what
  * keeps the state alive as the buyer moves between those routes.
+ *
+ * `initialCountry` is passed straight through to `useCheckoutAddress`. This
+ * hook has no opinion about it — it is here only because the flow layout is the
+ * one component that can read the destination, and this is the path from there
+ * to the form.
  */
 export default function useCheckout(
   items: CartState['items'],
   subtotal: Money,
+  initialCountry?: CheckoutCountry,
 ) {
   const [message, setMessage] = useState<string | null>(null);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
@@ -81,7 +88,7 @@ export default function useCheckout(
   }, [clearPreparedPayment, clearQuote]);
 
   const { address, errors, updateAddress, validateAddress } =
-    useCheckoutAddress(invalidateQuote);
+    useCheckoutAddress(invalidateQuote, initialCountry);
 
   const isPending = isQuotePending || isSubmitPending;
   const allPackagesSelected =
