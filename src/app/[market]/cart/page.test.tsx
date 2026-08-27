@@ -5,7 +5,7 @@ import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
 import { findDestination } from '@/lib/destination/destinations';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { usd } from '@/lib/money';
-import renderWithCart from '../../../test/render-with-cart';
+import renderWithCart from '../../../../test/render-with-cart';
 import CartPage, { generateMetadata } from './page';
 
 /*
@@ -41,7 +41,9 @@ describe('Cart page', () => {
   }
 
   it('shows an empty-cart message with no saved items', async () => {
-    renderWithCart(await CartPage());
+    renderWithCart(
+      await CartPage({ params: Promise.resolve({ market: 'au' }) }),
+    );
 
     expect(
       screen.getByRole('heading', { level: 1, name: /your cart is empty/i }),
@@ -62,7 +64,9 @@ describe('Cart page', () => {
     );
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
 
-    renderWithCart(await CartPage());
+    renderWithCart(
+      await CartPage({ params: Promise.resolve({ market: 'au' }) }),
+    );
 
     expect(
       await screen.findByText(/essence mascara lash princess/i),
@@ -102,7 +106,9 @@ describe('Cart page', () => {
     window.klaviyo = { track };
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
 
-    renderWithCart(await CartPage());
+    renderWithCart(
+      await CartPage({ params: Promise.resolve({ market: 'au' }) }),
+    );
 
     await screen.findByText(/essence mascara lash princess/i);
     await waitFor(() => {

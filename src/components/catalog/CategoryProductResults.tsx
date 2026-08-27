@@ -5,6 +5,7 @@ import { withAdSlots } from '@/lib/catalog/ad-slots';
 import type { FilterChip } from '@/lib/catalog/chips';
 import type { CategoryProduct } from '@/lib/catalog/filter-products';
 import type { ViewKey } from '@/lib/catalog/query';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import ProductListRow from './ProductListRow';
 
 type CategoryProductResultsProps = {
@@ -17,7 +18,13 @@ type CategoryProductResultsProps = {
   categoryName: string;
   totalCount: number;
   chips: FilterChip[];
+  /**
+   * Already market-prefixed by the page, as is every `clearHref` on `chips` —
+   * they come out of `lib/catalog/chips.ts`, which builds query state and
+   * deliberately knows nothing about which market is asking.
+   */
   clearAllHref: string;
+  market: MarketSegment;
   /**
    * Identity of this exact listing, from `categoryAdSeed`. It decides where the
    * sponsored card lands, so the placement is stable for a URL and different
@@ -32,7 +39,13 @@ type CategoryProductResultsProps = {
  * catalogue, and this is the case where the catalogue is exactly what could not
  * be read.
  */
-function UnavailablePanel({ categoryName }: { categoryName: string }) {
+function UnavailablePanel({
+  categoryName,
+  market,
+}: {
+  categoryName: string;
+  market: MarketSegment;
+}) {
   return (
     <div className="mt-3.5 rounded-xl border border-border bg-white px-6 py-11 text-center">
       <h2 className="m-0 text-[19px] font-bold text-ink">
@@ -43,7 +56,7 @@ function UnavailablePanel({ categoryName }: { categoryName: string }) {
         category. Nothing is wrong with your filters — try again in a moment.
       </p>
       <Link
-        href="/categories"
+        href={marketHref(market, '/categories')}
         className="mt-4.5 inline-flex min-h-11 items-center rounded-lg border border-brand-blue-500 px-5.5 text-sm font-bold text-brand-blue-900 hover:no-underline"
       >
         All categories
@@ -52,7 +65,13 @@ function UnavailablePanel({ categoryName }: { categoryName: string }) {
   );
 }
 
-function EmptyCategoryPanel({ categoryName }: { categoryName: string }) {
+function EmptyCategoryPanel({
+  categoryName,
+  market,
+}: {
+  categoryName: string;
+  market: MarketSegment;
+}) {
   return (
     <div className="mt-3.5 rounded-xl border border-border bg-white px-6 py-11 text-center">
       <h2 className="m-0 text-[19px] font-bold text-ink">
@@ -63,7 +82,7 @@ function EmptyCategoryPanel({ categoryName }: { categoryName: string }) {
         product into it. It appears here the moment one does.
       </p>
       <Link
-        href="/categories"
+        href={marketHref(market, '/categories')}
         className="bg-brand-gradient mt-4.5 inline-flex min-h-11 items-center rounded-lg px-5.5 text-sm font-bold text-white hover:no-underline"
       >
         Browse other categories
@@ -122,12 +141,14 @@ export default function CategoryProductResults({
   totalCount,
   chips,
   clearAllHref,
+  market,
   adSeed,
 }: CategoryProductResultsProps) {
-  if (isUnavailable) return <UnavailablePanel categoryName={categoryName} />;
+  if (isUnavailable)
+    return <UnavailablePanel categoryName={categoryName} market={market} />;
 
   if (isEmptyCategory)
-    return <EmptyCategoryPanel categoryName={categoryName} />;
+    return <EmptyCategoryPanel categoryName={categoryName} market={market} />;
 
   if (isFilteredEmpty) {
     return (
@@ -146,7 +167,11 @@ export default function CategoryProductResults({
       <div className="mt-3.5 flex flex-col gap-2.5">
         {items.map((item) =>
           item.kind === 'product' ? (
-            <ProductListRow key={item.product.id} product={item.product} />
+            <ProductListRow
+              key={item.product.id}
+              product={item.product}
+              market={market}
+            />
           ) : (
             <SponsoredCarousel key={item.slotKey} variant="row" />
           ),
@@ -157,7 +182,7 @@ export default function CategoryProductResults({
 
   return (
     <div className="mt-3.5">
-      <ProductGrid items={items} />
+      <ProductGrid items={items} market={market} />
     </div>
   );
 }

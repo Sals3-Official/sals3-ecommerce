@@ -81,7 +81,33 @@ function r2RemotePatterns() {
   }
 }
 
+/**
+ * The shopping routes that moved under `/[market]` on 2026-08-27.
+ *
+ * Every one of these was a live URL on `sals3-ecommerce.vercel.app` before the
+ * move, so they redirect rather than 404 — the deployed site is in use and its
+ * links are in browser history and in the owner's own notes.
+ *
+ * **Temporary, not permanent, and that is load-bearing.** A 308 would assert
+ * that this content now lives at `/au` — but the same product also lives at
+ * `/ph`, and which one a person belongs on depends on who is asking. A
+ * permanent redirect is cached by every browser and proxy, so it would pin a
+ * market-less link to Australia forever and take the choice away from the next
+ * visitor. Same reasoning as the dispatcher at `/`.
+ *
+ * `:path*` rather than a literal list, so a route added under a market later
+ * needs no matching entry here.
+ */
+const MARKET_MOVED_ROUTES = ['/p', '/c', '/search', '/categories', '/cart'];
+
 const nextConfig: NextConfig = {
+  async redirects() {
+    return MARKET_MOVED_ROUTES.map((source) => ({
+      source: `${source}/:path*`,
+      destination: `/au${source}/:path*`,
+      permanent: false,
+    }));
+  },
   async headers() {
     return [
       { source: DOCUMENT_PATHS, headers: SECURITY_HEADERS },

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import MarketLink from '@/components/layout/MarketLink';
 import SiteFooter from '@/components/layout/SiteFooter';
 import SiteHeader from '@/components/layout/SiteHeader';
 import { SITE_NAME } from '@/lib/site';
@@ -15,6 +15,10 @@ export const metadata: Metadata = {
  * page rather than an empty one. The message never echoes the invalid slug
  * back — nothing here needs to, and it keeps arbitrary path input off the
  * rendered page entirely.
+ *
+ * A `not-found` boundary receives no `params`, so the two ways out read the
+ * market from the client router through `MarketLink` rather than being handed
+ * it by a page.
  */
 export default function CategoryNotFound() {
   return (
@@ -34,18 +38,18 @@ export default function CategoryNotFound() {
             grid that looks like a category with no stock.
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link
-              href="/categories"
+            <MarketLink
+              path="/categories"
               className="bg-brand-gradient flex min-h-11 items-center rounded-lg px-5.5 text-sm font-bold text-white hover:no-underline"
             >
               All categories
-            </Link>
-            <Link
-              href="/"
+            </MarketLink>
+            <MarketLink
+              path="/"
               className="flex min-h-11 items-center rounded-lg border border-brand-blue-500 px-5.5 text-sm font-bold text-brand-blue-900 hover:no-underline"
             >
               Home
-            </Link>
+            </MarketLink>
           </div>
         </div>
       </main>

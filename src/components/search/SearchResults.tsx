@@ -4,6 +4,7 @@ import ProductListRow from '@/components/catalog/ProductListRow';
 import type { FilterChip } from '@/lib/catalog/chips';
 import type { CategoryProduct } from '@/lib/catalog/filter-products';
 import type { ViewKey } from '@/lib/catalog/query';
+import type { MarketSegment } from '@/lib/destination/markets';
 
 type SearchResultsProps = {
   view: ViewKey;
@@ -15,7 +16,9 @@ type SearchResultsProps = {
   isEmpty: boolean;
   filtering: boolean;
   chips: FilterChip[];
+  /** Market-prefixed by the page, as is every chip's own `clearHref`. */
   clearFiltersHref: string;
+  market: MarketSegment;
 };
 
 function Panel({
@@ -56,6 +59,7 @@ export default function SearchResults({
   filtering,
   chips,
   clearFiltersHref,
+  market,
 }: SearchResultsProps) {
   if (isIdle) {
     return (
@@ -123,7 +127,7 @@ export default function SearchResults({
     return (
       <div className="mt-3.5 flex flex-col gap-2.5">
         {products.map((product) => (
-          <ProductListRow key={product.id} product={product} />
+          <ProductListRow key={product.id} product={product} market={market} />
         ))}
       </div>
     );
@@ -133,6 +137,7 @@ export default function SearchResults({
     <div className="mt-3.5">
       <ProductGrid
         items={products.map((product) => ({ kind: 'product', product }))}
+        market={market}
       />
     </div>
   );

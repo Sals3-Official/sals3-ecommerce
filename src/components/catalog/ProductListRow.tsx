@@ -4,18 +4,25 @@ import { formatMoney } from '@/lib/money';
 import { AVAILABILITY_LABELS } from '@/lib/catalog/availability';
 import type { CategoryProduct } from '@/lib/catalog/filter-products';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
-type ProductListRowProps = { product: CategoryProduct };
+type ProductListRowProps = {
+  product: CategoryProduct;
+  market: MarketSegment;
+};
 
 /**
  * The list-view row. A new component rather than a `ProductCard` variant:
  * the layout is horizontal, and it shows one real field the grid card does
  * not — availability — so it is not a drop-in replacement for it.
  */
-export default function ProductListRow({ product }: ProductListRowProps) {
+export default function ProductListRow({
+  product,
+  market,
+}: ProductListRowProps) {
   return (
     <Link
-      href={`/p/${product.id}`}
+      href={marketHref(market, `/p/${product.id}`)}
       prefetch={false}
       className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-border bg-white p-3 transition hover:border-brand-600 hover:no-underline sm:gap-4"
     >

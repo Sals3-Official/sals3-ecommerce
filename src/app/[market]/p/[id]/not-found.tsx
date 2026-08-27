@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import MarketLink from '@/components/layout/MarketLink';
 import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
 
@@ -11,6 +11,12 @@ import SiteFooter from '@/components/layout/SiteFooter';
  * sale, and nobody would learn the storefront was down.
  *
  * Still an HTTP 404, so crawlers de-index the address rather than keeping it.
+ *
+ * Next gives a `not-found` boundary no `params`, so the market cannot be handed
+ * down here the way it is everywhere else. `MarketLink` reads it from the
+ * client router instead; the header and footer take the default, which is the
+ * one place in the market subtree they do. Their links are chrome on a dead
+ * address — the one that matters is the way out, and that one is correct.
  */
 export default function ProductNotFound() {
   return (
@@ -23,12 +29,12 @@ export default function ProductNotFound() {
         <p className="mt-2 max-w-prose text-sm text-ink-muted">
           It may have been removed, or the address may be mistyped.
         </p>
-        <Link
-          href="/"
+        <MarketLink
+          path="/"
           className="bg-brand-gradient mt-6 inline-flex min-h-11 items-center rounded-lg px-6 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
         >
           Browse products
-        </Link>
+        </MarketLink>
       </main>
       <SiteFooter />
     </div>

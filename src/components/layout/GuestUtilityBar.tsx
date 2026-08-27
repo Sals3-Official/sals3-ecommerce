@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { MarketSegment } from '@/lib/destination/markets';
 import AccountHeaderLink from '@/components/layout/AccountHeaderLink';
 import GuestAuthLinks from '@/components/layout/GuestAuthLinks';
 import HeaderDestination from '@/components/layout/HeaderDestination';
@@ -23,10 +24,15 @@ const LINK_CLASSES =
  * strip so the destination is read before the account links: it is the fact
  * that decides whether the rest of the funnel can end in an order at all.
  */
-export default function GuestUtilityBar() {
+export default function GuestUtilityBar({
+  market,
+}: {
+  /** Forwarded to the destination picker so it agrees with the address bar. */
+  market?: MarketSegment;
+}) {
   return (
     <div className="mx-auto flex min-h-6 max-w-6xl items-center justify-end gap-4 px-4 py-[var(--header-utility-py)] text-xs transition-[padding] duration-250 ease-out sm:px-6">
-      <HeaderDestination />
+      <HeaderDestination market={market} />
       <nav aria-label="Account and support" className="flex items-center gap-4">
         {GUEST_UTILITY_LINKS.map((link) => (
           <Link

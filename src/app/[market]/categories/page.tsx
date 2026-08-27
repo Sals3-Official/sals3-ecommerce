@@ -6,6 +6,11 @@ import { departmentsOrTaxonomy } from '@/lib/departments';
 import type { Category } from '@/lib/home-placeholder-data';
 import { SITE_NAME } from '@/lib/site';
 import { fetchProductCategories, toHomeCategory } from '@/services/products';
+import {
+  DEFAULT_MARKET,
+  isMarketSegment,
+  type MarketSegment,
+} from '@/lib/destination/markets';
 
 export function generateMetadata(): Metadata {
   return {
@@ -34,12 +39,21 @@ async function getDepartments(): Promise<Category[]> {
   }
 }
 
-export default async function CategoriesPage() {
+export default async function CategoriesPage({
+  params,
+}: {
+  params: Promise<{ market: string }>;
+}) {
+  const { market: rawMarket } = await params;
+  // The layout above 404s an unrecognised segment; this only narrows the type.
+  const market: MarketSegment = isMarketSegment(rawMarket)
+    ? rawMarket
+    : DEFAULT_MARKET;
   const departments = await getDepartments();
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
-      <SiteHeader />
+      <SiteHeader market={market} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-5 pb-16">
         <h1 className="mb-1 text-2xl font-bold">All departments</h1>
         <p className="mb-4 text-sm text-ink-subtle">
@@ -47,9 +61,9 @@ export default async function CategoriesPage() {
             ? '1 department'
             : `${departments.length} departments`}
         </p>
-        <DepartmentList departments={departments} />
+        <DepartmentList departments={departments} market={market} />
       </main>
-      <SiteFooter />
+      <SiteFooter market={market} />
     </div>
   );
 }

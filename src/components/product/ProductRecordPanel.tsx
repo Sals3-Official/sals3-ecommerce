@@ -18,6 +18,7 @@ import ProductAddToCartButtons from '@/components/product/ProductAddToCartButton
 import ProductEvidenceLedger from '@/components/product/ProductEvidenceLedger';
 import ProductOptionList from '@/components/product/ProductOptionList';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
+import type { MarketSegment } from '@/lib/destination/markets';
 
 type ProductRecordPanelProps = {
   detail: ProductDetail;
@@ -25,6 +26,12 @@ type ProductRecordPanelProps = {
   selectedVariant?: ProductVariant;
   /** Whether the selection came from the URL rather than from the default. */
   selectedFromUrl: boolean;
+  /**
+   * The market this product page belongs to, threaded on to the variant links
+   * and the Buy Now navigation. A prop rather than `useParams()`: the PDP hands
+   * it straight down and this is the only hop.
+   */
+  market: MarketSegment;
 };
 
 /**
@@ -62,6 +69,7 @@ export default function ProductRecordPanel({
   detail,
   selectedVariant,
   selectedFromUrl,
+  market,
 }: ProductRecordPanelProps) {
   const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
   const axes = useMemo(() => detail.options ?? [], [detail.options]);
@@ -196,6 +204,7 @@ export default function ProductRecordPanel({
             variants={variants}
             selectedVariantId={selected?.id}
             axes={axes}
+            market={market}
           />
         </CardSection>
       ) : null}
@@ -203,6 +212,7 @@ export default function ProductRecordPanel({
       <CardSection>
         <ProductAddToCartButtons
           productId={detail.id}
+          market={market}
           title={detail.title}
           category={detail.category}
           imageUrl={detail.imageUrl}

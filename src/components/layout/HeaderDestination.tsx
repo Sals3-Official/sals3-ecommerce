@@ -1,5 +1,9 @@
 import DestinationPicker from '@/components/layout/DestinationPicker';
 import { resolveDestination } from '@/lib/destination/resolve';
+import {
+  marketToDestinationCode,
+  type MarketSegment,
+} from '@/lib/destination/markets';
 
 /**
  * The one place per render that asks where the buyer is shipping, for the
@@ -52,8 +56,22 @@ import { resolveDestination } from '@/lib/destination/resolve';
  * from birth. If a genuinely static page is ever wanted, the picker has to move
  * out of the shared header, not lose its server value.
  */
-export default async function HeaderDestination() {
-  const { destination, source } = await resolveDestination();
+export default async function HeaderDestination({
+  market,
+}: {
+  /**
+   * The market this page belongs to, when it has one.
+   *
+   * Passed so the picker cannot contradict the address bar: on `/au` a
+   * first-time visitor reads "Ship to: Australia", not "Somewhere else". The
+   * account routes have no market and pass nothing, which keeps their old
+   * behaviour exactly.
+   */
+  market?: MarketSegment;
+}) {
+  const { destination, source } = await resolveDestination(
+    market === undefined ? undefined : marketToDestinationCode(market),
+  );
 
   return <DestinationPicker destination={destination} source={source} />;
 }

@@ -1,8 +1,13 @@
 import Link from 'next/link';
 import { GridIcon, ListIcon } from '@/components/icons/Icon';
 import { categoryHref, type CategoryQuery } from '@/lib/catalog/query';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
-type ViewToggleLinksProps = { slug: string; query: CategoryQuery };
+type ViewToggleLinksProps = {
+  slug: string;
+  query: CategoryQuery;
+  market: MarketSegment;
+};
 
 function toggleClass(active: boolean): string {
   return `flex h-9 w-9 items-center justify-center rounded-lg border ${
@@ -14,7 +19,11 @@ function toggleClass(active: boolean): string {
 
 /** Grid/list are plain links, not client state — a bookmarked
  * `?view=list` shows the same layout on the next visit. */
-export default function ViewToggleLinks({ slug, query }: ViewToggleLinksProps) {
+export default function ViewToggleLinks({
+  slug,
+  query,
+  market,
+}: ViewToggleLinksProps) {
   return (
     <div
       className="hidden items-center gap-1 lg:flex"
@@ -22,7 +31,7 @@ export default function ViewToggleLinks({ slug, query }: ViewToggleLinksProps) {
       aria-label="Result layout"
     >
       <Link
-        href={categoryHref(slug, query, { view: 'grid' })}
+        href={marketHref(market, categoryHref(slug, query, { view: 'grid' }))}
         aria-label="Grid view"
         aria-current={query.view === 'grid' ? 'true' : undefined}
         className={`${toggleClass(query.view === 'grid')} hover:no-underline`}
@@ -30,7 +39,7 @@ export default function ViewToggleLinks({ slug, query }: ViewToggleLinksProps) {
         <GridIcon width={16} height={16} />
       </Link>
       <Link
-        href={categoryHref(slug, query, { view: 'list' })}
+        href={marketHref(market, categoryHref(slug, query, { view: 'list' }))}
         aria-label="List view"
         aria-current={query.view === 'list' ? 'true' : undefined}
         className={`${toggleClass(query.view === 'list')} hover:no-underline`}

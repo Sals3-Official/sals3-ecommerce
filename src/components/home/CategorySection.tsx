@@ -1,6 +1,7 @@
 import type { Category } from '@/lib/home-placeholder-data';
 import CategoryCarousel from '@/components/home/CategoryCarousel';
 import CategoryTile from '@/components/home/CategoryTile';
+import type { MarketSegment } from '@/lib/destination/markets';
 
 /**
  * "Shop by category" — the department carousel that sits directly under the
@@ -44,9 +45,13 @@ function countLine(itemCount: number): string {
 
 type CategorySectionProps = {
   categories: Category[];
+  market: MarketSegment;
 };
 
-export default function CategorySection({ categories }: CategorySectionProps) {
+export default function CategorySection({
+  categories,
+  market,
+}: CategorySectionProps) {
   const pages = pagesOf(categories);
 
   return (
@@ -79,7 +84,11 @@ export default function CategorySection({ categories }: CategorySectionProps) {
               className="grid w-full shrink-0 snap-start grid-cols-3 grid-rows-4 gap-px bg-border md:grid-cols-6 md:grid-rows-2"
             >
               {page.map((category) => (
-                <CategoryTile key={category.id} category={category} />
+                <CategoryTile
+                  key={category.id}
+                  category={category}
+                  market={market}
+                />
               ))}
               {Array.from({ length: PAGE_SIZE - page.length }, (_, index) => (
                 <span

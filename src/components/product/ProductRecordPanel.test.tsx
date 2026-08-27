@@ -50,7 +50,11 @@ describe('ProductRecordPanel', () => {
    */
   it('says how many options cost more than the floor on screen', () => {
     renderWithCart(
-      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
+      <ProductRecordPanel
+        market="au"
+        detail={detail(SPREAD)}
+        selectedFromUrl={false}
+      />,
     );
 
     expect(
@@ -62,6 +66,7 @@ describe('ProductRecordPanel', () => {
   it('says so plainly when every option is the same price', () => {
     renderWithCart(
       <ProductRecordPanel
+        market="au"
         detail={detail({
           // The floor is the product price, so it has to match the variants —
           // a feed price below every variant is a different (and wrong) state.
@@ -83,7 +88,11 @@ describe('ProductRecordPanel', () => {
    */
   it('keeps a second money value out of the price block', () => {
     const { container } = renderWithCart(
-      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
+      <ProductRecordPanel
+        market="au"
+        detail={detail(SPREAD)}
+        selectedFromUrl={false}
+      />,
     );
     const money = (container.textContent ?? '').match(/US\$[\d,.]+/g) ?? [];
 
@@ -93,6 +102,7 @@ describe('ProductRecordPanel', () => {
   it('names the exact price once a variant is chosen, and says delivery is still to come', () => {
     renderWithCart(
       <ProductRecordPanel
+        market="au"
         detail={detail(SPREAD)}
         selectedVariant={SPREAD.variants[1]}
         selectedFromUrl
@@ -112,7 +122,11 @@ describe('ProductRecordPanel', () => {
    */
   it('never claims that nothing is added to the price at checkout', () => {
     const { container } = renderWithCart(
-      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
+      <ProductRecordPanel
+        market="au"
+        detail={detail(SPREAD)}
+        selectedFromUrl={false}
+      />,
     );
 
     expect(container.textContent ?? '').not.toMatch(
@@ -127,7 +141,11 @@ describe('ProductRecordPanel', () => {
    */
   it('arrives buyable on a named-axes product, with the default chosen', () => {
     renderWithCart(
-      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
+      <ProductRecordPanel
+        market="au"
+        detail={detail(SPREAD)}
+        selectedFromUrl={false}
+      />,
     );
 
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
@@ -144,6 +162,7 @@ describe('ProductRecordPanel', () => {
   it('blocks purchase when the chosen option is unavailable', () => {
     renderWithCart(
       <ProductRecordPanel
+        market="au"
         detail={detail({
           variants: [{ ...priced('black', 451), availability: 'UNAVAILABLE' }],
           options: [{ name: 'Colour', values: ['black'] }],
@@ -161,6 +180,7 @@ describe('ProductRecordPanel', () => {
   it('says nothing about a spread when there is only one option', () => {
     const { container } = renderWithCart(
       <ProductRecordPanel
+        market="au"
         detail={detail({ variants: [priced('black', 451)] })}
         selectedFromUrl={false}
       />,

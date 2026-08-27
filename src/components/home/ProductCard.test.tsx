@@ -31,11 +31,11 @@ const product: Product = {
 
 describe('ProductCard', () => {
   it('links to the PDP without prefetching the server-rendered product page', () => {
-    render(<ProductCard product={product} />);
+    render(<ProductCard market="au" product={product} />);
 
     const link = screen.getByRole('link', { name: /corduroy jacket/i });
 
-    expect(link).toHaveAttribute('href', '/p/corduroy-jacket');
+    expect(link).toHaveAttribute('href', '/au/p/corduroy-jacket');
     expect(link).toHaveAttribute('data-prefetch', 'false');
   });
 });

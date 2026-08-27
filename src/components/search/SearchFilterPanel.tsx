@@ -3,6 +3,7 @@ import BlockedFacetsNote from '@/components/catalog/BlockedFacetsNote';
 import { categories } from '@/lib/home-placeholder-data';
 import type { PriceBandId } from '@/lib/catalog/price-bands';
 import { searchHref, type SearchQuery } from '@/lib/search/query';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import SearchPriceForm from './SearchPriceForm';
 
 /**
@@ -24,6 +25,7 @@ type SearchFilterPanelProps = {
   counts: Record<PriceBandId, number>;
   rangeIsTyped: boolean;
   idPrefix: string;
+  market: MarketSegment;
 };
 
 export default function SearchFilterPanel({
@@ -31,6 +33,7 @@ export default function SearchFilterPanel({
   counts,
   rangeIsTyped,
   idPrefix,
+  market,
 }: SearchFilterPanelProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -41,7 +44,7 @@ export default function SearchFilterPanel({
         <ul className="m-0 flex list-none flex-col gap-0.5 p-1.5">
           <li>
             <Link
-              href={searchHref(query, { category: null })}
+              href={marketHref(market, searchHref(query, { category: null }))}
               aria-current={query.category === null ? 'true' : undefined}
               className={`flex min-h-9 items-center rounded-lg px-2.5 text-[13px] leading-tight hover:no-underline ${
                 query.category === null
@@ -58,7 +61,10 @@ export default function SearchFilterPanel({
             return (
               <li key={department.id}>
                 <Link
-                  href={searchHref(query, { category: department.id })}
+                  href={marketHref(
+                    market,
+                    searchHref(query, { category: department.id }),
+                  )}
                   aria-current={active ? 'true' : undefined}
                   className={`flex min-h-9 items-center rounded-lg px-2.5 text-[13px] leading-tight hover:no-underline ${
                     active
@@ -79,6 +85,7 @@ export default function SearchFilterPanel({
         counts={counts}
         rangeIsTyped={rangeIsTyped}
         idPrefix={idPrefix}
+        market={market}
       />
 
       <BlockedFacetsNote />

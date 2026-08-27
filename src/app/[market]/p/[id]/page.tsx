@@ -27,12 +27,18 @@ import {
   toHomeProduct,
   toProductDetail,
 } from '@/services/products';
+import {
+  DEFAULT_MARKET,
+  isMarketSegment,
+  marketHref,
+  type MarketSegment,
+} from '@/lib/destination/markets';
 
 const RELATED_PRODUCT_COUNT = 6;
 const META_DESCRIPTION_MAX_LENGTH = 155;
 
 type ProductPageProps = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ market: string; id: string }>;
   /**
    * Optional so a unit test can render the page without one. Next always passes
    * it in the app; treating its absence as "no variant chosen" is the same branch
@@ -91,7 +97,7 @@ const getProductDetail = cache(
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { market, id } = await params;
   const detail = await getProductDetail(id);
 
   if (!detail) {
@@ -139,8 +145,22 @@ export async function generateMetadata({
       title,
       description,
     },
-    ...(siteUrl
-      ? { alternates: { canonical: `${siteUrl}/p/${detail.id}` } }
+    /*
+      One market deep, and self-referential per market — same reasoning as the
+      category listing. `/au/p/x` and `/ph/p/x` are localized versions of one
+      product, declared as such by the `hreflang` set in the market layout;
+      collapsing them onto a single canonical would tell Google to drop a
+      shopfront it was just told to index.
+
+      Still omitted entirely when `NEXT_PUBLIC_SITE_URL` is unset — a canonical
+      is never guessed.
+    */
+    ...(siteUrl && isMarketSegment(market)
+      ? {
+          alternates: {
+            canonical: `${siteUrl}${marketHref(market, `/p/${detail.id}`)}`,
+          },
+        }
       : {}),
   };
 }
@@ -211,7 +231,11 @@ export default async function ProductPage({
   params,
   searchParams,
 }: ProductPageProps) {
-  const { id } = await params;
+  const { market: rawMarket, id } = await params;
+  // The layout above 404s an unrecognised segment; this only narrows the type.
+  const market: MarketSegment = isMarketSegment(rawMarket)
+    ? rawMarket
+    : DEFAULT_MARKET;
   const detail = await getProductDetail(id);
 
   if (!detail) {
@@ -241,7 +265,7 @@ export default async function ProductPage({
   // it. Preselecting cannot move the lead price off the feed price (ADR-016)
   // because the base-price match is what the default prefers.
   const selectedVariant = fromUrl ?? defaultVariantFor(variants, detail.price);
-  const trail = breadcrumbTrail(detail);
+  const trail = breadcrumbTrail(detail, market);
   const summary = answerSummary(detail);
   // The lead is promoted out of the description so it renders once, not twice.
   const remainingBlocks =
@@ -249,7 +273,7 @@ export default async function ProductPage({
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
-      <SiteHeader />
+      <SiteHeader market={market} />
       {/*
         `main` carries no width of its own any more, and each region owns its
         container instead. That is what lets Product specifications run a white
@@ -317,6 +341,7 @@ export default async function ProductPage({
                 detail={detail}
                 selectedVariant={selectedVariant}
                 selectedFromUrl={fromUrl !== undefined}
+                market={market}
               />
             </div>
           </div>
@@ -346,12 +371,15 @@ export default async function ProductPage({
             reviews={reviews}
           />
           <ProductSupplierDetails specs={detail.specs} />
-          <RelatedProducts products={relatedProducts} />
+          <RelatedProducts products={relatedProducts} market={market} />
           <ProductSchema detail={detail} />
-          <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
+          <BreadcrumbSchema
+            trail={trail}
+            productPath={marketHref(market, `/p/${detail.id}`)}
+          />
         </div>
       </main>
-      <SiteFooter />
+      <SiteFooter market={market} />
     </div>
   );
 }

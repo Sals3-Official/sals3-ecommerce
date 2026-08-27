@@ -96,12 +96,50 @@ async function readGeoCountry(): Promise<string | null> {
   }
 }
 
-export async function resolveDestination(): Promise<ResolvedDestination> {
+/**
+ * Resolves the buyer's destination.
+ *
+ * `marketDestinationCode` is the country of the market whose page is being
+ * rendered, and it exists to stop the page contradicting itself. Without it a
+ * first-time visitor on `/au` was shown **"Ship to: Somewhere else"** — the URL
+ * saying Australia and the header saying it was not, on the same screen (found
+ * in the browser, 2026-08-27; unit tests could not see it because neither half
+ * knew the other existed).
+ *
+ * Precedence, once a market is in play:
+ *
+ * 1. **The buyer's stored choice** — still wins over everything. Someone who
+ *    picked "Somewhere else" keeps it while browsing `/au`, and the cart tells
+ *    them what that means. Being in a market is not consent to ship there.
+ * 2. **The market** — the page they are on is a stronger statement of context
+ *    than an IP guess, and it is one the buyer can see in the URL.
+ * 3. **Global.**
+ *
+ * Geo is deliberately **not** consulted here. Its job is to choose a market at
+ * `/`, and by the time a market page renders it has already done that job — a
+ * second bite would let an IP override the segment in the address bar.
+ *
+ * Called with no argument (the account routes, which have no market), the order
+ * is unchanged: choice, then geo, then Global.
+ */
+export async function resolveDestination(
+  marketDestinationCode?: string,
+): Promise<ResolvedDestination> {
   const cookieStore = await cookies();
   const stored = cookieStore.get(DESTINATION_COOKIE_NAME)?.value;
 
   if (stored !== undefined && isKnownDestinationCode(stored)) {
     return { destination: findDestination(stored), source: 'chosen' };
+  }
+
+  if (
+    marketDestinationCode !== undefined &&
+    isKnownDestinationCode(marketDestinationCode)
+  ) {
+    return {
+      destination: findDestination(marketDestinationCode),
+      source: 'suggested',
+    };
   }
 
   const geo = await readGeoCountry();

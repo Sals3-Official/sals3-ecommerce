@@ -5,15 +5,18 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@/components/icons/Icon';
 type ProductPaginationProps = {
   currentPage: number;
   totalPages: number;
-  /** Defaults to the home "For You" section's own address. A caller with a
-   * different base path (e.g. `/c/[slug]`) passes its own builder rather
-   * than this component growing route-specific knowledge. */
-  getPageHref?: (page: number) => string;
+  /**
+   * Required, with no default any more.
+   *
+   * It used to default to the home "For You" section's own address, `/`. Every
+   * shopping route now lives one market deep, so there is no route-independent
+   * address left to fall back to — and a default that quietly meant "Australia"
+   * is exactly the market-less link this refactor exists to remove. Each caller
+   * builds its own, which is what kept route knowledge out of here to begin
+   * with.
+   */
+  getPageHref: (page: number) => string;
 };
-
-function defaultPageHref(page: number): string {
-  return page === 1 ? '/#for-you' : `/?page=${page}#for-you`;
-}
 
 function PageNumberLink({
   page,
@@ -86,7 +89,7 @@ function StepControl({
 export default function ProductPagination({
   currentPage,
   totalPages,
-  getPageHref = defaultPageHref,
+  getPageHref,
 }: ProductPaginationProps) {
   const pageItems = buildPageList(currentPage, totalPages);
 

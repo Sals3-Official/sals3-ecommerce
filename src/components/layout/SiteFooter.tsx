@@ -3,8 +3,17 @@ import FooterNavColumn from '@/components/layout/FooterNavColumn';
 import FooterCategoryLinks from '@/components/layout/FooterCategoryLinks';
 import { FOOTER_COLUMNS } from '@/lib/footer-data';
 import { categories } from '@/lib/home-placeholder-data';
+import { DEFAULT_MARKET, type MarketSegment } from '@/lib/destination/markets';
 
-export default function SiteFooter() {
+/**
+ * `market` is optional for the same reason it is on `SiteHeader`: the account
+ * routes render this footer with no market in their URL. Only the category
+ * links use it — `FOOTER_COLUMNS` is help, legal and account pages, none of
+ * which are market-scoped.
+ */
+export default function SiteFooter({
+  market,
+}: { market?: MarketSegment } = {}) {
   const year = new Date().getFullYear();
 
   return (
@@ -17,7 +26,10 @@ export default function SiteFooter() {
           ))}
         </div>
 
-        <FooterCategoryLinks categories={categories} />
+        <FooterCategoryLinks
+          categories={categories}
+          market={market ?? DEFAULT_MARKET}
+        />
 
         <div className="py-6 text-xs leading-relaxed text-footer-label">
           © {year} SALS3. All rights reserved.

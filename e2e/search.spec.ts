@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function hasResults(page: Page): Promise<boolean> {
-  return (await page.locator('a[href^="/p/"]').count()) > 0;
+  return (await page.locator('a[href*="/p/"]').count()) > 0;
 }
 
 /**
@@ -75,7 +75,7 @@ test('an empty box does not navigate', async ({ page }) => {
 test('/search with no term invites a search rather than reporting none', async ({
   page,
 }) => {
-  await page.goto('/search', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search', { timeout: UPSTREAM_TIMEOUT });
 
   await expect(
     page.getByRole('heading', { level: 1, name: /^search$/i }),
@@ -85,7 +85,7 @@ test('/search with no term invites a search rather than reporting none', async (
 });
 
 test('the box keeps the keyword on the results page', async ({ page }) => {
-  await page.goto('/search?q=lamp', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search?q=lamp', { timeout: UPSTREAM_TIMEOUT });
 
   await expect(
     page.getByRole('searchbox', { name: /search products/i }),
@@ -96,7 +96,7 @@ test('the box keeps the keyword on the results page', async ({ page }) => {
 test('filtering keeps the keyword in the URL and in the box', async ({
   page,
 }) => {
-  await page.goto('/search?q=a', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search?q=a', { timeout: UPSTREAM_TIMEOUT });
 
   // Scoped to the sidebar: the footer lists every department too, and an
   // unscoped name matches both.
@@ -117,7 +117,7 @@ test('filtering keeps the keyword in the URL and in the box', async ({
 });
 
 test('sorting keeps the keyword', async ({ page }) => {
-  await page.goto('/search?q=a', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search?q=a', { timeout: UPSTREAM_TIMEOUT });
 
   await page.getByLabel(/sort/i).selectOption('price-desc');
 
@@ -132,7 +132,7 @@ test('sorting keeps the keyword', async ({ page }) => {
  * widening a result set and abandoning it.
  */
 test('clearing filters keeps the search', async ({ page }) => {
-  await page.goto('/search?q=a&band=u15', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search?q=a&band=u15', { timeout: UPSTREAM_TIMEOUT });
 
   const clear = page.getByRole('link', { name: /^clear all$/i });
 
@@ -146,7 +146,7 @@ test('clearing filters keeps the search', async ({ page }) => {
 test('a term nothing can match says so without blaming filters', async ({
   page,
 }) => {
-  await page.goto('/search?q=zzzznotathinganyonesells', {
+  await page.goto('/au/search?q=zzzznotathinganyonesells', {
     timeout: UPSTREAM_TIMEOUT,
   });
 
@@ -171,7 +171,7 @@ test('a term nothing can match says so without blaming filters', async ({
 });
 
 test('search results are not indexed', async ({ page }) => {
-  await page.goto('/search?q=a', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search?q=a', { timeout: UPSTREAM_TIMEOUT });
 
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     'content',
@@ -181,7 +181,7 @@ test('search results are not indexed', async ({ page }) => {
 
 test('does not scroll sideways on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/search?q=a', { timeout: UPSTREAM_TIMEOUT });
+  await page.goto('/au/search?q=a', { timeout: UPSTREAM_TIMEOUT });
 
   await expect
     .poll(() =>

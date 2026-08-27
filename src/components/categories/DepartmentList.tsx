@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import type { Category } from '@/lib/home-placeholder-data';
 import { ChevronRightIcon } from '@/components/icons/Icon';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type DepartmentListProps = {
   departments: Category[];
+  market: MarketSegment;
 };
 
 /**
@@ -15,7 +17,10 @@ type DepartmentListProps = {
  * to visually parse, and it needs no icon for the two departments that
  * deliberately have none.
  */
-export default function DepartmentList({ departments }: DepartmentListProps) {
+export default function DepartmentList({
+  departments,
+  market,
+}: DepartmentListProps) {
   if (departments.length === 0) {
     return (
       <p className="m-0 rounded-xl border border-border bg-white px-4 py-8 text-center text-sm text-ink-muted">
@@ -36,7 +41,7 @@ export default function DepartmentList({ departments }: DepartmentListProps) {
             className="border-b border-border last:border-b-0"
           >
             <Link
-              href={`/c/${department.id}`}
+              href={marketHref(market, `/c/${department.id}`)}
               className="flex min-h-11 items-center justify-between gap-4 px-4 py-3 text-[15px] text-ink transition duration-200 ease-out hover:bg-surface hover:no-underline focus-visible:-outline-offset-2"
             >
               {department.name}
