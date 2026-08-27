@@ -33,6 +33,8 @@ import {
   marketHref,
   type MarketSegment,
 } from '@/lib/destination/markets';
+import marketToIndicativeCurrency from '@/lib/fx/market-currency';
+import { fetchIndicativeRate } from '@/lib/fx/rates';
 
 const RELATED_PRODUCT_COUNT = 6;
 const META_DESCRIPTION_MAX_LENGTH = 155;
@@ -247,9 +249,15 @@ export default async function ProductPage({
   // section is below the fold, and a slow review read must not delay the buy
   // box. `fetchProductReviews` answers `[]` on failure, so the page still
   // renders its summary from the product payload if this cannot load.
-  const [relatedProducts, reviews] = await Promise.all([
+  // The indicative rate joins the same wave, and is fetched **here only** — one
+  // call per page render, handed down to the panel as a prop. It is cached for
+  // six hours by `fetchIndicativeRate` itself, so this costs an upstream request
+  // on roughly one render in a few thousand, and it resolves to `null` on every
+  // failure rather than throwing into this `Promise.all`.
+  const [relatedProducts, reviews, indicativeRate] = await Promise.all([
     getRelatedProducts(detail.category, detail.id),
     fetchProductReviews(detail.id),
+    fetchIndicativeRate(marketToIndicativeCurrency(market)),
   ]);
   const variants = detail.variants ?? [];
 
@@ -342,6 +350,7 @@ export default async function ProductPage({
                 selectedVariant={selectedVariant}
                 selectedFromUrl={fromUrl !== undefined}
                 market={market}
+                indicativeRate={indicativeRate}
               />
             </div>
           </div>

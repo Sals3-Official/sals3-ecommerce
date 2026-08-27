@@ -1,9 +1,10 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
+import { resetRateMemoForTests } from '@/lib/fx/rates';
 import renderWithCart from '../../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
 
@@ -52,19 +53,59 @@ function productsPage(products: unknown[] = []) {
   };
 }
 
+/** The FX host. Its own constant so the assertions can count its requests. */
+const FX_HOST = 'api.frankfurter.dev';
+
 function mockFetch({
   found = true,
   status,
   productOverrides = {},
+  indicativeRate = null,
 }: {
   found?: boolean;
   /** A non-404 failure, to exercise the error path. */
   status?: number;
   productOverrides?: Partial<Record<string, unknown>>;
+  /**
+   * Units of the local currency per USD, or `null` for a host that answers
+   * nothing usable. `null` is the default: no local price is the state every
+   * other test in this file already assumes.
+   */
+  indicativeRate?: number | null;
 } = {}) {
   const product = productFixture(productOverrides);
   const fetchMock = vi.fn<typeof fetch>(async (url) => {
     const requestUrl = new URL(String(url));
+
+    if (requestUrl.hostname === FX_HOST) {
+      if (indicativeRate === null) {
+        return new Response('Not found', { status: 404 });
+      }
+
+      // Today's date, not a literal: the rate module refuses anything older
+      // than seven days, so a pinned date would turn this test into a
+      // time bomb that passes the week it was written.
+      const date = new Date().toISOString().slice(0, 10);
+      const currency = requestUrl.pathname.split('/').pop() ?? 'AUD';
+
+      /*
+        The real shape of `/v2/rate/{base}/{quote}`: a scalar `rate` and a
+        `quote`, NOT a `rates` object. This fixture said `rates` until
+        2026-08-28, and it was wrong in exactly the way the module under test
+        was wrong — both written from the same misreading of the docs, so the
+        pair agreed with each other while neither agreed with the API. Copied
+        from a live response; `rates.contract.test.ts` keeps them honest.
+      */
+      return new Response(
+        JSON.stringify({
+          date,
+          base: 'USD',
+          quote: currency,
+          rate: indicativeRate,
+        }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+    }
 
     if (requestUrl.pathname.startsWith(`${STOREFRONT_PRODUCTS_PATH}/`)) {
       if (status !== undefined) {
@@ -102,6 +143,18 @@ afterEach(() => {
 });
 
 describe('Product page', () => {
+  /*
+    The rate module remembers a failure for five minutes so an outage does not
+    cost a live request per render. That state is module-scoped, so a case here
+    that stubs a 404 would otherwise silence every case after it in this file —
+    which is exactly how the two FX cases below started failing once the memo
+    landed. Test-order coupling is the price of the memo, and this is where it
+    is paid.
+  */
+  beforeEach(() => {
+    resetRateMemoForTests();
+  });
+
   function acceptAnalytics() {
     window.localStorage.setItem(
       'sals3_klaviyo_consent_v1',
@@ -857,5 +910,86 @@ describe('Product page', () => {
         Title: 'Quiet tower air cooler',
       }),
     );
+  });
+
+  /**
+   * The approximate local price, wired end to end: the page resolves the rate on
+   * the server and hands it to the record panel. USD stays the price in every
+   * case — the only question is whether the extra appears.
+   */
+  describe('the approximate local price', () => {
+    function fxCalls(fetchMock: ReturnType<typeof mockFetch>) {
+      // Matched as a substring rather than parsed: not every call in here is
+      // made with a URL string, and `new URL()` throws on the ones that are not.
+      return fetchMock.mock.calls.filter((call) =>
+        String(call[0]).includes(FX_HOST),
+      );
+    }
+
+    it('renders the local figure and its note beneath the USD price', async () => {
+      mockFetch({ indicativeRate: 2 });
+
+      renderWithCart(
+        await ProductPage({
+          params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+        }),
+      );
+
+      expect(screen.getByText('US$1,999')).toBeInTheDocument();
+      expect(screen.getByText(/A\$3,998\.00/)).toBeInTheDocument();
+      // Text in the DOM, not a `title` attribute — a screen reader has to be
+      // able to reach the sentence that says which figure is the charge.
+      expect(
+        screen.getByText(/you are charged in us dollars/i),
+      ).toBeInTheDocument();
+    });
+
+    it('renders nothing extra when the rate is unavailable', async () => {
+      mockFetch();
+
+      const { container } = renderWithCart(
+        await ProductPage({
+          params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+        }),
+      );
+      const text = container.textContent ?? '';
+
+      expect(screen.getByText('US$1,999')).toBeInTheDocument();
+      expect(text).not.toMatch(/approximate/i);
+      expect(text).not.toMatch(/A\$/);
+      expect(text).not.toMatch(/≈/);
+    });
+
+    /** One conversion per page: one call, for the market's own currency. */
+    it('asks for the rate once, in the market’s currency', async () => {
+      const fetchMock = mockFetch({ indicativeRate: 2 });
+
+      renderWithCart(
+        await ProductPage({
+          params: Promise.resolve({ market: 'ph', id: 'air-cooler' }),
+        }),
+      );
+
+      const calls = fxCalls(fetchMock);
+
+      expect(calls).toHaveLength(1);
+      expect(String(calls[0]?.[0])).toContain('/rate/USD/PHP');
+    });
+
+    /**
+     * A grid of approximate prices multiplies the chance of one being read as
+     * the charge, for no gain. Related products carry the USD price only.
+     */
+    it('keeps the local price off the related-products rail', async () => {
+      mockFetch({ indicativeRate: 2 });
+
+      renderWithCart(
+        await ProductPage({
+          params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+        }),
+      );
+
+      expect(screen.getAllByText(/A\$/)).toHaveLength(1);
+    });
   });
 });

@@ -54,6 +54,7 @@ describe('ProductRecordPanel', () => {
         market="au"
         detail={detail(SPREAD)}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
 
@@ -75,6 +76,7 @@ describe('ProductRecordPanel', () => {
           options: [{ name: 'Colour', values: ['black', 'navy'] }],
         })}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
 
@@ -92,6 +94,7 @@ describe('ProductRecordPanel', () => {
         market="au"
         detail={detail(SPREAD)}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
     const money = (container.textContent ?? '').match(/US\$[\d,.]+/g) ?? [];
@@ -106,6 +109,7 @@ describe('ProductRecordPanel', () => {
         detail={detail(SPREAD)}
         selectedVariant={SPREAD.variants[1]}
         selectedFromUrl
+        indicativeRate={null}
       />,
     );
 
@@ -126,6 +130,7 @@ describe('ProductRecordPanel', () => {
         market="au"
         detail={detail(SPREAD)}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
 
@@ -145,6 +150,7 @@ describe('ProductRecordPanel', () => {
         market="au"
         detail={detail(SPREAD)}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
 
@@ -168,6 +174,7 @@ describe('ProductRecordPanel', () => {
           options: [{ name: 'Colour', values: ['black'] }],
         })}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
 
@@ -177,12 +184,80 @@ describe('ProductRecordPanel', () => {
     ).toBeInTheDocument();
   });
 
+  /**
+   * The approximate local price is an **extra**. The USD figure is what the
+   * buyer is charged and stays present and prominent in both of the next two
+   * tests; the difference between them is only whether the extra appears.
+   */
+  describe('the approximate local price', () => {
+    const AUD_RATE = { currency: 'AUD', rate: 2, asOf: '2026-08-27' } as const;
+
+    it('renders the local figure and its note beside the USD price', () => {
+      renderWithCart(
+        <ProductRecordPanel
+          market="au"
+          detail={detail({ variants: [priced('black', 451)] })}
+          selectedFromUrl={false}
+          indicativeRate={AUD_RATE}
+        />,
+      );
+
+      expect(screen.getByText('US$4.51')).toBeInTheDocument();
+      expect(screen.getByText(/A\$9\.02/)).toBeInTheDocument();
+      // Readable text in the DOM, not a `title` attribute: a screen reader has
+      // to reach the label that says which figure is the real one.
+      expect(
+        screen.getByText(/you are charged in us dollars/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/27 Aug 2026/)).toBeInTheDocument();
+    });
+
+    /**
+     * The rule the whole feature turns on: no rate means **nothing extra** — no
+     * dash, no placeholder, no "unavailable". The USD price is complete alone.
+     */
+    it('renders nothing extra when there is no rate', () => {
+      const { container } = renderWithCart(
+        <ProductRecordPanel
+          market="au"
+          detail={detail({ variants: [priced('black', 451)] })}
+          selectedFromUrl={false}
+          indicativeRate={null}
+        />,
+      );
+      const text = container.textContent ?? '';
+
+      expect(screen.getByText('US$4.51')).toBeInTheDocument();
+      expect(text).not.toMatch(/approximate/i);
+      expect(text).not.toMatch(/A\$/);
+      expect(text).not.toMatch(/≈/);
+      expect(text).not.toMatch(/unavailable\./i);
+    });
+
+    /** It follows the chosen variant, because the price above it does. */
+    it('converts the selected variant price, not the floor', () => {
+      renderWithCart(
+        <ProductRecordPanel
+          market="au"
+          detail={detail(SPREAD)}
+          selectedVariant={SPREAD.variants[1]}
+          selectedFromUrl
+          indicativeRate={AUD_RATE}
+        />,
+      );
+
+      expect(screen.getByText('US$20')).toBeInTheDocument();
+      expect(screen.getByText(/A\$40\.00/)).toBeInTheDocument();
+    });
+  });
+
   it('says nothing about a spread when there is only one option', () => {
     const { container } = renderWithCart(
       <ProductRecordPanel
         market="au"
         detail={detail({ variants: [priced('black', 451)] })}
         selectedFromUrl={false}
+        indicativeRate={null}
       />,
     );
 
