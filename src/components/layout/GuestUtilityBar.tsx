@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import AccountHeaderLink from '@/components/layout/AccountHeaderLink';
 import GuestAuthLinks from '@/components/layout/GuestAuthLinks';
-import HeaderDestination from '@/components/layout/HeaderDestination';
 import { GUEST_UTILITY_LINKS } from '@/lib/guest-utility-links';
 
 const LINK_CLASSES =
@@ -17,16 +16,15 @@ const LINK_CLASSES =
  * muted grey until the owner levelled them with `Feedback` on 2026-08-20, so the
  * only remaining difference between them is whether they survive below `sm`.
  *
- * `HeaderDestination` sits outside the `Account and support` nav because it is
- * neither: it is a control over what the buyer is looking at, and folding it
- * into that landmark would make the nav's accessible name a lie. It leads the
- * strip so the destination is read before the account links: it is the fact
- * that decides whether the rest of the funnel can end in an order at all.
+ * The `Ship to` destination picker led this strip from 2026-08-27 until the
+ * owner removed it on 2026-08-28, together with the market shopfronts. Nothing
+ * in the header states a country now; where a buyer is shipping is asked once,
+ * on the checkout address form. See `src/lib/destination/resolve.ts` for what
+ * still resolves a destination, and from what.
  */
 export default function GuestUtilityBar() {
   return (
     <div className="mx-auto flex min-h-6 max-w-6xl items-center justify-end gap-4 px-4 py-[var(--header-utility-py)] text-xs transition-[padding] duration-250 ease-out sm:px-6">
-      <HeaderDestination />
       <nav aria-label="Account and support" className="flex items-center gap-4">
         {GUEST_UTILITY_LINKS.map((link) => (
           <Link

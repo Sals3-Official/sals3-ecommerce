@@ -44,25 +44,26 @@ downstream can rescue a swallowed asset. Both sides are asserted in
 `test/next-config-headers.test.ts` — read `RETIRED_SEGMENT_PATHS` in
 `next.config.ts` before adding a prefix rule or a `public/` directory.
 
-## One storefront, and one place a country is chosen
+## One storefront, and no country in the chrome
 
 Every shopping route lives at the root: `/`, `/p/[id]`, `/c/[slug]`, `/search`,
-`/categories`, `/cart`. **No URL names a country.**
+`/categories`, `/cart`. **No URL names a country, and neither does the header.**
 
 For one day — 2026-08-27 to 2026-08-28 — there was a shopfront per country at
 `/au`, `/ph` and `/fj`, and every shopping link carried the segment. The owner
 removed it: with the country in the URL _and_ in a cookie, the two could
 disagree, and they did. A buyer with the Philippines chosen, reading
 `Ship to: Philippines` in the header on `/checkout`, was moved to `/au` by
-clicking the logo.
+clicking the logo. The `Ship to` picker went with it, on the same decision.
 
-So the buyer's destination now lives in exactly one place — the
-`sals3_destination` cookie, written only by the `Ship to` picker in the header
-(`src/components/layout/DestinationPicker.tsx`) and read by
-`resolveDestination()` (`src/lib/destination/resolve.ts`). Nothing else states a
-country, so nothing else can contradict it. What reads it:
+**So nothing on the storefront asks a buyer where they are shipping until the
+checkout address form.** That is the silence ADR-003 §1 and the destination
+context were built to end, reintroduced deliberately — see the amendment on
+ADR-003.
 
-- the header's `Ship to` label;
+What a destination is still resolved for, by `resolveDestination()` in
+`src/lib/destination/resolve.ts`:
+
 - the cart's "where orders can be placed" notice, when checkout cannot take that
   destination;
 - the approximate local price beside the USD one, whose currency comes from
@@ -70,6 +71,13 @@ country, so nothing else can contradict it. What reads it:
   the currencies `src/lib/fx/rates.ts` can source from a named central bank. Any
   other destination shows no approximate figure at all;
 - the checkout address form's initial country.
+
+Where the answer comes from, in order: the `sals3_destination` cookie if one is
+already set, then the `x-vercel-ip-country` geo header, then Global. **Nothing
+writes that cookie any more** — the picker was its only writer. It is still read
+so a buyer who chose a country on 2026-08-27 keeps it rather than silently losing
+it, and so that putting a control back is a one-file change. In practice, geo is
+the only live signal, and every visitor without it gets Global.
 
 **The buyer is still charged in USD** (ADR-003 §3). The local figure is display
 only and is deliberately not a `Money`.

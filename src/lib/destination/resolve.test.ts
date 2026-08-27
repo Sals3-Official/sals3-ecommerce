@@ -34,44 +34,49 @@ describe('resolveDestination', () => {
   });
 
   /*
-    The `marketDestinationCode` parameter these tests used to cover was added on
-    2026-08-27 and removed with the markets on 2026-08-28. It existed so a
-    shopfront's own country could stand in when the buyer had chosen nothing —
-    `/au` was showing a first-time visitor "Ship to: Somewhere else". With one
-    storefront there is no country in the URL to disagree with, so what is left
-    is the buyer's choice, then geo, then Global.
+    Two of the three steps ADR-003 §1 sets can still happen. The third — the
+    buyer choosing — lost its control on 2026-08-28 when the owner removed the
+    `Ship to` picker along with the market shopfronts.
+
+    The stored choice is still read and still wins, and that is deliberate: the
+    cookie is already in real browsers with a year to run, so a buyer who chose
+    the Philippines on 2026-08-27 keeps it instead of silently losing it. What is
+    gone is the ability to make a new choice before checkout.
   */
-  /*
-    The rule everything else rests on, and the one the owner asked for in plain
-    words on 2026-08-28: whatever country is selected, nothing overrides it.
-    ADR-003 §1 — "Geo-IP is only a default suggestion. The user's selected
-    shipping country is the browsing source of truth."
-  */
-  it("keeps the buyer's own choice over a geo hint that disagrees", async () => {
+  it('keeps a stored choice over a geo hint that disagrees', async () => {
     cookieStore.get.mockImplementation((name: string) =>
       name === DESTINATION_COOKIE_NAME ? { value: 'PH' } : undefined,
     );
     headerStore.get.mockReturnValue('AU');
 
-    const result = await resolveDestination();
-
-    expect(result.destination.code).toBe('PH');
-    expect(result.source).toBe('chosen');
+    await expect(resolveDestination()).resolves.toMatchObject({ code: 'PH' });
   });
 
-  it('uses geo when the buyer has chosen nothing', async () => {
+  it('uses geo when there is no stored choice', async () => {
     headerStore.get.mockReturnValue('PH');
 
-    const result = await resolveDestination();
-
-    expect(result.destination.code).toBe('PH');
-    expect(result.source).toBe('suggested');
+    await expect(resolveDestination()).resolves.toMatchObject({ code: 'PH' });
   });
 
+  /*
+    Every visitor with no geo header now lands here — `x-vercel-ip-country` is
+    absent locally and on any non-Vercel host, and nothing writes the cookie any
+    more. Global is the honest answer to an unknown location, and it is what the
+    cart's cannot-ship notice speaks to.
+  */
   it('falls back to Global when nothing is known', async () => {
-    const result = await resolveDestination();
+    await expect(resolveDestination()).resolves.toMatchObject({
+      isGlobal: true,
+    });
+  });
 
-    expect(result.destination.isGlobal).toBe(true);
-    expect(result.source).toBe('default');
+  it('ignores a stored value that is not a destination we price', async () => {
+    cookieStore.get.mockImplementation((name: string) =>
+      name === DESTINATION_COOKIE_NAME ? { value: 'ZZ' } : undefined,
+    );
+
+    await expect(resolveDestination()).resolves.toMatchObject({
+      isGlobal: true,
+    });
   });
 });

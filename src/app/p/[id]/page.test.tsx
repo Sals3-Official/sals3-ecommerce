@@ -23,10 +23,9 @@ import ProductPage, { generateMetadata } from './page';
   ask for; the tests that care mock the rate itself.
 */
 vi.mock('@/lib/destination/resolve', () => ({
-  resolveDestination: vi.fn().mockResolvedValue({
-    destination: { code: 'AU', label: 'Australia', isGlobal: false },
-    source: 'chosen',
-  }),
+  resolveDestination: vi
+    .fn()
+    .mockResolvedValue({ code: 'AU', label: 'Australia', isGlobal: false }),
 }));
 
 vi.mock('@/components/layout/HeaderDestination', () => ({
@@ -983,8 +982,9 @@ describe('Product page', () => {
     it("asks for the rate once, in the currency of the buyer's destination", async () => {
       const fetchMock = mockFetch({ indicativeRate: 2 });
       vi.mocked(resolveDestination).mockResolvedValueOnce({
-        destination: { code: 'PH', label: 'Philippines', isGlobal: false },
-        source: 'chosen',
+        code: 'PH',
+        label: 'Philippines',
+        isGlobal: false,
       });
 
       renderWithCart(

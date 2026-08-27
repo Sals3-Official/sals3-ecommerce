@@ -49,7 +49,7 @@ export default async function CartPage() {
     correct — which is the exact shape of "the approximate one looked like the
     real one" this display is built to avoid.
   */
-  const { destination } = await resolveDestination();
+  const destination = await resolveDestination();
   /*
     No currency for this destination means no approximate figure at all, rather
     than one converted through a rate nobody named — New Zealand, the United

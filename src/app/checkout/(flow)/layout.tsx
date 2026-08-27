@@ -44,7 +44,7 @@ export default async function CheckoutFlowLayout({
     keeps its own default. Seeding a country the form would then refuse is the
     one outcome worth ruling out here rather than downstream.
   */
-  const { destination } = await resolveDestination();
+  const destination = await resolveDestination();
   const initialCountry = isCheckoutCountry(destination.code)
     ? destination.code
     : undefined;

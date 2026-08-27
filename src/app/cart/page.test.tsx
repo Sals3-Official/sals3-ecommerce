@@ -16,10 +16,7 @@ import CartPage, { generateMetadata } from './page';
   and these assertions stay about the cart; the notice has its own tests.
 */
 vi.mock('@/lib/destination/resolve', () => ({
-  resolveDestination: vi.fn().mockResolvedValue({
-    destination: findDestination('AU'),
-    source: 'chosen',
-  }),
+  resolveDestination: vi.fn().mockResolvedValue(findDestination('AU')),
 }));
 
 /*
@@ -188,10 +185,9 @@ describe('Cart page', () => {
       buyer's own choice is the only honest answer to "local to whom".
     */
     it("asks for the currency of the buyer's destination", async () => {
-      vi.mocked(resolveDestination).mockResolvedValueOnce({
-        destination: findDestination('PH'),
-        source: 'chosen',
-      });
+      vi.mocked(resolveDestination).mockResolvedValueOnce(
+        findDestination('PH'),
+      );
       seedOneLine();
 
       renderWithCart(await CartPage());
@@ -205,10 +201,9 @@ describe('Cart page', () => {
       figure — never one converted through a rate nobody named.
     */
     it('asks for no rate at all where none can be sourced', async () => {
-      vi.mocked(resolveDestination).mockResolvedValueOnce({
-        destination: findDestination('NZ'),
-        source: 'chosen',
-      });
+      vi.mocked(resolveDestination).mockResolvedValueOnce(
+        findDestination('NZ'),
+      );
       seedOneLine();
       // Nothing resets this mock between tests in this file, and "was never
       // called" is the whole assertion.
