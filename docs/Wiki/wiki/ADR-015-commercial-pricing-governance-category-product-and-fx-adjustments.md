@@ -6,11 +6,13 @@ updated: 2026-08-27
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: phase-1-merged-not-launched, per-destination scope built
+implementation_status: phase-1-merged-not-launched, per-destination and Global scopes built
 related:
   - "[[hot]]"
   - "[[sals3-session-2026-08-27-part77-a-margin-per-destination-and-two-hours-of-refused-saves]]"
   - "[[sals3-session-2026-08-27-part78-the-floor-that-became-a-percentage]]"
+  - "[[sals3-session-2026-08-27-part80-a-global-scope-for-the-countries-with-no-column]]"
+  - "[[cross-border-rest-of-world-selling-reference]]"
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
@@ -466,3 +468,80 @@ before this amendment.**
 `phase-1-merged-not-launched, per-destination scope built` — the dimension and both floor forms
 are merged and applied to production; no destination rate is approved and publication still binds
 a single destination from `seller_market_profiles`.
+
+## Amendment — 2026-08-27 (second): a Global scope for the countries with no column (owner decision, Bogs)
+
+Merchant pricing gains a seventh scope. Built and merged the same day —
+`sals3-portal` [#203](https://github.com/Sals3-Official/sals3-portal/pull/203) — with **no DDL**.
+See [[sals3-session-2026-08-27-part80-a-global-scope-for-the-countries-with-no-column]].
+
+### Decision
+
+1. **`Global` is a pricing scope covering every country Sals3 has not named**, and only those.
+   A named destination never resolves a Global rule. Its column being blank means it cannot
+   price, which the screen already reports.
+2. **A buyer whose country is one of the named destinations is routed to that country's own
+   scope**, so a supported country cannot reach Global by either routing or resolution.
+3. **Global is stored as `market_code IS NULL`.** No migration: the CHECK already admits null and
+   the two partial unique indexes already keep one such row per scope. What changed is the
+   *meaning* — see the warning below.
+4. **Global grants no availability whatsoever.** It answers "what margin would apply", never
+   "may a buyer here order". ADR-003 §1's allow-list remains the only thing that decides that.
+
+### The reversal inside this, stated plainly
+
+The 2026-08-25 amendment introduced `market_code IS NULL` as **"all destinations"**, and
+`outranks()` let a deeper unscoped rule beat a shallower destination-scoped one. Under this
+amendment null means **"the countries with no column"**, and the two scopes are disjoint: one
+destination reads one scope's rows. `outranks()` therefore keeps depth and drops the market
+tie-break it no longer has anything to break.
+
+**"Depth beats market" is not reversed.** It governed a scoped rule against an unscoped one, and
+that pairing can no longer occur. Its original reasoning — a single country rate on a department
+must never silently override a product-level decision beneath it — is unchanged and is why this
+did not become "market beats depth".
+
+### Warning for whoever reads the schema next
+
+**This amendment changed the semantics of a column without changing the column.** There is no
+migration, no DDL diff, and no type error marking the point where `null` stopped meaning "all
+destinations". A reader who infers the meaning from the schema will infer the 2026-08-25 one.
+The authority is `scopeCondition()` in `modules/pricing/repository.ts` and this amendment.
+
+For the same reason `fanOutUnscopedMargins` was **deleted** — module, route and workflow. It
+copied every null-scoped row into all six destinations and retired the original, which from now
+on would silently destroy every Global rule and report a clean idempotent no-op. A one-time
+migration whose premise has expired is a live hazard, not dead code.
+
+### Evidence considered
+
+Before designing this, the owner asked for a reference on how large marketplaces serve countries
+they do not operate in. The brief is [[cross-border-rest-of-world-selling-reference]]. Three
+findings bear on this ADR:
+
+- **Amazon has no rest-of-world price rule.** Build International Listings is one price rule per
+  *named* target marketplace; an uncovered country gets the source price plus export shipping
+  plus an import-fee line. A single Global margin is therefore Sals3's simplification, and the
+  rate must cover the worst destination in the set rather than the average.
+- **The export margin belongs in the duties line, not the item price.** Amazon UK's "Import
+  Charges" is a fixed fee covering customs processes, refunded neither way.
+- **De minimis no longer applies in the two largest fallback markets**: the US $800 exemption is
+  suspended indefinitely (codified 2026-06-24, on CBP's own authority, unaffected by the
+  February 2026 IEEPA ruling), and the EU's €150 relief ended 2026-07-01 in favour of €3 per
+  item. Duty applies from the first dollar, which a margin cannot absorb.
+
+### Open
+
+- **No Global rate is approved by this amendment.** As with both prior ones, it authorises the
+  instrument, not the number.
+- **The routing half is not built.** ADR-003 §1 already constrains its shape: geo-IP is a
+  suggestion and the buyer's selected country is the browsing source of truth, so it must be an
+  overridable prompt rather than a forced redirect.
+- **No duty model is chosen**, and until one is, Global cannot take an order. Also required
+  first: a restricted-category deny-list, a sanctions country deny-list, and terms naming the
+  buyer as importer of record.
+- **A store default still cannot be deactivated from the screen** (part 78 §7), which now
+  applies to Global too.
+
+**Frontmatter `updated`** stays 2026-08-27. `implementation_status` becomes
+`phase-1-merged-not-launched, per-destination and Global scopes built`.

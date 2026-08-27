@@ -2,7 +2,7 @@
 tags: [moc, hot-cache, current-state, sals3]
 aliases: [Hot Cache, Recent Context Cache]
 created: 2026-07-31
-updated: 2026-08-27 (parts 53-79, order listing snapshot, durable supplier media, ADR-007 and ADR-011 amendments, five production DDL runs, webfonts loaded, PDP sticky panel removed against spec, PDP option label in sentence case against spec, Product Catalogue table narrowed and opened on Live, buyer reviews built end to end across both repositories, Variants & Pricing reworked over five PRs with no DDL at all, variant photos made to stick and to reach the buyer, per-destination margins built and applied to production, the contribution floor given a percentage form against its own ADR, a third-party finance carousel shipped with its Sponsored label removed)
+updated: 2026-08-27 (parts 53-80, order listing snapshot, durable supplier media, ADR-007 and ADR-011 amendments, five production DDL runs, webfonts loaded, PDP sticky panel removed against spec, PDP option label in sentence case against spec, Product Catalogue table narrowed and opened on Live, buyer reviews built end to end across both repositories, Variants & Pricing reworked over five PRs with no DDL at all, variant photos made to stick and to reach the buyer, per-destination margins built and applied to production, the contribution floor given a percentage form against its own ADR, a third-party finance carousel shipped with its Sponsored label removed, a Global pricing scope for the countries with no column)
 status: current-state
 authority: implementation-state
 owner_approved: true
@@ -34,6 +34,8 @@ related:
   - "[[sals3-portal-cj-to-sals3-category-mapping-pilot]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
   - "[[parked-ideas-backlog]]"
+  - "[[sals3-session-2026-08-27-part80-a-global-scope-for-the-countries-with-no-column]]"
+  - "[[cross-border-rest-of-world-selling-reference]]"
   - "[[sals3-session-2026-08-27-part77-a-margin-per-destination-and-two-hours-of-refused-saves]]"
   - "[[sals3-session-2026-08-27-part78-the-floor-that-became-a-percentage]]"
   - "[[sals3-session-2026-08-27-part79-review-chips-and-an-advertisement-that-says-it-is-none]]"
@@ -114,6 +116,8 @@ related:
 ## Verified implementation state
 
 ### Implemented foundations
+
+- **A `Global` pricing scope covers every country with no column of its own — 2026-08-27, owner decision, `sals3-portal` [#203](https://github.com/Sals3-Official/sals3-portal/pull/203), no DDL.** Market Rules has a seventh scope: a `GLOBAL` column on Category margins and a row on Store default pricing. Two halves to the decision, and they are consistent: **Global prices only the countries Sals3 has not named** — a named destination never silently takes the everywhere-else rate — and **a buyer whose country *is* named is routed to that country's own scope**, so a supported country cannot reach Global by either route. The alternative (Global as a fallback for any *unset* destination, including a blank Australia column) was put to the owner and refused: it would let one number price Australia again, the exact thing per-destination margins exist to stop. **Stored as `market_code IS NULL`, with no migration** — the CHECK already admitted null and the two partial unique indexes already kept one such row per scope. **What changed is what null means, and that is the part to remember**: it meant *"all destinations, competing on depth"*, so a Global rule on a deep category would have won an **Australian** order that had an AU rule higher up, silently. `scopeCondition()` now gives one destination exactly one scope's rows and the two sets are disjoint, so `outranks()` keeps depth and drops the market tie-break it no longer has anything to break — **"depth beats market" is not reversed**, its pairing simply cannot occur any more. **`fanOutUnscopedMargins` was deleted**, route and workflow included: it copies every null-scoped row into all six destinations and retires the original, so from now on it would shred every Global rule *and report a clean idempotent no-op doing it*. Also closed the one write path that never asked the allow list — a hand-edited CSV could store a policy scoped to `GB`, which passes `^[A-Z]{2}$` and the database CHECK but has no column to show it and no buyer able to reach it. Verified on production after merge: header `AU · PH · NZ · US · CA · FJ · GLOBAL`, grid `repeat(7,…)`, every category reading `Set on this category` in the six against `Nothing yet` in Global — which also proved empirically that **no `NULL`-scoped row existed in production**, so the semantic change repointed nothing live. **Global grants no availability** — see the checkout-wire risk below. See [[sals3-session-2026-08-27-part80-a-global-scope-for-the-countries-with-no-column]] and [[cross-border-rest-of-world-selling-reference]].
 
 - **Margins and the contribution floor are per-destination and applied to production, and the floor grew a percentage form its own ADR had refused — 2026-08-25, twelve merged `sals3-portal` PRs, two migrations, three break-glass runs.** ADR-015's `Amendment — 2026-08-25` approved per-destination pricing and left it explicitly unbuilt; **it shipped the same day** across [#186](https://github.com/Sals3-Official/sals3-portal/pull/186)-[#200](https://github.com/Sals3-Official/sals3-portal/pull/200). `market_code` is **nullable** on `pricing_category_policies` and `pricing_store_defaults` (migration `0029_jazzy_senator_kelly`), and that is the whole design: `null` is *the unscoped rule, not a missing value*, so all 213 existing rules kept their exact meaning at the instant the column landed and **no backfill was required to preserve behaviour**. A `NOT NULL DEFAULT 'AU'` would have silently turned every store-wide rule into an Australia-only one. Uniqueness needs **two partial indexes per table** rather than one composite, because Postgres treats `NULL`s as distinct — one `WHERE market_code IS NULL`, one `WHERE market_code IS NOT NULL` — which is also what lets a category hold an all-destinations rule *and* a destination rule at once. **Depth beats market** in resolution (`outranks()`, `repository.ts:182`), owner-confirmed and counter-intuitive on purpose: a deeper category with only an all-destinations rule outranks a shallower one carrying a rule for this exact destination, because otherwise *"setting a single country rate on a department would silently override every product-level decision beneath it, and nothing in the UI would show that it had."* The market input is **required, never defaulted** (`MARKET_REQUIRED` before any read); `create-draft.ts` passes `''` deliberately rather than inferring `'AU'`. **Resolving and editing are deliberately different reads** — `findNearestActiveCategoryPolicy` falls back scoped→unscoped, `findActiveCategoryPolicy` matches one scope exactly, because a fallback on the save path lets a seller supersede a rule they never opened. Six destinations opened (`AU, NZ, PH, US, CA, FJ`, policy `v3-six-measured`), sized by the 2026-08-24 freight table ($3.70 PH to $16.01 FJ against about $1.07 of contribution at 25% on a $4.29 cost). Then [#201](https://github.com/Sals3-Official/sals3-portal/pull/201)/[#202](https://github.com/Sals3-Official/sals3-portal/pull/202) added `min_contribution_rate` (`0030_lean_blizzard`) — **the percentage floor this ADR had refused twice**. The old refusal's *arithmetic* was right (both floor price and margin price are lines through the origin in cost and never cross); its **scope was wrong**, because the resolver floors whichever layer won, so a *category* margin below the store minimum is exactly the case the rule exists for. It is a cross-layer clamp on the margin, not a second margin. **The two forms are mutually exclusive by database CHECK, so choosing the percentage turns the absolute floor off for that rule** — §1's answer to fixed per-order cost is unprotected at the cheap end, a trade-off nothing recorded until ADR-015's `Amendment — 2026-08-27`. Also fixed on the way: `StoreDefaultSection` **had been rendered by no page at all**, so the floor the resolver already applied could not be set from anywhere. See [[sals3-session-2026-08-27-part77-a-margin-per-destination-and-two-hours-of-refused-saves]] and [[sals3-session-2026-08-27-part78-the-floor-that-became-a-percentage]].
 
@@ -319,6 +323,35 @@ References:
 - <https://developers.cjdropshipping.com/en/api/api2/standard/limit.html>
 
 ## Active risks and blockers
+
+### The policy opens six buyer destinations; the checkout wire carries two - found 2026-08-27
+
+`buyer-destination-country` went to **v3 with `AU, NZ, PH, US, CA, FJ`** on
+2026-08-25, and margins can be set for all six plus Global. But checkout still
+refuses four of them, on both sides of the wire:
+
+- `sals3-portal` — `src/modules/checkout/freight-quotes.ts:41`:
+  `country: z.enum(['AU', 'PH'])`, composed into
+  `checkoutFreightQuoteRequestSchema` and into `CreateCheckoutIntentInput`, so
+  the API answers **400** for the other four.
+- `sals3-ecommerce` — `src/lib/checkout/locations.ts:1`:
+  `CHECKOUT_ALLOWED_COUNTRIES = ['AU', 'PH']`.
+
+**Nothing is broken**: the two repositories agree with each other, and the
+storefront never offered the four, so no buyer meets a failure. It is an
+incomplete rollout rather than a defect — the pricing dimension opened and the
+checkout wire did not follow.
+
+What it means in practice: **NZ, US, CA and FJ margins are forward-looking
+configuration**, exactly as `pricing-scope-destinations.ts` says of five of the
+six, and the same is now true of Global. A rule set for any of them prices
+nothing until this enum widens *and* `publishProduct` can name more than one
+destination per product.
+
+Widening it is not a one-line change: it needs a freight quote that CJ can
+actually answer for each destination, and — for anything beyond the six — the
+duties, deny-list and importer-of-record work catalogued in
+[[cross-border-rest-of-world-selling-reference]].
 
 ### A third-party finance advertisement runs in the product feed with no visible "Sponsored" label - 2026-08-25
 
@@ -636,6 +669,8 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 
 ## Recent session notes
 
+- [[sals3-session-2026-08-27-part80-a-global-scope-for-the-countries-with-no-column]] — a seventh pricing scope for the countries with no column, built with **no DDL** because `market_code IS NULL` already existed. The whole risk was that null already *meant* something else — "all destinations, competing on depth" — so the semantics inverted with no migration, no DDL diff and no type error to mark the point. Also why a one-time migration left running is a live hazard, and how to tell "the browser tool cannot click it" from "the code is broken".
+- [[cross-border-rest-of-world-selling-reference]] — **reference, not a decision.** How Amazon and eBay actually serve countries they do not operate in: the three duty models, the importer-of-record clause worth copying, the published export deny-lists (dominated by exactly what a cheap dropship catalogue carries), and the fact that **US and EU de minimis both ended in mid-2026**.
 - [[sals3-session-2026-08-27-part77-a-margin-per-destination-and-two-hours-of-refused-saves]] — **backfill.** Nine PRs that took ADR-015's per-destination amendment from approved-to-shipped in one day, with the DDL and the 213→1,278 fan-out proven against production from the workflow logs rather than from a PR body. The honest half: **every category-margin save in production returned `invalid_input` for two hours**, because #190 added a required field to a shared schema and did not touch the dialog that posts it — invisible to three layers of tests, and a near-identical near-miss in the same PR would have written the wrong scope. Also why the `CJ-` mirror fix of part 73 did not work in production, and why the browser check that "confirmed" it could not have.
 - [[sals3-session-2026-08-27-part78-the-floor-that-became-a-percentage]] — **backfill.** The contribution floor gained the percentage form ADR-015 had refused twice, and no amendment said so for two days. The old refusal's arithmetic was right and its scope was wrong: the resolver floors *whichever layer won*, so the rate is a cross-layer clamp on the margin rather than a second margin. The cost nobody wrote down: the two forms are mutually exclusive, so choosing the percentage turns the absolute floor off. Plus `sql<Date>` as a type lie — a raw drizzle template carries `noopDecoder`, so the first buyer to post a review found it.
 - [[sals3-session-2026-08-27-part79-review-chips-and-an-advertisement-that-says-it-is-none]] — **backfill.** Review filter chips that appear only when they narrow, which made an empty state unreachable and so deleted it; a README catching up with a checklist the PR before it skipped; and a real third-party finance campaign whose Sponsored label, advertiser strip and pause button the owner removed. One creative was correctly quarantined by a test for carrying an unfilled comparison-rate bracket beside a live rate.
@@ -724,6 +759,10 @@ The first real Better Auth login (2026-08-08) exposed a CJ connection created un
 ## Reusable lessons
 
 See [[sals3-skills]] for the detailed engineering lesson register. Continue to verify against actual code/data, keep source contracts strict, avoid fabricated public claims, and report exact validation evidence rather than assumed behavior.
+
+**A nullable column's meaning is a decision, and changing it is invisible** (learned 2026-08-27, adding the Global scope). Global needed no migration because `market_code` already allowed null — and that is exactly what made it dangerous. The schema stayed identical while the semantics inverted from "all destinations" to "the countries with no column", so there was **no migration to review, no DDL diff, and no type error** marking the point where every existing reader's assumption stopped being true. A reader who infers meaning from the schema will infer the old one, so the predicate that reads the value becomes the only authority and has to say so in a comment. Corollary, from the same change: **a one-time migration left running is a live hazard.** `fanOutUnscopedMargins` was correct, ran once and reported success; the moment null stopped meaning "legacy", the same correct code became a data-shredder that would have looked like an idempotent no-op. When a migration's premise expires, delete it — an endpoint does not know its own assumptions have moved.
+
+**Tell "the tool cannot click it" from "the code is broken" by clicking something you did not change** (learned 2026-08-27). A `Set` button on the new Global row opened nothing in the Browser pane, which *matched* part 74's known limitation — and matching a known limitation is not evidence of one. Clicking the **Australia** button, untouched by that change, failed identically; `btn.click()` through `javascript_tool` then fired the React handler and the dialog opened fully. One failing click proves nothing; the control you did not touch is what converts a suspicion into a finding. Also: two different `ref_N` clicks reported the same coordinate, so a ref-based click in that pane can silently land on another row's button — check `getBoundingClientRect()` before trusting one.
 
 **`sql<T>` in drizzle is an assertion with nothing behind it** (learned 2026-08-25, on the first buyer review anybody tried to post). A raw `sql` template carries `noopDecoder`, so `sql<Date>` does not decode anything — whatever the driver returns passes through, and `PgTimestamp.mapToDriverValue` then calls `.toISOString()` on it. Only a column reference or an explicit `.mapWith()` has a real decoder. Two things kept it hidden for three days: the **read** path compared the same expression *inside SQL* and returned a boolean, so it never touched the raw value and cheerfully rendered a "write a review" button the write path could not honour; and the unit test drives a hand-built fake whose `then` resolves canned rows, so drizzle's result mapping never runs. The fake was right for its job — it renders the real `WHERE` and proves the authorisation predicate — and structurally could not see this. The fix earns the type from the decoder rather than asserting it, and **refuses a number instead of converting it**, because the value anchors a deadline and guessing epoch units moves it by 1000×.
 
