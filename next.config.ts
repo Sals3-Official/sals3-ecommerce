@@ -95,15 +95,36 @@ function r2RemotePatterns() {
  * market-less link to Australia forever and take the choice away from the next
  * visitor. Same reasoning as the dispatcher at `/`.
  *
- * `:path*` rather than a literal list, so a route added under a market later
- * needs no matching entry here.
+ * A prefix rather than a literal list of routes, so a route added under a
+ * market later needs no matching entry here.
  */
 const MARKET_MOVED_ROUTES = ['/p', '/c', '/search', '/categories', '/cart'];
+
+/**
+ * What each moved prefix matches under: any number of path segments, none of
+ * which may contain a dot. Deliberately not a bare `:path*`.
+ *
+ * **A redirect `source` is a claim over a namespace, and `public/` shares that
+ * namespace with the router.** `/categories/:path*` matched the static asset
+ * directory `public/categories/` as readily as the route, so all 21 department
+ * photographs were answered with `307 -> /au/categories/<file>.webp`, where no
+ * file exists, and every one of them 404ed in production. Redirects are
+ * evaluated before the static-file handler, so nothing downstream could rescue
+ * them.
+ *
+ * Excluding a dot rather than naming the one colliding directory keeps the
+ * guard over all five prefixes and over assets nobody has added yet. What it
+ * costs is a redirect for any route segment containing a dot, and none exists:
+ * a product or category slug is `^[a-z0-9]+(?:-[a-z0-9]+)*$`, refused by
+ * `isPublicSlug` in `sals3-portal` before it can ever be written. `*` keeps the
+ * bare prefix (`/cart`, `/categories`) matching on zero segments.
+ */
+const MOVED_ROUTE_SEGMENTS = ':path([^/.]+)*';
 
 const nextConfig: NextConfig = {
   async redirects() {
     return MARKET_MOVED_ROUTES.map((source) => ({
-      source: `${source}/:path*`,
+      source: `${source}/${MOVED_ROUTE_SEGMENTS}`,
       destination: `/au${source}/:path*`,
       permanent: false,
     }));
