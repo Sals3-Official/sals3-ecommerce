@@ -43,7 +43,7 @@ const RELATED_PRODUCT_COUNT = 6;
  * named central bank or it is not shown.
  */
 async function indicativeRateFor() {
-  const { destination } = await resolveDestination();
+  const destination = await resolveDestination();
   const currency = destinationToIndicativeCurrency(destination.code);
 
   return currency === undefined ? null : fetchIndicativeRate(currency);

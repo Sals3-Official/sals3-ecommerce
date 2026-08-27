@@ -60,20 +60,6 @@ export const DESTINATION_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
  */
 const GEO_COUNTRY_HEADER = 'x-vercel-ip-country';
 
-export type ResolvedDestination = {
-  destination: Destination;
-  /**
-   * How the answer was reached.
-   *
-   * `chosen` — the buyer picked it. `suggested` — geo-IP matched a named
-   * destination and nothing was chosen. `default` — neither, so Global.
-   *
-   * The UI needs this to avoid claiming a guess is a decision: only a `chosen`
-   * destination should be presented as the buyer's own.
-   */
-  source: 'chosen' | 'suggested' | 'default';
-};
-
 /**
  * The geo hint, normalised, or `null`.
  *
@@ -99,37 +85,46 @@ async function readGeoCountry(): Promise<string | null> {
 /**
  * Resolves the buyer's destination.
  *
- * ## One answer, and nothing that can contradict it
+ * ## What is left, after the picker was removed
  *
- * Between 2026-08-27 and 2026-08-28 this took a `marketDestinationCode`: the
- * country of the shopfront being rendered, added because `/au` was showing a
- * first-time visitor **"Ship to: Somewhere else"** — the URL saying Australia
- * and the header saying it was not, on one screen. With the markets removed
- * there is no country in the URL to disagree with, so the parameter is gone and
- * the contradiction it patched cannot recur.
+ * ADR-003 §1's order still holds, but only two of its three steps can happen
+ * now:
  *
- * What is left is the order ADR-003 §1 sets:
+ * 1. **A stored choice** — still read, and still wins. Nothing writes this
+ *    cookie any more: the `Ship to` picker was its only writer and the owner
+ *    removed it on 2026-08-28. It is read because the cookie is already in real
+ *    browsers with a year to run — a buyer who chose the Philippines on
+ *    2026-08-27 keeps it rather than silently losing it — and because putting a
+ *    writer back is then a one-file change.
+ * 2. **Geo-IP** — in practice the only live signal.
+ * 3. **Global** — the neutral answer, and what every visitor with no geo header
+ *    now gets. `x-vercel-ip-country` is absent locally and on any non-Vercel
+ *    host.
  *
- * 1. **The buyer's stored choice** — always wins.
- * 2. **Geo-IP** — a suggestion, only when nothing is chosen.
- * 3. **Global** — the neutral answer.
+ * **The consequence, stated plainly:** a buyer can no longer tell the site where
+ * they are shipping before the checkout address form. That is the silence
+ * ADR-003 §1 and the destination context were built to end, reintroduced by
+ * owner decision. What still depends on the answer: the cart's cannot-ship
+ * notice, the approximate local price, and the checkout form's initial country.
+ * All three now follow geo, or Global.
+ *
+ * The `marketDestinationCode` parameter this took between 2026-08-27 and
+ * 2026-08-28 is also gone — it existed so a shopfront's own country could stand
+ * in, and there are no shopfronts.
  */
-export async function resolveDestination(): Promise<ResolvedDestination> {
+export async function resolveDestination(): Promise<Destination> {
   const cookieStore = await cookies();
   const stored = cookieStore.get(DESTINATION_COOKIE_NAME)?.value;
 
   if (stored !== undefined && isKnownDestinationCode(stored)) {
-    return { destination: findDestination(stored), source: 'chosen' };
+    return findDestination(stored);
   }
 
   const geo = await readGeoCountry();
 
   if (geo !== null && isKnownDestinationCode(geo)) {
-    return { destination: findDestination(geo), source: 'suggested' };
+    return findDestination(geo);
   }
 
-  return {
-    destination: findDestination(DEFAULT_DESTINATION_CODE),
-    source: 'default',
-  };
+  return findDestination(DEFAULT_DESTINATION_CODE);
 }

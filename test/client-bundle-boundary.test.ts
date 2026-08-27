@@ -53,7 +53,6 @@ const CLIENT_ENTRY_POINTS = [
   // The utility bar's destination control, added 2026-08-27. Its server half,
   // `HeaderDestination`, is deliberately not an entry point: it reads
   // `cookies()` and stays on the server, and only this half reaches the browser.
-  'components/layout/DestinationPicker.tsx',
   // The shopping link for the boundaries Next renders without `params`
   // (`not-found.tsx`, `error.tsx`), added with the market URL segments on
   // 2026-08-27. It reaches `useMarket`, and through it `markets.ts` and the
