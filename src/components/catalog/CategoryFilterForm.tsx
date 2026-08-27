@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, type FormEvent } from 'react';
 import type { PriceBandId } from '@/lib/catalog/price-bands';
 import { categoryHref, type CategoryQuery } from '@/lib/catalog/query';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import PriceFacetFields from './PriceFacetFields';
 
 /**
@@ -21,6 +22,12 @@ type CategoryFilterFormProps = {
   rangeIsTyped: boolean;
   /** Namespaces this instance's field ids — see `PriceFacetFields`. */
   idPrefix: string;
+  /**
+   * A prop rather than `useParams()`: the only caller is `CategoryFilterPanel`,
+   * a Server Component one step above that already has the market. One hop is
+   * not worth a hook.
+   */
+  market: MarketSegment;
 };
 
 export default function CategoryFilterForm({
@@ -29,14 +36,15 @@ export default function CategoryFilterForm({
   counts,
   rangeIsTyped,
   idPrefix,
+  market,
 }: CategoryFilterFormProps) {
   const router = useRouter();
 
   const go = useCallback(
     (changes: Partial<CategoryQuery>) => {
-      router.push(categoryHref(slug, query, changes));
+      router.push(marketHref(market, categoryHref(slug, query, changes)));
     },
-    [router, slug, query],
+    [router, market, slug, query],
   );
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -48,7 +56,7 @@ export default function CategoryFilterForm({
   return (
     <form
       method="get"
-      action={`/c/${slug}`}
+      action={marketHref(market, `/c/${slug}`)}
       onSubmit={submit}
       className="flex flex-col gap-3"
     >

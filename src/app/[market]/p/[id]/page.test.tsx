@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
-import renderWithCart from '../../../../test/render-with-cart';
+import renderWithCart from '../../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
 
 /*
@@ -116,7 +116,9 @@ describe('Product page', () => {
     mockFetch();
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     expect(
@@ -137,7 +139,9 @@ describe('Product page', () => {
     mockFetch();
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     expect(
@@ -163,7 +167,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     expect(screen.getByText('A quiet tower cooler.')).toBeInTheDocument();
@@ -216,7 +222,9 @@ describe('Product page', () => {
     });
 
     const { container } = renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
     const readable = container.cloneNode(true) as HTMLElement;
 
@@ -243,7 +251,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     expect(
@@ -286,7 +296,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     // Named axes are the one case where a row may carry its name, because the
@@ -338,7 +350,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     // Options are links, not radios: selection lives in the URL so the price is
@@ -396,7 +410,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     expect(screen.getByText('From')).toBeVisible();
@@ -425,7 +441,7 @@ describe('Product page', () => {
 
     renderWithCart(
       await ProductPage({
-        params: Promise.resolve({ id: 'air-cooler' }),
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
         searchParams: Promise.resolve({ variant: 'v-9' }),
       }),
     );
@@ -443,13 +459,15 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     fetchMock.mockClear();
     fireEvent.click(screen.getByRole('link', { name: /option 10/i }));
 
-    expect(window.location.pathname).toBe('/p/air-cooler');
+    expect(window.location.pathname).toBe('/au/p/air-cooler');
     expect(window.location.search).toBe('?variant=v-9');
     expect(screen.queryByText('From')).not.toBeInTheDocument();
     expect(screen.getAllByText('US$20')).toHaveLength(2);
@@ -464,7 +482,7 @@ describe('Product page', () => {
 
     renderWithCart(
       await ProductPage({
-        params: Promise.resolve({ id: 'air-cooler' }),
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
         searchParams: Promise.resolve({ variant: 'v-9' }),
       }),
     );
@@ -491,7 +509,7 @@ describe('Product page', () => {
     // It must not 404 and must not throw.
     renderWithCart(
       await ProductPage({
-        params: Promise.resolve({ id: 'air-cooler' }),
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
         searchParams: Promise.resolve({ variant: 'no-such-variant' }),
       }),
     );
@@ -528,7 +546,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     const rows = screen.getAllByRole('list', { name: /choose an option/i });
@@ -574,7 +594,7 @@ describe('Product page', () => {
 
     renderWithCart(
       await ProductPage({
-        params: Promise.resolve({ id: 'air-cooler' }),
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
         searchParams: Promise.resolve({ variant: 'v-8' }),
       }),
     );
@@ -598,7 +618,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     const nav = screen.getByRole('navigation', { name: /breadcrumb/i });
@@ -606,7 +628,7 @@ describe('Product page', () => {
     // `/c/[category]` does not exist and `categoryPath` carries no ancestor
     // slug, so every level except Home is text rather than a dead link.
     expect(nav.querySelectorAll('a')).toHaveLength(1);
-    expect(nav.querySelector('a')).toHaveAttribute('href', '/');
+    expect(nav.querySelector('a')).toHaveAttribute('href', '/au');
     expect(screen.getByText('Outerwear')).toBeVisible();
 
     const breadcrumb = [
@@ -642,7 +664,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
@@ -664,7 +688,9 @@ describe('Product page', () => {
     mockFetch();
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     fireEvent.click(screen.getByRole('button', { name: /add to cart/i }));
@@ -676,7 +702,9 @@ describe('Product page', () => {
     mockFetch({ found: false });
 
     await expect(
-      ProductPage({ params: Promise.resolve({ id: 'does-not-exist' }) }),
+      ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'does-not-exist' }),
+      }),
     ).rejects.toThrow();
   });
 
@@ -689,7 +717,9 @@ describe('Product page', () => {
     mockFetch({ status: 503 });
 
     await expect(
-      ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     ).rejects.toMatchObject({ name: 'ProductsApiError' });
   });
 
@@ -697,7 +727,7 @@ describe('Product page', () => {
     mockFetch();
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ id: 'air-cooler' }),
+      params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
     });
 
     expect(metadata.title).toMatch(/quiet tower air cooler/i);
@@ -712,7 +742,7 @@ describe('Product page', () => {
     });
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ id: 'air-cooler' }),
+      params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
     });
 
     expect(metadata.description).toBe('Cools a bedroom without the fan noise.');
@@ -734,7 +764,9 @@ describe('Product page', () => {
     });
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     expect(
@@ -757,7 +789,7 @@ describe('Product page', () => {
     });
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ id: 'air-cooler' }),
+      params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
     });
 
     expect(metadata.description).toMatch(/home and living/i);
@@ -777,7 +809,9 @@ describe('Product page', () => {
     const fetchMock = mockFetch();
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     // Ends at the slug: `/products/air-cooler/reviews` is a different read on
@@ -802,7 +836,9 @@ describe('Product page', () => {
     mockFetch();
 
     renderWithCart(
-      await ProductPage({ params: Promise.resolve({ id: 'air-cooler' }) }),
+      await ProductPage({
+        params: Promise.resolve({ market: 'au', id: 'air-cooler' }),
+      }),
     );
 
     await waitFor(() => {

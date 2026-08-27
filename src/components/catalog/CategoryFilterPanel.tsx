@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { categories } from '@/lib/home-placeholder-data';
 import type { PriceBandId } from '@/lib/catalog/price-bands';
 import { categoryHref, type CategoryQuery } from '@/lib/catalog/query';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import BlockedFacetsNote from './BlockedFacetsNote';
 import CategoryFilterForm from './CategoryFilterForm';
 
@@ -22,6 +23,7 @@ type CategoryFilterPanelProps = {
    * same panel, so their field ids must not collide.
    */
   idPrefix: string;
+  market: MarketSegment;
 };
 
 export default function CategoryFilterPanel({
@@ -30,6 +32,7 @@ export default function CategoryFilterPanel({
   counts,
   rangeIsTyped,
   idPrefix,
+  market,
 }: CategoryFilterPanelProps) {
   const visibleCategories = query.allCats
     ? categories
@@ -45,7 +48,7 @@ export default function CategoryFilterPanel({
           {visibleCategories.map((category) => (
             <li key={category.id}>
               <Link
-                href={`/c/${category.id}`}
+                href={marketHref(market, `/c/${category.id}`)}
                 className={`flex min-h-9 items-center rounded-lg px-2.5 text-[13px] leading-tight hover:no-underline ${
                   category.id === currentSlug
                     ? 'bg-brand-600/10 font-bold text-brand-900'
@@ -58,7 +61,10 @@ export default function CategoryFilterPanel({
           ))}
         </ul>
         <Link
-          href={categoryHref(currentSlug, query, { allCats: !query.allCats })}
+          href={marketHref(
+            market,
+            categoryHref(currentSlug, query, { allCats: !query.allCats }),
+          )}
           className="block border-t border-border px-4 py-2.5 text-[13px] font-bold text-brand-600 hover:no-underline"
         >
           {query.allCats
@@ -73,6 +79,7 @@ export default function CategoryFilterPanel({
         counts={counts}
         rangeIsTyped={rangeIsTyped}
         idPrefix={idPrefix}
+        market={market}
       />
 
       <BlockedFacetsNote />

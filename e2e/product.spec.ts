@@ -15,7 +15,7 @@ test('clicking a product on the home page reaches either a live PDP or honest no
 }) => {
   await page.goto('/');
 
-  const firstProductLink = page.locator('a[href^="/p/"]').first();
+  const firstProductLink = page.locator('a[href*="/p/"]').first();
 
   /*
    * An empty catalogue is a legitimate third state, not a failure. The feed now
@@ -68,7 +68,7 @@ test('clicking a product on the home page reaches either a live PDP or honest no
 test('an unknown product slug shows the Sals3 not-found page', async ({
   page,
 }) => {
-  const response = await page.goto('/p/this-slug-does-not-exist');
+  const response = await page.goto('/au/p/this-slug-does-not-exist');
 
   /*
    * 404 when the portal is reachable and genuinely has no such product; 500

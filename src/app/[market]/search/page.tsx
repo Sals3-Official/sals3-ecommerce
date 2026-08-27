@@ -29,6 +29,12 @@ import {
   fetchSearchProducts,
   type CategoryProductsSort,
 } from '@/services/products';
+import {
+  DEFAULT_MARKET,
+  isMarketSegment,
+  marketHref,
+  type MarketSegment,
+} from '@/lib/destination/markets';
 
 /**
  * Search results, wearing the category listing's own shell.
@@ -52,7 +58,10 @@ const SORT_TO_API: Record<CategoryQuery['sort'], CategoryProductsSort> = {
   'price-desc': 'price-desc',
 };
 
-type SearchPageProps = { searchParams?: Promise<RawSearchParams> };
+type SearchPageProps = {
+  params: Promise<{ market: string }>;
+  searchParams?: Promise<RawSearchParams>;
+};
 
 type SearchOutcome = {
   products: CategoryProduct[];
@@ -140,7 +149,15 @@ function resultLine(total: number, term: string): string {
   return `${total} results for “${term}”`;
 }
 
-export default async function SearchPage({ searchParams }: SearchPageProps) {
+export default async function SearchPage({
+  params,
+  searchParams,
+}: SearchPageProps) {
+  const { market: rawMarket } = await params;
+  // The layout above 404s an unrecognised segment; this only narrows the type.
+  const market: MarketSegment = isMarketSegment(rawMarket)
+    ? rawMarket
+    : DEFAULT_MARKET;
   const query = parseSearchQuery((await searchParams) ?? {});
   const [outcome, counts] = await Promise.all([
     runSearch(query),
@@ -149,15 +166,24 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const range = activePriceRange(query.band, query.priceMin, query.priceMax);
   const filtering = hasActiveFilters(query);
-  const chips = buildSearchChips(query);
-  const clearHref = clearSearchFiltersHref(query);
+  /*
+    The chip builders return query state — `?band=…` on `/search` — and know
+    nothing about which market is asking, deliberately: they are the same
+    functions whichever shopfront renders them. The market is applied here,
+    once, on the way out.
+  */
+  const chips = buildSearchChips(query).map((chip) => ({
+    ...chip,
+    clearHref: marketHref(market, chip.clearHref),
+  }));
+  const clearHref = marketHref(market, clearSearchFiltersHref(query));
   const isIdle = query.q === '';
   const isEmpty = !isIdle && !outcome.unavailable && outcome.total === 0;
   const showsResults = !isIdle && !outcome.unavailable && outcome.total > 0;
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
-      <SiteHeader searchTerm={query.q} />
+      <SiteHeader market={market} searchTerm={query.q} />
       <main className="mx-auto w-full max-w-6xl px-6 py-4 pb-16">
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
           <aside className="hidden lg:sticky lg:top-4 lg:flex lg:flex-col">
@@ -166,6 +192,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               counts={counts}
               rangeIsTyped={range.typed}
               idPrefix="sidebar"
+              market={market}
             />
           </aside>
 
@@ -192,6 +219,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   counts={counts}
                   rangeIsTyped={range.typed}
                   idPrefix="sheet"
+                  market={market}
                 />
               </MobileFilterSheet>
             </div>
@@ -204,8 +232,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     : resultLine(outcome.total, query.q)}
                 </p>
                 <div className="flex items-center gap-3">
-                  <SearchSortSelect query={query} />
-                  <SearchViewToggle query={query} />
+                  <SearchSortSelect query={query} market={market} />
+                  <SearchViewToggle query={query} market={market} />
                 </div>
               </div>
             )}
@@ -224,13 +252,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               filtering={filtering}
               chips={chips}
               clearFiltersHref={clearHref}
+              market={market}
             />
 
             {showsResults ? (
               <ProductPagination
                 currentPage={Math.min(query.page, outcome.totalPages)}
                 totalPages={outcome.totalPages}
-                getPageHref={(target) => searchHref(query, { page: target })}
+                getPageHref={(target) =>
+                  marketHref(market, searchHref(query, { page: target }))
+                }
               />
             ) : null}
           </div>

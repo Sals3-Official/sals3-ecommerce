@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { SearchIcon } from '@/components/icons/Icon';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 import { SEARCH_PATH } from '@/lib/search/query';
 
 /**
@@ -22,8 +23,9 @@ import { SEARCH_PATH } from '@/lib/search/query';
  *
  * ## Why a real form
  *
- * `<form method="get" action="/search">` and nothing else — the browser's own
- * submit produces `/search?q=…`, so this works identically with JavaScript off.
+ * `<form method="get" action="/au/search">` and nothing else — the browser's
+ * own submit produces `/au/search?q=…`, so this works identically with
+ * JavaScript off.
  *
  * There is deliberately no `router.push`. Soft-navigating would have bought a
  * slightly smoother hop to a different route, at the cost of `useRouter` in a
@@ -44,11 +46,24 @@ import { SEARCH_PATH } from '@/lib/search/query';
  * input.
  */
 type SearchBoxProps = {
+  /**
+   * The market the results page belongs to.
+   *
+   * A prop rather than `useParams()` for the same reason the keyword is one:
+   * this box renders in the header of *every* page, including the account
+   * routes that have no market segment and the tests that mount a page with no
+   * app router at all. `SiteHeader` already knows the answer, so it is passed
+   * rather than looked up in a hook that would have to guess in both cases.
+   */
+  market: MarketSegment;
   /** What the box starts with — the current keyword on `/search`, else empty. */
   initialTerm?: string;
 };
 
-export default function SearchBox({ initialTerm = '' }: SearchBoxProps) {
+export default function SearchBox({
+  market,
+  initialTerm = '',
+}: SearchBoxProps) {
   const [query, setQuery] = useState(initialTerm);
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -59,7 +74,7 @@ export default function SearchBox({ initialTerm = '' }: SearchBoxProps) {
   return (
     <form
       method="get"
-      action={SEARCH_PATH}
+      action={marketHref(market, SEARCH_PATH)}
       onSubmit={submit}
       role="search"
       className="relative min-w-0 flex-1"

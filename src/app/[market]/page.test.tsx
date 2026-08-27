@@ -3,8 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { homePromoSlides } from '@/lib/home-promo-slides';
 import { SITE_TAGLINE } from '@/lib/site';
-import renderWithCart from '../../test/render-with-cart';
+import renderWithCart from '../../../test/render-with-cart';
 import Home from './page';
+
+/*
+  Every render here is Australia's shopfront. The market decides the prefix
+  on every shopping link the page emits and nothing else about its content,
+  so one segment covers the assertions in this file; `/fj`'s own behaviour —
+  the cannot-order notice — is asserted separately below.
+*/
+const MARKET_PARAMS = Promise.resolve({ market: 'au' });
 
 /*
   `HeaderDestination` reads `cookies()` to resolve the buyer's shipping
@@ -133,7 +141,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(
       screen.getByRole('heading', { level: 2, name: /deals/i }),
@@ -147,7 +155,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(screen.getByPlaceholderText(/search products/i)).toBeInTheDocument();
   });
@@ -156,7 +164,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(
       await screen.findByRole('link', { name: /^log in$/i }),
@@ -172,7 +180,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch(21, { signedIn: true, fullName: 'AJ Shopper' });
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(
       await screen.findByRole('button', { name: /aj shopper account menu/i }),
@@ -185,7 +193,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     const categories = screen.getByRole('navigation', { name: /categories/i });
 
@@ -196,7 +204,7 @@ describe('Home page', () => {
     // page-wide query matches twice.
     expect(
       within(categories).getByRole('link', { name: /electronics/i }),
-    ).toHaveAttribute('href', '/c/electronics');
+    ).toHaveAttribute('href', '/au/c/electronics');
 
     // Order matters here — the grid used to be a full-bleed band above the
     // banner. They are siblings inside <main>, so the comparison is exactly
@@ -245,7 +253,7 @@ describe('Home page', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     const grid = screen.getByRole('navigation', { name: /categories/i });
     const names = within(grid)
@@ -255,9 +263,9 @@ describe('Home page', () => {
     // Furniture is the only stocked department, so it leads; the two with no
     // published product still appear rather than being hidden.
     expect(names).toEqual([
-      '/c/furniture',
-      '/c/animals-pet-supplies',
-      '/c/electronics',
+      '/au/c/furniture',
+      '/au/c/animals-pet-supplies',
+      '/au/c/electronics',
     ]);
   });
 
@@ -295,13 +303,13 @@ describe('Home page', () => {
       }),
     );
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     const grid = screen.getByRole('navigation', { name: /categories/i });
 
     expect(
       within(grid).getByRole('link', { name: /animals & pet supplies/i }),
-    ).toHaveAttribute('href', '/c/animals-pet-supplies');
+    ).toHaveAttribute('href', '/au/c/animals-pet-supplies');
     expect(
       within(grid).queryByRole('link', { name: /aquarium lighting/i }),
     ).not.toBeInTheDocument();
@@ -311,7 +319,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(screen.queryByText(/free shipping this weekend/i)).toBeNull();
     expect(
@@ -332,7 +340,7 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const fetchMock = mockProductsFetch(30);
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:3001/api/storefront/products?section=for-you&page=1&limit=14',
@@ -349,6 +357,7 @@ describe('Home page', () => {
 
     renderWithCart(
       await Home({
+        params: MARKET_PARAMS,
         searchParams: Promise.resolve({ page: '2' }),
       }),
     );
@@ -378,10 +387,10 @@ describe('Home page', () => {
     expect(screen.queryByRole('button', { name: /load more/i })).toBeNull();
     expect(
       screen.getByRole('link', { name: /go to previous product page/i }),
-    ).toHaveAttribute('href', '/#for-you');
+    ).toHaveAttribute('href', '/au#for-you');
     expect(
       screen.getByRole('link', { name: /go to next product page/i }),
-    ).toHaveAttribute('href', '/?page=3#for-you');
+    ).toHaveAttribute('href', '/au?page=3#for-you');
   });
 
   /**
@@ -417,7 +426,7 @@ describe('Home page', () => {
       }),
     );
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(screen.getByText(/no products are listed yet/i)).toBeInTheDocument();
     // Not the placeholder fallback: those only appear when the feed throws.
@@ -460,7 +469,7 @@ describe('Home page', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(screen.getByText('Live product 1')).toBeInTheDocument();
     expect(screen.getByText(/live products unavailable/i)).toBeInTheDocument();
@@ -470,10 +479,77 @@ describe('Home page', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     mockProductsFetch();
 
-    renderWithCart(await Home());
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
 
     expect(
       screen.getByRole('heading', { level: 1, name: SITE_TAGLINE }),
     ).toBeInTheDocument();
+  });
+
+  /*
+    The point of publishing `/fj` at all. Fiji is a real, linkable, crawlable
+    shopfront while checkout still refuses a Fijian address — defensible only
+    while the shopfront says so on its first screen, rather than letting a buyer
+    discover it after filling a cart.
+
+    The notice is about the **market**, not the reader: it appears for everyone
+    on `/fj`, including a visitor whose own destination is Australia, because it
+    is a statement about the shopfront being read.
+  */
+  it('says on the Fiji home page that an order cannot be placed there', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch();
+
+    renderWithCart(await Home({ params: Promise.resolve({ market: 'fj' }) }));
+
+    const notice = screen.getByRole('heading', {
+      level: 2,
+      name: /where orders can be placed/i,
+    }).parentElement!;
+
+    expect(notice).toHaveTextContent(
+      /checkout does not take a fiji delivery address yet/i,
+    );
+    // Built from CHECKOUT_ALLOWED_COUNTRIES, so it cannot name a country the
+    // address form would refuse.
+    expect(notice).toHaveTextContent(/australia and the philippines/i);
+  });
+
+  it('carries no such notice on a market that can be ordered to', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch();
+
+    renderWithCart(await Home({ params: MARKET_PARAMS }));
+
+    expect(
+      screen.queryByRole('heading', {
+        level: 2,
+        name: /where orders can be placed/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('points every shopping link at the market being browsed', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch();
+
+    renderWithCart(await Home({ params: Promise.resolve({ market: 'fj' }) }));
+
+    expect(screen.getByRole('link', { name: 'Cart' })).toHaveAttribute(
+      'href',
+      '/fj/cart',
+    );
+    expect(screen.getByRole('search')).toHaveAttribute('action', '/fj/search');
+    expect(
+      screen.getAllByRole('link', { name: /^Electronics$/ })[0],
+    ).toHaveAttribute('href', '/fj/c/electronics');
+    /*
+      Account routes belong to a person, not to a country, and stay unprefixed.
+      Awaited because the utility bar renders neither identity until the session
+      check answers — it must never flash the wrong one.
+    */
+    expect(
+      await screen.findByRole('link', { name: /log in/i }),
+    ).toHaveAttribute('href', '/login');
   });
 });

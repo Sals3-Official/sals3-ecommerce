@@ -11,8 +11,14 @@ import {
   trackKlaviyoCartQuantityChanged,
   trackKlaviyoCartViewed,
 } from '@/lib/klaviyo/client';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
-export default function CartPageClient() {
+/**
+ * `market` scopes "Continue shopping" back into the shopfront the buyer came
+ * from. `Proceed to Checkout` deliberately stays a bare `/checkout`: checkout
+ * belongs to a person, not to a country.
+ */
+export default function CartPageClient({ market }: { market: MarketSegment }) {
   const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
 
   useEffect(() => {
@@ -30,7 +36,7 @@ export default function CartPageClient() {
           like.
         </p>
         <Link
-          href="/"
+          href={marketHref(market, '/')}
           className="inline-block rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
         >
           Continue shopping

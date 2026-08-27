@@ -1,6 +1,7 @@
 import type { Product } from '@/lib/home-placeholder-data';
 import SponsoredCarousel from '@/components/ads/SponsoredCarousel';
 import ProductCard from '@/components/home/ProductCard';
+import type { MarketSegment } from '@/lib/destination/markets';
 
 /**
  * `slotKey` is a property of the slot, not of what fills it. The slot's content
@@ -12,14 +13,19 @@ type GridItem =
 
 type ProductGridProps = {
   items: GridItem[];
+  market: MarketSegment;
 };
 
-export default function ProductGrid({ items }: ProductGridProps) {
+export default function ProductGrid({ items, market }: ProductGridProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {items.map((item) =>
         item.kind === 'product' ? (
-          <ProductCard key={item.product.id} product={item.product} />
+          <ProductCard
+            key={item.product.id}
+            product={item.product}
+            market={market}
+          />
         ) : (
           <SponsoredCarousel key={item.slotKey} variant="card" />
         ),

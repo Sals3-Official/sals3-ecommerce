@@ -109,9 +109,15 @@ test.describe('Login screen', () => {
     await fillCredentials(page);
     await continueButton(page).click();
 
-    await page.waitForURL('**/');
+    /*
+      Sign-in still sends the visitor to `/`, which is now a dispatcher rather
+      than a page: it redirects to the market their stored destination names.
+      Nothing has been chosen in this run and there is no geo header locally, so
+      it resolves to the default market.
+    */
+    await page.waitForURL('**/au');
     expect(new URL(page.url()).search).toBe('');
-    expect(new URL(page.url()).pathname).toBe('/');
+    expect(new URL(page.url()).pathname).toBe('/au');
   });
 
   test('keeps the password out of the query string when sign-in fails', async ({
@@ -160,8 +166,9 @@ test.describe('Login screen', () => {
     await fillCredentials(page);
     await continueButton(page).click();
 
-    await page.waitForURL('**/');
-    expect(new URL(page.url()).pathname).toBe('/');
+    // `/` dispatches to the default market — see the note above.
+    await page.waitForURL('**/au');
+    expect(new URL(page.url()).pathname).toBe('/au');
   });
 
   test('tells the visitor to wait when the attempt is throttled', async ({

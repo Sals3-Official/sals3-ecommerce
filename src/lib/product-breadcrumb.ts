@@ -1,4 +1,5 @@
 import type { ProductDetail } from '@/lib/product-detail';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 /**
  * The breadcrumb trail, as data, so the visible `<nav>` and the
@@ -50,8 +51,17 @@ function pathSegments(categoryPath: string): string[] {
  * Falls back to `categoryName`, then the raw `category` code, when no
  * `categoryPath` arrives. For a CJ-mirrored product the path is a single
  * segment, so the real trail is three levels with one link.
+ *
+ * `Home` is the market's own home, never the bare `/`. The dispatcher at `/`
+ * re-resolves the destination from the cookie, so a crumb pointing there would
+ * walk a buyer browsing `/ph` out of the Philippines — and it would put a
+ * cross-market URL into the `BreadcrumbList` JSON-LD built from this same
+ * trail, which is a worse version of the same mistake.
  */
-export function breadcrumbTrail(detail: ProductDetail): BreadcrumbEntry[] {
+export function breadcrumbTrail(
+  detail: ProductDetail,
+  market: MarketSegment,
+): BreadcrumbEntry[] {
   const middle =
     detail.categoryPath !== undefined &&
     pathSegments(detail.categoryPath).length > 0
@@ -59,7 +69,7 @@ export function breadcrumbTrail(detail: ProductDetail): BreadcrumbEntry[] {
       : [detail.categoryName ?? detail.category];
 
   return [
-    { name: 'Home', href: '/' },
+    { name: 'Home', href: marketHref(market, '/') },
     ...middle.map((name) => ({ name })),
     { name: detail.title },
   ];

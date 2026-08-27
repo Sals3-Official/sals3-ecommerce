@@ -1,10 +1,12 @@
 import type { Product } from '@/lib/home-placeholder-data';
 import ProductGrid from '@/components/home/ProductGrid';
 import ProductPagination from '@/components/home/ProductPagination';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 type ForYouSectionProps = {
   products: Product[];
   regionNote: string;
+  market: MarketSegment;
   pagination?: {
     currentPage: number;
     totalPages: number;
@@ -16,9 +18,20 @@ type ForYouSectionProps = {
  * carries no slot at all. */
 const AD_SLOT_AFTER = 3;
 
+/**
+ * The section's own address, one market deep. `#for-you` keeps the jump on the
+ * grid rather than the top of the home page.
+ */
+function pageHref(market: MarketSegment, page: number): string {
+  const home = marketHref(market, '/');
+
+  return page === 1 ? `${home}#for-you` : `${home}?page=${page}#for-you`;
+}
+
 export default function ForYouSection({
   products,
   regionNote,
+  market,
   pagination,
 }: ForYouSectionProps) {
   const productItems = products.map((product) => ({
@@ -54,12 +67,13 @@ export default function ForYouSection({
           No products are listed yet. Check back soon.
         </p>
       ) : (
-        <ProductGrid items={items} />
+        <ProductGrid items={items} market={market} />
       )}
       {pagination && pagination.totalPages > 1 ? (
         <ProductPagination
           currentPage={pagination.currentPage}
           totalPages={pagination.totalPages}
+          getPageHref={(target) => pageHref(market, target)}
         />
       ) : null}
     </section>

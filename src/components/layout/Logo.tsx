@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { marketHref, type MarketSegment } from '@/lib/destination/markets';
 
 /**
  * The mark is 640x219 and is drawn in navy and teal on transparency, so it
@@ -14,10 +15,18 @@ import Link from 'next/link';
  * `--header-logo-height`). `width: auto` keeps the intrinsic 2.92:1 proportion
  * at every height, and the `width`/`height` attributes stay at the intrinsic
  * pixel size so the browser reserves the right box before the file arrives.
+ *
+ * The mark points at the current market's home (`/au`, `/ph`, `/fj`) rather
+ * than at the bare `/`. `/` is a dispatcher that re-resolves the destination
+ * from the cookie, so a buyer browsing `/fj` with nothing chosen would be sent
+ * to Australia by clicking the logo — which reads as the site losing its place.
  */
-export default function Logo() {
+export default function Logo({ market }: { market: MarketSegment }) {
   return (
-    <Link href="/" className="flex shrink-0 items-center rounded-lg">
+    <Link
+      href={marketHref(market, '/')}
+      className="flex shrink-0 items-center rounded-lg"
+    >
       <Image
         src="/sals3-logo.webp"
         alt="Sals3"

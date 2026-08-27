@@ -4,14 +4,23 @@ import { findDestination } from '@/lib/destination/destinations';
 import DestinationPicker from './DestinationPicker';
 
 const routerRefresh = vi.hoisted(() => vi.fn());
+const routerPush = vi.hoisted(() => vi.fn());
+const currentPathname = vi.hoisted(() => ({ value: '/au' }));
 const setDestinationAction = vi.hoisted(() =>
   vi.fn<
     (code: string) => Promise<{ ok: true } | { ok: false; reason: string }>
   >(),
 );
 
+/*
+  The picker is a market switcher as well as a preference control, so it reads
+  the current path to work out where the equivalent page in another market is.
+  `currentPathname` is a box rather than a plain string so a test can stand the
+  picker on a different route before rendering it.
+*/
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: routerRefresh }),
+  useRouter: () => ({ refresh: routerRefresh, push: routerPush }),
+  usePathname: () => currentPathname.value,
 }));
 
 /*
@@ -26,6 +35,8 @@ vi.mock('@/lib/destination/actions', () => ({
 
 beforeEach(() => {
   routerRefresh.mockClear();
+  routerPush.mockClear();
+  currentPathname.value = '/au';
   setDestinationAction.mockReset();
   setDestinationAction.mockResolvedValue({ ok: true });
 });
@@ -100,7 +111,79 @@ describe('DestinationPicker', () => {
     ).not.toHaveTextContent(/ordering not available yet/i);
   });
 
-  it('records the chosen destination and refreshes the server-rendered tree', async () => {
+  /*
+    The cookie is written whatever else happens — it is what the `/` dispatcher
+    reads, and the only record that the buyer chose rather than that geo
+    guessed.
+  */
+  it('records the chosen destination', async () => {
+    renderPicker('AU');
+    openPicker();
+
+    fireEvent.click(screen.getByRole('button', { name: /^philippines$/i }));
+
+    await waitFor(() =>
+      expect(setDestinationAction).toHaveBeenCalledWith('PH'),
+    );
+  });
+
+  it('moves the buyer into the market they chose', async () => {
+    renderPicker('AU');
+    openPicker();
+
+    fireEvent.click(screen.getByRole('button', { name: /^philippines$/i }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/ph'));
+    // The navigation re-renders the target route on the server with the new
+    // cookie, so a refresh on top of it would be a second round trip for the
+    // same answer.
+    expect(routerRefresh).not.toHaveBeenCalled();
+  });
+
+  /*
+    The markets serve one catalogue, so the same product exists in each of them.
+    Landing the buyer on the home page after they corrected their destination
+    halfway down a product would read as a reset rather than a switch.
+  */
+  it('keeps the buyer on the same page one market over', async () => {
+    currentPathname.value = '/au/p/air-cooler';
+
+    renderPicker('AU');
+    openPicker();
+
+    fireEvent.click(screen.getByRole('button', { name: /^philippines$/i }));
+
+    await waitFor(() =>
+      expect(routerPush).toHaveBeenCalledWith('/ph/p/air-cooler'),
+    );
+  });
+
+  /*
+    `US` is priced but has no shopfront of its own, so there is nowhere to send
+    anyone. The preference still has to be recorded: it is what `/` reads.
+  */
+  it('records a destination with no market of its own without navigating', async () => {
+    renderPicker('AU');
+    openPicker();
+
+    fireEvent.click(screen.getByRole('button', { name: /united states/i }));
+
+    await waitFor(() =>
+      expect(setDestinationAction).toHaveBeenCalledWith('US'),
+    );
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1));
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  /*
+    `/checkout` belongs to a person, not to a country. Throwing away a
+    half-filled checkout because the buyer corrected their shipping destination
+    would destroy work in order to honour a preference the cookie has already
+    recorded.
+  */
+  it('does not navigate away from an account route', async () => {
+    currentPathname.value = '/checkout/delivery';
+
     renderPicker('AU');
     openPicker();
 
@@ -110,6 +193,7 @@ describe('DestinationPicker', () => {
       expect(setDestinationAction).toHaveBeenCalledWith('PH'),
     );
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1));
+    expect(routerPush).not.toHaveBeenCalled();
   });
 
   it('says so and stays open when the destination could not be saved', async () => {
@@ -127,6 +211,7 @@ describe('DestinationPicker', () => {
       /did not save/i,
     );
     expect(routerRefresh).not.toHaveBeenCalled();
+    expect(routerPush).not.toHaveBeenCalled();
     expect(
       screen.getByRole('button', { name: /^philippines$/i }),
     ).toBeInTheDocument();
