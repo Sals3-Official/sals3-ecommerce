@@ -2,7 +2,19 @@ export const CHECKOUT_ALLOWED_COUNTRIES = ['AU', 'PH', 'FJ'] as const;
 
 export type CheckoutCountry = (typeof CHECKOUT_ALLOWED_COUNTRIES)[number];
 
-const CHECKOUT_FREE_TEXT_CITY_COUNTRIES = ['FJ'] as const;
+/**
+ * Countries whose second address level is towns rather than cities, and whose
+ * buyers may live outside every entry on the list.
+ *
+ * Fiji is the case: the divisions hold 25 towns between them, but deliveries
+ * also reach villages and outer islands that no list of towns will ever carry.
+ * The select still holds the towns — a typed city was never read by the freight
+ * quote and only ever reached the courier as a string, so the list buys clean,
+ * consistent data the same way Australia and the Philippines already do. The
+ * hint is what covers the gap: the nearest town goes here, the village name
+ * goes on the address lines, where the courier actually reads it.
+ */
+const CHECKOUT_TOWN_LIST_COUNTRIES = ['FJ'] as const;
 const CHECKOUT_OPTIONAL_POSTAL_CODE_COUNTRIES = ['FJ'] as const;
 
 export const CHECKOUT_COUNTRY_DETAILS = {
@@ -323,11 +335,34 @@ export const CHECKOUT_COUNTRY_DETAILS = {
     label: 'Fiji',
     phonePrefix: '+679',
     regions: {
-      'Central Division': ['Suva'],
+      'Central Division': [
+        'Korovou',
+        'Lami',
+        'Nasinu',
+        'Nausori',
+        'Navua',
+        'Pacific Harbour',
+        'Suva',
+      ],
       'Eastern Division': ['Levuka'],
-      'Northern Division': ['Labasa'],
+      'Northern Division': [
+        'Labasa',
+        'Matei',
+        'Nabouwalu',
+        'Naqara',
+        'Savusavu',
+        'Seaqaqa',
+      ],
       Rotuma: ['Ahau'],
-      'Western Division': ['Lautoka'],
+      'Western Division': [
+        'Ba',
+        'Lautoka',
+        'Nadi',
+        'Rakiraki',
+        'Sigatoka',
+        'Tavua',
+        'Vatukoula',
+      ],
     },
   },
 } as const;
@@ -354,10 +389,20 @@ export function checkoutCityOptions(
   ];
 }
 
-export function checkoutAllowsFreeTextCity(country: CheckoutCountry): boolean {
-  return (
-    CHECKOUT_FREE_TEXT_CITY_COUNTRIES as readonly CheckoutCountry[]
-  ).includes(country);
+function checkoutUsesTownList(country: CheckoutCountry): boolean {
+  return (CHECKOUT_TOWN_LIST_COUNTRIES as readonly CheckoutCountry[]).includes(
+    country,
+  );
+}
+
+export function checkoutCityLabel(country: CheckoutCountry): string {
+  return checkoutUsesTownList(country) ? 'City or town' : 'City';
+}
+
+export function checkoutCityHint(country: CheckoutCountry): string | undefined {
+  return checkoutUsesTownList(country)
+    ? 'Not listed? Choose the nearest town and put your village or island on address line 1.'
+    : undefined;
 }
 
 export function checkoutRequiresPostalCode(country: CheckoutCountry): boolean {

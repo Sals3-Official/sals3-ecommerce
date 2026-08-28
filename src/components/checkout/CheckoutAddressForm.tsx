@@ -4,7 +4,8 @@ import type { CheckoutAddress } from '@/lib/checkout/schema';
 import {
   CHECKOUT_ALLOWED_COUNTRIES,
   CHECKOUT_COUNTRY_DETAILS,
-  checkoutAllowsFreeTextCity,
+  checkoutCityHint,
+  checkoutCityLabel,
   checkoutCityOptions,
   checkoutRequiresPostalCode,
   checkoutRegionOptions,
@@ -138,6 +139,7 @@ type SelectFieldProps = {
   disabled: boolean;
   autoComplete: string;
   placeholder?: string;
+  helperText?: string;
   options: readonly string[];
   onChange: (field: keyof CheckoutAddress, value: string) => void;
 };
@@ -150,9 +152,19 @@ function SelectField({
   disabled,
   autoComplete,
   placeholder,
+  helperText,
   options,
   onChange,
 }: SelectFieldProps) {
+  const helperId =
+    helperText === undefined ? undefined : `${fieldId(field)}-hint`;
+  const describedBy = [
+    helperId,
+    error === undefined ? undefined : errorId(field),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div>
       <label
@@ -168,7 +180,7 @@ function SelectField({
         disabled={disabled}
         autoComplete={autoComplete}
         aria-invalid={error === undefined ? undefined : true}
-        aria-describedby={error === undefined ? undefined : errorId(field)}
+        aria-describedby={describedBy === '' ? undefined : describedBy}
         onChange={(event) => onChange(field, event.target.value)}
         className={FIELD_CLASS}
       >
@@ -183,6 +195,11 @@ function SelectField({
           </option>
         ))}
       </select>
+      {helperText === undefined ? null : (
+        <p id={helperId} className="mt-1 text-xs text-ink-faint">
+          {helperText}
+        </p>
+      )}
       {error === undefined ? null : (
         <p
           id={errorId(field)}
@@ -206,7 +223,7 @@ export default function CheckoutAddressForm({
   const { country } = value;
   const countryDetails = CHECKOUT_COUNTRY_DETAILS[country];
   const regionOptions = checkoutRegionOptions(country);
-  const useFreeTextCity = checkoutAllowsFreeTextCity(country);
+  const cityLabel = checkoutCityLabel(country);
   const cityOptions =
     value.region === '' ? [] : checkoutCityOptions(country, value.region);
 
@@ -328,30 +345,18 @@ export default function CheckoutAddressForm({
           options={regionOptions}
           onChange={onChange}
         />
-        {useFreeTextCity ? (
-          <Field
-            label="City or town"
-            field="city"
-            value={value.city}
-            error={errors.city}
-            disabled={disabled || value.region === ''}
-            autoComplete="address-level2"
-            helperText="Enter the town, city, island, or village for this address."
-            onChange={onChange}
-          />
-        ) : (
-          <SelectField
-            label="City"
-            field="city"
-            value={value.city}
-            error={errors.city}
-            disabled={disabled || value.region === ''}
-            autoComplete="address-level2"
-            placeholder="Select city"
-            options={cityOptions}
-            onChange={onChange}
-          />
-        )}
+        <SelectField
+          label={cityLabel}
+          field="city"
+          value={value.city}
+          error={errors.city}
+          disabled={disabled || value.region === ''}
+          autoComplete="address-level2"
+          placeholder={`Select ${cityLabel.toLowerCase()}`}
+          helperText={checkoutCityHint(country)}
+          options={cityOptions}
+          onChange={onChange}
+        />
         <Field
           label="Postal code"
           field="postalCode"

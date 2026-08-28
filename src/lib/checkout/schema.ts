@@ -4,7 +4,6 @@ import { SUPPORTED_CURRENCIES } from '@/lib/money';
 import {
   CHECKOUT_ALLOWED_COUNTRIES,
   CHECKOUT_COUNTRY_DETAILS,
-  checkoutAllowsFreeTextCity,
   checkoutCityOptions,
   checkoutRequiresPostalCode,
   checkoutRegionOptions,
@@ -62,8 +61,6 @@ export const CheckoutAddressSchema = z
       });
       return;
     }
-
-    if (checkoutAllowsFreeTextCity(address.country)) return;
 
     if (
       !checkoutCityOptions(address.country, address.region).includes(

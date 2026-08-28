@@ -87,7 +87,7 @@ describe('CheckoutAddressForm countries', () => {
     expect(screen.getByRole('option', { name: 'Fiji' })).toHaveValue('FJ');
   });
 
-  it('uses free text for a Fiji city or town', () => {
+  it('labels the Fiji city field as a city or town', () => {
     renderForm(false, {
       ...ADDRESS,
       phone: '+6793212345',
@@ -101,5 +101,71 @@ describe('CheckoutAddressForm countries', () => {
     expect(
       screen.getByText(/leave blank if your address has no postal code/i),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * A select, like Australia and the Philippines already use. A typed city was
+   * never read by the freight quote and only ever reached the courier as a
+   * string, so the list costs nothing and buys consistent data.
+   */
+  it('offers the towns of the selected Fiji division as a select', () => {
+    renderForm(false, {
+      ...ADDRESS,
+      phone: '+6793212345',
+      city: '',
+      region: 'Western Division',
+      postalCode: '',
+      country: 'FJ',
+    });
+
+    const city = screen.getByLabelText('City or town');
+
+    expect(city.tagName).toBe('SELECT');
+    expect(
+      [...(city as HTMLSelectElement).options]
+        .filter((option) => option.value !== '')
+        .map((option) => option.value),
+    ).toEqual([
+      'Ba',
+      'Lautoka',
+      'Nadi',
+      'Rakiraki',
+      'Sigatoka',
+      'Tavua',
+      'Vatukoula',
+    ]);
+  });
+
+  /**
+   * The list holds 25 towns; Fiji also delivers to villages and outer islands.
+   * The select must say where those go rather than leave the buyer stuck.
+   */
+  it('tells a Fiji buyer whose village is not listed where to put it', () => {
+    renderForm(false, {
+      ...ADDRESS,
+      phone: '+6793212345',
+      city: '',
+      region: 'Rotuma',
+      postalCode: '',
+      country: 'FJ',
+    });
+
+    const city = screen.getByLabelText('City or town');
+
+    expect(
+      [...(city as HTMLSelectElement).options]
+        .filter((option) => option.value !== '')
+        .map((option) => option.value),
+    ).toEqual(['Ahau']);
+    expect(city).toHaveAccessibleDescription(
+      /nearest town.*village or island on address line 1/i,
+    );
+  });
+
+  it('keeps Australia and the Philippines on the plain city label', () => {
+    renderForm(false);
+
+    expect(screen.getByLabelText('City')).toHaveValue('Quezon City');
+    expect(screen.queryByLabelText('City or town')).not.toBeInTheDocument();
   });
 });
