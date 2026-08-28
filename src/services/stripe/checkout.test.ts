@@ -75,6 +75,7 @@ describe('createStripeCheckoutSession', () => {
         address,
         shippingSelection,
         shippingQuotedAt: '2026-08-17T14:00:00.000Z',
+        buyerUid: 'firebase-uid-1',
         checkoutIntentId: '11111111-1111-4111-8111-111111111111',
       }),
     ).resolves.toEqual({
@@ -129,6 +130,7 @@ describe('createStripeCheckoutSession', () => {
       address,
       shippingSelection,
       shippingQuotedAt: '2026-08-17T14:00:00.000Z',
+      buyerUid: 'firebase-uid-1',
       checkoutIntentId: '11111111-1111-4111-8111-111111111111',
     });
 

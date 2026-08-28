@@ -183,13 +183,33 @@ export type BuyerOrderLinePayload = z.infer<typeof orderLineSchema>;
 export type OrderedListingPayload = z.infer<typeof orderedListingSchema>;
 export type BuyerTrackingEventPayload = z.infer<typeof trackingEventSchema>;
 
-function buyerHeaders(verifiedEmail: string): Record<string, string> {
-  return { 'X-Buyer-Email': verifiedEmail };
+/**
+ * `X-Buyer-Uid` carries the session-verified Firebase uid, and it is the
+ * header that actually scopes an order placed from 2026-08-28 onward.
+ *
+ * `X-Buyer-Email` stays because every order placed before then is scoped by it
+ * and has no uid to be scoped by instead. It is the weaker of the two: the
+ * email on an order is the contact address the buyer typed into the checkout
+ * form, so it names a mailbox rather than a person, and a buyer who typed
+ * anything other than their account address paid for an order they could not
+ * then see. Both are resolved from the session cookie; neither is ever taken
+ * from the request.
+ */
+function buyerHeaders(
+  verifiedEmail: string,
+  verifiedUid: string | undefined,
+): Record<string, string> {
+  return {
+    'X-Buyer-Email': verifiedEmail,
+    ...(verifiedUid === undefined || verifiedUid === ''
+      ? {}
+      : { 'X-Buyer-Uid': verifiedUid }),
+  };
 }
 
 export async function fetchBuyerOrders(
   verifiedEmail: string,
-  options: { fetcher?: typeof fetch } = {},
+  options: { fetcher?: typeof fetch; verifiedUid?: string } = {},
 ): Promise<BuyerOrderPayload[]> {
   const payload = await requestStorefrontJson(
     {
@@ -199,7 +219,7 @@ export async function fetchBuyerOrders(
     },
     {
       ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
-      headers: buyerHeaders(verifiedEmail),
+      headers: buyerHeaders(verifiedEmail, options.verifiedUid),
     },
   );
 
@@ -209,7 +229,7 @@ export async function fetchBuyerOrders(
 export async function fetchBuyerOrder(
   verifiedEmail: string,
   orderNumber: string,
-  options: { fetcher?: typeof fetch } = {},
+  options: { fetcher?: typeof fetch; verifiedUid?: string } = {},
 ): Promise<BuyerOrderPayload | null> {
   const payload = await requestStorefrontJson(
     {
@@ -224,7 +244,7 @@ export async function fetchBuyerOrder(
     },
     {
       ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
-      headers: buyerHeaders(verifiedEmail),
+      headers: buyerHeaders(verifiedEmail, options.verifiedUid),
     },
   );
 

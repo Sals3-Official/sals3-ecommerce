@@ -33,7 +33,9 @@ export default async function CheckoutFlowLayout({
 }: {
   children: ReactNode;
 }) {
-  if (!(await getBuyerSession())) {
+  const buyer = await getBuyerSession();
+
+  if (!buyer) {
     redirect(withPostLoginKey(AUTH_LINKS.signIn, 'checkout'));
   }
 
@@ -44,6 +46,16 @@ export default async function CheckoutFlowLayout({
     keeps its own default. Seeding a country the form would then refuse is the
     one outcome worth ruling out here rather than downstream.
   */
+  /*
+    The account's own address, seeded into the contact field.
+
+    The form still lets the buyer change it — some people genuinely want the
+    receipt somewhere else. But the default matters: an order is scoped by the
+    account that placed it, and until 2026-08-28 it was scoped by this field
+    instead, so a buyer who typed a different address paid for an order that
+    then vanished from their list. Seeding removes the accident while leaving
+    the choice.
+  */
   const destination = await resolveDestination();
   const initialCountry = isCheckoutCountry(destination.code)
     ? destination.code
@@ -53,7 +65,10 @@ export default async function CheckoutFlowLayout({
     <div className="flex flex-1 flex-col bg-surface">
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-5 pb-16">
-        <CheckoutFlowProvider initialCountry={initialCountry}>
+        <CheckoutFlowProvider
+          initialCountry={initialCountry}
+          initialEmail={buyer.email}
+        >
           <CheckoutFlowChrome>{children}</CheckoutFlowChrome>
         </CheckoutFlowProvider>
       </main>

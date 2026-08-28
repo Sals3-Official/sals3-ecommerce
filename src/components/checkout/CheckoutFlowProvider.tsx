@@ -38,12 +38,15 @@ const CheckoutFlowContext = createContext<CheckoutFlowValue | undefined>(
 export function CheckoutFlowProvider({
   children,
   initialCountry,
+  initialEmail,
 }: {
   children: ReactNode;
   initialCountry?: CheckoutCountry;
+  /** The signed-in account's own address, seeded into the contact field. */
+  initialEmail?: string | undefined;
 }) {
   const { items, itemCount, subtotal } = useCart();
-  const checkout = useCheckout(items, subtotal, initialCountry);
+  const checkout = useCheckout(items, subtotal, initialCountry, initialEmail);
 
   const value = useMemo<CheckoutFlowValue>(
     () => ({ ...checkout, items, itemCount, subtotal }),

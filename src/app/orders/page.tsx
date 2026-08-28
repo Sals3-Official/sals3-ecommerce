@@ -83,7 +83,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const posted = parsePostedCount(raw[REVIEW_POSTED_PARAM]);
   const now = new Date();
 
-  const all = await listBuyerOrders(session.email ?? '');
+  const all = await listBuyerOrders(session.email ?? '', session.uid);
   const matched = filterOrders(all, query, now);
   const counts = laneCounts(all, query, now);
   const page = paginate(matched, query.page);

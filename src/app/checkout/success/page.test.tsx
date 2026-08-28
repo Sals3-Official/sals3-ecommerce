@@ -313,3 +313,62 @@ describe('Checkout success page', () => {
     ).toBeInTheDocument();
   });
 });
+
+/**
+ * The 2026-08-28 failure: a buyer paid, the order was created and paid at the
+ * supplier seven seconds later, and this page told them the checkout was not
+ * theirs — because it compared their account address with the contact address
+ * they had typed into the checkout form, and those differed.
+ */
+describe('Checkout success page buyer identity', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+    mockedGetBuyerSession.mockResolvedValue({
+      uid: 'buyer-123',
+      email: BUYER_EMAIL,
+    });
+  });
+
+  it('shows the receipt when the uid matches, whatever address was typed', async () => {
+    mockedRetrieveSession.mockResolvedValue(
+      stripeSession({
+        customer_details: { email: 'typed-at-checkout@example.com' },
+        metadata: { sals3_buyer_uid: 'buyer-123' },
+      }),
+    );
+
+    renderWithCart(await renderPage());
+
+    expect(screen.getByText('Payment received')).toBeInTheDocument();
+  });
+
+  /**
+   * Once a session carries a uid, the email is not a fallback: allowing one
+   * would mean anyone who got a receipt's contact address onto their own
+   * account could read it.
+   */
+  it('refuses a matching address when the uid belongs to someone else', async () => {
+    mockedRetrieveSession.mockResolvedValue(
+      stripeSession({
+        customer_details: { email: BUYER_EMAIL },
+        metadata: { sals3_buyer_uid: 'someone-else' },
+      }),
+    );
+
+    renderWithCart(await renderPage());
+
+    expect(screen.getByText('Checkout not verified')).toBeInTheDocument();
+  });
+
+  /** Sessions created before the uid existed still verify by address. */
+  it('still verifies a pre-uid session by its contact address', async () => {
+    mockedRetrieveSession.mockResolvedValue(
+      stripeSession({ customer_details: { email: BUYER_EMAIL } }),
+    );
+
+    renderWithCart(await renderPage());
+
+    expect(screen.getByText('Payment received')).toBeInTheDocument();
+  });
+});

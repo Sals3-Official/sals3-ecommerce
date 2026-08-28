@@ -44,6 +44,7 @@ function metadataFor(
   cart: ValidatedCheckoutCart,
   shippingSelection: CheckoutShippingSelection,
   shippingQuotedAt: string,
+  buyerUid: string,
 ) {
   const optionIds = shippingSelection.packageSelections
     .map((selection) =>
@@ -66,6 +67,18 @@ function metadataFor(
 
   return {
     sals3_checkout_version: 'cj_freight_v2',
+    /**
+     * The verified account id of whoever was signed in when this session was
+     * created, so `/checkout/success` can answer "is this receipt yours" from
+     * the session itself.
+     *
+     * It used to answer that by comparing the buyer's account email with the
+     * contact email on the Stripe session. That address is typed into the
+     * checkout form, so on 2026-08-28 a buyer who typed a different one paid
+     * for an order and was then refused their own receipt. A uid is not
+     * something the buyer can type.
+     */
+    sals3_buyer_uid: buyerUid,
     sals3_line_count: String(cart.lines.length),
     sals3_shipping_package_count: String(
       shippingSelection.packageSelections.length,
@@ -105,6 +118,7 @@ export async function createStripeCheckoutSession(input: {
   shippingSelection: CheckoutShippingSelection;
   shippingQuotedAt: string;
   checkoutIntentId: string;
+  buyerUid: string;
 }): Promise<{ clientSecret: string; sessionId: string }> {
   const baseUrl = getBaseUrl();
   const stripe = getStripeClient();
@@ -115,6 +129,7 @@ export async function createStripeCheckoutSession(input: {
     input.cart,
     input.shippingSelection,
     input.shippingQuotedAt,
+    input.buyerUid,
   );
   const shippingAmount = shippingTotal(input.shippingSelection);
   const shippingCurrency =

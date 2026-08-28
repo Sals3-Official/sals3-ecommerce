@@ -57,6 +57,7 @@ export default function useCheckout(
   items: CartState['items'],
   subtotal: Money,
   initialCountry?: CheckoutCountry,
+  initialEmail?: string,
 ) {
   const [message, setMessage] = useState<string | null>(null);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
@@ -88,7 +89,7 @@ export default function useCheckout(
   }, [clearPreparedPayment, clearQuote]);
 
   const { address, errors, updateAddress, validateAddress } =
-    useCheckoutAddress(invalidateQuote, initialCountry);
+    useCheckoutAddress(invalidateQuote, initialCountry, initialEmail);
 
   const isPending = isQuotePending || isSubmitPending;
   const allPackagesSelected =
