@@ -132,5 +132,9 @@ export default function useCheckoutAddress(
     return true;
   }, [address]);
 
-  return { address, errors, updateAddress, validateAddress };
+  // Seeded means locked. An account with no email claim on its session falls
+  // through to an editable field rather than an empty one the buyer cannot fill.
+  const emailLocked = initialEmail !== '';
+
+  return { address, errors, updateAddress, validateAddress, emailLocked };
 }

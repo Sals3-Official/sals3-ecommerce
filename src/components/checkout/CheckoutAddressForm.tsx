@@ -16,10 +16,29 @@ const COUNTRY_ERROR_ID = 'checkout-country-error';
 const FIELD_CLASS =
   'mt-1 min-h-11 w-full rounded-lg border border-border-strong bg-white px-3 text-sm text-ink transition-colors duration-200 focus:border-brand-600 disabled:bg-surface-sunken disabled:text-ink-faint';
 
+/**
+ * Reads as settled rather than broken: the sunken background says "not yours to
+ * change" while the text stays at full contrast, because this value is the one
+ * the buyer most needs to be able to read back.
+ */
+const READ_ONLY_FIELD_CLASS =
+  'mt-1 min-h-11 w-full cursor-default rounded-lg border border-border bg-surface-sunken px-3 text-sm text-ink transition-colors duration-200 focus:border-brand-600';
+
 type CheckoutAddressFormProps = {
   value: CheckoutAddress;
   errors: CheckoutAddressErrors;
   disabled: boolean;
+  /**
+   * True once the contact field has been seeded from the signed-in account.
+   *
+   * The field used to be an empty box, and whatever was typed into it became
+   * the order's identity: on 2026-08-28 a buyer typed a second address, paid,
+   * and the order vanished from their own list. `buyer_uid` now carries the
+   * identity instead, so this is no longer load-bearing — but an editable
+   * contact field still invites the buyer to send their own receipt somewhere
+   * they cannot read it, so it is presented as settled.
+   */
+  emailLocked?: boolean;
   onChange: (field: keyof CheckoutAddress, value: string) => void;
 };
 
@@ -40,6 +59,12 @@ type FieldProps = {
   autoComplete: string;
   inputMode?: 'email' | 'tel' | 'text' | 'numeric';
   helperText?: string;
+  /**
+   * `readOnly`, not `disabled`. A disabled input is skipped by keyboard
+   * navigation and is not announced with its value, which is the wrong
+   * treatment for a field whose value the buyer needs to read and confirm.
+   */
+  readOnly?: boolean;
   onChange: (field: keyof CheckoutAddress, value: string) => void;
 };
 
@@ -52,6 +77,7 @@ function Field({
   autoComplete,
   inputMode = 'text',
   helperText,
+  readOnly = false,
   onChange,
 }: FieldProps) {
   const helperId =
@@ -78,10 +104,11 @@ function Field({
         disabled={disabled}
         autoComplete={autoComplete}
         inputMode={inputMode}
+        readOnly={readOnly}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={describedBy === '' ? undefined : describedBy}
         onChange={(event) => onChange(field, event.target.value)}
-        className={FIELD_CLASS}
+        className={readOnly ? READ_ONLY_FIELD_CLASS : FIELD_CLASS}
       />
       {helperText === undefined ? null : (
         <p id={helperId} className="mt-1 text-xs text-ink-faint">
@@ -171,6 +198,7 @@ export default function CheckoutAddressForm({
   value,
   errors,
   disabled,
+  emailLocked = false,
   onChange,
 }: CheckoutAddressFormProps) {
   const { country } = value;
@@ -199,6 +227,12 @@ export default function CheckoutAddressForm({
           disabled={disabled}
           autoComplete="email"
           inputMode="email"
+          readOnly={emailLocked}
+          helperText={
+            emailLocked
+              ? 'Your account email. Orders are tied to it, so it cannot be changed here.'
+              : undefined
+          }
           onChange={onChange}
         />
         <Field

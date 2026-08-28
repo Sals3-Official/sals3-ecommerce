@@ -220,8 +220,10 @@ one that differed from their account address, and the receipt told them
 "This checkout is not available on your account" for an order that had been
 created and paid at the supplier seven seconds later; the same order was absent
 from `/orders` for the same reason. The contact field is now seeded from the
-signed-in account (still editable), and buyer order reads send `X-Buyer-Uid`
-alongside `X-Buyer-Email`.
+signed-in account and rendered **read-only** — `readOnly`, not `disabled`, so it
+stays keyboard-reachable and is announced with its value. A session carrying no
+email claim falls through to an editable field rather than an empty locked one.
+Buyer order reads send `X-Buyer-Uid` alongside `X-Buyer-Email`.
 
 **Duplicate-session guard.** Separate routes hand the buyer a Back button.
 `useCheckout` records a signature of the address plus the selected tiers when
