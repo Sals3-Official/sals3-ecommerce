@@ -66,13 +66,6 @@ function requestKey(headersList: Headers): string {
   return forwarded || headersList.get('x-real-ip') || 'unknown';
 }
 
-function selectionTotal(selection: CheckoutShippingSelection): number {
-  return selection.packageSelections.reduce(
-    (total, selected) => total + selected.amountMinor,
-    0,
-  );
-}
-
 function validateShippingSelection(
   quoted: CheckoutFreightQuoteResponse,
   selection: CheckoutShippingSelection,
@@ -115,10 +108,6 @@ function validateShippingSelection(
     throw new CheckoutValidationError(
       'Choose a delivery option for every package.',
     );
-  }
-
-  if (selectionTotal({ packageSelections: selections }) <= 0) {
-    throw new CheckoutValidationError('Choose a delivery option.');
   }
 
   return { packageSelections: selections };

@@ -2,7 +2,7 @@
 tags: [sals3, adr, shipping, pricing, international, seo, currency]
 aliases: [ADR-003, International Availability and Pricing, Destination Pricing]
 created: 2026-08-06
-updated: 2026-08-28
+updated: 2026-08-29
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -327,3 +327,41 @@ and named.
 constraint, no backfill and no rewrite of existing rows.
 
 **Frontmatter `updated`** stays 2026-08-28.
+
+## Amendment — 2026-08-29: destination thresholds fund Standard delivery only (owner decision, Bogs)
+
+The storefront now offers free `Standard` delivery when the current, Portal-verified
+product subtotal reaches the destination's USD threshold:
+
+| Destination | Product subtotal threshold |
+|---|---:|
+| Philippines (`PH`) | US$12 |
+| Australia (`AU`) | US$25 |
+| Fiji (`FJ`) | US$55 |
+
+### Decision
+
+1. **Portal owns eligibility.** It resolves current published offer prices while producing the
+   existing CJ freight quote, totals `price × quantity`, and returns the threshold, verified
+   subtotal, amount remaining, and eligibility. Browser cart prices never authorize the benefit.
+   Threshold values exist only in Portal server environment:
+   `SALS3_FREE_STANDARD_SHIPPING_PH_USD`,
+   `SALS3_FREE_STANDARD_SHIPPING_AU_USD`, and
+   `SALS3_FREE_STANDARD_SHIPPING_FJ_USD`. There is no code fallback.
+2. **Only `Standard` becomes zero.** Classification still uses CJ's positive freight amounts.
+   After classification, an eligible Standard row receives a buyer charge of zero; Express and
+   Expedited retain their full quoted amounts.
+3. **Payment re-verifies the zero.** Both ecommerce and Portal re-quote and require the selected
+   package, tier, option, channel, amount, and currency to match before intent and Stripe Session
+   creation. A zero Standard amount is valid only when that fresh quote also returns zero.
+4. **Supplier freight remains auditable.** Each quote carries `regularAmountMinor` beside the
+   buyer-facing `amountMinor`, and Portal's immutable freight snapshot retains both. The promotion
+   changes what the buyer pays; it does not claim CJ stopped charging Sals3.
+5. **Checkout shows measured progress.** Below threshold it states the exact USD amount remaining.
+   At or above threshold it states that free Standard delivery is unlocked. Its short animated
+   sheen uses transform only and respects reduced-motion preferences.
+
+This adds no CJ call, background task, package, database migration, or new destination. It uses
+the quote work checkout already performs for AU, PH, and FJ. Ecommerce opts in through
+`capabilities.freeStandardShipping`; omission keeps Standard paid, so separate deployments remain
+backward compatible.

@@ -203,7 +203,7 @@ const getCachedRelatedProducts = unstableCache(
  * product stays live, while this non-critical rail stops re-scanning the
  * storefront lists on every variant URL.
  */
-export async function getRelatedProducts(
+async function getRelatedProducts(
   category: string,
   excludeId: string,
 ): Promise<HomeProduct[]> {

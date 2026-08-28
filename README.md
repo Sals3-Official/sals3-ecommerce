@@ -206,11 +206,11 @@ or the `FIREBASE_*` trio in `.env.local`.
 `/cart` sends buyers to `/checkout`. Checkout is **three routes**, grouped under
 `src/app/checkout/(flow)/`:
 
-| Route                | Step           | What it does                                                                                                                                                                                                                                                                                      |
-| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.                                                                                                                               |
-| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and exactly three tier cards per fulfillment package: Standard, Express, Expedited. Standard is pre-selected; a tier with no real CJ service remains visible and disabled. "Go to payment" creates the Portal intent and Stripe session, then navigates. |
-| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                                                                                                                                                  |
+| Route                | Step           | What it does                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.                                                                                                                                                                                                                                                                     |
+| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and exactly three tier cards per fulfillment package: Standard, Express, Expedited. Standard is pre-selected; a tier with no real CJ service remains visible and disabled. Portal-verified progress shows the amount remaining for free Standard delivery (PH US$12, AU US$25, FJ US$55) and its unlocked state. "Go to payment" creates the Portal intent and Stripe session, then navigates. |
+| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                                                                                                                                                                                                                                                                                        |
 
 The `(flow)` route group exists so `/checkout/success` stays outside it: the
 receipt is not a step, has no stepper or order summary, and is Stripe's
@@ -303,8 +303,9 @@ Checkout address entry is country-aware for the currently enabled CJ
 destinations. Philippines starts phone numbers with `+639`, Australia starts
 with `+614`, and Fiji starts with `+679`. State/region choices are sourced from
 `src/lib/checkout/locations.ts`. AU and PH use city dropdowns tied to the chosen
-state/region; FJ uses a free-text city or town field and allows a blank postal
-code because Fiji addresses do not always carry one. Changing country resets
+state/region; FJ uses a town dropdown tied to its division, explains where to
+put an unlisted village or island, and allows a blank postal code because Fiji
+addresses do not always carry one. Changing country resets
 phone, state/region, city, and any previous freight quote so the next Portal
 quote receives a country-matched address (`country`, `postalCode`, `region`,
 `city`, `phone`) without this app calling CJ directly.
@@ -337,6 +338,18 @@ selection). The `cj_freight_v2` metadata contract stores a compact freight
 snapshot: tier, option ID, channel ID, price, days, package count, destination
 country, and quote timestamp. The success receipt also reads legacy
 `cj_freight_v1` sessions, whose shipping line may still carry a CJ courier name.
+
+Free shipping changes only the buyer charge for an earned Standard selection.
+Portal calculates eligibility from current published offer prices and re-checks
+it before intent creation; browser cart totals do not authorize the benefit.
+Express and Expedited stay paid. Portal retains the regular CJ freight amount
+in its immutable quote snapshot, while Stripe receives a zero-priced
+`Shipping - Standard` line when the threshold is still met.
+The three thresholds are configured only in the Portal server environment as
+`SALS3_FREE_STANDARD_SHIPPING_PH_USD`,
+`SALS3_FREE_STANDARD_SHIPPING_AU_USD`, and
+`SALS3_FREE_STANDARD_SHIPPING_FJ_USD`; ecommerce receives their resolved values
+in the protected quote response and contains no threshold fallback.
 
 Before creating Stripe payment, ecommerce creates an immutable Portal checkout
 intent that owns the cart, address, freight, and supplier snapshot. The Stripe

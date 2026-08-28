@@ -70,6 +70,7 @@ describe('requestCheckoutFreightQuotes', () => {
     );
     expect(JSON.parse(fetcher.mock.calls[0]?.[1].body)).toMatchObject({
       cart: { items: [{ productId: 'jacket', variantId: 'v1', quantity: 1 }] },
+      capabilities: { freeStandardShipping: true },
       address: {
         phone: '+639171234567',
         city: 'Manila',

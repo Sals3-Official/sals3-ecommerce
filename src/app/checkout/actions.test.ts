@@ -335,6 +335,64 @@ describe('createCheckoutSessionAction', () => {
     expect(createStripeCheckoutSession).not.toHaveBeenCalled();
   });
 
+  it('accepts an earned zero-priced Standard selection after re-quote', async () => {
+    const freeSelection = {
+      packageSelections: [
+        { ...shippingSelection.packageSelections[0]!, amountMinor: 0 },
+      ],
+    };
+    const freeQuote = {
+      ...freightQuote,
+      quotes: [
+        {
+          ...freightQuote.quotes[0]!,
+          amountMinor: 0,
+          regularAmountMinor: 409,
+        },
+      ],
+      freeShipping: {
+        thresholdAmountMinor: 1200,
+        subtotalAmountMinor: 1200,
+        amountRemainingMinor: 0,
+        eligible: true,
+        currency: 'USD' as const,
+      },
+    };
+    vi.mocked(validateCheckoutCart).mockResolvedValue({
+      lines: [],
+      subtotal: { amountMinor: 1200, currency: 'USD' },
+    });
+    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freeQuote);
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
+      checkoutIntentId: '11111111-1111-4111-8111-111111111111',
+    });
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_123',
+    });
+
+    await expect(
+      createCheckoutSessionAction({
+        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+        address,
+        shippingSelection: freeSelection,
+      }),
+    ).resolves.toMatchObject({ ok: true });
+    expect(createPortalCheckoutIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shippingSelection: {
+          packageSelections: [
+            expect.objectContaining({
+              quoteId: 'quote-new',
+              amountMinor: 0,
+              shippingTier: 'Standard',
+            }),
+          ],
+        },
+      }),
+    );
+  });
+
   it('rejects a buyer-supplied tier that differs from the fresh quote', async () => {
     vi.mocked(validateCheckoutCart).mockResolvedValue({
       lines: [],

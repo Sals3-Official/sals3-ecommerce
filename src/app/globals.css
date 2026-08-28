@@ -308,3 +308,34 @@ body {
 .animate-s3pulse {
   animation: s3pulse 1.4s ease-in-out infinite;
 }
+
+/*
+ * Measured progress, not an indeterminate loader. Width is set once from the
+ * Portal-owned subtotal; only this short sheen moves, using transform so it
+ * stays compositor-friendly. Three passes make the earned benefit noticeable
+ * without leaving a permanent decorative animation on checkout.
+ */
+@keyframes free-shipping-sheen {
+  from {
+    transform: translateX(-180%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(420%) skewX(-18deg);
+  }
+}
+
+.free-shipping-progress-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.free-shipping-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 32%;
+  background: rgb(255 255 255 / 0.62);
+  transform: translateX(-180%) skewX(-18deg);
+  animation: free-shipping-sheen 700ms ease-out 3;
+}

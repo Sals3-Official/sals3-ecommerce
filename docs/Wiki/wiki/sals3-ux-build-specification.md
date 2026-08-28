@@ -503,7 +503,7 @@ See section 7.2 for the section order. The action bar stays at the bottom.
 | Element | Content | Behaviour |
 |---|---|---|
 | Shipment group | Items, shipping fee, arrival date | One card for each fulfillment leg. |
-| Free-shipping progress | "Add P120 more for free shipping" | The message is true. Otherwise the system hides it. |
+| Free-shipping progress | "Add US$6 more for FREE Standard delivery" | Portal-verified product subtotal only. Thresholds: PH US$12, AU US$25, FJ US$55. At threshold, show the unlocked state. A short sheen makes progress noticeable and respects reduced motion. |
 | Savings panel | The applied discounts and the total saved | The buyer taps to see each line. See section 17.3 for the wording rule. |
 | Address row | A closed summary | The buyer taps to open it. Only one row is open. |
 | Payment row | Approved online prepaid method(s) | Cash on Delivery is absent in phase 1 under ADR-005. |
