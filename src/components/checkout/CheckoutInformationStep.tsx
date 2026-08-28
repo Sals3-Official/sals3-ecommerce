@@ -20,6 +20,7 @@ export default function CheckoutInformationStep() {
     address,
     errors,
     updateAddress,
+    emailLocked,
     isPending,
     message,
     prepareDelivery,
@@ -37,6 +38,7 @@ export default function CheckoutInformationStep() {
         value={address}
         errors={errors}
         disabled={isPending}
+        emailLocked={emailLocked}
         onChange={updateAddress}
       />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -88,7 +88,7 @@ export default function useCheckout(
     clearPreparedPayment();
   }, [clearPreparedPayment, clearQuote]);
 
-  const { address, errors, updateAddress, validateAddress } =
+  const { address, errors, updateAddress, validateAddress, emailLocked } =
     useCheckoutAddress(invalidateQuote, initialCountry, initialEmail);
 
   const isPending = isQuotePending || isSubmitPending;
@@ -202,6 +202,7 @@ export default function useCheckout(
     address,
     errors,
     updateAddress,
+    emailLocked,
     message,
     setMessage,
     stripeClientSecret,
