@@ -2,6 +2,7 @@
 tags:
   - sals3
   - sals3-portal
+  - sals3-ecommerce
   - orders
   - fulfillment
   - cj-dropshipping
@@ -35,6 +36,9 @@ reached.
   — adopt the CJ order a timed-out create left behind.
 - `sals3-portal` [#213](https://github.com/Sals3-Official/sals3-portal/pull/213)
   — scope an order to the account that placed it, not the typed address.
+- `sals3-ecommerce` [#182](https://github.com/Sals3-Official/sals3-ecommerce/pull/182)
+  — the storefront half: verify the receipt against the account, and stop
+  shipping an empty contact box.
 
 > [!NOTE] Provenance
 > Written after the fact from each pull request's own record. The schema claim was
@@ -151,9 +155,42 @@ when the uid does not match; a uid-bearing order refused to a caller sending no
 uid; a pre-uid order still readable by email; and a row with no `buyer_uid` key at
 all treated as pre-uid.
 
-## 4. Open
+## 4. The storefront half, merged the same day
 
-#213's own record says it *"pairs with `sals3-ecommerce`#182"* — the storefront
-half that would send `X-Buyer-Uid`. **No such pull request exists in that
-repository yet.** Until it does, no order can acquire a uid, so every row stays on
-the email path and the fix is dormant rather than active.
+`sals3-ecommerce` [#182](https://github.com/Sals3-Official/sals3-ecommerce/pull/182)
+closes the loop, and it is where the buyer actually met the failure:
+`/checkout/success` told them **"This checkout is not available on your
+account"** for an order CJ created and paid seven seconds later. The Stripe
+lookup had succeeded — the copy for a failed lookup is different — so what
+refused them was the ownership check, comparing their account address against the
+contact address they had typed into the form.
+
+- The Stripe session now carries `sals3_buyer_uid` in its metadata, and the
+  success page compares **that**. Email is not a fallback for a session that has
+  one, for the same reason as the portal side.
+- Sessions created before this have no uid and still verify by address, *which is
+  all they ever had*.
+- Buyer order reads send `X-Buyer-Uid` alongside `X-Buyer-Email`, and the
+  checkout intent carries the uid so the portal can stamp it onto the order.
+
+**And the contact field is seeded now.** It was an empty box: filling it with
+anything other than the account address silently detached the order, with no
+warning. It is seeded from the signed-in account, threaded from the flow layout
+the way `initialCountry` already was — still editable, because some people
+genuinely do want the receipt elsewhere.
+
+That is the real repair. #213 made the order *knowable* by uid; #182 is what
+causes a uid to exist in the first place, and what stops the empty box producing
+the next detached order. Migration `0033` is applied to production
+(`columnsExistAfter: true`).
+
+Three new tests on the success page: the receipt renders when the uid matches
+whatever address was typed, a matching address is refused when the uid belongs to
+someone else, and a pre-uid session still verifies by address.
+
+## 5. Open
+
+Orders accepted before this pair carry no uid and stay on the email path
+permanently — there is no backfill, and inventing one would mean guessing which
+account a typed address belonged to. **Orders Repair Buyer Identity** exists for
+exactly that, one explicitly named order at a time.
