@@ -67,7 +67,7 @@ export default async function CheckoutFlowLayout({
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-5 pb-16">
         <CheckoutFlowProvider
           initialCountry={initialCountry}
-          {...(buyer.email === undefined ? {} : { initialEmail: buyer.email })}
+          initialEmail={buyer.email}
         >
           <CheckoutFlowChrome>{children}</CheckoutFlowChrome>
         </CheckoutFlowProvider>

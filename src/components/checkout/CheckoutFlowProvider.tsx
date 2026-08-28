@@ -43,7 +43,7 @@ export function CheckoutFlowProvider({
   children: ReactNode;
   initialCountry?: CheckoutCountry;
   /** The signed-in account's own address, seeded into the contact field. */
-  initialEmail?: string;
+  initialEmail?: string | undefined;
 }) {
   const { items, itemCount, subtotal } = useCart();
   const checkout = useCheckout(items, subtotal, initialCountry, initialEmail);
