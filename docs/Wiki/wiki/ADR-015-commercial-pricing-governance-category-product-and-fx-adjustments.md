@@ -2,11 +2,11 @@
 tags: [sals3, adr, pricing, margin, forex, admin-portal, governance, audit]
 aliases: [ADR-015, Commercial Pricing Governance, Category and Product Pricing Policy]
 created: 2026-08-10
-updated: 2026-08-27
+updated: 2026-08-28
 status: approved
 authority: architecture-decision
 owner_approved: true
-implementation_status: phase-1-merged-not-launched, per-destination and Global scopes built
+implementation_status: phase-1-merged-not-launched, per-destination and Global scopes built, bulk sheet speaks markup, live repricing built (preview-and-approve)
 related:
   - "[[hot]]"
   - "[[sals3-session-2026-08-27-part77-a-margin-per-destination-and-two-hours-of-refused-saves]]"
@@ -545,3 +545,129 @@ findings bear on this ADR:
 
 **Frontmatter `updated`** stays 2026-08-27. `implementation_status` becomes
 `phase-1-merged-not-launched, per-destination and Global scopes built`.
+
+
+## Amendment — 2026-08-28: the bulk spreadsheet speaks markup over cost, and a zero target is a rule (owner decision, Bogs)
+
+### What triggered it
+
+The owner filled the Category margins spreadsheet with `300` and `0` and got back *"The system
+changed nothing"* on all 1241 lines: `margin_percent must be above 0 and below 100`. The request
+was to widen the rule to accept `0` up to `500`.
+
+### The objection, stated before the change was made
+
+`500` is not a margin this system can hold. Every price in it comes from ADR-003 §4's
+`price = cost / (1 - margin)`, where the margin is a share of the **selling price**. At `1` the
+denominator vanishes and above it the price goes negative, so `500%` as a margin is not a wide
+setting — it is arithmetic that has no answer. Simply widening the CSV bound would have written
+`3.000000` into `pricing_category_policies.target_margin_rate` (a `numeric(8, 6)` with **no**
+CHECK constraint of its own, so the database would have taken it), and the resolver would then
+have answered `INVALID_MARGIN_RATE` for every product in those categories — a silent unpricing
+of the catalogue, reported to the seller as a successful import.
+
+### Decision
+
+1. **The bulk sheet's column is markup over cost, and is named `markup_percent`.** `300` means
+   "sell at four times what it costs me", which is what the owner meant by 300. The stored value
+   is still a margin rate: `margin = markup / (100 + markup)`, so `300` is stored as `0.750000`
+   and prices at exactly four times cost. The conversion lives in one place,
+   `markupPercentToMarginRateScaled` in `src/modules/pricing/money-math.ts`, in the same BigInt
+   fixed-point math as every other rate — no float reaches a stored price.
+2. **The accepted range is `0` to `500` inclusive**, which is margins `0` to `0.833333`. The
+   upper bound is a fat-finger guard, not a business rule; it replaces the old `< 100`.
+3. **A file still carrying `margin_percent` is refused, not read.** The same `35` meant a 35%
+   margin under the old header and a 35% markup under the new one — two different prices — so
+   reinterpreting an old export would quietly reprice every category it names. The refusal names
+   the fix: download the file again.
+4. **A target margin of exactly `0` is now valid end to end** — CSV, the Zod write boundary, the
+   resolver, and `suggestedPriceMinor` — and means "sell at cost". It was previously refused as
+   a typo, which would have made an imported `0` row unpriceable rather than free.
+5. **The contribution floor keeps the strict `0 < rate < 1` bound.** A floor of zero floors
+   nothing, and `pricing_store_defaults_floor_rate_range` refuses it in the database anyway. The
+   one `marginRateSchema` that served both is now two: `targetMarginRateSchema` and
+   `floorMarginRateSchema`. Do not merge them back.
+
+### What this does NOT change
+
+- **The database still stores margin rates.** Nothing was migrated, no DDL was written, and
+  every existing row means exactly what it meant before. Only the file a person edits changed
+  unit.
+- **The Category margin and Store default dialogs still ask for a margin**, not a markup. They
+  are the two units side by side in one screen, which is a real usability wart the owner accepted
+  knowingly when choosing this option; the file says `markup_percent` so it cannot be read as the
+  other one.
+- **No rate is approved by this amendment.** As with every prior one, it authorises the
+  instrument, not the number.
+
+### Open
+
+- The screen's own margin fields are unconverted. If the dialogs ever move to markup too, that
+  is a second decision, and the display of existing rates has to move with it.
+- `pricing_category_policies.target_margin_rate` still has no CHECK constraint. Every write path
+  validates the bound in application code, which is why the CSV path was the exposure it was.
+
+**Frontmatter `updated`** becomes 2026-08-28. `implementation_status` gains
+`bulk sheet speaks markup`.
+
+
+## Amendment — 2026-08-28 (second): a margin rule can now reach a price that is already live (owner decision, Bogs)
+
+### The gap this closes
+
+A price was resolved once, at publication, and frozen into
+`product_offers.price_amount_minor`. `saveCategoryPolicyAction` revalidated `/market-rules` and
+touched no offer at all, so a margin saved after a product went live changed nothing a buyer
+saw — the old price stood until somebody republished that product by hand, and no screen said
+so. Verified in code before building: no repricing path existed anywhere in `src/`.
+
+### Decision
+
+1. **Repricing is its own act, not a side effect of saving a rule.** `RepriceControls` on Market
+   Rules previews first and writes second. Saving a margin still writes only the margin.
+2. **Every new price comes from `resolveProductPricing`** — the same function `publishProduct`
+   calls, given the offer's own destination and the product's own category. `modules/pricing/
+   reprice.ts` orchestrates; it computes nothing itself. A second pricing path is how two prices
+   for one product start disagreeing.
+3. **A price a person typed is never overwritten.** An offer stamped
+   `resolvedLayer: 'SELLER_RETAIL_PRICE'` is skipped and reported as skipped. The resolver is not
+   even asked about it.
+4. **An offer the resolver refuses keeps the price it has** and is listed with the resolver's own
+   reason. This is the one deliberate departure from the plan artefact, which said one
+   unpriceable product should refuse the whole run: that rule is right for a CSV a person
+   authored, and wrong here, because the blocker is pre-existing data — one product with no
+   category mapping would otherwise freeze the whole catalogue's pricing forever. The counts and
+   the toast both name how many kept their old price, so the partial outcome is never reported as
+   a clean one.
+5. **All-or-nothing still governs the write set.** Each update carries the offer `version` the
+   plan was built from; a concurrent republish matches zero rows and aborts the transaction.
+6. **The approved numbers are the written numbers.** The preview returns a digest of exactly the
+   writes it proposes; apply recomputes the plan server-side and refuses as `stale_preview` if the
+   digest moved. The client never sends a price.
+7. **Repricing requires `pricing_policy:manage` AND `product:publish`.** Holding the margin rules
+   is not the same authority as changing what a buyer is charged today.
+8. **The buyer-facing cache is expired only after the transaction commits**, via
+   `updateTag(STOREFRONT_CATALOG_TAG)` — the ordering `publish-actions.ts` already records.
+9. **One run covers at most 500 published offers**, and says so on screen when there are more. A
+   silent cap reads as "everything is up to date" when it is not.
+
+### Explicitly deferred, and why
+
+**Repricing does not fire automatically when a rule is saved.** The plan's third slice proposed
+queueing it. It is not built, and should not be until the preview flow has been used in anger:
+auto-firing removes the look-before-you-write gate that is the entire safety property of this
+build, and doing it properly needs a job runner and a queue table (DDL, and therefore a manual
+production migration — the failure mode this project has already been bitten by twice). The
+button is the honest version of the capability until then.
+
+### Consequences to carry forward
+
+- A margin change is now a two-step act. A seller who changes a rule and does not reprice is in
+  exactly the state they were in before this amendment, and nothing on the Market Rules screen
+  yet tells them a reprice is outstanding. That prompt is the obvious next piece of work.
+- `product_offers` has no `pricing_policy_id` column and does not need one: the decision JSON
+  already carries `categoryPolicyId`, `categoryPolicyVersion`, and the override ids, and
+  repricing resolves structurally rather than by chasing that stamp.
+
+**Frontmatter `updated`** stays 2026-08-28. `implementation_status` gains
+`live repricing built (preview-and-approve)`.
