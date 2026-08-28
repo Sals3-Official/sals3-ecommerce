@@ -62,6 +62,13 @@ function errorsFor(address: CheckoutAddress): CheckoutAddressErrors {
  * one. It is only ever a `CheckoutCountry`, so the caller does the narrowing
  * and a Global destination simply does not reach this.
  *
+ * `initialEmail` seeds the contact field with the signed-in account's own
+ * address, threaded the same way from the layout. Same rule: a starting value,
+ * still editable. It exists because an order is scoped by the account that
+ * placed it, and this field used to be that scope — a buyer who typed a
+ * different address on 2026-08-28 paid for an order that then vanished from
+ * their own list.
+ *
  * Seeding is a starting value and nothing more: the country select stays fully
  * editable, and `CHECKOUT_ALLOWED_COUNTRIES` and the Zod schema are untouched
  * by it.
@@ -69,12 +76,14 @@ function errorsFor(address: CheckoutAddress): CheckoutAddressErrors {
 export default function useCheckoutAddress(
   onAddressEdited: () => void,
   initialCountry: CheckoutCountry = FALLBACK_COUNTRY,
+  initialEmail = '',
 ) {
   // A lazy initialiser, not a plain value: `useState` keeps the first render's
   // state, so re-computing this object on every render would allocate an
   // address the hook then throws away.
   const [address, setAddress] = useState<CheckoutAddress>(() => ({
     ...INITIAL_ADDRESS,
+    email: initialEmail,
     country: initialCountry,
     phone: CHECKOUT_COUNTRY_DETAILS[initialCountry].phonePrefix,
   }));

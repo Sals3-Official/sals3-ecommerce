@@ -64,6 +64,7 @@ async function readOwnLine(orderNumber: string, lineId: string) {
   const order = await readBuyerOrder(
     session.email ?? '',
     decodeURIComponent(orderNumber).slice(0, MAX_ORDER_NUMBER_LENGTH),
+    session.uid,
   );
 
   if (order === null) return null;

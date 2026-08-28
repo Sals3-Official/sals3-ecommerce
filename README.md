@@ -209,6 +209,20 @@ the form width to say nothing new. One consequence worth knowing: the page shows
 no amount until Stripe finishes loading, because Stripe is now the only thing
 that states it.
 
+**The receipt is tied to the account, not the address typed at checkout.** The
+Stripe session carries `sals3_buyer_uid` in its metadata — the verified account
+id of whoever was signed in when it was created — and `/checkout/success`
+compares that. Email is not a fallback for a session that has one. Sessions
+created before this shipped have no uid and still verify by contact address.
+
+Why: that address is typed into the checkout form. On 2026-08-28 a buyer typed
+one that differed from their account address, and the receipt told them
+"This checkout is not available on your account" for an order that had been
+created and paid at the supplier seven seconds later; the same order was absent
+from `/orders` for the same reason. The contact field is now seeded from the
+signed-in account (still editable), and buyer order reads send `X-Buyer-Uid`
+alongside `X-Buyer-Email`.
+
 **Duplicate-session guard.** Separate routes hand the buyer a Back button.
 `useCheckout` records a signature of the address plus the selected tiers when
 it creates a Stripe session, and reuses that session while the signature is

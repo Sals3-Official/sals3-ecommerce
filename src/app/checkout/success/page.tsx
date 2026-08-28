@@ -68,26 +68,42 @@ function amountLabel(
  * the email on the verified session cookie, never against anything supplied
  * with the request.
  *
- * This is the strongest tie available today, and it is not a perfect one — the
- * buyer types the contact email themselves during checkout, so an address that
- * differs from the account email locks the buyer out of their own receipt. The
- * durable fix is stamping the verified uid onto the checkout intent, which is
- * tracked as a follow-up; until then a mismatch is treated as "not yours".
+ * ## The uid is the tie; the email is the leftover
+ *
+ * A session created from 2026-08-28 carries `sals3_buyer_uid` in its metadata —
+ * the verified account id of whoever was signed in when it was created. That is
+ * compared and nothing else is: email is not a fallback for those sessions,
+ * because allowing one would mean anyone who got a receipt's contact address
+ * onto their own account could read it.
+ *
+ * Older sessions have no uid, and for those the email comparison is all there
+ * is. It was never a good tie. The buyer types the contact email during
+ * checkout, so an address differing from the account email locked the buyer out
+ * of their own receipt — which is exactly what happened on 2026-08-28, to a
+ * buyer whose order had been created and paid at the supplier seven seconds
+ * after they were told the checkout was not theirs.
  */
 function belongsToBuyer(
-  sessionEmail: string | null | undefined,
-  buyerEmail: string | undefined,
+  session: {
+    uid: string | undefined;
+    email: string | null | undefined;
+  },
+  buyer: { uid: string; email?: string },
 ): boolean {
-  if (!sessionEmail || buyerEmail === undefined) {
+  if (session.uid !== undefined && session.uid !== '') {
+    return session.uid === buyer.uid;
+  }
+
+  if (!session.email || buyer.email === undefined) {
     return false;
   }
 
-  return sessionEmail.toLowerCase() === buyerEmail.toLowerCase();
+  return session.email.toLowerCase() === buyer.email.toLowerCase();
 }
 
 async function statusFor(
   sessionId: string | undefined,
-  buyerEmail: string | undefined,
+  buyer: { uid: string; email?: string },
 ): Promise<CheckoutStatus> {
   if (sessionId === undefined || sessionId === '') {
     return {
@@ -103,8 +119,11 @@ async function statusFor(
 
     if (
       !belongsToBuyer(
-        session.customer_details?.email ?? session.customer_email,
-        buyerEmail,
+        {
+          uid: session.metadata?.sals3_buyer_uid ?? undefined,
+          email: session.customer_details?.email ?? session.customer_email,
+        },
+        buyer,
       )
     ) {
       // Same wording as an unknown session: whether the id exists is not
@@ -161,7 +180,7 @@ export default async function CheckoutSuccessPage({
 
   const params = await searchParams;
   const sessionId = first(params?.session_id) ?? '';
-  const status = await statusFor(sessionId, buyer.email);
+  const status = await statusFor(sessionId, buyer);
 
   return (
     <div className="flex flex-1 flex-col bg-surface">

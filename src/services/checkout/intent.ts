@@ -20,6 +20,13 @@ export default async function createPortalCheckoutIntent(
     cart: { items: CheckoutCartLineInput[] };
     address: CheckoutAddress;
     shippingSelection: CheckoutShippingSelection;
+    /**
+     * The signed-in buyer's verified account id, resolved from the session
+     * cookie by the caller and never from the request. The portal stamps it
+     * onto the intent and the order, which is what makes an order belong to a
+     * person rather than to whichever address they typed into the form.
+     */
+    buyerUid?: string;
   },
   options: { fetcher?: typeof fetch } = {},
 ): Promise<CheckoutIntentResponse> {

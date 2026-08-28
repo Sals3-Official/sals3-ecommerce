@@ -61,6 +61,7 @@ async function readOwnOrder(orderNumber: string) {
   return readBuyerOrder(
     session.email ?? '',
     decodeURIComponent(orderNumber).slice(0, MAX_ORDER_NUMBER_LENGTH),
+    session.uid,
   );
 }
 

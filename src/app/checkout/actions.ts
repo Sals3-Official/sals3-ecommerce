@@ -208,7 +208,12 @@ export async function createCheckoutSessionAction(
     };
   }
 
-  if (!(await getRevocationCheckedBuyerSession())) {
+  // Kept, not discarded: `buyer.uid` is what makes the resulting order belong
+  // to this account rather than to whichever contact address the buyer typed
+  // into the form.
+  const buyer = await getRevocationCheckedBuyerSession();
+
+  if (!buyer) {
     return { ok: false, message: SIGNED_OUT_MESSAGE };
   }
 
@@ -226,6 +231,7 @@ export async function createCheckoutSessionAction(
       cart: parsed.data.cart,
       address: parsed.data.address,
       shippingSelection,
+      buyerUid: buyer.uid,
     });
     const session = await createStripeCheckoutSession({
       cart,
@@ -233,6 +239,7 @@ export async function createCheckoutSessionAction(
       shippingSelection,
       shippingQuotedAt: quoted.quotedAt,
       checkoutIntentId: intent.checkoutIntentId,
+      buyerUid: buyer.uid,
     });
 
     return { ok: true, ...session };
