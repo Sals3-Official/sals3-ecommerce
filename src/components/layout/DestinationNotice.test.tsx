@@ -21,6 +21,7 @@ describe('DestinationNotice', () => {
     expect(
       screen.getByText(new RegExp(describeCheckoutReadyDestinations(), 'i')),
     ).toBeInTheDocument();
+    expect(screen.getByText(/fiji/i)).toBeInTheDocument();
   });
 
   it('names the destination when it is a country checkout does not take', () => {
@@ -44,6 +45,12 @@ describe('DestinationNotice', () => {
 
   it('renders nothing for a destination orders can be placed to', () => {
     const { container } = renderNotice('AU');
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('renders nothing for Fiji', () => {
+    const { container } = renderNotice('FJ');
 
     expect(container).toBeEmptyDOMElement();
   });

@@ -15,9 +15,9 @@ import type { CheckoutAddressErrors } from '@/components/checkout/CheckoutAddres
 /**
  * The country the form starts on when nothing else is known.
  *
- * Philippines, unchanged: it is where the storefront's buyers are today, and
- * one of the two `CHECKOUT_ALLOWED_COUNTRIES`. A buyer whose destination is
- * already known overrides it — see `initialCountry` below.
+ * Philippines, unchanged: it is where the storefront's buyers are today. A
+ * buyer whose destination is already known overrides it — see `initialCountry`
+ * below.
  */
 const FALLBACK_COUNTRY: CheckoutCountry = 'PH';
 

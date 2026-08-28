@@ -15,10 +15,10 @@ const ADDRESS: CheckoutAddress = {
   country: 'PH',
 };
 
-function renderForm(emailLocked: boolean) {
+function renderForm(emailLocked: boolean, value: CheckoutAddress = ADDRESS) {
   return render(
     <CheckoutAddressForm
-      value={ADDRESS}
+      value={value}
       errors={{}}
       disabled={false}
       emailLocked={emailLocked}
@@ -77,5 +77,29 @@ describe('CheckoutAddressForm contact email', () => {
     expect(
       screen.queryByText(/Orders are tied to it/i),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('CheckoutAddressForm countries', () => {
+  it('offers Fiji as a checkout country', () => {
+    renderForm(false);
+
+    expect(screen.getByRole('option', { name: 'Fiji' })).toHaveValue('FJ');
+  });
+
+  it('uses free text for a Fiji city or town', () => {
+    renderForm(false, {
+      ...ADDRESS,
+      phone: '+6793212345',
+      city: 'Nadi',
+      region: 'Western Division',
+      postalCode: '',
+      country: 'FJ',
+    });
+
+    expect(screen.getByLabelText('City or town')).toHaveValue('Nadi');
+    expect(
+      screen.getByText(/leave blank if your address has no postal code/i),
+    ).toBeInTheDocument();
   });
 });

@@ -22,7 +22,7 @@ import { CHECKOUT_ALLOWED_COUNTRIES } from '@/lib/checkout/locations';
  *   exactly, including `GLOBAL` for "every country without a column of its own"
  *   (owner decision 2026-08-27, ADR-015's second amendment that day).
  * - **`CHECKOUT_ALLOWED_COUNTRIES`** — where an order may actually be *placed*.
- *   Two countries today.
+ *   Three countries today.
  *
  * They are not the same list and must never be collapsed into one. The gap
  * between them is the honest thing this feature exists to show, not a bug to
@@ -32,7 +32,8 @@ import { CHECKOUT_ALLOWED_COUNTRIES } from '@/lib/checkout/locations';
  * ## Why the picker is not a list of every country
  *
  * Offering ~190 countries would state that Sals3 ships to ~190 countries. It
- * ships to two. Global is one option meaning "somewhere else", which is exactly
+ * ships to the checkout-ready destinations. Global is one option meaning
+ * "somewhere else", which is exactly
  * what it means on the pricing side, and it keeps the two systems saying the
  * same thing.
  */
@@ -140,7 +141,7 @@ export function listCheckoutReadyDestinations(): Destination[] {
 }
 
 /**
- * "Australia and the Philippines" — an English list for a sentence.
+ * "Australia, the Philippines and Fiji" — an English list for a sentence.
  *
  * Built from the same source as the gate, so the sentence cannot name a country
  * the form will refuse, or omit one it accepts.

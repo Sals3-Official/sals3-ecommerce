@@ -4,7 +4,9 @@ import { SUPPORTED_CURRENCIES } from '@/lib/money';
 import {
   CHECKOUT_ALLOWED_COUNTRIES,
   CHECKOUT_COUNTRY_DETAILS,
+  checkoutAllowsFreeTextCity,
   checkoutCityOptions,
+  checkoutRequiresPostalCode,
   checkoutRegionOptions,
 } from '@/lib/checkout/locations';
 import { SHIPPING_TIERS } from '@/lib/checkout/shipping-tiers';
@@ -26,7 +28,7 @@ export const CheckoutAddressSchema = z
     addressLine2: z.string().trim().max(120).optional(),
     city: z.string().trim().min(2).max(80),
     region: z.string().trim().min(2).max(80),
-    postalCode: z.string().trim().min(3).max(20),
+    postalCode: z.string().trim().max(20),
     country: z.enum(CHECKOUT_ALLOWED_COUNTRIES),
   })
   .superRefine((address, context) => {
@@ -41,6 +43,17 @@ export const CheckoutAddressSchema = z
       });
     }
 
+    if (
+      checkoutRequiresPostalCode(address.country) &&
+      address.postalCode.length < 3
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['postalCode'],
+        message: 'Enter a postal code.',
+      });
+    }
+
     if (!checkoutRegionOptions(address.country).includes(address.region)) {
       context.addIssue({
         code: 'custom',
@@ -49,6 +62,8 @@ export const CheckoutAddressSchema = z
       });
       return;
     }
+
+    if (checkoutAllowsFreeTextCity(address.country)) return;
 
     if (
       !checkoutCityOptions(address.country, address.region).includes(

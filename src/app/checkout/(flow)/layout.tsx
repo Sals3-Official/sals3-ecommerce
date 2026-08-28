@@ -41,7 +41,7 @@ export default async function CheckoutFlowLayout({
 
   /*
     The destination the buyer has been shopping to, if checkout can take an
-    address there. `isCheckoutCountry` is the narrowing: Global and the four
+    address there. `isCheckoutCountry` is the narrowing: Global and the
     priced-but-not-orderable countries fall through to `undefined`, and the form
     keeps its own default. Seeding a country the form would then refuse is the
     one outcome worth ruling out here rather than downstream.

@@ -170,6 +170,30 @@ async function fillValidAddress() {
   });
 }
 
+async function fillValidFijiAddress() {
+  fireEvent.change(await screen.findByLabelText(/^email$/i), {
+    target: { value: 'buyer@example.com' },
+  });
+  fireEvent.change(screen.getByLabelText(/^full name$/i), {
+    target: { value: 'Buyer Example' },
+  });
+  fireEvent.change(screen.getByLabelText(/^country$/i), {
+    target: { value: 'FJ' },
+  });
+  fireEvent.change(screen.getByLabelText(/^phone$/i), {
+    target: { value: '+6793212345' },
+  });
+  fireEvent.change(screen.getByLabelText(/address line 1/i), {
+    target: { value: '14 Queens Road' },
+  });
+  fireEvent.change(screen.getByLabelText(/state or region/i), {
+    target: { value: 'Western Division' },
+  });
+  fireEvent.change(screen.getByLabelText(/city or town/i), {
+    target: { value: 'Nadi' },
+  });
+}
+
 async function reachDelivery() {
   await fillValidAddress();
   fireEvent.click(
@@ -212,6 +236,28 @@ describe('checkout flow across routes', () => {
     expect(push).toHaveBeenCalledWith('/checkout/delivery');
     expect(screen.getByText(/123 Main Street/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/address line 1/i)).not.toBeInTheDocument();
+  });
+
+  it('quotes a Fiji address', async () => {
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await fillValidFijiAddress();
+    fireEvent.click(
+      screen.getByRole('button', { name: /continue to delivery/i }),
+    );
+    await screen.findAllByRole('radio', { name: 'Standard' });
+
+    expect(mockedQuoteShipping).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: expect.objectContaining({
+          country: 'FJ',
+          phone: '+6793212345',
+          region: 'Western Division',
+          city: 'Nadi',
+          postalCode: '',
+        }),
+      }),
+    );
   });
 
   /*

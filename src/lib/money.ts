@@ -34,7 +34,7 @@ export type Money = {
 };
 
 /**
- * `US$` rather than a bare `$`: Australia and the Philippines are both approved
+ * `US$` rather than a bare `$`: Australia, the Philippines and Fiji are approved
  * buyer destinations, so an unqualified dollar sign is genuinely ambiguous to a
  * buyer in either.
  */

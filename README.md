@@ -274,13 +274,14 @@ tiers, courier identifiers, delivery promises, and prices are never trusted for
 payment.
 
 Checkout address entry is country-aware for the currently enabled CJ
-destinations. Philippines starts phone numbers with `+639`; Australia starts
-with `+614`. State/region and city are native dropdowns sourced from
-`src/lib/checkout/locations.ts`, and city options depend on the chosen
-state/region. Changing country resets phone, state/region, city, and any
-previous freight quote so the next Portal quote receives a country-matched
-address (`country`, `postalCode`, `region`, `city`, `phone`) without this app
-calling CJ directly.
+destinations. Philippines starts phone numbers with `+639`, Australia starts
+with `+614`, and Fiji starts with `+679`. State/region choices are sourced from
+`src/lib/checkout/locations.ts`. AU and PH use city dropdowns tied to the chosen
+state/region; FJ uses a free-text city or town field and allows a blank postal
+code because Fiji addresses do not always carry one. Changing country resets
+phone, state/region, city, and any previous freight quote so the next Portal
+quote receives a country-matched address (`country`, `postalCode`, `region`,
+`city`, `phone`) without this app calling CJ directly.
 
 Required Stripe values in `.env.local` or host secrets:
 

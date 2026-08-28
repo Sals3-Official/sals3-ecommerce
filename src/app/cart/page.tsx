@@ -19,7 +19,7 @@ export function generateMetadata(): Metadata {
  * The cart is the last screen before the sign-in wall, so it is the last place
  * a buyer can be told that checkout will not take their destination while it
  * still costs them nothing to hear it. `DestinationNotice` renders nothing for
- * the two destinations checkout accepts, so this is only a banner for the
+ * the destinations checkout accepts, so this is only a banner for the
  * buyers it is about.
  *
  * It sits above the cart rather than beside the `Proceed to Checkout` button
