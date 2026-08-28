@@ -7,7 +7,7 @@ export const SITE_NAME = 'Sals3';
  *
  * Two claims were removed on 2026-08-13. "A Philippine online marketplace" no
  * longer matches the product: prices are USD (ADR-003 phase 1), Sals3's business
- * registration is Australian (ADR-014), and both AU and PH are approved buyer
+ * registration is Australian (ADR-014), and AU, PH and FJ are approved buyer
  * destinations — no single country is the right one to name until incorporation
  * and launch markets are settled. "No surprises at checkout" contradicted the
  * shipping reality the PDP now states honestly: no freight is added at checkout

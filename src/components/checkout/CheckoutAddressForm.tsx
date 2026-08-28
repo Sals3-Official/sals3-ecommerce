@@ -4,7 +4,9 @@ import type { CheckoutAddress } from '@/lib/checkout/schema';
 import {
   CHECKOUT_ALLOWED_COUNTRIES,
   CHECKOUT_COUNTRY_DETAILS,
+  checkoutAllowsFreeTextCity,
   checkoutCityOptions,
+  checkoutRequiresPostalCode,
   checkoutRegionOptions,
 } from '@/lib/checkout/locations';
 
@@ -204,6 +206,7 @@ export default function CheckoutAddressForm({
   const { country } = value;
   const countryDetails = CHECKOUT_COUNTRY_DETAILS[country];
   const regionOptions = checkoutRegionOptions(country);
+  const useFreeTextCity = checkoutAllowsFreeTextCity(country);
   const cityOptions =
     value.region === '' ? [] : checkoutCityOptions(country, value.region);
 
@@ -325,17 +328,30 @@ export default function CheckoutAddressForm({
           options={regionOptions}
           onChange={onChange}
         />
-        <SelectField
-          label="City"
-          field="city"
-          value={value.city}
-          error={errors.city}
-          disabled={disabled || value.region === ''}
-          autoComplete="address-level2"
-          placeholder="Select city"
-          options={cityOptions}
-          onChange={onChange}
-        />
+        {useFreeTextCity ? (
+          <Field
+            label="City or town"
+            field="city"
+            value={value.city}
+            error={errors.city}
+            disabled={disabled || value.region === ''}
+            autoComplete="address-level2"
+            helperText="Enter the town, city, island, or village for this address."
+            onChange={onChange}
+          />
+        ) : (
+          <SelectField
+            label="City"
+            field="city"
+            value={value.city}
+            error={errors.city}
+            disabled={disabled || value.region === ''}
+            autoComplete="address-level2"
+            placeholder="Select city"
+            options={cityOptions}
+            onChange={onChange}
+          />
+        )}
         <Field
           label="Postal code"
           field="postalCode"
@@ -344,6 +360,11 @@ export default function CheckoutAddressForm({
           disabled={disabled}
           autoComplete="postal-code"
           inputMode="text"
+          helperText={
+            checkoutRequiresPostalCode(country)
+              ? undefined
+              : 'Leave blank if your address has no postal code.'
+          }
           onChange={onChange}
         />
       </div>

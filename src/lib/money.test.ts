@@ -11,7 +11,7 @@ import {
 
 describe('formatMoney', () => {
   /**
-   * `US$`, not a bare `$`: Australia and the Philippines are both approved buyer
+   * `US$`, not a bare `$`: Australia, the Philippines and Fiji are approved buyer
    * destinations, so an unqualified dollar sign is ambiguous to a buyer in
    * either.
    */

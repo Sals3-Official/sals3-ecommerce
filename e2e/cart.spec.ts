@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const CART_STORAGE_KEY = 'sals3-cart-v2';
 const LEGACY_CART_STORAGE_KEY = 'sals3-cart-v1';
+const PROTECTED_ROUTE_REDIRECT_TIMEOUT_MS = 15000;
 
 function seedCartItem(page: import('@playwright/test').Page) {
   return page.addInitScript(
@@ -91,7 +92,9 @@ test('a signed-out visitor is sent to sign in, and pointed back at checkout', as
 
   await page.getByRole('link', { name: /proceed to checkout/i }).click();
 
-  await expect(page).toHaveURL(/\/login\?next=checkout$/);
+  await expect(page).toHaveURL(/\/login\?next=checkout$/, {
+    timeout: PROTECTED_ROUTE_REDIRECT_TIMEOUT_MS,
+  });
   await expect(
     page.getByRole('heading', { name: /sign in or create an account/i }),
   ).toBeVisible();

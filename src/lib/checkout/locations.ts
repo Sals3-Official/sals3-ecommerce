@@ -1,6 +1,9 @@
-export const CHECKOUT_ALLOWED_COUNTRIES = ['AU', 'PH'] as const;
+export const CHECKOUT_ALLOWED_COUNTRIES = ['AU', 'PH', 'FJ'] as const;
 
 export type CheckoutCountry = (typeof CHECKOUT_ALLOWED_COUNTRIES)[number];
+
+const CHECKOUT_FREE_TEXT_CITY_COUNTRIES = ['FJ'] as const;
+const CHECKOUT_OPTIONAL_POSTAL_CODE_COUNTRIES = ['FJ'] as const;
 
 export const CHECKOUT_COUNTRY_DETAILS = {
   PH: {
@@ -316,6 +319,17 @@ export const CHECKOUT_COUNTRY_DETAILS = {
       ],
     },
   },
+  FJ: {
+    label: 'Fiji',
+    phonePrefix: '+679',
+    regions: {
+      'Central Division': ['Suva'],
+      'Eastern Division': ['Levuka'],
+      'Northern Division': ['Labasa'],
+      Rotuma: ['Ahau'],
+      'Western Division': ['Lautoka'],
+    },
+  },
 } as const;
 
 export function isCheckoutCountry(value: string): value is CheckoutCountry {
@@ -338,4 +352,16 @@ export function checkoutCityOptions(
       >
     )[region] ?? []),
   ];
+}
+
+export function checkoutAllowsFreeTextCity(country: CheckoutCountry): boolean {
+  return (
+    CHECKOUT_FREE_TEXT_CITY_COUNTRIES as readonly CheckoutCountry[]
+  ).includes(country);
+}
+
+export function checkoutRequiresPostalCode(country: CheckoutCountry): boolean {
+  return !(
+    CHECKOUT_OPTIONAL_POSTAL_CODE_COUNTRIES as readonly CheckoutCountry[]
+  ).includes(country);
 }

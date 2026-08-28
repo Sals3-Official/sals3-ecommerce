@@ -18,6 +18,32 @@ describe('CheckoutAddressSchema', () => {
     expect(CheckoutAddressSchema.safeParse(validAddress).success).toBe(true);
   });
 
+  it('accepts a Fiji address without a postal code', () => {
+    expect(
+      CheckoutAddressSchema.safeParse({
+        ...validAddress,
+        phone: '+6793212345',
+        city: 'Nadi',
+        region: 'Western Division',
+        postalCode: '',
+        country: 'FJ',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('accepts free-text Fiji city and town names', () => {
+    expect(
+      CheckoutAddressSchema.safeParse({
+        ...validAddress,
+        phone: '+6793212345',
+        city: 'Savusavu',
+        region: 'Northern Division',
+        postalCode: '',
+        country: 'FJ',
+      }).success,
+    ).toBe(true);
+  });
+
   it('rejects a Philippines phone that does not start with +639', () => {
     const parsed = CheckoutAddressSchema.safeParse({
       ...validAddress,
@@ -51,6 +77,44 @@ describe('CheckoutAddressSchema', () => {
         expect.objectContaining({
           path: ['phone'],
           message: 'Phone must start with +614.',
+        }),
+      ]),
+    );
+  });
+
+  it('rejects a Fiji phone that does not start with +679', () => {
+    const parsed = CheckoutAddressSchema.safeParse({
+      ...validAddress,
+      phone: '+61412345678',
+      city: 'Suva',
+      region: 'Central Division',
+      postalCode: '',
+      country: 'FJ',
+    });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['phone'],
+          message: 'Phone must start with +679.',
+        }),
+      ]),
+    );
+  });
+
+  it('still requires a postal code for Australia and the Philippines', () => {
+    const parsed = CheckoutAddressSchema.safeParse({
+      ...validAddress,
+      postalCode: '',
+    });
+
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['postalCode'],
+          message: 'Enter a postal code.',
         }),
       ]),
     );

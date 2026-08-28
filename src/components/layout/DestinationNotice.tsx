@@ -10,7 +10,7 @@ import {
  *
  * ## Why it renders nothing most of the time
  *
- * The two destinations checkout accepts need no banner — for those buyers the
+ * The destinations checkout accepts need no banner — for those buyers the
  * cart is already true. This is a statement about a gap, so it exists only
  * while there is one, and `canCheckOutTo` is the same gate the address form
  * enforces rather than a second copy of the rule.
@@ -27,7 +27,7 @@ import {
  * ## Why the countries are not written out
  *
  * `describeCheckoutReadyDestinations()` builds the sentence from
- * `CHECKOUT_ALLOWED_COUNTRIES`. A hard-coded "Australia and the Philippines"
+ * `CHECKOUT_ALLOWED_COUNTRIES`. A hard-coded destination sentence
  * would be a second place to edit on the day a third country opens, and the
  * one that gets missed — `destinations.ts` records that the two lists must
  * never be collapsed, and this is the copy side of the same rule.
