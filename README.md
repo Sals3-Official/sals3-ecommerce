@@ -69,8 +69,34 @@ What a destination is still resolved for, by `resolveDestination()` in
 - the approximate local price beside the USD one, whose currency comes from
   `src/lib/fx/destination-currency.ts` — AUD, PHP and FJD only, because those are
   the currencies `src/lib/fx/rates.ts` can source from a named central bank. Any
-  other destination shows no approximate figure at all;
+  other destination shows no approximate figure at all. That figure is the
+  published mid rate **plus the Portal's FX buffer** — see below;
 - the checkout address form's initial country.
+
+### The approximate local price carries the Portal's FX buffer
+
+`src/lib/fx/buffer.ts` fetches **Market Rules → Funding buffer** from
+`sals3-portal`'s `GET /api/storefront/fx-buffer` and `toIndicativePrice` applies
+it on top of the published rate. Owner decision 2026-08-28: a published
+mid-market rate is not one a buyer's card transacts at, and the cushion had been
+hard-coded on the Portal side at `2.5` while the screen said `+1.50%`.
+
+- **No buffer means no local price**, not a mid-market one. A mid conversion is
+  knowingly below what the card will charge and the buyer cannot tell that apart
+  from an ordinary approximation, so `IndicativePriceLine` renders nothing —
+  the same rule already in force for a missing rate.
+- A served `{"buffer": null}` (deactivated in Market Rules) takes effect at
+  once. A transport failure instead reuses the last good value for up to six
+  hours, per instance, so a Portal blip does not clear every local price.
+- The disclosure sentence changed with it: it no longer claims the figure is
+  "converted at the rate published on …", because it is not any more.
+- Nothing here changes what a buyer is charged. The charge is USD, and
+  `IndicativePrice` is deliberately not a `Money` so this value cannot reach a
+  Stripe session or an order line.
+
+Both `src/lib/fx/rates.ts` and the buffer now cache for **1 hour** (was six for
+the rate). Central banks publish once per business day, so that is not buying
+rate accuracy — it bounds how long a Market Rules edit takes to reach a shopper.
 
 Where the answer comes from, in order: the `sals3_destination` cookie if one is
 already set, then the `x-vercel-ip-country` geo header, then Global. **Nothing

@@ -54,6 +54,7 @@ describe('ProductRecordPanel', () => {
         detail={detail(SPREAD)}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 
@@ -75,6 +76,7 @@ describe('ProductRecordPanel', () => {
         })}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 
@@ -92,6 +94,7 @@ describe('ProductRecordPanel', () => {
         detail={detail(SPREAD)}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
     const money = (container.textContent ?? '').match(/US\$[\d,.]+/g) ?? [];
@@ -106,6 +109,7 @@ describe('ProductRecordPanel', () => {
         selectedVariant={SPREAD.variants[1]}
         selectedFromUrl
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 
@@ -126,6 +130,7 @@ describe('ProductRecordPanel', () => {
         detail={detail(SPREAD)}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 
@@ -145,6 +150,7 @@ describe('ProductRecordPanel', () => {
         detail={detail(SPREAD)}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 
@@ -168,6 +174,7 @@ describe('ProductRecordPanel', () => {
         })}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 
@@ -191,6 +198,7 @@ describe('ProductRecordPanel', () => {
           detail={detail({ variants: [priced('black', 451)] })}
           selectedFromUrl={false}
           indicativeRate={AUD_RATE}
+          fxBufferPercent={0}
         />,
       );
 
@@ -214,6 +222,7 @@ describe('ProductRecordPanel', () => {
           detail={detail({ variants: [priced('black', 451)] })}
           selectedFromUrl={false}
           indicativeRate={null}
+          fxBufferPercent={0}
         />,
       );
       const text = container.textContent ?? '';
@@ -225,6 +234,45 @@ describe('ProductRecordPanel', () => {
       expect(text).not.toMatch(/unavailable\./i);
     });
 
+    it('lifts the figure by the buffer', () => {
+      renderWithCart(
+        <ProductRecordPanel
+          detail={detail({ variants: [priced('black', 451)] })}
+          selectedFromUrl={false}
+          indicativeRate={AUD_RATE}
+          fxBufferPercent={10}
+        />,
+      );
+
+      // 451 x 2 = A$9.02 mid, +10% = A$9.92. Asserted against the unbuffered
+      // figure the case above proves, so a dropped buffer fails here rather
+      // than passing quietly as "still renders something".
+      expect(screen.getByText(/A\$9\.92/)).toBeInTheDocument();
+      expect(screen.queryByText(/A\$9\.02/)).not.toBeInTheDocument();
+    });
+
+    /**
+     * A buffer the Portal could not supply is not a reason to fall back to the
+     * mid-market figure: it is knowingly below what the card will charge, and
+     * the buyer cannot tell that apart from an ordinary approximation.
+     */
+    it('renders nothing extra when there is a rate but no buffer', () => {
+      const { container } = renderWithCart(
+        <ProductRecordPanel
+          detail={detail({ variants: [priced('black', 451)] })}
+          selectedFromUrl={false}
+          indicativeRate={AUD_RATE}
+          fxBufferPercent={null}
+        />,
+      );
+      const text = container.textContent ?? '';
+
+      expect(screen.getByText('US$4.51')).toBeInTheDocument();
+      expect(text).not.toMatch(/approximate/i);
+      expect(text).not.toMatch(/A\$/);
+      expect(text).not.toMatch(/≈/);
+    });
+
     /** It follows the chosen variant, because the price above it does. */
     it('converts the selected variant price, not the floor', () => {
       renderWithCart(
@@ -233,6 +281,7 @@ describe('ProductRecordPanel', () => {
           selectedVariant={SPREAD.variants[1]}
           selectedFromUrl
           indicativeRate={AUD_RATE}
+          fxBufferPercent={0}
         />,
       );
 
@@ -247,6 +296,7 @@ describe('ProductRecordPanel', () => {
         detail={detail({ variants: [priced('black', 451)] })}
         selectedFromUrl={false}
         indicativeRate={null}
+        fxBufferPercent={0}
       />,
     );
 

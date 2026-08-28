@@ -114,15 +114,23 @@ const MAX_RATE_AGE_DAYS = 7;
 /**
  * How long a successful response is reused, across instances.
  *
- * Six hours, via `next: { revalidate }` on the fetch. These rates move daily at
- * most, so this is generous. Failures are handled separately and differently —
- * see `FAILURE_MEMO_MS`, and the reason there is the important one.
+ * One hour (owner decision 2026-08-28), down from six.
+ *
+ * Worth being precise about what that buys, because it is not rate accuracy:
+ * every source here is a central bank publishing **once per business day**, so
+ * an hourly refresh fetches the same number roughly eight times before it
+ * changes. What it buys is a shorter worst case between a rate being published
+ * and a shopper seeing it, at the cost of more upstream requests against a free,
+ * unmetered API. `MAX_RATE_AGE_DAYS` is what actually governs correctness.
+ *
+ * Failures are handled separately and differently — see `FAILURE_MEMO_MS`, and
+ * the reason there is the important one.
  *
  * The timeout is 1.5s rather than 4s so the one render that does pay for a
  * refresh cannot be held up for long. Both surfaces sit on the render path with
  * no `loading.tsx`, so anything spent here is time-to-first-byte.
  */
-const CACHE_SECONDS = 6 * 60 * 60;
+const CACHE_SECONDS = 60 * 60;
 
 const REQUEST_TIMEOUT_MS = 1_500;
 

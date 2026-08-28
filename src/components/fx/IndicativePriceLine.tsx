@@ -8,6 +8,12 @@ type IndicativePriceLineProps = {
   /** Resolved once per page render on the server, and passed down. */
   rate: IndicativeRate | null;
   /**
+   * The Market Rules funding buffer, resolved from the Portal alongside the
+   * rate. `null` renders nothing, the same as a missing rate -- see
+   * `toIndicativePrice` for why an unbuffered figure is not the fallback.
+   */
+  bufferPercent: number | null;
+  /**
    * Mirrors the qualifier on the USD price above, e.g. `'From'`.
    *
    * Required so the two figures cannot disagree about what they are. When the
@@ -58,12 +64,13 @@ type IndicativePriceLineProps = {
 export default function IndicativePriceLine({
   price,
   rate,
+  bufferPercent,
   fromLabel,
   className,
 }: IndicativePriceLineProps) {
   const indicative =
     price.currency === 'USD'
-      ? toIndicativePrice(price.amountMinor, rate)
+      ? toIndicativePrice(price.amountMinor, rate, bufferPercent)
       : null;
 
   if (indicative === null) return null;

@@ -41,6 +41,12 @@ type ProductRecordPanelProps = {
    * and the panel then renders no local price at all.
    */
   indicativeRate: IndicativeRate | null;
+  /**
+   * The Market Rules funding buffer, fetched by the page beside the rate. A
+   * prop for the same reason the rate is one, and `null` is likewise a
+   * first-class value meaning "render no local price".
+   */
+  fxBufferPercent: number | null;
 };
 
 /**
@@ -79,6 +85,7 @@ export default function ProductRecordPanel({
   selectedVariant,
   selectedFromUrl,
   indicativeRate,
+  fxBufferPercent,
 }: ProductRecordPanelProps) {
   const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
   const axes = useMemo(() => detail.options ?? [], [detail.options]);
@@ -214,6 +221,7 @@ export default function ProductRecordPanel({
         <IndicativePriceLine
           price={price}
           rate={indicativeRate}
+          bufferPercent={fxBufferPercent}
           fromLabel={showFrom ? 'From' : undefined}
           className="mt-2.5"
         />

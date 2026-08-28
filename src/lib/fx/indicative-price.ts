@@ -91,10 +91,25 @@ function formatAsOf(asOf: string): string {
  * Rounds to whole minor units. There is no rounding-direction cleverness here
  * on purpose: this number is never charged, so rounding it "safely" in either
  * direction would only make it differ from the honest conversion for no gain.
+ *
+ * ## The buffer
+ *
+ * `bufferPercent` is the Market Rules funding buffer, fetched from the Portal
+ * by `lib/fx/buffer.ts`. A published mid-market rate is not a rate anybody
+ * transacts at -- the card doing the conversion takes its own spread -- so the
+ * figure shown is the mid rate plus that allowance, which lands closer to what
+ * the buyer's statement will say than a bare mid conversion does.
+ *
+ * This does not change what anyone is charged, and must never be able to: the
+ * charge is USD, and `IndicativePrice` is not a `Money` precisely so this value
+ * cannot reach a Stripe session or an order line. The same policy is applied
+ * once, separately, to the seller's cost basis at publish time by the Portal's
+ * pricing resolver; that is a different conversion, not this one twice.
  */
 export function toIndicativePrice(
   usdAmountMinor: number,
   rate: IndicativeRate | null,
+  bufferPercent: number | null,
 ): IndicativePrice | null {
   /*
     Falsy, not `=== null`. The type says null is the only absent case, but this
@@ -105,10 +120,24 @@ export function toIndicativePrice(
   if (!rate) return null;
   if (!Number.isFinite(usdAmountMinor) || usdAmountMinor < 0) return null;
 
-  const converted = Math.round(usdAmountMinor * rate.rate);
+  /*
+    No buffer, no figure -- deliberately not a mid-market fallback.
+
+    A mid conversion is knowingly below what the buyer's card will actually
+    charge, and nothing on the page distinguishes "approximate because converted"
+    from "approximate because we could not reach the setting". Absent costs the
+    buyer nothing; low-by-an-unknown-amount costs them trust the one time they
+    compare it against their statement.
+  */
+  if (bufferPercent === null) return null;
+  if (!Number.isFinite(bufferPercent)) return null;
+
+  const converted = Math.round(
+    usdAmountMinor * rate.rate * (1 + bufferPercent / 100),
+  );
 
   return {
     formatted: formatIndicative(converted, rate.currency),
-    note: `Approximate. You are charged in US dollars. Converted at the rate published on ${formatAsOf(rate.asOf)}; your bank's rate will differ.`,
+    note: `Approximate. You are charged in US dollars. Based on the rate published on ${formatAsOf(rate.asOf)} plus an allowance for conversion costs; your bank's rate will differ.`,
   };
 }

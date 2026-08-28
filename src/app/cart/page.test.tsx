@@ -39,6 +39,16 @@ vi.mock('@/lib/fx/rates', () => ({
   fetchIndicativeRate: vi.fn().mockResolvedValue(null),
 }));
 
+/*
+  The buffer is the second half of the local figure: without one, no local price
+  renders at all (see `toIndicativePrice`). Mocked to a live-shaped 1.5% so the
+  cases that opt into a rate still get a figure, and so this suite does not
+  reach the Portal.
+*/
+vi.mock('@/lib/fx/buffer', () => ({
+  default: vi.fn().mockResolvedValue(1.5),
+}));
+
 describe('Cart page', () => {
   function acceptAnalytics() {
     window.localStorage.setItem(
@@ -171,8 +181,9 @@ describe('Cart page', () => {
 
       // The line total and the subtotal, unchanged: the charge is still USD.
       expect(await screen.findAllByText('US$1,998')).toHaveLength(2);
-      // One conversion, against the subtotal only — never per line.
-      expect(screen.getByText(/A\$3,996\.00/)).toBeInTheDocument();
+      // One conversion, against the subtotal only — never per line, and
+      // carrying the Portal's 1.5% buffer: 199800 x 2 x 1.015.
+      expect(screen.getByText(/A\$4,055\.94/)).toBeInTheDocument();
       expect(
         screen.getByText(/you are charged in us dollars/i),
       ).toBeInTheDocument();
