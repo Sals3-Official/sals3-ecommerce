@@ -30,6 +30,7 @@ import {
 import destinationToIndicativeCurrency from '@/lib/fx/destination-currency';
 import { resolveDestination } from '@/lib/destination/resolve';
 import { fetchIndicativeRate } from '@/lib/fx/rates';
+import fetchFxBuffer from '@/lib/fx/buffer';
 
 const RELATED_PRODUCT_COUNT = 6;
 
@@ -46,7 +47,16 @@ async function indicativeRateFor() {
   const destination = await resolveDestination();
   const currency = destinationToIndicativeCurrency(destination.code);
 
-  return currency === undefined ? null : fetchIndicativeRate(currency);
+  if (currency === undefined) return { rate: null, bufferPercent: null };
+
+  // Resolved together because they are rendered together: a rate without the
+  // buffer shows nothing, so fetching one without the other buys no page.
+  const [rate, bufferPercent] = await Promise.all([
+    fetchIndicativeRate(currency),
+    fetchFxBuffer(),
+  ]);
+
+  return { rate, bufferPercent };
 }
 const META_DESCRIPTION_MAX_LENGTH = 155;
 
@@ -247,12 +257,12 @@ export default async function ProductPage({
   // section is below the fold, and a slow review read must not delay the buy
   // box. `fetchProductReviews` answers `[]` on failure, so the page still
   // renders its summary from the product payload if this cannot load.
-  // The indicative rate joins the same wave, and is fetched **here only** — one
-  // call per page render, handed down to the panel as a prop. It is cached for
-  // six hours by `fetchIndicativeRate` itself, so this costs an upstream request
-  // on roughly one render in a few thousand, and it resolves to `null` on every
-  // failure rather than throwing into this `Promise.all`.
-  const [relatedProducts, reviews, indicativeRate] = await Promise.all([
+  // The indicative rate and its buffer join the same wave, and are fetched
+  // **here only** — one call each per page render, handed down to the panel as
+  // props. Both are cached for an hour by their own modules, so this costs an
+  // upstream request on a small fraction of renders, and each resolves to
+  // `null` on every failure rather than throwing into this `Promise.all`.
+  const [relatedProducts, reviews, indicative] = await Promise.all([
     getRelatedProducts(detail.category, detail.id),
     fetchProductReviews(detail.id),
     indicativeRateFor(),
@@ -347,7 +357,8 @@ export default async function ProductPage({
                 detail={detail}
                 selectedVariant={selectedVariant}
                 selectedFromUrl={fromUrl !== undefined}
-                indicativeRate={indicativeRate}
+                indicativeRate={indicative.rate}
+                fxBufferPercent={indicative.bufferPercent}
               />
             </div>
           </div>

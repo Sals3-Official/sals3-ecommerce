@@ -10,6 +10,15 @@ import renderWithCart from '../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
 
 /*
+  The buffer is the second half of the local figure: without one, no local price
+  renders at all (see `toIndicativePrice`). Mocked to the live 1.5% so this suite
+  exercises the rate path for real without also reaching the Portal.
+*/
+vi.mock('@/lib/fx/buffer', () => ({
+  default: vi.fn().mockResolvedValue(1.5),
+}));
+
+/*
   `HeaderDestination` reads `cookies()` to resolve the buyer's shipping
   destination, so it is an async Server Component and React refuses to render it
   outside RSC. Left alone it would log an error into every assertion in this
@@ -949,7 +958,8 @@ describe('Product page', () => {
       );
 
       expect(screen.getByText('US$1,999')).toBeInTheDocument();
-      expect(screen.getByText(/A\$3,998\.00/)).toBeInTheDocument();
+      // 199900 x 2 x 1.015 — the Portal's buffer, applied end to end.
+      expect(screen.getByText(/A\$4,057\.97/)).toBeInTheDocument();
       // Text in the DOM, not a `title` attribute — a screen reader has to be
       // able to reach the sentence that says which figure is the charge.
       expect(

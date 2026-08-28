@@ -21,6 +21,11 @@ type CartPageClientProps = {
    * `null` means no usable rate, and then no local figure renders at all.
    */
   indicativeRate: IndicativeRate | null;
+  /**
+   * The Market Rules funding buffer, resolved on the server beside the rate.
+   * `null` means no local figure renders, same as a missing rate.
+   */
+  fxBufferPercent: number | null;
 };
 
 /**
@@ -39,6 +44,7 @@ type CartPageClientProps = {
  */
 export default function CartPageClient({
   indicativeRate,
+  fxBufferPercent,
 }: CartPageClientProps) {
   const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
 
@@ -111,6 +117,7 @@ export default function CartPageClient({
           <IndicativePriceLine
             price={subtotal}
             rate={indicativeRate}
+            bufferPercent={fxBufferPercent}
             className="mt-1.5 text-right"
           />
           <Link

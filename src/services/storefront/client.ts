@@ -23,6 +23,7 @@ export const STOREFRONT_ORDERS_PATH = '/api/storefront/orders';
 export const STOREFRONT_REVIEWS_PATH = '/api/storefront/reviews';
 export const STOREFRONT_CHECKOUT_ORDERS_ACCEPT_PATH =
   '/api/storefront/checkout/orders/accept';
+export const STOREFRONT_FX_BUFFER_PATH = '/api/storefront/fx-buffer';
 
 export class ProductsApiError extends Error {
   readonly status?: number;
@@ -64,7 +65,15 @@ export function getAuthorizationHeader(): string {
  * publish is visible immediately and a token-less build cannot bake placeholder
  * fallback data into static output.
  */
-export type StorefrontCachePolicy = { cache: 'no-store' };
+export type StorefrontCachePolicy =
+  | { cache: 'no-store' }
+  /**
+   * For reads that are configuration rather than catalogue. Product reads must
+   * stay `no-store` (see above); a setting that changes when a human edits one
+   * field is a different question, and re-asking it on every render would put a
+   * first-party round trip on the render path for a number that moves weekly.
+   */
+  | { next: { revalidate: number; tags?: string[] } };
 
 export function productCachePolicy(): StorefrontCachePolicy {
   return { cache: 'no-store' };

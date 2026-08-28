@@ -6,6 +6,7 @@ import CartPageClient from '@/components/cart/CartPageClient';
 import { resolveDestination } from '@/lib/destination/resolve';
 import destinationToIndicativeCurrency from '@/lib/fx/destination-currency';
 import { fetchIndicativeRate } from '@/lib/fx/rates';
+import fetchFxBuffer from '@/lib/fx/buffer';
 import { SITE_NAME } from '@/lib/site';
 
 export function generateMetadata(): Metadata {
@@ -56,15 +57,25 @@ export default async function CartPage() {
     States, Canada and Global have no provider in `rates.ts`.
   */
   const currency = destinationToIndicativeCurrency(destination.code);
-  const indicativeRate =
-    currency === undefined ? null : await fetchIndicativeRate(currency);
+  /*
+    In parallel: the buffer is a first-party Portal call and the rate a
+    third-party one, neither depends on the other, and both sit on the render
+    path. Sequencing them would add the slower one's latency to the faster.
+  */
+  const [indicativeRate, fxBufferPercent] = await Promise.all([
+    currency === undefined ? null : fetchIndicativeRate(currency),
+    currency === undefined ? null : fetchFxBuffer(),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-5 pb-16">
         <DestinationNotice destination={destination} />
-        <CartPageClient indicativeRate={indicativeRate} />
+        <CartPageClient
+          indicativeRate={indicativeRate}
+          fxBufferPercent={fxBufferPercent}
+        />
       </main>
       <SiteFooter />
     </div>
