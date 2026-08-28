@@ -23,6 +23,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-014-admin-portal-platform-governance-and-global-controls]] — approved future Admin Portal boundary for global markets, seller-account governance, global marketing, provider controls, versioned publication, and audited high-impact actions; not implemented.
 - [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]] — approved layered multi-seller pricing: tenant-owned Seller Portal margins/PICs/product overrides/merchant FX adjustments, with Admin Portal limited to platform FX inputs, fees, capabilities, and guardrails; not implemented.
 - [[ADR-016-google-merchant-center-product-feed-compliance]] — approved schema constraint requiring the future Product/Offer/Media/Promotion build to carry Merchant Center attributes (GTIN/MPN/brand, Google Product Category, micros-safe price, real promotion entity) from its first migration, targeting the Merchant API only; not implemented.
+- [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery]] — proposed Sals3-owned returns/refunds architecture for the CJ-only, no-local-warehouse Phase 1: returnless-first guardrails, separate buyer remedy and CJ recovery states, PH filing-based redress clock, AU major/minor remedy structure, delivered-not-received investigation, and legal/accounting launch blockers.
 
 - [[agent-operating-contract]] — anti-yesman and verification rules.
 - [[nextjs-component-security-code-rules]] — mandatory Next.js component architecture, security, and verification gate for all Sals3 codebase edits.
@@ -47,6 +48,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[ADR-011-product-media-source-selection-and-supplier-original-preservation]] — approved seller/supplier media-source resolver, original-source preservation, rights-aware fallback, controlled revision media, and Product Catalogue media statuses; not implemented.
 - [[ADR-012-supplier-trend-signals-and-storefront-merchandising]] — approved CJ trend/listing-signal ingestion, qualified category-normalized ranking, truthful storefront merchandising, and Portal/ecommerce ownership boundary; not implemented.
 - [[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]] — approved CJ evidence fidelity, lean stock/freight/scan/webhook recovery, supported product modes, variant/media truth, and triggered rather than speculative catalog complexity; not implemented.
+- [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery]] — proposed returns/refunds policy architecture and ADR input for the current CJ-only, no-local-warehouse operating model. CJ policy is internal supplier recovery only; Sals3 buyer-facing remedies require AU/PH legal/accounting review before launch.
 - [[index]] — main map of content.
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
