@@ -43,6 +43,7 @@ function orderWith(packages: Partial<BuyerOrderPackage>[]): BuyerOrder {
     packages: packages.map((pkg, index) => ({
       id: `p${index}`,
       label: `Package ${index + 1}`,
+      shippingTier: null,
       carrier: 'Carrier',
       trackingNumber: null,
       trackingUrl: null,

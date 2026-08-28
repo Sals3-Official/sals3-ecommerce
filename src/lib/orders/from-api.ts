@@ -213,6 +213,7 @@ function toPackage(
   return {
     id: pkg.packageId,
     label: `Package ${index + 1} of ${total}`,
+    shippingTier: pkg.shippingTier,
     carrier: pkg.carrier,
     trackingNumber: pkg.trackingNumber,
     // No confirmed carrier deep link exists; the number itself is copyable.

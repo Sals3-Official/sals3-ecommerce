@@ -31,6 +31,7 @@ import type {
   ProductSpecification,
   ProductSpecs,
 } from '@/lib/product-detail';
+import type { ShippingTier } from '@/lib/checkout/shipping-tiers';
 
 /**
  * Mirrored from `sals3-portal/src/modules/orders/contracts.ts`. Order matters:
@@ -173,6 +174,7 @@ export type BuyerOrderPackage = {
   id: string;
   /** `Package 1 of 2`. */
   label: string;
+  shippingTier: ShippingTier | null;
   carrier: string;
   trackingNumber: string | null;
   trackingUrl: string | null;

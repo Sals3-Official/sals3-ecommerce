@@ -9,7 +9,7 @@ import useCheckoutAddress from '@/components/checkout/useCheckoutAddress';
 import useShippingQuote, {
   toCheckoutCart,
 } from '@/components/checkout/useShippingQuote';
-import type { SelectedShippingQuote } from '@/components/checkout/CheckoutShippingOptions';
+import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
 import { createCheckoutSessionAction } from '@/app/checkout/actions';
 
 const INVALID_ADDRESS_MESSAGE = 'Check the highlighted address fields.';

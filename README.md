@@ -180,11 +180,11 @@ or the `FIREBASE_*` trio in `.env.local`.
 `/cart` sends buyers to `/checkout`. Checkout is **three routes**, grouped under
 `src/app/checkout/(flow)/`:
 
-| Route                | Step           | What it does                                                                                                                                                                                                          |
-| -------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.                                                   |
-| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and one courier choice per fulfillment package, the first option per package pre-selected. "Go to payment" creates the Portal intent and the Stripe session, then navigates. |
-| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                                                                      |
+| Route                | Step           | What it does                                                                                                                                                                                                                                                                                      |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/checkout`          | 01 Information | Contact and delivery address. "Continue to delivery" validates, fetches CJ freight options from the protected Portal quote endpoint, and navigates only on success.                                                                                                                               |
+| `/checkout/delivery` | 02 Delivery    | "Ship to" recap (Edit returns to step 1) and exactly three tier cards per fulfillment package: Standard, Express, Expedited. Standard is pre-selected; a tier with no real CJ service remains visible and disabled. "Go to payment" creates the Portal intent and Stripe session, then navigates. |
+| `/checkout/payment`  | 03 Payment     | Stripe Embedded Checkout, already mounted on arrival. No submit button — the work happened on the delivery step.                                                                                                                                                                                  |
 
 The `(flow)` route group exists so `/checkout/success` stays outside it: the
 receipt is not a step, has no stepper or order summary, and is Stripe's
@@ -210,7 +210,7 @@ no amount until Stripe finishes loading, because Stripe is now the only thing
 that states it.
 
 **Duplicate-session guard.** Separate routes hand the buyer a Back button.
-`useCheckout` records a signature of the address plus the selected couriers when
+`useCheckout` records a signature of the address plus the selected tiers when
 it creates a Stripe session, and reuses that session while the signature is
 unchanged — so bouncing delivery↔payment does not mint duplicate Portal intents
 or burn CJ freight quota. Editing the address or changing a courier clears the
@@ -241,14 +241,21 @@ offer satisfies its dropship conditions (published, `RESOLVED` price,
 that a product can be publishable and purchasable on the storefront while being
 unquotable — a buyer then discovers it only after entering a full address.
 
-Every quote arrives with the first courier CJ returns already selected for each
-package, so "Go to payment" is live on arrival; the buyer can still pick any
-other option. Editing any address field clears the quote, so returning to
+Every package renders Standard, Express, and Expedited in that order. Standard
+is the cheapest valid CJ row and is selected on arrival. Expedited is the
+fastest valid row that is strictly faster than Standard. Express is the
+remaining middle price/speed balance. A missing service is shown as
+"Unavailable for this package" with a disabled radio; the app never duplicates
+a courier or invents a delivery promise merely to fill all three cards. CJ
+courier names, identifiers, and supplier rules stay out of buyer-facing option
+cards. Editing any address field clears the quote, so returning to
 delivery re-quotes; going back without editing reuses the live quote and keeps
 the selection (a "Refresh options" button re-quotes on demand). The server re-fetches each
 product and re-quotes the selected freight from the Sals3 Portal storefront API
-before creating a Stripe Embedded Checkout Session. Browser cart prices and
-browser freight prices are never trusted for payment.
+before creating a Stripe Embedded Checkout Session. It requires an exact fresh
+match on package, tier, option, channel, amount, and currency. Browser-assigned
+tiers, courier identifiers, delivery promises, and prices are never trusted for
+payment.
 
 Checkout address entry is country-aware for the currently enabled CJ
 destinations. Philippines starts phone numbers with `+639`; Australia starts
@@ -281,11 +288,12 @@ the session currency, buyer details, account, and payment method configuration
 are eligible. AU BECS requires an AUD cart; this app does not convert USD to
 AUD.
 
-Selected CJ freight is added to Stripe as a separate line item named
-`Shipping - <CJ logistics name>`. A compact, non-sensitive freight snapshot is
-stored in Stripe Checkout Session and PaymentIntent metadata: selected option
-IDs, channel IDs, price, days, package count, destination country, and quote
-timestamp.
+Selected freight is added to Stripe as a buyer-facing line item named
+`Shipping - <tier>` (or `Shipping - Mixed delivery tiers` for a mixed package
+selection). The `cj_freight_v2` metadata contract stores a compact freight
+snapshot: tier, option ID, channel ID, price, days, package count, destination
+country, and quote timestamp. The success receipt also reads legacy
+`cj_freight_v1` sessions, whose shipping line may still carry a CJ courier name.
 
 Before creating Stripe payment, ecommerce creates an immutable Portal checkout
 intent that owns the cart, address, freight, and supplier snapshot. The Stripe

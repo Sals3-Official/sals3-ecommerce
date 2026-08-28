@@ -7,6 +7,7 @@ import {
   checkoutCityOptions,
   checkoutRegionOptions,
 } from '@/lib/checkout/locations';
+import { SHIPPING_TIERS } from '@/lib/checkout/shipping-tiers';
 
 export { CHECKOUT_ALLOWED_COUNTRIES };
 
@@ -72,6 +73,7 @@ export const CreateCheckoutSessionInputSchema = z.object({
       .array(
         z.object({
           packageId: z.string().min(1).max(80),
+          shippingTier: z.enum(SHIPPING_TIERS),
           quoteId: z.string().min(1).max(120),
           optionId: z.string().min(1).max(120),
           channelId: z.string().min(1).max(120),

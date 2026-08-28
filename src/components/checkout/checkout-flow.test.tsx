@@ -97,7 +97,7 @@ const shippingQuote = {
     {
       quoteId: 'quote-1',
       packageId: 'pkg_1',
-      label: 'Standard' as const,
+      shippingTier: 'Standard' as const,
       cjLogisticName: 'CJPacket Postal',
       optionId: 'option-1',
       channelId: 'channel-1',
@@ -112,7 +112,7 @@ const shippingQuote = {
     {
       quoteId: 'quote-2',
       packageId: 'pkg_1',
-      label: 'Express' as const,
+      shippingTier: 'Expedited' as const,
       cjLogisticName: 'DHL Official',
       optionId: 'option-2',
       channelId: 'channel-2',
@@ -175,10 +175,10 @@ async function reachDelivery() {
   fireEvent.click(
     screen.getByRole('button', { name: /continue to delivery/i }),
   );
-  await screen.findByText(/cjpacket postal/i);
+  await screen.findAllByRole('radio', { name: 'Standard' });
 }
 
-// No courier click: the quote arrives with the first option already selected.
+// No delivery click: the quote arrives with Standard already selected.
 // `findByRole` waits for the quote transition to settle — until it does the
 // button reads "Preparing payment...".
 async function reachPayment() {
@@ -215,31 +215,74 @@ describe('checkout flow across routes', () => {
   });
 
   /*
-   * Every package needs a courier, so a quote that arrives with nothing
+   * Every package needs a tier, so a quote that arrives with nothing
    * selected only ever shows the buyer a disabled "Go to payment".
    */
-  it('pre-selects the first courier offered for each package', async () => {
+  it('pre-selects Standard for each package', async () => {
     renderWithCart(<CheckoutFlowHarness />);
 
     await reachDelivery();
 
-    expect(screen.getByLabelText(/standard.*cjpacket postal/i)).toBeChecked();
-    expect(screen.getByLabelText(/express.*dhl official/i)).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Standard' })).toBeChecked();
+    expect(
+      screen.getByRole('radio', {
+        name: 'Express, unavailable for this package',
+      }),
+    ).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Expedited' })).not.toBeChecked();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(
+      screen.queryByText(/cjpacket|dhl official/i),
+    ).not.toBeInTheDocument();
     expect(
       await screen.findByRole('button', { name: /go to payment/i }),
     ).toBeEnabled();
   });
 
-  it('lets the buyer switch away from the pre-selected courier', async () => {
+  it('renders and selects three fixed tier cards independently per package', async () => {
+    mockedQuoteShipping.mockResolvedValue({
+      ok: true,
+      quote: {
+        ...shippingQuote,
+        packages: [
+          ...shippingQuote.packages,
+          { packageId: 'pkg_2', originCountry: 'US', itemCount: 1 },
+        ],
+        quotes: [
+          ...shippingQuote.quotes,
+          {
+            ...shippingQuote.quotes[0]!,
+            quoteId: 'quote-3',
+            packageId: 'pkg_2',
+            optionId: 'option-3',
+            channelId: 'channel-3',
+            originCountry: 'US',
+          },
+        ],
+      },
+    });
     renderWithCart(<CheckoutFlowHarness />);
 
     await reachDelivery();
-    fireEvent.click(screen.getByLabelText(/express.*dhl official/i));
 
-    expect(screen.getByLabelText(/express.*dhl official/i)).toBeChecked();
+    expect(screen.getAllByRole('radio')).toHaveLength(6);
+    expect(screen.getAllByRole('radio', { name: 'Standard' })).toHaveLength(2);
+    screen.getAllByRole('radio', { name: 'Standard' }).forEach((radio) => {
+      expect(radio).toBeChecked();
+    });
     expect(
-      screen.getByLabelText(/standard.*cjpacket postal/i),
-    ).not.toBeChecked();
+      await screen.findByRole('button', { name: /go to payment/i }),
+    ).toBeEnabled();
+  });
+
+  it('lets the buyer switch away from pre-selected Standard', async () => {
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await reachDelivery();
+    fireEvent.click(screen.getByRole('radio', { name: 'Expedited' }));
+
+    expect(screen.getByRole('radio', { name: 'Expedited' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Standard' })).not.toBeChecked();
     expect(screen.getByText(/shipping US\$37\.34/i)).toBeInTheDocument();
   });
 
@@ -272,7 +315,7 @@ describe('checkout flow across routes', () => {
     expect(curtain).toHaveAttribute('aria-busy', 'true');
 
     releaseQuote();
-    await screen.findByText(/cjpacket postal/i);
+    await screen.findByRole('radio', { name: 'Standard' });
     // `waitFor`, not a bare assertion: the options render as soon as the quote
     // resolves, but the transition driving `isPending` settles a tick later.
     await waitFor(() =>
@@ -351,7 +394,7 @@ describe('checkout flow across routes', () => {
       screen.getByRole('heading', { name: /order summary/i }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText(/standard.*cjpacket postal/i));
+    fireEvent.click(screen.getByRole('radio', { name: 'Standard' }));
     fireEvent.click(
       await screen.findByRole('button', { name: /go to payment/i }),
     );
@@ -386,7 +429,7 @@ describe('checkout flow across routes', () => {
     await reachPayment();
     fireEvent.click(screen.getByRole('button', { name: /back to delivery/i }));
     // A different courier: the prepared session priced the previous one.
-    fireEvent.click(await screen.findByLabelText(/express.*dhl official/i));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Expedited' }));
     fireEvent.click(screen.getByRole('button', { name: /go to payment/i }));
 
     await waitFor(() =>

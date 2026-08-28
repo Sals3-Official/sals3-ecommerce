@@ -2,6 +2,10 @@ import 'server-only';
 
 import type Stripe from 'stripe';
 import { formatMoney, isSupportedCurrency } from '@/lib/money';
+import {
+  SHIPPING_TIERS,
+  type ShippingTier,
+} from '@/lib/checkout/shipping-tiers';
 
 /**
  * Turns a Stripe Checkout Session into the receipt shown on
@@ -29,11 +33,12 @@ export type ReceiptItem = {
 
 export type ReceiptDeliveryPackage = {
   id: string;
+  shippingTier?: ShippingTier;
   arrivalTime?: string;
 };
 
 export type ReceiptDelivery = {
-  carrier?: string;
+  service?: string;
   amount?: string;
   packages: ReceiptDeliveryPackage[];
 };
@@ -117,13 +122,40 @@ function deliveryPackagesOf(options: string | undefined) {
     });
 }
 
+function deliveryPackagesV2(delivery: string | undefined) {
+  if (delivery === undefined || delivery === '') return [];
+
+  return delivery
+    .split(',')
+    .filter((entry) => entry !== '')
+    .flatMap((entry, index) => {
+      const separator = entry.indexOf(':');
+      const tier = entry.slice(0, separator);
+      const arrivalTime = entry.slice(separator + 1);
+
+      if (
+        separator < 1 ||
+        !SHIPPING_TIERS.some((candidate) => candidate === tier)
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          id: `package-${index + 1}`,
+          shippingTier: tier as ShippingTier,
+          ...(arrivalTime === '' ? {} : { arrivalTime }),
+        },
+      ];
+    });
+}
+
 /**
- * The carrier name lives only in the shipping line item, which this app names
- * `Shipping - <cjLogisticName>` at creation. The prefix is stripped for
- * display; if it is ever absent the whole description is shown rather than
- * risking an empty carrier.
+ * The buyer-facing service name lives in the shipping line item. Version 1
+ * stored the CJ courier; version 2 stores the Sals3 tier (or mixed-tier copy).
+ * The prefix is stripped for display so both receipt versions remain readable.
  */
-function carrierOf(description: string | null | undefined) {
+function serviceOf(description: string | null | undefined) {
   if (description === null || description === undefined) {
     return undefined;
   }
@@ -190,8 +222,11 @@ export default function toCheckoutReceipt(
       'Amount unavailable',
   }));
 
-  const packages = deliveryPackagesOf(session.metadata?.sals3_shipping_options);
-  const carrier = carrierOf(shippingLine?.description);
+  const packages =
+    session.metadata?.sals3_checkout_version === 'cj_freight_v2'
+      ? deliveryPackagesV2(session.metadata.sals3_shipping_delivery)
+      : deliveryPackagesOf(session.metadata?.sals3_shipping_options);
+  const service = serviceOf(shippingLine?.description);
   const shippingAmount = formatAmount(
     positiveInteger(session.metadata?.sals3_shipping_total_minor) ??
       shippingLine?.amount_total,
@@ -200,11 +235,11 @@ export default function toCheckoutReceipt(
 
   return {
     items,
-    ...(carrier === undefined && packages.length === 0
+    ...(service === undefined && packages.length === 0
       ? {}
       : {
           delivery: {
-            ...(carrier === undefined ? {} : { carrier }),
+            ...(service === undefined ? {} : { service }),
             ...(shippingAmount === undefined ? {} : { amount: shippingAmount }),
             packages,
           },

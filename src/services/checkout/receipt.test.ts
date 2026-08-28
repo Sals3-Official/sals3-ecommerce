@@ -105,16 +105,53 @@ describe('toCheckoutReceipt', () => {
     expect(receipt.items[0]?.title).toBe('Shipping Container Model');
   });
 
-  it('reports the carrier, arrival window, and shipping charge', () => {
+  it('keeps legacy v1 carrier receipts readable', () => {
     const receipt = toCheckoutReceipt(session());
 
     expect(receipt.delivery).toMatchObject({
-      carrier: 'CJPacket Postal',
+      service: 'CJPacket Postal',
       amount: 'US$4.09',
     });
     expect(receipt.delivery?.packages).toEqual([
       { id: 'pkg_1', arrivalTime: '12-20' },
     ]);
+  });
+
+  it('reports v2 Sals3 tiers instead of exposing CJ courier names', () => {
+    const receipt = toCheckoutReceipt(
+      session({
+        metadata: {
+          sals3_checkout_version: 'cj_freight_v2',
+          sals3_line_count: '2',
+          sals3_shipping_total_minor: '409',
+          sals3_shipping_delivery: 'Standard:12-20',
+        },
+        line_items: {
+          data: [
+            lineItem({ id: 'li_a', description: 'Item A' }),
+            lineItem({ id: 'li_b', description: 'Item B' }),
+            lineItem({
+              id: 'li_ship',
+              description: 'Shipping - Standard',
+              amount_total: 409,
+            }),
+          ],
+        },
+      }),
+    );
+
+    expect(receipt.delivery).toMatchObject({
+      service: 'Standard',
+      amount: 'US$4.09',
+      packages: [
+        {
+          id: 'package-1',
+          shippingTier: 'Standard',
+          arrivalTime: '12-20',
+        },
+      ],
+    });
+    expect(JSON.stringify(receipt.delivery)).not.toContain('CJPacket');
   });
 
   /* Fields are read from the end, so a colon inside an id shifts nothing. */

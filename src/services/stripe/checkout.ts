@@ -49,16 +49,23 @@ function metadataFor(
     .map((selection) =>
       [
         selection.packageId,
+        selection.shippingTier,
         selection.optionId,
         selection.channelId,
         selection.amountMinor,
+        selection.currency,
         selection.arrivalTime,
       ].join(':'),
     )
     .join(',');
+  const deliveryPromises = shippingSelection.packageSelections
+    .map((selection) =>
+      [selection.shippingTier, selection.arrivalTime].join(':'),
+    )
+    .join(',');
 
   return {
-    sals3_checkout_version: 'cj_freight_v1',
+    sals3_checkout_version: 'cj_freight_v2',
     sals3_line_count: String(cart.lines.length),
     sals3_shipping_package_count: String(
       shippingSelection.packageSelections.length,
@@ -67,6 +74,7 @@ function metadataFor(
     sals3_shipping_total_minor: String(shippingTotal(shippingSelection)),
     sals3_shipping_quoted_at: shippingQuotedAt,
     sals3_shipping_options: optionIds.slice(0, 500),
+    sals3_shipping_delivery: deliveryPromises.slice(0, 500),
   };
 }
 
@@ -117,10 +125,15 @@ export async function createStripeCheckoutSession(input: {
     throw new Error('Shipping currency does not match cart currency.');
   }
 
+  const selectedTiers = new Set(
+    input.shippingSelection.packageSelections.map(
+      (selection) => selection.shippingTier,
+    ),
+  );
   const shippingName =
-    input.shippingSelection.packageSelections.length === 1
-      ? `Shipping - ${input.shippingSelection.packageSelections[0]!.cjLogisticName}`
-      : 'Shipping - CJ package delivery';
+    selectedTiers.size === 1
+      ? `Shipping - ${input.shippingSelection.packageSelections[0]!.shippingTier}`
+      : 'Shipping - Mixed delivery tiers';
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',

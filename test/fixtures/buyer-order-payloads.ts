@@ -31,6 +31,7 @@ export const SPLIT_ORDER_PAYLOAD: BuyerOrderPayload = {
   packages: [
     {
       packageId: 'pkg_1',
+      shippingTier: 'Standard',
       carrier: 'CJPacket Ordinary',
       trackingNumber: 'CJP7742119055',
       parcelState: 'SHIPPED',
@@ -67,6 +68,7 @@ export const SPLIT_ORDER_PAYLOAD: BuyerOrderPayload = {
     },
     {
       packageId: 'pkg_2',
+      shippingTier: 'Express',
       carrier: 'CJPacket Sensitive',
       trackingNumber: null,
       parcelState: 'FULFILLING',
@@ -109,6 +111,7 @@ export const CONFLICT_ORDER_PAYLOAD: BuyerOrderPayload = {
   packages: [
     {
       packageId: 'pkg_1',
+      shippingTier: 'Expedited',
       carrier: 'CJPacket Ordinary',
       trackingNumber: 'CJP7590441220',
       parcelState: 'TRACKING_CONFLICT',
@@ -151,6 +154,7 @@ export const UNSYNCED_ORDER_PAYLOAD: BuyerOrderPayload = {
   packages: [
     {
       packageId: 'pkg_1',
+      shippingTier: null,
       carrier: 'CJPacket Ordinary',
       trackingNumber: null,
       parcelState: null,

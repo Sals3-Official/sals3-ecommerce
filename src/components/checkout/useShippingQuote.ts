@@ -3,7 +3,7 @@
 import { useCallback, useState, useTransition } from 'react';
 import type { CartState } from '@/lib/cart';
 import type { CheckoutAddress } from '@/lib/checkout/schema';
-import type { SelectedShippingQuote } from '@/components/checkout/CheckoutShippingOptions';
+import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
 import { quoteCheckoutShippingAction } from '@/app/checkout/actions';
 import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
 
@@ -18,7 +18,7 @@ export function toCheckoutCart(items: CartState['items']) {
 }
 
 /**
- * Pre-selects the first courier offered for each package.
+ * Pre-selects Standard for each package.
  *
  * A fresh quote used to arrive with nothing selected, which left "Go to
  * payment" disabled until the buyer noticed the radios — every order needs a
@@ -33,11 +33,13 @@ function firstOptionPerPackage(
   quote: CheckoutFreightQuoteResponse,
 ): SelectedShippingQuote[] {
   return quote.packages.flatMap((pkg) => {
-    const first = quote.quotes.find(
-      (option) => option.packageId === pkg.packageId,
+    const standard = quote.quotes.find(
+      (option) =>
+        option.packageId === pkg.packageId &&
+        option.shippingTier === 'Standard',
     );
 
-    return first === undefined ? [] : [first];
+    return standard === undefined ? [] : [standard];
   });
 }
 

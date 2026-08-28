@@ -1,22 +1,12 @@
 'use client';
 
-import { formatMoney } from '@/lib/money';
+import { SHIPPING_TIERS } from '@/lib/checkout/shipping-tiers';
+import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
 import type {
   CheckoutFreightQuote,
   CheckoutFreightQuoteResponse,
 } from '@/services/storefront/schemas';
-
-export type SelectedShippingQuote = Pick<
-  CheckoutFreightQuote,
-  | 'packageId'
-  | 'quoteId'
-  | 'optionId'
-  | 'channelId'
-  | 'cjLogisticName'
-  | 'arrivalTime'
-  | 'amountMinor'
-  | 'currency'
->;
+import CheckoutShippingTierCard from './CheckoutShippingTierCard';
 
 type CheckoutShippingOptionsProps = {
   quote: CheckoutFreightQuoteResponse | null;
@@ -27,11 +17,11 @@ type CheckoutShippingOptionsProps = {
 };
 
 function selectedKey(selected: SelectedShippingQuote): string {
-  return `${selected.packageId}:${selected.optionId}:${selected.channelId}`;
+  return `${selected.packageId}:${selected.shippingTier}:${selected.optionId}:${selected.channelId}`;
 }
 
 function quoteKey(quote: CheckoutFreightQuote): string {
-  return `${quote.packageId}:${quote.optionId}:${quote.channelId}`;
+  return `${quote.packageId}:${quote.shippingTier}:${quote.optionId}:${quote.channelId}`;
 }
 
 export default function CheckoutShippingOptions({
@@ -42,6 +32,19 @@ export default function CheckoutShippingOptions({
   onSelect,
 }: CheckoutShippingOptionsProps) {
   const selectedKeys = new Set(selected.map(selectedKey));
+  const optionsByPackage = (quote?.quotes ?? []).reduce<
+    Map<string, Map<CheckoutFreightQuote['shippingTier'], CheckoutFreightQuote>>
+  >((packages, option) => {
+    const packageOptions = packages.get(option.packageId);
+
+    if (packageOptions === undefined) {
+      packages.set(option.packageId, new Map([[option.shippingTier, option]]));
+    } else {
+      packageOptions.set(option.shippingTier, option);
+    }
+
+    return packages;
+  }, new Map());
 
   return (
     <section
@@ -57,7 +60,7 @@ export default function CheckoutShippingOptions({
             Delivery
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            CJ delivery methods are quoted for your delivery address.
+            Choose a delivery speed for each package.
           </p>
         </div>
         <button
@@ -72,58 +75,30 @@ export default function CheckoutShippingOptions({
       {quote === null ? null : (
         <div className="mt-4 flex flex-col gap-4">
           {quote.packages.map((pkg) => {
-            const quotes = quote.quotes.filter(
-              (option) => option.packageId === pkg.packageId,
-            );
+            const optionsByTier = optionsByPackage.get(pkg.packageId);
 
             return (
               <fieldset key={pkg.packageId} className="flex flex-col gap-2">
                 <legend className="text-sm font-semibold text-ink">
                   Package from {pkg.originCountry}
                 </legend>
-                {quotes.map((option) => {
-                  const id = `shipping-${option.quoteId}`;
-                  const checked = selectedKeys.has(quoteKey(option));
+                {SHIPPING_TIERS.map((tier) => {
+                  const option = optionsByTier?.get(tier) ?? null;
 
                   return (
-                    <label
-                      key={quoteKey(option)}
-                      htmlFor={id}
-                      className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition-colors duration-200 ${
-                        checked
-                          ? 'border-brand-600 bg-brand-600/5'
-                          : 'border-border-strong bg-white hover:border-brand-600'
-                      }`}
-                    >
-                      <input
-                        id={id}
-                        type="radio"
-                        name={`shipping-${pkg.packageId}`}
-                        checked={checked}
-                        disabled={disabled}
-                        onChange={() => onSelect(option)}
-                        className="mt-1"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-bold text-ink">
-                          {option.label} · {option.cjLogisticName}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-ink-muted">
-                          {option.arrivalTime} days · {option.optionId}
-                        </span>
-                        {option.ruleTips.length === 0 ? null : (
-                          <span className="mt-1 block text-xs text-ink-muted">
-                            {option.ruleTips[0]}
-                          </span>
-                        )}
-                      </span>
-                      <span className="font-display text-base font-semibold text-ink">
-                        {formatMoney({
-                          amountMinor: option.amountMinor,
-                          currency: option.currency,
-                        })}
-                      </span>
-                    </label>
+                    <CheckoutShippingTierCard
+                      key={tier}
+                      packageId={pkg.packageId}
+                      tier={tier}
+                      option={option}
+                      checked={
+                        option === null
+                          ? false
+                          : selectedKeys.has(quoteKey(option))
+                      }
+                      disabled={disabled}
+                      onSelect={onSelect}
+                    />
                   );
                 })}
               </fieldset>
