@@ -29,7 +29,10 @@ export default async function requestCheckoutFreightQuotes(
     },
     {
       method: 'POST',
-      body: input,
+      body: {
+        ...input,
+        capabilities: { freeStandardShipping: true },
+      },
       cachePolicy: { cache: 'no-store' },
       fetcher: options.fetcher,
     },

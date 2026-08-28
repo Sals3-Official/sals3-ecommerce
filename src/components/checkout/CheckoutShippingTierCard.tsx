@@ -6,11 +6,12 @@ import {
   type ShippingTier,
 } from '@/lib/checkout/shipping-tiers';
 import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
+import type { CheckoutFreightQuote } from '@/services/storefront/schemas';
 
 type CheckoutShippingTierCardProps = {
   packageId: string;
   tier: ShippingTier;
-  option: SelectedShippingQuote | null;
+  option: CheckoutFreightQuote | null;
   checked: boolean;
   disabled: boolean;
   onSelect: (quote: SelectedShippingQuote) => void;
@@ -45,6 +46,14 @@ export default function CheckoutShippingTierCard({
           amountMinor: option.amountMinor,
           currency: option.currency,
         });
+  const regularPrice =
+    option?.regularAmountMinor === undefined
+      ? null
+      : formatMoney({
+          amountMinor: option.regularAmountMinor,
+          currency: option.currency,
+        });
+  const isFree = option?.amountMinor === 0;
 
   return (
     <label
@@ -81,7 +90,18 @@ export default function CheckoutShippingTierCard({
         aria-hidden={unavailable}
         className={`col-start-2 font-display text-base font-semibold text-ink sm:col-start-3 sm:row-start-1 sm:self-center ${unavailable ? 'invisible' : ''}`}
       >
-        {price}
+        {isFree ? (
+          <span className="flex items-center gap-2">
+            <span className="text-teal-500">FREE</span>
+            {regularPrice === null ? null : (
+              <span className="text-xs font-medium text-ink-muted line-through">
+                {regularPrice}
+              </span>
+            )}
+          </span>
+        ) : (
+          price
+        )}
       </span>
     </label>
   );

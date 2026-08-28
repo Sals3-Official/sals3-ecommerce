@@ -125,6 +125,13 @@ const shippingQuote = {
       expiresAt: '2026-08-19T14:15:00.000Z',
     },
   ],
+  freeShipping: {
+    thresholdAmountMinor: 1200,
+    subtotalAmountMinor: 1000,
+    amountRemainingMinor: 200,
+    eligible: false,
+    currency: 'USD' as const,
+  },
 };
 
 function seedCart() {
@@ -329,6 +336,43 @@ describe('checkout flow across routes', () => {
 
     expect(screen.getByRole('radio', { name: 'Expedited' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Standard' })).not.toBeChecked();
+    expect(screen.getByText(/shipping US\$37\.34/i)).toBeInTheDocument();
+  });
+
+  it('shows free Standard delivery while keeping faster delivery paid', async () => {
+    mockedQuoteShipping.mockResolvedValue({
+      ok: true,
+      quote: {
+        ...shippingQuote,
+        quotes: [
+          {
+            ...shippingQuote.quotes[0]!,
+            amountMinor: 0,
+            regularAmountMinor: 409,
+          },
+          shippingQuote.quotes[1]!,
+        ],
+        freeShipping: {
+          thresholdAmountMinor: 1200,
+          subtotalAmountMinor: 1200,
+          amountRemainingMinor: 0,
+          eligible: true,
+          currency: 'USD',
+        },
+      },
+    });
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await reachDelivery();
+
+    expect(
+      screen.getByText('FREE Standard delivery unlocked'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('FREE')).toBeInTheDocument();
+    expect(screen.getByText('US$4.09')).toHaveClass('line-through');
+    expect(screen.getByText(/^shipping US\$0$/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Expedited' }));
     expect(screen.getByText(/shipping US\$37\.34/i)).toBeInTheDocument();
   });
 

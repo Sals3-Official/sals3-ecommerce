@@ -38,7 +38,10 @@ export default async function createPortalCheckoutIntent(
     },
     {
       method: 'POST',
-      body: input,
+      body: {
+        ...input,
+        capabilities: { freeStandardShipping: true },
+      },
       cachePolicy: { cache: 'no-store' },
       fetcher: options.fetcher,
     },

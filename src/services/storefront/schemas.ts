@@ -384,6 +384,8 @@ export const CheckoutFreightQuoteSchema = z.object({
   channelId: z.string().min(1).max(120),
   arrivalTime: truncatedText(80),
   amountMinor: z.number().int().nonnegative(),
+  /** Freight before an earned Standard-delivery promotion. */
+  regularAmountMinor: z.number().int().nonnegative().optional(),
   currency: z.enum(SUPPORTED_CURRENCIES),
   originCountry: z.string().min(2).max(20),
   destinationCountry: z.string().min(2).max(20),
@@ -404,6 +406,15 @@ export const CheckoutFreightQuoteResponseSchema = z.object({
     .min(1)
     .max(20),
   quotedAt: z.string().datetime(),
+  freeShipping: z
+    .object({
+      thresholdAmountMinor: z.number().int().positive(),
+      subtotalAmountMinor: z.number().int().nonnegative(),
+      amountRemainingMinor: z.number().int().nonnegative(),
+      eligible: z.boolean(),
+      currency: z.enum(SUPPORTED_CURRENCIES),
+    })
+    .optional(),
 });
 
 export const CheckoutIntentResponseSchema = z.object({

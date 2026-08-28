@@ -6,6 +6,7 @@ import type {
   CheckoutFreightQuote,
   CheckoutFreightQuoteResponse,
 } from '@/services/storefront/schemas';
+import CheckoutFreeShippingProgress from './CheckoutFreeShippingProgress';
 import CheckoutShippingTierCard from './CheckoutShippingTierCard';
 
 type CheckoutShippingOptionsProps = {
@@ -104,6 +105,9 @@ export default function CheckoutShippingOptions({
               </fieldset>
             );
           })}
+          {quote.freeShipping === undefined ? null : (
+            <CheckoutFreeShippingProgress progress={quote.freeShipping} />
+          )}
         </div>
       )}
     </section>

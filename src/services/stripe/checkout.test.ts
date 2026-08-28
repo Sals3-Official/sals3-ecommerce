@@ -148,4 +148,34 @@ describe('createStripeCheckoutSession', () => {
       ),
     ).toBe(2409);
   });
+
+  it('creates a zero-priced Standard line after free shipping is earned', async () => {
+    createSession.mockResolvedValue({
+      id: 'cs_test_123',
+      client_secret: 'cs_test_secret',
+    });
+
+    await createStripeCheckoutSession({
+      cart,
+      address,
+      shippingSelection: {
+        packageSelections: [
+          { ...shippingSelection.packageSelections[0]!, amountMinor: 0 },
+        ],
+      },
+      shippingQuotedAt: '2026-08-29T14:00:00.000Z',
+      buyerUid: 'firebase-uid-1',
+      checkoutIntentId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    const params = createSession.mock.calls[0]?.[0];
+
+    expect(params.line_items[1]).toMatchObject({
+      price_data: {
+        unit_amount: 0,
+        product_data: { name: 'Shipping - Standard' },
+      },
+    });
+    expect(params.metadata.sals3_shipping_total_minor).toBe('0');
+  });
 });
