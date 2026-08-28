@@ -81,9 +81,11 @@ function validateShippingSelection(
     const match = quoted.quotes.find(
       (quote) =>
         quote.packageId === selected.packageId &&
+        quote.shippingTier === selected.shippingTier &&
         quote.optionId === selected.optionId &&
         quote.channelId === selected.channelId &&
-        quote.amountMinor === selected.amountMinor,
+        quote.amountMinor === selected.amountMinor &&
+        quote.currency === selected.currency,
     );
 
     if (match === undefined) {
@@ -94,6 +96,7 @@ function validateShippingSelection(
 
     return {
       packageId: match.packageId,
+      shippingTier: match.shippingTier,
       quoteId: match.quoteId,
       optionId: match.optionId,
       channelId: match.channelId,
@@ -105,7 +108,10 @@ function validateShippingSelection(
   });
   const selectedPackages = new Set(selections.map((quote) => quote.packageId));
 
-  if (selectedPackages.size !== quoted.packages.length) {
+  if (
+    selections.length !== quoted.packages.length ||
+    selectedPackages.size !== quoted.packages.length
+  ) {
     throw new CheckoutValidationError(
       'Choose a delivery option for every package.',
     );

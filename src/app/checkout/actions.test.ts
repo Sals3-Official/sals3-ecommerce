@@ -55,6 +55,7 @@ const shippingSelection = {
   packageSelections: [
     {
       packageId: 'pkg_1',
+      shippingTier: 'Standard' as const,
       quoteId: 'quote-old',
       optionId: 'option-1',
       channelId: 'channel-1',
@@ -73,7 +74,7 @@ const freightQuote = {
     {
       quoteId: 'quote-new',
       packageId: 'pkg_1',
-      label: 'Standard' as const,
+      shippingTier: 'Standard' as const,
       cjLogisticName: 'CJPacket Postal',
       optionId: 'option-1',
       channelId: 'channel-1',
@@ -330,6 +331,56 @@ describe('createCheckoutSessionAction', () => {
     ).resolves.toEqual({
       ok: false,
       message: 'Shipping changed. Refresh delivery options and choose again.',
+    });
+    expect(createStripeCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects a buyer-supplied tier that differs from the fresh quote', async () => {
+    vi.mocked(validateCheckoutCart).mockResolvedValue({
+      lines: [],
+      subtotal: { amountMinor: 0, currency: 'USD' },
+    });
+    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
+
+    await expect(
+      createCheckoutSessionAction({
+        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+        address,
+        shippingSelection: {
+          packageSelections: [
+            {
+              ...shippingSelection.packageSelections[0]!,
+              shippingTier: 'Expedited',
+            },
+          ],
+        },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Shipping changed. Refresh delivery options and choose again.',
+    });
+    expect(createStripeCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate selections for one package', async () => {
+    vi.mocked(validateCheckoutCart).mockResolvedValue({
+      lines: [],
+      subtotal: { amountMinor: 0, currency: 'USD' },
+    });
+    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
+    const selected = shippingSelection.packageSelections[0]!;
+
+    await expect(
+      createCheckoutSessionAction({
+        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
+        address,
+        shippingSelection: {
+          packageSelections: [selected, { ...selected }],
+        },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      message: 'Choose a delivery option for every package.',
     });
     expect(createStripeCheckoutSession).not.toHaveBeenCalled();
   });

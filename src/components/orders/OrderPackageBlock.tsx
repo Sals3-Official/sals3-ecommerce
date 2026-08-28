@@ -60,7 +60,12 @@ export default function OrderPackageBlock({
           <span aria-hidden className="hidden text-border-strong sm:inline">
             |
           </span>
-          <span className="text-[13px] text-ink-muted">{pkg.carrier}</span>
+          <span className="text-[13px] font-semibold text-ink-muted">
+            {pkg.shippingTier ?? pkg.carrier}
+          </span>
+          {pkg.shippingTier === null ? null : (
+            <span className="text-[13px] text-ink-muted">{pkg.carrier}</span>
+          )}
           {pkg.trackingNumber === null ? null : (
             <span className="rounded-md border border-border bg-white px-2 py-0.5 font-mono text-xs text-ink">
               {pkg.trackingNumber}

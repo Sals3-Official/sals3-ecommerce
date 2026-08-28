@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { z } from 'zod';
+import { SHIPPING_TIERS } from '@/lib/checkout/shipping-tiers';
 import {
   getStorefrontApiUrl,
   requestStorefrontJson,
@@ -136,6 +137,7 @@ const trackingEventSchema = z.object({
 
 const packageSchema = z.object({
   packageId: z.string(),
+  shippingTier: z.enum(SHIPPING_TIERS).nullable().optional().default(null),
   carrier: z.string(),
   trackingNumber: z.string().nullable(),
   parcelState: z.enum(PARCEL_LIFECYCLE_STATE_VALUES).nullable(),

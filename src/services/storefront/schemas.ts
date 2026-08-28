@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SHIPPING_TIERS } from '@/lib/checkout/shipping-tiers';
 import { SUPPORTED_CURRENCIES } from '@/lib/money';
 
 /**
@@ -377,7 +378,7 @@ export type RatingSummary = z.infer<typeof RatingSummarySchema>;
 export const CheckoutFreightQuoteSchema = z.object({
   quoteId: z.string().min(1).max(120),
   packageId: z.string().min(1).max(80),
-  label: z.enum(['Economy', 'Standard', 'Express', 'Other']),
+  shippingTier: z.enum(SHIPPING_TIERS),
   cjLogisticName: truncatedText(120),
   optionId: z.string().min(1).max(120),
   channelId: z.string().min(1).max(120),

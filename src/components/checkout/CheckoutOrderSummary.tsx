@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { formatMoney, money } from '@/lib/money';
 import { getCartLineTotal, type CartLineItem } from '@/lib/cart';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
-import type { SelectedShippingQuote } from './CheckoutShippingOptions';
+import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
 
 type CheckoutOrderSummaryProps = {
   items: CartLineItem[];

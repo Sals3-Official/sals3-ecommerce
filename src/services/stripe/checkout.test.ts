@@ -41,6 +41,7 @@ const shippingSelection = {
   packageSelections: [
     {
       packageId: 'pkg_1',
+      shippingTier: 'Standard' as const,
       quoteId: 'quote-1',
       optionId: 'option-1',
       channelId: 'channel-1',
@@ -103,16 +104,17 @@ describe('createStripeCheckoutSession', () => {
       price_data: {
         currency: 'usd',
         unit_amount: 409,
-        product_data: { name: 'Shipping - CJPacket Postal' },
+        product_data: { name: 'Shipping - Standard' },
       },
     });
     expect(params.payment_intent_data.shipping.address.country).toBe('PH');
     expect(params.metadata).toMatchObject({
-      sals3_checkout_version: 'cj_freight_v1',
+      sals3_checkout_version: 'cj_freight_v2',
       sals3_shipping_package_count: '1',
       sals3_shipping_total_minor: '409',
       sals3_shipping_quoted_at: '2026-08-17T14:00:00.000Z',
-      sals3_shipping_options: 'pkg_1:option-1:channel-1:409:12-20',
+      sals3_shipping_options: 'pkg_1:Standard:option-1:channel-1:409:USD:12-20',
+      sals3_shipping_delivery: 'Standard:12-20',
     });
   });
 

@@ -147,6 +147,7 @@ function toPackage(
       total === 1 && seed.state === 'CHECKOUT_PENDING'
         ? 'Not yet a package'
         : `Package ${index + 1} of ${total}`,
+    shippingTier: null,
     carrier: seed.carrier,
     trackingNumber: seed.trackingNumber,
     // No carrier deep link is confirmed for CJPacket, and guessing one would

@@ -68,7 +68,7 @@ export default function CheckoutReceiptDelivery({
             Delivery
           </h2>
           <p className="mt-1 font-display text-base font-semibold text-ink">
-            {delivery.carrier ?? 'Selected at checkout'}
+            {delivery.service ?? 'Selected at checkout'}
           </p>
           {delivery.packages.length === 0 ? null : (
             <ul className="mt-0.5 text-sm text-ink">
@@ -77,6 +77,9 @@ export default function CheckoutReceiptDelivery({
                   {delivery.packages.length > 1
                     ? `Package ${index + 1}: `
                     : null}
+                  {shipment.shippingTier === undefined
+                    ? null
+                    : `${shipment.shippingTier} · `}
                   {shipment.arrivalTime === undefined
                     ? 'Arrival window unavailable'
                     : `Arrives in ${shipment.arrivalTime} days`}

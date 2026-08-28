@@ -44,6 +44,45 @@ Supplier order: uses the confirmed quote inputs
 
 Persist the quote inputs, selected logistics method, amount, currency, timestamp, expiry, and supplier response reference. Prevent payment when the quote is missing, expired, or materially changed.
 
+### 2.1 Present three delivery tiers without fabricating services
+
+For each fulfillment package, checkout always presents three buyer-facing
+positions in this order: `Standard`, `Express`, `Expedited`. Portal owns the
+classification beside its authoritative CJ quote integration; the browser
+cannot assign a tier, courier, amount, or delivery promise.
+
+A valid candidate has no CJ row error, non-empty `optionId` and `channelId`, a
+positive final USD shipping amount, a parseable positive arrival window, and a
+unique, internally consistent option/channel identity. Conflicting duplicate
+identities are excluded.
+
+- `Standard` is the lowest amount; ties prefer lower maximum days, then lower
+  minimum days, then stable IDs.
+- `Expedited` is the fastest remaining row strictly faster than Standard; ties
+  prefer lower minimum days, lower price, then stable IDs.
+- `Express` must be strictly between Standard and Expedited. Candidates are
+  ranked independently by price and speed, each rank normalized to `0..1`, and
+  the lowest `|priceRank - 0.5| + |speedRank - 0.5|` wins. Ties prefer lower
+  price, faster delivery, then stable IDs.
+
+One CJ option/channel identity may serve only one tier. Portal returns available
+assignments only; ecommerce renders all three cards and disables any missing
+tier with explicit unavailable copy. Thus twenty valid CJ rows become at most
+three services, two rows normally produce Standard plus Expedited, and one row
+produces Standard only. If any package lacks Standard, the cart/address is
+unshippable. The invariant is **three visible, not three fabricated**.
+
+Before payment, Portal re-quotes and reclassifies. The selected row must exactly
+match `packageId + shippingTier + optionId + channelId + amountMinor + currency`.
+Checkout intents and new fulfillment groups persist the tier plus exact CJ row;
+legacy groups keep a null tier and display their stored carrier without an
+invented classification. Stripe metadata uses `cj_freight_v2`; receipts retain
+read compatibility with `cj_freight_v1`.
+
+This decision adds no CJ call, poller, job, package, free-shipping contribution,
+courier-preference policy, or Admin Portal dependency. The 2026-08-28 shipping
+handoff is implementation evidence, not authority; this ADR is canonical.
+
 ### 3. Use USD as the phase-1 accounting and checkout currency
 
 CJ supplier costs are USD-denominated and phase 1 displays/charges USD. Do not use a hardcoded USD/PHP conversion. An approximate local-currency display may be added later, but it must be clearly labelled and must not change the actual charge currency.
@@ -253,3 +292,38 @@ The `unstable_cache` warning stands unchanged and for the same reason: it is key
 country and is safe only while the destination changes no price.
 
 **Frontmatter `updated`** moves to 2026-08-28.
+
+## Amendment — 2026-08-28: freight options are sorted into three named delivery tiers
+
+CJ returns a variable, unnamed list of logistics options per package — the same cart can offer
+four choices one minute and seven the next, with names that mean nothing to a buyer. §1's
+"checkout freight confirmation" and the verification item "checkout rejects stale or changed
+quotes before payment" both assume the buyer chose something nameable. They could not.
+
+### Decision
+
+1. **Every quote is classified into exactly one of three tiers** — `Standard`, `Express`,
+   `Expedited` — from its arrival window, and the buyer is offered at most one option per tier.
+   Classification is a pure function over the parsed window, so the same quote list always
+   produces the same tiers.
+2. **The tier is what the buyer selects, and what is carried forward.** The selection travels
+   into the Stripe Checkout Session metadata (`sals3_checkout_version: cj_freight_v2`) and onto
+   the order, so what was promised at checkout is recoverable from the payment record alone.
+3. **The tier is persisted nullable.** `fulfillment_groups.shipping_tier` is a nullable `text`
+   with a CHECK constraint restricting it to the three names. Nullable because every order placed
+   before this change has no tier and must not be given a false one.
+4. **Older receipts stay readable.** The receipt path keeps its pre-tier shape, so an order from
+   last week renders from the same code as one from today.
+
+### What this does not change
+
+No destination is enabled or disabled; checkout still takes Australia and the Philippines. USD
+remains what is charged. Prices are untouched — this changes only how the freight line is chosen
+and named.
+
+### Migration
+
+`drizzle/0032_strict_shipping_tiers.sql`. Additive only: one nullable column and one CHECK
+constraint, no backfill and no rewrite of existing rows.
+
+**Frontmatter `updated`** stays 2026-08-28.
