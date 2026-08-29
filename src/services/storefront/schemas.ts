@@ -139,6 +139,17 @@ const StorefrontProductBaseSchema = z.object({
    * the stars, never the product.
    */
   rating: RatingSummarySchema.optional().catch(undefined),
+  /**
+   * Units Sals3 has actually sold, absent until at least one has been.
+   *
+   * Absent rather than zero, for the same reason `rating` is: a wall of
+   * "0 sold" on a young catalogue reads as "nobody buys here", which is a
+   * verdict the absence of sales does not support. Never a supplier figure —
+   * CJ's `listedNum` counts listings on CJ's own marketplace.
+   *
+   * `.catch(undefined)` so a malformed count costs the line, never the product.
+   */
+  soldUnits: z.number().int().nonnegative().optional().catch(undefined),
 });
 
 /** The card feed. Deliberately does not grow. */

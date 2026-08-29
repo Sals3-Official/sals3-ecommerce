@@ -979,6 +979,29 @@ the one route every `/c/<slug>` link on the site (home category tiles, the
 `/categories` list, the footer) pointed at while it did not exist; those links
 are now real.
 
+### What a product card is allowed to claim
+
+`src/components/home/ProductCard.tsx` carries one **evidence line** under the
+title, holding whatever is actually known about the product: the buyer rating,
+the units sold, or both, separated by a dot.
+
+Each half is rendered only when it is real, and the whole row is absent when
+neither is — not a greyed star row, not reserved space, and never `0 sold`. The
+feed enforces the same rule from the other side: `soldUnits` and `rating` are
+**omitted** from the payload rather than sent as zero
+(`services/storefront/schemas.ts`), so a card cannot render a nought from a key
+that is not there. On a young catalogue a wall of zeroes reads as "nobody buys
+here", which is a verdict the absence of sales does not support.
+
+`soldUnits` counts Sals3 sales whose payment cleared, from the Portal's
+`sals3_order_lines`. Refunded and disputed lines are excluded, so the number can
+go **down**. It is never a supplier figure: CJ's `listedNum` counts listings on
+CJ's own marketplace, which ADR-013 §7 keeps off a Sals3 surface.
+
+Both fields carry `.catch(undefined)` in the schema, for the same reason
+`listing` on an order line does — a malformed aggregate must cost the line,
+never the product.
+
 **Sidebar facets are limited to fields the card feed actually publishes.**
 Category (a link list, not a filter — each entry navigates to that
 department) and Price (five preset bands plus free-typed min/max, reading
@@ -986,9 +1009,11 @@ department) and Price (five preset bands plus free-typed min/max, reading
 availability filter either** (owner decision, 2026-08-24 — the availability
 checkboxes were removed after the page shipped). The rating omission is a
 data-honesty call: the design this page was built from included one, but
-`ratingLine` is deprecated on the storefront contract and no product on the
-live feed carries a rating — a "4 stars & up" control with nothing behind it
-would be a fabricated claim. `Buyer rating` instead appears in the sidebar's
+`ratingLine` is deprecated on the storefront contract and, as of 2026-08-30,
+only a handful of live products carry a real `rating` — a "4 stars & up"
+control that silently hides almost the whole catalogue is worse than no
+control. (The earlier wording here said _no_ product carried one; that stopped
+being true once buyer reviews started landing.) `Buyer rating` instead appears in the sidebar's
 "Not filterable yet" note alongside `Brand`, `Ships from`, and `Discount`,
 each with the real reason it is absent (`src/lib/catalog/blocked-facets.ts`).
 `AvailabilityKey`/`AVAILABILITY_LABELS` (`src/lib/catalog/availability.ts`)

@@ -39,6 +39,15 @@ export type Product = {
    * removed from them.
    */
   rating?: { average: number; count: number };
+  /**
+   * Units Sals3 has sold, absent until at least one has been.
+   *
+   * The fallback products below deliberately carry none, for the same reason
+   * they carry no rating and no was/now price: they are shown to a real visitor
+   * whenever the live feed fails, and an invented sales figure on a real page is
+   * the same class of fabrication.
+   */
+  soldUnits?: number;
 };
 
 /**

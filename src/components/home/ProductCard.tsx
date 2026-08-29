@@ -41,21 +41,39 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.title}
         </p>
         {/*
-          Rendered only when a real rating exists, and the row is absent
-          otherwise rather than reserving space or showing nought stars. An
-          unreviewed product is new, not bad, and a greyed-out star row on every
-          card would say the opposite of that all over the home page.
+          One evidence line carrying whatever is actually known: the rating, the
+          units sold, or both. Each half is rendered only when it is real, and
+          the whole row is absent otherwise rather than reserving space, showing
+          nought stars, or printing "0 sold". An unreviewed product is new, not
+          bad, and a card that announced two zeroes would say the opposite of
+          that all over the home page.
         */}
-        {product.rating === undefined ? null : (
+        {product.rating === undefined &&
+        product.soldUnits === undefined ? null : (
           <div className="flex items-center gap-1.5">
-            <StarRating
-              rating={Math.round(product.rating.average)}
-              size="sm"
-              label={`${product.rating.average.toFixed(1)} out of 5`}
-            />
-            <span className="text-[11px] text-ink-subtle tabular-nums">
-              {product.rating.average.toFixed(1)} ({product.rating.count})
-            </span>
+            {product.rating === undefined ? null : (
+              <>
+                <StarRating
+                  rating={Math.round(product.rating.average)}
+                  size="sm"
+                  label={`${product.rating.average.toFixed(1)} out of 5`}
+                />
+                <span className="text-[11px] text-ink-subtle tabular-nums">
+                  {product.rating.average.toFixed(1)} ({product.rating.count})
+                </span>
+              </>
+            )}
+            {product.rating !== undefined && product.soldUnits !== undefined ? (
+              <span
+                aria-hidden="true"
+                className="size-[3px] shrink-0 rounded-full bg-border-strong"
+              />
+            ) : null}
+            {product.soldUnits === undefined ? null : (
+              <span className="text-[11px] text-ink-subtle tabular-nums">
+                {product.soldUnits.toLocaleString('en-US')} sold
+              </span>
+            )}
           </div>
         )}
       </div>
