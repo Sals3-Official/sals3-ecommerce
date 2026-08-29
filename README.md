@@ -985,8 +985,23 @@ are now real.
 title, holding whatever is actually known about the product: the buyer rating,
 the units sold, or both, separated by a dot.
 
-Each half is rendered only when it is real, and the whole row is absent when
-neither is — not a greyed star row, not reserved space, and never `0 sold`. The
+Each half is rendered only when it is real, and never as `0 sold` or a greyed
+star row. When **nobody has reviewed the product yet**, the line instead carries
+an invitation: _Be the first to review_.
+
+That is a reframe, not a claim. "No reviews yet" states a deficit and asks the
+shopper for nothing; the same fact offered as an opening leans on the one thing
+reliably true about going first — that somebody has to. It is deliberately
+quiet: no urgency, no count of people looking, no scarcity. A product that has
+already sold keeps its count in front of the invitation, because the sold figure
+does the persuading and the invitation only asks for the half that is missing.
+
+It stays **text, never a control**. The whole card is already a link to the
+product page, which is where a shopper can act, and a button labelled "review"
+that led anywhere else would say one thing and do another. It could not be
+honoured immediately in any case: reviewing is gated on the parcel being
+delivered, which is weeks away on this catalogue. The star beside it is hollow
+and must stay hollow — filling it would draw a rating that does not exist. The
 feed enforces the same rule from the other side: `soldUnits` and `rating` are
 **omitted** from the payload rather than sent as zero
 (`services/storefront/schemas.ts`), so a card cannot render a nought from a key

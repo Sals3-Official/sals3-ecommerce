@@ -42,40 +42,79 @@ export default function ProductCard({ product }: ProductCardProps) {
         </p>
         {/*
           One evidence line carrying whatever is actually known: the rating, the
-          units sold, or both. Each half is rendered only when it is real, and
-          the whole row is absent otherwise rather than reserving space, showing
-          nought stars, or printing "0 sold". An unreviewed product is new, not
-          bad, and a card that announced two zeroes would say the opposite of
-          that all over the home page.
+          units sold, or both — and, when nobody has reviewed the product yet, an
+          invitation to be the first.
+
+          The invitation is a reframe, not a claim. "No reviews yet" states a
+          deficit and asks the shopper for nothing; "be the first to review" is
+          the same fact offered as an opening, and it leans on the one thing that
+          is reliably true about going first — that somebody has to. It is
+          deliberately quiet: no urgency, no count of people looking, no
+          scarcity. An unreviewed product is new, not bad.
+
+          It stays a line of TEXT, never a button. The whole card is already a
+          link to the product page, which is where a shopper can act — and a
+          control labelled "review" that did anything other than take them to a
+          review would be saying one thing and doing another. It cannot even be
+          honoured immediately: reviewing is gated on the parcel being delivered,
+          which is weeks away on this catalogue.
+
+          The star beside it is hollow and must stay hollow. Filling it would
+          draw a rating that does not exist.
+
+          "0 sold" is still never printed — an absent `soldUnits` renders
+          nothing, because on a young catalogue a wall of zeroes reads as nobody
+          buying.
         */}
-        {product.rating === undefined &&
-        product.soldUnits === undefined ? null : (
-          <div className="flex items-center gap-1.5">
-            {product.rating === undefined ? null : (
-              <>
-                <StarRating
-                  rating={Math.round(product.rating.average)}
-                  size="sm"
-                  label={`${product.rating.average.toFixed(1)} out of 5`}
-                />
-                <span className="text-[11px] text-ink-subtle tabular-nums">
-                  {product.rating.average.toFixed(1)} ({product.rating.count})
-                </span>
-              </>
-            )}
-            {product.rating !== undefined && product.soldUnits !== undefined ? (
-              <span
-                aria-hidden="true"
-                className="size-[3px] shrink-0 rounded-full bg-border-strong"
+        <div className="flex items-center gap-1.5">
+          {product.rating === undefined ? null : (
+            <>
+              <StarRating
+                rating={Math.round(product.rating.average)}
+                size="sm"
+                label={`${product.rating.average.toFixed(1)} out of 5`}
               />
-            ) : null}
-            {product.soldUnits === undefined ? null : (
               <span className="text-[11px] text-ink-subtle tabular-nums">
-                {product.soldUnits.toLocaleString('en-US')} sold
+                {product.rating.average.toFixed(1)} ({product.rating.count})
               </span>
-            )}
-          </div>
-        )}
+            </>
+          )}
+          {product.rating !== undefined && product.soldUnits !== undefined ? (
+            <span
+              aria-hidden="true"
+              className="size-[3px] shrink-0 rounded-full bg-border-strong"
+            />
+          ) : null}
+          {product.soldUnits === undefined ? null : (
+            <span className="text-[11px] text-ink-subtle tabular-nums">
+              {product.soldUnits.toLocaleString('en-US')} sold
+            </span>
+          )}
+          {product.rating !== undefined ? null : (
+            <>
+              {product.soldUnits === undefined ? null : (
+                <span
+                  aria-hidden="true"
+                  className="size-[3px] shrink-0 rounded-full bg-border-strong"
+                />
+              )}
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="size-3 shrink-0 text-brand-600"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z" />
+              </svg>
+              <span className="text-[11px] font-medium text-brand-600">
+                Be the first to review
+              </span>
+            </>
+          )}
+        </div>
       </div>
     </Link>
   );

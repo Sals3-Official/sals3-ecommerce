@@ -41,19 +41,38 @@ describe('ProductCard', () => {
 });
 
 describe('the evidence line', () => {
-  it('shows nothing at all on a product with no rating and no sales', () => {
-    const { container } = render(<ProductCard product={product} />);
+  it('invites the first review, and still never prints a zero', () => {
+    render(<ProductCard product={product} />);
 
-    // Not a greyed star row, not "0 sold". An unreviewed, unsold product is
-    // new, and a card announcing two zeroes says the opposite.
+    expect(screen.getByText('Be the first to review')).toBeInTheDocument();
+    // The reframe is the whole point: the deficit ("no reviews yet") is never
+    // stated, and neither is "0 sold" - on a young catalogue a wall of zeroes
+    // reads as nobody buying.
+    expect(screen.queryByText(/no reviews/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/sold/)).not.toBeInTheDocument();
-    expect(container.querySelector('svg')).toBeNull();
   });
 
-  it('shows the units sold on their own when nobody has reviewed yet', () => {
+  it('offers the invitation as text, never as a control', () => {
+    render(<ProductCard product={product} />);
+
+    // The invitation adds no control of its own. The only interactive thing on
+    // the card is the card, and it goes to the product page - a second control
+    // labelled "review" that led anywhere else would say one thing and do
+    // another, and reviewing is gated on delivery, weeks away, so it could not
+    // be honoured immediately even if it were a button.
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', '/p/corduroy-jacket');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('keeps the sold count in front of the invitation when both apply', () => {
     render(<ProductCard product={{ ...product, soldUnits: 1420 }} />);
 
+    // The sold count does the persuading; the invitation only asks for the
+    // half that is missing.
     expect(screen.getByText('1,420 sold')).toBeInTheDocument();
+    expect(screen.getByText('Be the first to review')).toBeInTheDocument();
   });
 
   it('shows both halves, separated, when each is real', () => {
@@ -69,6 +88,10 @@ describe('the evidence line', () => {
 
     expect(screen.getByText('4.6 (12)')).toBeInTheDocument();
     expect(screen.getByText('142 sold')).toBeInTheDocument();
+    // The invitation has to disappear the moment it stops being true.
+    expect(
+      screen.queryByText('Be the first to review'),
+    ).not.toBeInTheDocument();
   });
 
   it('keeps the rating when a refund has taken the sold count back to nothing', () => {
@@ -82,5 +105,8 @@ describe('the evidence line', () => {
 
     expect(screen.getByText('4.0 (1)')).toBeInTheDocument();
     expect(screen.queryByText(/sold/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Be the first to review'),
+    ).not.toBeInTheDocument();
   });
 });
