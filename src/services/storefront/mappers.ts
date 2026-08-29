@@ -99,6 +99,9 @@ export function toHomeProduct(product: Product, index: number): HomeProduct {
     ...(product.rating === undefined || product.rating.count === 0
       ? {}
       : { rating: product.rating }),
+    ...(product.soldUnits === undefined || product.soldUnits <= 0
+      ? {}
+      : { soldUnits: product.soldUnits }),
   };
 }
 
