@@ -5,7 +5,6 @@ import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
 import { resetRateMemoForTests } from '@/lib/fx/rates';
-import { resolveDestination } from '@/lib/destination/resolve';
 import renderWithCart from '../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
 
@@ -26,10 +25,9 @@ vi.mock('@/lib/fx/buffer', () => ({
   has its own tests.
 */
 /*
-  The page resolves the buyer's destination to decide which currency the
-  approximate price is shown in, and `resolveDestination` reads `cookies()`,
-  which jsdom has no request for. Australia so the rate lookup has a currency to
-  ask for; the tests that care mock the rate itself.
+  `resolveDestination` reads `cookies()`, which jsdom has no request for. The
+  page itself stopped asking when the approximate local price was removed, but
+  the header still does, so the mock stays.
 */
 vi.mock('@/lib/destination/resolve', () => ({
   resolveDestination: vi
@@ -265,17 +263,21 @@ describe('Product page', () => {
   });
 
   /**
-   * The assertion that stops the rejected behaviour coming back. `specs.sku` is
-   * an `S3V-<hex>` digest: it stays on the payload for cart and order plumbing,
-   * and it must reach no text a buyer can read — the same rule the option chips
-   * already follow, applied to the section that used to break it.
+   * This page used to hide the Sals3 SKU from every readable string. The owner
+   * reversed that 2026-08-30: the code is how a listing is quoted between the
+   * Portal, an order line and a support thread, and search now finds a product
+   * by it, so a buyer who cannot see it cannot use any of that.
    *
-   * `<script>` content is deliberately excluded rather than the assertion being
-   * relaxed. Product JSON-LD carries `sku` on purpose: it is the real
-   * identifier, Merchant listings want it, and structured data is read by
-   * machines. The rejected thing was *showing* a digest to a person.
+   * What did not change is *where* it may appear. It is printed once, as the
+   * identity line above the specifications grid, and nowhere else — above all
+   * not as an option chip's name, where a digest replaces the supplier's own
+   * words for a colour. So this asserts the count, not the absence.
+   *
+   * `<script>` is still excluded from the readable clone: JSON-LD carries `sku`
+   * for machines and always did, and folding that into the visible count would
+   * make this test pass for the wrong reason.
    */
-  it('never shows the Sals3 SKU digest to a buyer, while keeping it in structured data', async () => {
+  it('prints the Sals3 SKU exactly once, and keeps it in structured data', async () => {
     mockFetch({
       productOverrides: {
         specs: { sku: 'S3V-2268B366F762', weightGrams: 4200 },
@@ -309,10 +311,18 @@ describe('Product page', () => {
 
     readable.querySelectorAll('script').forEach((node) => node.remove());
 
-    expect(readable.textContent ?? '').not.toMatch(/S3V-[0-9A-F]{12}/);
-    expect(readable.innerHTML).not.toMatch(/S3V-[0-9A-F]{12}/);
-    expect(screen.queryByText('SKU')).not.toBeInTheDocument();
-    // Still in the machine-readable payload, which is where it belongs.
+    const shown = (readable.textContent ?? '').match(/S3V-[0-9A-F]{12}/g) ?? [];
+
+    // One code on the page: the selected variant's, on the identity line.
+    expect(shown).toEqual(['S3V-AAAABBBBCCCC']);
+    expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
+
+    // Never as a chip. The chips carry the supplier's words for the option.
+    screen.getAllByRole('link').forEach((link) => {
+      expect(link.textContent ?? '').not.toMatch(/S3V-/);
+    });
+
+    // Still in the machine-readable payload, which is where it always belonged.
     expect(container.innerHTML).toContain('S3V-2268B366F762');
   });
 
@@ -664,7 +674,9 @@ describe('Product page', () => {
    * The panel stopped printing a "label · count" line under the price when the
    * default preselection landed, so the supplier's own words for the chosen
    * variant now reach the buyer through the chips (and the cart line). A SKU
-   * digest still must not reach either.
+   * digest still must not reach either — the identity line below the fold is
+   * the one place the code is spelled out, and a chip named `S3V-2268B366F762`
+   * would tell a shopper nothing about the colour they are picking.
    */
   it('marks the chosen variant by its supplier label, not its SKU', async () => {
     mockFetch({
@@ -686,7 +698,9 @@ describe('Product page', () => {
       'aria-current',
       'page',
     );
-    expect(document.body.textContent).not.toMatch(/S3V-/);
+    screen.getAllByRole('link').forEach((link) => {
+      expect(link.textContent ?? '').not.toMatch(/S3V-/);
+    });
   });
 
   it('links only Home in the breadcrumb and never guesses a BreadcrumbList URL', async () => {
