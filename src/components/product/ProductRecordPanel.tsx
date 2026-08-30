@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ProductDetail, ProductVariant } from '@/lib/product-detail';
 import {
-  defaultVariantFor,
   optionSummary,
   variantById,
   variantCountInWords,
   variantsAboveFloor,
 } from '@/lib/product-variants';
+import chooseSentence from '@/lib/product-choice-sentence';
 import {
   PRODUCT_VARIANT_CHANGE_EVENT,
   type ProductVariantChangeDetail,
@@ -18,13 +18,20 @@ import ProductAddToCartButtons from '@/components/product/ProductAddToCartButton
 import ProductEvidenceLedger from '@/components/product/ProductEvidenceLedger';
 import ProductOptionList from '@/components/product/ProductOptionList';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
+import ProductQuantityStepper, {
+  stepQuantity,
+} from '@/components/product/ProductQuantityStepper';
 import { usePublishSelectedSku } from './selected-sku';
 
 type ProductRecordPanelProps = {
   detail: ProductDetail;
-  /** The variant in play — resolved from `?variant=`, or the honest default. */
+  /**
+   * The variant in play, resolved on the server: the `?variant=` one, or the
+   * sole variant of a product that has only one. Absent means the buyer has not
+   * chosen yet — no longer an impossible state.
+   */
   selectedVariant?: ProductVariant;
-  /** Whether the selection came from the URL rather than from the default. */
+  /** Whether that selection came from the URL rather than from being the only one. */
   selectedFromUrl: boolean;
   /**
    * Whether the page below rendered its reviews section, which decides whether
@@ -34,16 +41,29 @@ type ProductRecordPanelProps = {
 };
 
 /**
- * Selection is never empty. `defaultVariantFor` preselects on every product —
- * named axes included — so Add to Cart and Buy Now are live on arrival rather
- * than disabled behind a choice the page has not asked for. The default prefers
- * an available variant priced at the product's own displayed price, which is why
- * preselecting cannot move the lead price off the feed price (ADR-016).
+ * Selection starts empty on any product that has something to choose.
  *
- * The chips show that combination as chosen, so the preselection is stated on
- * screen instead of being a hidden assumption in the cart line, and one click
- * replaces it. What is lost is the deliberate first choice the earlier client
- * panel forced; that was an owner decision, taken 2026-08-21.
+ * This reverses the 2026-08-21 owner decision that had `defaultVariantFor`
+ * preselect on every product so the buttons were live on arrival. The owner
+ * asked for the deliberate first choice back on 2026-08-31: what a buyer takes
+ * to checkout should be a thing they picked, not a thing the page picked and
+ * showed them. So both actions are disabled until a variant exists, with the
+ * reason said in words above them — the same contract the unavailable state has
+ * always used, now reached by a second route.
+ *
+ * A product with exactly one variant still arrives resolved. There is nothing to
+ * choose, so a gate there would sit in front of a door with nothing behind it.
+ *
+ * ## What this does not yet do
+ *
+ * On a product with two or more named axes the first chip click still resolves
+ * the axes the buyer has not answered: `ProductOptionList.chipTarget` narrows to
+ * a real variant, preferring an available one, so clicking Black on a
+ * colour-and-size product lands on some size rather than on a half-selection.
+ * That is the existing rule and it is what keeps every chip live instead of
+ * dead. Forcing an answer per axis needs the panel to hold a partial selection
+ * rather than one variant id, which is a change to how selection is modelled
+ * here, not a condition on this gate.
  */
 
 /**
@@ -78,12 +98,27 @@ export default function ProductRecordPanel({
   );
   const [selectionCameFromUrl, setSelectionCameFromUrl] =
     useState(selectedFromUrl);
+  const [quantity, setQuantity] = useState(1);
+  /*
+    No default behind it any more: `undefined` here means the buyer has not
+    chosen, and that is a state the page is now allowed to be in.
+
+    The one fallback left is the product with a single variant, resolved here as
+    well as in `page.tsx` rather than only there. The panel must not need the
+    page to have thought of it: dropped on its own — in a test, or on any screen
+    that reuses it — a one-variant product would otherwise arrive with nothing
+    selected, and since it also has nothing to choose, its buttons would go live
+    against no variant at all.
+  */
   const selected =
     variantById(variants, selectedVariantId) ??
-    defaultVariantFor(variants, detail.price);
+    (hasOptions ? undefined : variants[0]);
   const price = selected?.price ?? detail.price;
   const availability = selected?.availability ?? detail.availability;
   const unavailable = selected?.availability === 'UNAVAILABLE';
+  // A product with one variant arrives resolved, and one with none buys against
+  // its own price. Only a real set of options can be unanswered.
+  const needsChoice = hasOptions && selected === undefined;
 
   // Mirrored outward for the specifications band, which prints the code and sits
   // in a different branch of the page. Publish only — the selection above stays
@@ -146,13 +181,15 @@ export default function ProductRecordPanel({
 
   /**
    * Why purchase is blocked, in words a buyer can act on. Absent means enabled —
-   * never a silently grey button.
+   * never a silently grey button, and never colour as the only signal.
    *
-   * "Choose a colour." is gone with the empty selection that produced it: there
-   * is always a variant now, so the only thing that can block a buy is that
-   * variant being unavailable, and the fix for that is picking another chip.
+   * Two reasons now, and the order matters: nothing chosen is checked first
+   * because with nothing chosen there is no availability to report. The sentence
+   * names the axis in the seller's own word for it, so a buyer reads the same
+   * label the chips above are grouped under.
    */
   function disabledReason(): string | undefined {
+    if (needsChoice) return chooseSentence(axes[0]?.name);
     if (unavailable) return 'This option is currently unavailable.';
 
     return undefined;
@@ -212,6 +249,21 @@ export default function ProductRecordPanel({
         </CardSection>
       ) : null}
 
+      {/*
+        Its own band, above the actions and below the options, because that is
+        the order the decision is made in: which one, how many, then buy. The
+        number survives an option change on purpose — a buyer who wanted three
+        of the black one still wants three of the blue one.
+      */}
+      <CardSection>
+        <ProductQuantityStepper
+          value={quantity}
+          onStep={(delta) =>
+            setQuantity((current) => stepQuantity(current, delta))
+          }
+        />
+      </CardSection>
+
       <CardSection>
         <ProductAddToCartButtons
           productId={detail.id}
@@ -221,6 +273,7 @@ export default function ProductRecordPanel({
           imageAlt={detail.imageAlt}
           tone={detail.tone}
           unitPrice={price}
+          quantity={quantity}
           variant={
             selected === undefined
               ? undefined

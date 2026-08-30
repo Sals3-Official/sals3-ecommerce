@@ -12,9 +12,15 @@ type ProductSpecificationsProps = {
    */
   specs?: ProductSpecs;
   /**
-   * The Sals3 SKU for the variant this request resolved. Printed above the
-   * grid rather than in it — see `Sals3SkuLine` for why the provenance line
-   * beneath the grid cannot be stretched to cover it.
+   * Whether this product has a Sals3 SKU to show at all — the resolved code, or
+   * any variant's, or the product's own. It decides whether the band is worth
+   * rendering and **nothing else**: what is actually printed comes from the
+   * buyer's live selection, which `Sals3SkuLine` reads from context.
+   *
+   * The two are deliberately different questions. A buyer arrives with no option
+   * chosen, so the printed code is absent on first paint, but the band must
+   * still exist for the code to appear in when they choose — deciding the band's
+   * existence from the printed value would make it unreachable.
    */
   sals3Sku?: string;
 };
@@ -72,10 +78,19 @@ export default function ProductSpecifications({
   return (
     <section className="border-y border-border bg-white">
       <div className="mx-auto w-full max-w-6xl px-6 py-9">
-        <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
-          Product specifications
-        </h2>
-        <Sals3SkuLine fallbackSku={sals3Sku} />
+        {/*
+          Heading and identifier share one baseline row: the heading names the
+          band, the code identifies what the band is describing. They wrap to
+          two lines below `sm`, in that order, and the heading holds the row's
+          height on its own — so the band does not reflow when the buyer's first
+          option click makes a code exist.
+        */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
+            Product specifications
+          </h2>
+          <Sals3SkuLine />
+        </div>
         <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
           {rows.map((row) => (
             <div

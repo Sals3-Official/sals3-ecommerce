@@ -278,6 +278,21 @@ export async function createCheckoutSessionAction(
   }
 
   try {
+    /*
+      Deliberately sequential, and it must stay that way.
+
+      Overlapping this with the freight quote looks free — the quote takes
+      `parsed.data.cart`, not the validated one — but the price check below
+      returns before paying, and a quote started in parallel would already have
+      spent CJ freight quota on a checkout that is not going to complete. CJ
+      points are a constrained shared budget by owner decision (ADR-013), and
+      the case is guarded by a test that says so.
+
+      It is also a poor trade even ignoring the budget: this is one Portal round
+      trip and the quote is several live CJ requests deep, so running them
+      together saves the shorter of the two and the button still waits on the
+      longer. The cost of the sequence is bounded; the cost of the quote is not.
+    */
     const cart = await validateCheckoutCart(parsed.data.cart.items);
     /*
       The last gate before money moves.

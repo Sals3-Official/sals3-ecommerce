@@ -91,9 +91,33 @@ function linePrice(
 export async function validateCheckoutCart(
   inputLines: CheckoutCartLineInput[],
 ): Promise<ValidatedCheckoutCart> {
+  /*
+    One request per product, not one per line.
+
+    Two variants of the same jacket are two cart lines and were two identical
+    round trips to the Portal — a cart of one product in five sizes asked the
+    catalogue the same question five times, in parallel, on the path to Stripe.
+    The promise is shared rather than the answer, so the lines still resolve
+    together and each still reads the same payload it would have fetched itself.
+
+    Deliberately per call, not a module-level memo: this read is `no-store`
+    precisely because it decides the price the buyer is charged, and a cache
+    that outlived the request would be the staleness that boundary exists to
+    prevent. Two lines inside one checkout are the same instant; two checkouts
+    are not.
+  */
+  const reads = new Map<string, ReturnType<typeof fetchProductBySlug>>();
+  const readProduct = (slug: string) => {
+    const started = reads.get(slug) ?? fetchProductBySlug(slug);
+
+    reads.set(slug, started);
+
+    return started;
+  };
+
   const lines = await Promise.all(
     inputLines.map(async (line) => {
-      const product = await fetchProductBySlug(line.productId);
+      const product = await readProduct(line.productId);
 
       if (product === undefined) {
         throw new CheckoutValidationError(

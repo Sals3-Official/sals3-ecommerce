@@ -151,11 +151,34 @@ product does not fail the page.
 `fetchProductBySlug()` calls `GET /api/storefront/products/<slug>` and returns
 `undefined` **only** for a genuine absence (invalid slug shape, or a 404).
 Everything else throws, which is what lets the PDP tell "no such product" from
-"the catalogue is unreachable". That read is cached
-(`next: { revalidate: 300, tags: [...] }`); the list feed deliberately stays
-`no-store`, because the home page falls back to placeholder products and a
-cacheable feed would let a token-less `next build` bake those placeholders into
-static output.
+"the catalogue is unreachable".
+
+**Whether that read is cached depends on the caller, not the endpoint.**
+`fetchProductBySlug` takes `readFor`, and it defaults to `'checkout'` — the safe
+value:
+
+- `readFor: 'page'` → `next: { revalidate: 60 }`. Only `/p/[id]` passes it. Every
+  render used to be a live round trip to the Portal, which was the dominant cost
+  of that route.
+- default (`'checkout'`) → `cache: 'no-store'`. This is the read behind
+  `validateCheckoutCart`, which decides **the price the buyer is charged** and
+  whether the product may be sold at all. A cached answer there could charge a
+  price that has moved, or sell something withdrawn a minute ago.
+
+The trade on the page side is that a Portal publish takes up to a minute to
+appear. Making it instant again means the Portal calling a revalidation route
+here on publish — not built, which is also why **no cache tag is declared**: a
+tag nothing invalidates is a promise the code does not keep. And `revalidate`
+writes Next's Data Cache only for a `200`, so this makes good days cheap and
+changes nothing about an outage.
+
+(This paragraph previously claimed the read was cached at `revalidate: 300` with
+tags. It was not, and had not been: the code returned `no-store` for every
+caller.)
+
+The list feed deliberately stays `no-store`, because the home page falls back to
+placeholder products and a cacheable feed would let a token-less `next build`
+bake those placeholders into static output.
 
 `test/fixtures/storefront-product-detail.json` is the committed cross-repository
 contract fixture: one maximal payload, parsed by
@@ -172,7 +195,8 @@ product `id` first, because the same product can legitimately appear in both
 sections and a duplicate `id` in the related grid throws React's
 "Encountered two children with the same key". The PDP wraps this related-products
 read in a 30-second Next cache so variant URLs and nearby product views do not
-repeat the four-list scan; the main product detail read remains live.
+repeat the four-list scan; the main product detail read is cached for 60 seconds
+on the page and stays live everywhere else (see `readFor` above).
 
 Required `.env.local` values:
 
@@ -1346,6 +1370,60 @@ Next prefetch because each PDP URL is server-rendered and reads the storefront.
 After hydration, a normal left-click on a variant option updates
 `?variant=<id>` and the price from the already-loaded payload; direct URL visits,
 reloads, copied links, and modified clicks still use the server-rendered route.
+
+### Nothing is chosen for the buyer (owner decision, 2026-08-31)
+
+A product with options arrives with **no variant selected**. Add to Cart and Buy
+Now are disabled until the buyer picks one, and the reason is printed above them
+in a polite live region — `Choose a colour to continue.`, naming the axis in the
+seller's own word for it (`chooseSentence` in `src/lib/product-choice-sentence.ts`).
+The price reads `From …` until the choice narrows it, and the Sals3 SKU on the
+specifications band prints nothing until then, because every variant carries its
+own and there is no product-level code.
+
+This **reverses the 2026-08-21 decision** that had `defaultVariantFor` preselect
+an available variant priced at the feed price so the buttons were live on
+arrival. That helper is deleted, along with its tests: nothing preselects any
+more, and a documented "this is how the default is chosen" helper that nothing
+calls is a trap. ADR-016's constraint — that preselecting must not move the lead
+price off the feed price — no longer applies, because nothing is preselected.
+
+Two products still arrive buyable: one with a single variant (nothing to choose)
+and one with no variants at all (it buys against its own price). Both are
+resolved in `ProductRecordPanel` as well as in `page.tsx`, so the panel does not
+depend on the page having thought of it.
+
+**Known gap.** On a product with two or more named axes, the first chip click
+still resolves the axes the buyer has not answered: `chipTarget` narrows to a
+real variant, preferring an available one, so clicking `Black` on a
+colour-and-size product lands on some size rather than on a half-selection. That
+is the existing rule and it is what keeps every chip live instead of dead.
+Forcing an answer per axis needs the panel to hold a `VariantSelection` rather
+than one variant id — `initialSelection`, `isValueSelectable` and
+`firstUnchosenAxis` in `src/lib/product-variants.ts` are the (currently unused)
+remains of that model, and they are where such a change would start.
+
+### Quantity, and what a press answers with
+
+`ProductQuantityStepper` sits between the options and the actions. Before it, the
+PDP could only ever add one, and a buyer who wanted three had to add one and
+press `+` twice in the cart. It copies `CartLineItemRow`'s control value for
+value — 44px squares, `rounded-md`, `border-strong`, the brand-600 hover wash —
+and imports `MAX_LINE_QUANTITY` rather than restating it, so the PDP cannot offer
+a number the cart would clamp. The number survives an option change on purpose.
+
+Add to Cart confirms **in place**: the same button changes skin to `teal-500`
+with a check and `Added` for 1100ms, then offers itself again. The header count
+answers at the same time — the pill settles once and the new digit rises — driven
+by `lastAddedAt` on the cart context rather than by `itemCount`, because the count
+also changes when the cart hydrates from `localStorage` and a badge that bumped on
+page load would be claiming something happened. Keyframes live in `globals.css`
+(`s3-confirm-in`, `s3-label-back`, `s3-count-bump`, `s3-count-in`) so the
+site-wide `prefers-reduced-motion` rule neutralises them; a component-local
+animation would escape it. Nothing flies across the page: a thumbnail animating
+into the cart icon needs a fixed-position clone measured against a header that
+moves with scroll. The existing `SuccessToast` is unchanged and still announces
+the add — the button is not a second live region.
 
 ### Variant options: three tiers, and a sparse grid is now the second one
 

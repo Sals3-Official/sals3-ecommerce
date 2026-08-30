@@ -33,30 +33,39 @@ export default async function CheckoutFlowLayout({
 }: {
   children: ReactNode;
 }) {
-  const buyer = await getBuyerSession();
-
-  if (!buyer) {
-    redirect(withPostLoginKey(AUTH_LINKS.signIn, 'checkout'));
-  }
-
   /*
     The destination the buyer has been shopping to, if checkout can take an
     address there. `isCheckoutCountry` is the narrowing: Global and the
     priced-but-not-orderable countries fall through to `undefined`, and the form
     keeps its own default. Seeding a country the form would then refuse is the
     one outcome worth ruling out here rather than downstream.
-  */
-  /*
-    The account's own address, seeded into the contact field.
 
-    The form still lets the buyer change it — some people genuinely want the
-    receipt somewhere else. But the default matters: an order is scoped by the
-    account that placed it, and until 2026-08-28 it was scoped by this field
+    The account's own address is seeded into the contact field for a separate
+    reason. The form still lets the buyer change it — some people genuinely want
+    the receipt somewhere else — but the default matters: an order is scoped by
+    the account that placed it, and until 2026-08-28 it was scoped by this field
     instead, so a buyer who typed a different address paid for an order that
     then vanished from their list. Seeding removes the accident while leaving
     the choice.
+
+    Both reads start together. The session decides whether this page renders at
+    all and the destination only seeds a form field, so they ran in sequence for
+    no reason beyond the order they were written in — and this layout is the
+    first thing standing between the cart and the address form.
+
+    Starting the destination read before the guard has answered is safe: it
+    reads a cookie the visitor already sent, its answer is discarded on the
+    redirect path, and it spends nothing upstream.
   */
-  const destination = await resolveDestination();
+  const [buyer, destination] = await Promise.all([
+    getBuyerSession(),
+    resolveDestination(),
+  ]);
+
+  if (!buyer) {
+    redirect(withPostLoginKey(AUTH_LINKS.signIn, 'checkout'));
+  }
+
   const initialCountry = isCheckoutCountry(destination.code)
     ? destination.code
     : undefined;

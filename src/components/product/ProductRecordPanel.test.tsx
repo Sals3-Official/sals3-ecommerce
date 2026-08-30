@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ProductDetail, ProductVariant } from '@/lib/product-detail';
 import renderWithCart from '../../../test/render-with-cart';
@@ -143,23 +143,57 @@ describe('ProductRecordPanel', () => {
   });
 
   /**
-   * Owner decision, 2026-08-21: a named-axes product arrives buyable. The
-   * default is preselected, both buttons are live, and no "Choose a colour."
-   * blocker is rendered — the buyer changes the selection rather than starting it.
+   * The 2026-08-21 preselection, reversed by the owner on 2026-08-31. Nothing is
+   * chosen on the buyer's behalf, so nothing is buyable until they choose — and
+   * the reason is said in words rather than left to a grey button.
    */
-  it('arrives buyable on a named-axes product, with the default chosen', () => {
+  it('arrives unbuyable on a named-axes product, with nothing chosen', () => {
     renderWithCart(
       <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
     );
 
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
+    expect(
+      screen.getByText('Choose a colour to continue.'),
+    ).toBeInTheDocument();
+    // No chip carries the selection, because there is no selection to carry.
+    expect(screen.getByRole('link', { name: 'black' })).not.toHaveAttribute(
+      'aria-current',
+    );
+  });
+
+  /** And one click is all it takes to clear the gate. */
+  it('becomes buyable once an option is chosen', () => {
+    renderWithCart(
+      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: 'black' }));
+
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
-    expect(screen.queryByText('Choose a colour.')).not.toBeInTheDocument();
-    // The floor-priced option, so the lead price still matches the feed price.
-    expect(screen.getByRole('link', { name: 'black' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    expect(
+      screen.queryByText('Choose a colour to continue.'),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * A product with one variant has nothing to choose, so a gate there would sit
+   * in front of a door with nothing behind it. Asserted without a
+   * `selectedVariant` prop on purpose: the panel resolves this itself rather
+   * than relying on the page having thought of it.
+   */
+  it('arrives buyable when there is only one variant', () => {
+    renderWithCart(
+      <ProductRecordPanel
+        detail={detail({ variants: [priced('black', 451)] })}
+        selectedFromUrl={false}
+      />,
     );
+
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
   });
 
   /** An unavailable selection is the one remaining blocker, and it says so. */

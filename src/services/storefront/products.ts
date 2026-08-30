@@ -1,6 +1,7 @@
 import {
   getStorefrontApiUrl,
   productCachePolicy,
+  productPageCachePolicy,
   ProductsApiError,
   requestStorefrontJson,
   STOREFRONT_CATEGORIES_PATH,
@@ -31,6 +32,25 @@ import {
 type FetchOptions = {
   fetcher?: typeof fetch;
   signal?: AbortSignal;
+};
+
+type FetchProductOptions = FetchOptions & {
+  /**
+   * What the answer is for, which is the only thing that decides whether it may
+   * come from a cache.
+   *
+   * `'page'` renders a product page: a figure a buyer reads, where a few seconds
+   * of staleness is invisible and a live round trip on every render is the
+   * dominant cost of the route.
+   *
+   * `'checkout'` is the default **because it is the safe one**. It is the read
+   * behind `validateCheckoutCart`, which decides the price the buyer is charged
+   * and whether the product may be sold at all — a cached answer there can
+   * charge yesterday's price or sell something withdrawn a minute ago. A new
+   * caller that does not think about this gets the safe behaviour rather than
+   * the fast one.
+   */
+  readFor?: 'page' | 'checkout';
 };
 
 type FetchProductsOptions = FetchOptions & {
@@ -156,7 +176,7 @@ function getProductByIdApiUrl(id: string): string {
  */
 export async function fetchProductBySlug(
   slug: unknown,
-  { fetcher, signal }: FetchOptions = {},
+  { fetcher, signal, readFor = 'checkout' }: FetchProductOptions = {},
 ): Promise<ProductPayloadDetail | undefined> {
   const parsedSlug = StorefrontProductDetailSchema.shape.slug.safeParse(slug);
 
@@ -171,7 +191,12 @@ export async function fetchProductBySlug(
       subject: 'product API',
       notFoundStatuses: [404],
     },
-    { fetcher, signal, cachePolicy: productCachePolicy() },
+    {
+      fetcher,
+      signal,
+      cachePolicy:
+        readFor === 'page' ? productPageCachePolicy() : productCachePolicy(),
+    },
   );
 
   return payload?.product;

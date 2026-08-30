@@ -61,22 +61,74 @@ export function getAuthorizationHeader(): string {
 }
 
 /**
- * Product reads are live storefront data. Keep them `no-store` so a portal
- * publish is visible immediately and a token-less build cannot bake placeholder
- * fallback data into static output.
+ * Product reads are live storefront data, and `no-store` remains the default
+ * everywhere a read decides something: a token-less build cannot then bake
+ * placeholder fallback data into static output, and no cached answer can price
+ * or authorise a sale.
+ *
+ * The one exception is the product **page** read — see `productPageCachePolicy`
+ * for why it is safe there and nowhere else.
  */
 export type StorefrontCachePolicy =
   | { cache: 'no-store' }
   /**
-   * For reads that are configuration rather than catalogue. Product reads must
-   * stay `no-store` (see above); a setting that changes when a human edits one
-   * field is a different question, and re-asking it on every render would put a
-   * first-party round trip on the render path for a number that moves weekly.
+   * For reads that are configuration rather than catalogue, and for the product
+   * page read. A setting that changes when a human edits one field is a
+   * different question from a price a checkout is about to charge, and
+   * re-asking it on every render would put a first-party round trip on the
+   * render path for a number that moves weekly.
    */
   | { next: { revalidate: number; tags?: string[] } };
 
 export function productCachePolicy(): StorefrontCachePolicy {
   return { cache: 'no-store' };
+}
+
+/**
+ * How long a product page may serve an answer it already has, in seconds.
+ *
+ * Sized against the neighbours rather than picked: the PDP's related-products
+ * read is already `unstable_cache`d for 30s, and this is the same class of
+ * staleness on the same page. It is the shortest window that still collapses a
+ * burst of readers on one product into one round trip.
+ */
+export const PRODUCT_PAGE_REVALIDATE_SECONDS = 60;
+
+/**
+ * The **page** read of one product — and only that.
+ *
+ * Every render of `/p/[id]` was a live round trip to the Portal, which is the
+ * dominant cost of the route: nothing else on that page waits on a first-party
+ * network call it cannot share with the next reader.
+ *
+ * ## Why this is not `productCachePolicy`
+ *
+ * `fetchProductBySlug` has a second caller — `validateCheckoutCart` — and it
+ * decides **the price the buyer is charged** and whether the product may be
+ * sold. A minute of staleness there can charge a price that has moved or sell
+ * something withdrawn since, so that read stays `no-store` and this policy is
+ * reached only by passing `readFor: 'page'`. Caching by caller rather than by
+ * endpoint is the whole point; one flag on the shared function would have
+ * cached both.
+ *
+ * ## What a publish now costs
+ *
+ * Up to a minute before a change reaches the product page. That is the trade,
+ * and it is deliberate: the note above this used to say `no-store` kept a
+ * publish visible immediately, and it did. Making it instant again means the
+ * Portal calling a revalidation route here on publish, which is the follow-up
+ * this leaves open rather than pretends to have done — which is also why no
+ * cache tag is declared. A tag nothing ever invalidates is a promise the code
+ * does not keep.
+ *
+ * ## What this does not fix
+ *
+ * `next: { revalidate }` writes the Data Cache **only for a 200**. During a
+ * Portal outage every render still issues a live request, exactly as today —
+ * this makes good days cheap and changes nothing about bad ones.
+ */
+export function productPageCachePolicy(): StorefrontCachePolicy {
+  return { next: { revalidate: PRODUCT_PAGE_REVALIDATE_SECONDS } };
 }
 
 type RequestOptions = {

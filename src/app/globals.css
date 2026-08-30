@@ -339,3 +339,82 @@ body {
   transform: translateX(-180%) skewX(-18deg);
   animation: free-shipping-sheen 700ms ease-out 3;
 }
+
+/*
+ * The Add to Cart confirmation, in two places at once: the button answers where
+ * the press happened, and the header count answers where the buyer has to look
+ * next. Declared here for the same reason as the two above — a `@keyframes`
+ * cannot live in an arbitrary Tailwind value, and the `prefers-reduced-motion`
+ * block earlier in this file neutralises every duration declared here, which a
+ * component-local animation would escape.
+ *
+ * One easing throughout: `cubic-bezier(0.32, 0.72, 0, 1)` leaves fast and lands
+ * slowly, so the motion reads as something settling rather than something
+ * sliding. Nothing travels across the page: a thumbnail flying into the cart
+ * icon needs a fixed-position clone measured against a header that moves with
+ * scroll, and it reads as loud on a page built to read as a record.
+ */
+@keyframes s3-confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes s3-label-back {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes s3-count-bump {
+  0% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes s3-count-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-s3-confirm-in {
+  animation: s3-confirm-in 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.animate-s3-label-back {
+  animation: s3-label-back 200ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.animate-s3-count-bump {
+  animation: s3-count-bump 520ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/*
+ * The digit starts 90ms after the pill, so the two read as one gesture with a
+ * leading edge rather than as two things firing together.
+ */
+.animate-s3-count-in {
+  animation: s3-count-in 260ms cubic-bezier(0.32, 0.72, 0, 1) 90ms both;
+}
