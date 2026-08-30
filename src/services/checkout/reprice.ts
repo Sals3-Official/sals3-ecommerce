@@ -2,22 +2,8 @@ import 'server-only';
 
 import type { Money } from '@/lib/money';
 import type { CheckoutCartLineInput } from '@/lib/checkout/schema';
+import type { RepricedCart } from '@/lib/checkout/price-change';
 import { validateCheckoutCart } from './cart-validation';
-
-export type RepricedLine = {
-  productId: string;
-  variantId?: string;
-  unitPrice: Money;
-  /** The price this line was carrying, when it differs from `unitPrice`. */
-  previousUnitPrice?: Money;
-  title: string;
-};
-
-export type RepricedCart = {
-  lines: RepricedLine[];
-  /** Only the lines whose price moved. Empty is the ordinary case. */
-  changed: RepricedLine[];
-};
 
 /**
  * Today's price for everything in a cart, and which of those moved.

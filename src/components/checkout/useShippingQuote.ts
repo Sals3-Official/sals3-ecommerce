@@ -13,6 +13,9 @@ export function toCheckoutCart(items: CartState['items']) {
       productId: line.productId,
       ...(line.variant?.id === undefined ? {} : { variantId: line.variant.id }),
       quantity: line.quantity,
+      // What this line is displaying. The server compares and discards it; the
+      // price it charges still comes from the Portal.
+      unitPriceMinor: line.unitPrice.amountMinor,
     })),
   };
 }

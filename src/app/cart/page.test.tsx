@@ -15,6 +15,20 @@ import CartPage, { generateMetadata } from './page';
   a destination checkout accepts, so `DestinationNotice` renders nothing here
   and these assertions stay about the cart; the notice has its own tests.
 */
+/*
+  The cart reprices through a Server Action now. Next turns a `'use server'`
+  import from a client component into a reference; under vitest it is a real
+  import, and this module's own imports are `server-only`. Same mock the
+  checkout flow test uses, for the same reason.
+
+  It answers `ok: false`, which is the do-nothing branch: the cart keeps the
+  prices it has. Repricing has its own coverage in `reprice.test.ts`; these
+  cases are about the cart.
+*/
+vi.mock('@/app/checkout/actions', () => ({
+  repriceCartAction: vi.fn(async () => ({ ok: false, message: 'no' })),
+}));
+
 vi.mock('@/lib/destination/resolve', () => ({
   resolveDestination: vi.fn().mockResolvedValue(findDestination('AU')),
 }));

@@ -1,5 +1,5 @@
 import { formatMoney } from '@/lib/money';
-import type { CheckoutPriceChange } from './useCartReprice';
+import type { CheckoutPriceChange } from '@/lib/checkout/price-change';
 
 /**
  * Says out loud that a price moved between the cart and this screen.

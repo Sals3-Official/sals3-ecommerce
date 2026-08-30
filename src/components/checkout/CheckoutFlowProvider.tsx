@@ -3,9 +3,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import useCheckout from '@/components/checkout/useCheckout';
-import useCartReprice, {
-  type CheckoutPriceChange,
-} from '@/components/checkout/useCartReprice';
+import useCartReprice from '@/components/checkout/useCartReprice';
+import type { CheckoutPriceChange } from '@/lib/checkout/price-change';
 import type { CartLineItem } from '@/lib/cart';
 import type { CheckoutCountry } from '@/lib/checkout/locations';
 import type { Money } from '@/lib/money';
@@ -56,8 +55,14 @@ export function CheckoutFlowProvider({
   const { items, itemCount, subtotal } = useCart();
   // Before anything is totalled. This rewrites the cart's stored prices, so
   // `items` and `subtotal` below are already the corrected ones.
-  const { changes: priceChanges } = useCartReprice(items);
-  const checkout = useCheckout(items, subtotal, initialCountry, initialEmail);
+  const { changes: priceChanges, applyServerChanges } = useCartReprice(items);
+  const checkout = useCheckout(
+    items,
+    subtotal,
+    initialCountry,
+    initialEmail,
+    applyServerChanges,
+  );
 
   const value = useMemo<CheckoutFlowValue>(
     () => ({ ...checkout, items, itemCount, subtotal, priceChanges }),

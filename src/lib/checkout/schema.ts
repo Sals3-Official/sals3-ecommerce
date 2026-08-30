@@ -16,6 +16,20 @@ export const CheckoutCartLineInputSchema = z.object({
   productId: z.string().min(1).max(160),
   variantId: z.string().min(1).max(120).optional(),
   quantity: z.number().int().min(1).max(MAX_LINE_QUANTITY),
+  /**
+   * The price the buyer was looking at when they pressed pay.
+   *
+   * **Never charged, and never trusted for money.** The amount comes from the
+   * Portal through `validateCheckoutCart`, exactly as before; this is compared
+   * against that and thrown away. Its only job is to let the server answer a
+   * question it previously could not ask — "is this still the figure they
+   * agreed to?" — so a price that moved mid-checkout stops the charge instead
+   * of quietly changing it.
+   *
+   * Optional because an older client, or the shipping-quote path, sends none;
+   * absent simply means there is nothing to compare and the flow is unchanged.
+   */
+  unitPriceMinor: z.number().int().nonnegative().optional(),
 });
 
 export const CheckoutAddressSchema = z

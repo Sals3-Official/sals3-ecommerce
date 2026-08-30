@@ -1,16 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { repriceCartAction } from '@/app/checkout/actions';
 import { useCart } from '@/components/cart/CartProvider';
-import { lineIdOf, type CartLineItem } from '@/lib/cart';
-import type { Money } from '@/lib/money';
-
-export type CheckoutPriceChange = {
-  title: string;
-  from: Money;
-  to: Money;
-};
+import { cartLineId, lineIdOf, type CartLineItem } from '@/lib/cart';
+import type {
+  CheckoutPriceChange,
+  RepricedLine,
+} from '@/lib/checkout/price-change';
 
 /**
  * Reprices the cart once, when checkout opens, and reports what moved.
@@ -41,7 +38,7 @@ export type CheckoutPriceChange = {
  */
 export default function useCartReprice(items: CartLineItem[]): {
   changes: CheckoutPriceChange[];
-  dismiss: () => void;
+  applyServerChanges: (changed: RepricedLine[]) => void;
 } {
   const { reprice } = useCart();
   const [changes, setChanges] = useState<CheckoutPriceChange[]>([]);
@@ -101,5 +98,30 @@ export default function useCartReprice(items: CartLineItem[]): {
     };
   }, [items, reprice]);
 
-  return { changes, dismiss: () => setChanges([]) };
+  /**
+   * The same correction, applied when the *pay* attempt is what discovered it.
+   * `createCheckoutSessionAction` refuses to charge a price the buyer was not
+   * shown; this is what turns that refusal into a corrected summary.
+   */
+  const applyServerChanges = useCallback(
+    (changed: RepricedLine[]) => {
+      reprice(
+        changed.map((line) => ({
+          lineId: cartLineId(line.productId, line.variantId),
+          unitPrice: line.unitPrice,
+        })),
+      );
+
+      setChanges(
+        changed.map((line) => ({
+          title: line.title,
+          from: line.previousUnitPrice ?? line.unitPrice,
+          to: line.unitPrice,
+        })),
+      );
+    },
+    [reprice],
+  );
+
+  return { changes, applyServerChanges };
 }
