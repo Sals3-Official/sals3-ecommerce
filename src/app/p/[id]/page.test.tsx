@@ -316,16 +316,20 @@ describe('Product page', () => {
     }
 
     /*
-      Nothing is chosen on arrival since 2026-08-31, and every variant carries
-      its own code — so there is no honest one to print yet. Printing either of
-      these two would be right for one colour and quietly wrong for the other.
+      The product's own code on arrival — not either variant's.
+
+      This briefly printed nothing at all, on the reasoning that no single
+      variant speaks for the product. It shipped, and on live the SKU vanished
+      from every page reached without a `?variant=` link while the same code
+      went on reaching Google as `Product.sku`. `specs.sku` belongs to the
+      product, so it is the honest default.
     */
-    expect(visibleCodes()).toEqual([]);
-    expect(screen.queryByText('Sals3 SKU')).not.toBeInTheDocument();
+    expect(visibleCodes()).toEqual(['S3V-2268B366F762']);
+    expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('link', { name: 'Black' }));
 
-    // One code on the page: the chosen variant's, on the identity line.
+    // Still one code, and now the chosen variant's rather than the product's.
     expect(visibleCodes()).toEqual(['S3V-AAAABBBBCCCC']);
     expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
 
@@ -402,12 +406,16 @@ describe('Product page', () => {
       screen.getByRole('heading', { name: /supplier details/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('ABS plastic')).toBeInTheDocument();
+    /*
+      One provenance line on the page, not two. The seller's was removed by the
+      owner on 2026-08-31, so the supplier's is the only sentence left saying
+      whose claim is whose — and the two grids now share a format and a white
+      region, which is exactly why it has to be there exactly once.
+    */
     expect(
-      screen.getByText(/entered by the seller against this category/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/as reported by the supplier/i),
-    ).toBeInTheDocument();
+      screen.queryByText(/entered by the seller against this category/i),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText(/as reported by the supplier/i)).toHaveLength(1);
   });
 
   it('renders a variant selector only when there is a choice to make', async () => {

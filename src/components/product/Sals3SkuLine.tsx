@@ -46,22 +46,43 @@ import { useSelectedSku } from './selected-sku';
  * signal that the borrowed family was carrying badly. Nothing is downloaded for
  * it, and it cannot drift with the reader's OS.
  *
- * ## Why it can render nothing
+ * ## Why there is always a code, and how that was got wrong
  *
- * There is no product-level Sals3 SKU. Every variant has its own, so a pair of
- * jeans in two colours and six sizes carries twelve of them — and since a buyer
- * now arrives with no option chosen, there is no honest code to print until they
- * choose one. Printing any one of the twelve would be right for one combination
- * and quietly wrong for the other eleven, which matters precisely because the
- * reason to show a code at all is that somebody intends to quote it.
+ * Every variant carries its own SKU, so a pair of jeans in two colours and six
+ * sizes has twelve. When the buyer stopped arriving with a variant preselected
+ * (2026-08-31) this component was changed to print **nothing** until they chose
+ * one, reasoning that any one of the twelve would be right for one combination
+ * and wrong for the other eleven.
+ *
+ * That shipped, and it was wrong: on live the SKU simply vanished from every
+ * product page anybody reached without a `?variant=` link — which is nearly all
+ * of them. The reasoning skipped the fact that a product **does** have a code of
+ * its own. `specs.sku` is the product's, not a variant's, and the page already
+ * publishes it as `Product.sku` in its JSON-LD, so hiding it from the reader
+ * while handing it to Google was the worst of both.
+ *
+ * So: the product's own code by default, the chosen variant's the moment there
+ * is one. Neither is a guess, and the label never claims more than "this is the
+ * code" — which is also why the sentence that used to say "for the option
+ * selected above" could not survive this change and did not.
  *
  * The selection is read from context rather than taken as a prop: the panel that
  * owns it is a client component in a different branch of `page.tsx`, and chip
- * clicks deliberately do not navigate. Outside a provider this renders nothing,
- * so no surface can print a code that no selection stands behind.
+ * clicks deliberately do not navigate.
  */
-export default function Sals3SkuLine() {
-  const sku = useSelectedSku();
+export default function Sals3SkuLine({
+  fallbackSku,
+}: {
+  /**
+   * The product's own code, shown until the buyer narrows to a variant.
+   *
+   * `page.tsx` prefers `specs.sku` here over any one variant's, because that is
+   * the code the product carries as a whole — the same value the page already
+   * publishes as `Product.sku` in its JSON-LD.
+   */
+  fallbackSku?: string;
+}) {
+  const sku = useSelectedSku() ?? fallbackSku;
 
   if (sku === undefined) return null;
 

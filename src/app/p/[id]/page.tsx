@@ -375,31 +375,37 @@ export default async function ProductPage({
             specification={detail.specification}
             specs={detail.specs}
             /*
-              Existence, not content: any code this product could ever show is
-              enough to earn the band. What gets printed is the buyer's live
-              selection, and on arrival there is none — deciding the band from
-              the printed value would leave the code nowhere to appear.
+              The product's own code first, the resolved variant's ahead of it.
+
+              `specs.sku` before `variants[0]` on purpose: with nothing chosen,
+              the honest code is the one belonging to the whole product — the
+              same value this page publishes as `Product.sku` in its JSON-LD —
+              not whichever variant happens to sort first. `variants[0]` is the
+              last resort for a payload carrying no product-level code at all.
             */
             sals3Sku={
-              selectedVariant?.sku ?? variants[0]?.sku ?? detail.specs?.sku
+              selectedVariant?.sku ?? detail.specs?.sku ?? variants[0]?.sku
             }
           />
-          <div className="mx-auto w-full max-w-6xl px-6">
-            {/*
-              Supplier details follows specifications directly, by owner
-              decision 2026-08-31. The two are the same kind of thing read back
-              to back — what the seller declared, then what the supplier
-              reported — and the provenance line under each is what keeps them
-              apart. Putting the description and the reviews between them made a
-              buyer scroll past both to compare two tables about one product.
+          {/*
+            Supplier details reads straight after specifications, in the same
+            white region and the same format — owner decision 2026-08-31, after
+            seeing the first attempt on live.
 
-              It stays on the 1152px measure rather than joining the white
-              full-bleed band above it. The band is the page's one rhythm break
-              and its second background colour; a second full-bleed white
-              section would merge with the first and read as one enormous table
-              with two headings.
-            */}
-            <ProductSupplierDetails specs={detail.specs} />
+            That attempt kept this on the 1152px measure as a rounded card, on
+            the argument that a second full-bleed white section would merge with
+            the first. It did not read as a merge; it read as a table, a strip
+            of grey, and then a smaller table in a box, for two halves of one
+            subject. The owner's word for it was "sobrang awkward".
+
+            So the two bands are deliberately continuous now, sharing one
+            hairline. What keeps them apart is no longer a gap or a type scale —
+            it is the sentence under the supplier grid, which is the only thing
+            left saying whose claim is whose. That sentence is load-bearing;
+            `ProductSupplierDetails` says so beside it.
+          */}
+          <ProductSupplierDetails specs={detail.specs} />
+          <div className="mx-auto w-full max-w-6xl px-6">
             <ProductDescription blocks={remainingBlocks} />
             <ProductReviews
               rating={detail.rating}

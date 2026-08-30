@@ -12,15 +12,14 @@ type ProductSpecificationsProps = {
    */
   specs?: ProductSpecs;
   /**
-   * Whether this product has a Sals3 SKU to show at all — the resolved code, or
-   * any variant's, or the product's own. It decides whether the band is worth
-   * rendering and **nothing else**: what is actually printed comes from the
-   * buyer's live selection, which `Sals3SkuLine` reads from context.
+   * The Sals3 SKU to show before the buyer narrows to a variant: the code the
+   * request resolved, or the product's own. It does two jobs — it decides
+   * whether the band is worth rendering at all, and it is what `Sals3SkuLine`
+   * prints until the buyer's selection replaces it.
    *
-   * The two are deliberately different questions. A buyer arrives with no option
-   * chosen, so the printed code is absent on first paint, but the band must
-   * still exist for the code to appear in when they choose — deciding the band's
-   * existence from the printed value would make it unreachable.
+   * It briefly did only the first of those, and the line printed nothing until
+   * an option was chosen. On live that meant no SKU on any product page reached
+   * without a `?variant=` link, which is nearly all of them. See `Sals3SkuLine`.
    */
   sals3Sku?: string;
 };
@@ -89,7 +88,7 @@ export default function ProductSpecifications({
           <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
             Product specifications
           </h2>
-          <Sals3SkuLine />
+          <Sals3SkuLine fallbackSku={sals3Sku} />
         </div>
         <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
           {rows.map((row) => (
@@ -103,14 +102,16 @@ export default function ProductSpecifications({
           ))}
         </dl>
         {/*
-          The provenance line, and the whole reason this section is separate.
-          It must never read "as reported by the supplier" — that sentence
-          belongs to Supplier details, and applying it here would misattribute
-          the seller's own declaration.
+          There was a provenance line here — "Entered by the seller against this
+          category's attribute set." — removed by the owner on 2026-08-31.
+
+          The rule it enforced has not gone anywhere: this grid must never carry
+          "as reported by the supplier", because these are the seller's own
+          declarations and that sentence belongs to `ProductSupplierDetails`
+          alone. With the two sections now sharing a format and a white region,
+          that sentence sitting under this grid is a live risk rather than a
+          hypothetical one, so nothing goes here.
         */}
-        <p className="mt-4 max-w-[80ch] text-xs leading-relaxed text-ink-subtle">
-          Entered by the seller against this category&rsquo;s attribute set.
-        </p>
       </div>
     </section>
   );
