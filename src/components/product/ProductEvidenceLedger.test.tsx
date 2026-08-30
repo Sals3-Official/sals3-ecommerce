@@ -67,9 +67,66 @@ describe('ProductEvidenceLedger', () => {
     expect(screen.queryByText(/invalid date/i)).not.toBeInTheDocument();
   });
 
-  it('claims no reviews, because Sals3 has none', () => {
+  it('says nobody has reviewed a product with no rating', () => {
     render(<ProductEvidenceLedger />);
 
-    expect(screen.getByText(/sals3 has no reviews yet/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/nobody has reviewed this one/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  /**
+   * The bug this component shipped with: the ledger hardcoded "no reviews yet"
+   * and was never handed a rating, so a reviewed product contradicted its own
+   * reviews section a screen below.
+   */
+  it('never claims there are no reviews when the product has one', () => {
+    render(<ProductEvidenceLedger rating={{ average: 4, count: 1 }} />);
+
+    expect(screen.queryByText(/no reviews/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/nobody has reviewed/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('4.0 out of 5, from 1 verified purchase.'),
+    ).toBeInTheDocument();
+  });
+
+  it('pluralises the purchase count and links to the reviews themselves', () => {
+    render(
+      <ProductEvidenceLedger
+        rating={{ average: 4.66, count: 12 }}
+        reviewsAnchored
+      />,
+    );
+
+    expect(
+      screen.getByRole('link', {
+        name: '4.7 out of 5, from 12 verified purchases.',
+      }),
+    ).toHaveAttribute('href', '#reviews-heading');
+  });
+
+  /**
+   * The reviews section bows out when its list could not be fetched, so linking
+   * on the rating alone would produce a dead anchor precisely when the review
+   * read is failing. The rating still gets stated — it is the link that goes.
+   */
+  it('states the rating without a link when no reviews section rendered', () => {
+    render(<ProductEvidenceLedger rating={{ average: 4.66, count: 12 }} />);
+
+    expect(
+      screen.getByText('4.7 out of 5, from 12 verified purchases.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  /** A payload can carry an average with no reviews behind it. */
+  it('treats a zero count as no reviews at all', () => {
+    render(<ProductEvidenceLedger rating={{ average: 0, count: 0 }} />);
+
+    expect(
+      screen.getByText(/nobody has reviewed this one/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/out of 5/i)).not.toBeInTheDocument();
   });
 });

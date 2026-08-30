@@ -225,9 +225,13 @@ describe('Product page', () => {
     expect(
       screen.queryByRole('heading', { name: /specifications/i }),
     ).not.toBeInTheDocument();
-    // No rating line at all — the portal no longer sends one, and inventing one
-    // would be a Sals3 rating that does not exist.
-    expect(screen.queryByText(/rating/i)).not.toBeInTheDocument();
+    // The reviews section is the one deliberate exception to the rule above:
+    // it renders on every product, because a buyer who scrolls to where reviews
+    // live and finds nothing cannot tell "none yet" from a broken page. What it
+    // must never do is invent a figure — no average, and no nought out of five.
+    expect(screen.getByText('No reviews yet')).toBeInTheDocument();
+    expect(screen.queryByText(/\d\.\d out of 5/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
   });
 
   it("renders description, supplier details, and the ledger's stock row when the portal sends them", async () => {
