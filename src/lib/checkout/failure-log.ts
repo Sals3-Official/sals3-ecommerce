@@ -61,7 +61,7 @@ export function classifyStorefrontFailure(error: unknown): CheckoutFailure {
  * echoes an upstream body.
  */
 export function logCheckoutFailure(
-  step: 'shipping-quote' | 'checkout-session',
+  step: 'shipping-quote' | 'checkout-session' | 'reprice',
   failure: CheckoutFailure,
   error: unknown,
 ): void {

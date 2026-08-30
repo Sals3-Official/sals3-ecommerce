@@ -21,6 +21,10 @@ import { createStripeCheckoutSession } from '@/services/stripe/checkout';
 import { ProductsApiError } from '@/services/storefront/client';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
 import createPortalCheckoutIntent from '@/services/checkout/intent';
+import repriceCheckoutCart, {
+  type RepricedLine,
+} from '@/services/checkout/reprice';
+import type { Money } from '@/lib/money';
 import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
 
 /**
@@ -111,6 +115,68 @@ function validateShippingSelection(
   }
 
   return { packageSelections: selections };
+}
+
+export type RepriceCartResult =
+  | { ok: true; lines: RepricedLine[]; changed: RepricedLine[] }
+  | { ok: false; message: string };
+
+/**
+ * Today's price for every line in the cart, before the buyer is shown a total.
+ *
+ * The checkout summary used to render the price each line was *added* at, while
+ * Stripe was handed the price read back from the Portal at pay time. When those
+ * differed the buyer saw one total through Information and Delivery and was
+ * charged another on the card form, with nothing saying so.
+ *
+ * No session check, unlike the two actions below. This spends no money and no
+ * supplier quota, it reads only prices already public on every product page,
+ * and requiring a session would mean a signed-out buyer browsing to checkout
+ * still gets shown stale figures — the exact defect. Rate limited all the same,
+ * because it fans out one Portal read per line.
+ */
+export async function repriceCartAction(input: {
+  cart: { items: CheckoutCartLineInput[] };
+  carriedPrices?: (Money | undefined)[];
+}): Promise<RepriceCartResult> {
+  const parsed = CreateCheckoutSessionInputSchema.pick({
+    cart: true,
+  }).safeParse({ cart: input.cart });
+
+  if (!parsed.success) {
+    return { ok: false, message: 'Check your cart, then try again.' };
+  }
+
+  const headersList = await headers();
+  const allowed = checkRateLimit({
+    key: `checkout-reprice:${requestKey(headersList)}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+
+  if (!allowed) {
+    return { ok: false, message: 'Too many attempts. Wait a minute.' };
+  }
+
+  try {
+    const repriced = await repriceCheckoutCart(
+      parsed.data.cart.items,
+      input.carriedPrices ?? [],
+    );
+
+    return { ok: true, lines: repriced.lines, changed: repriced.changed };
+  } catch (error) {
+    if (error instanceof CheckoutValidationError) {
+      return { ok: false, message: error.message };
+    }
+
+    logCheckoutFailure('reprice', classifyStorefrontFailure(error), error);
+
+    return {
+      ok: false,
+      message: 'We could not confirm prices just now. Try again.',
+    };
+  }
 }
 
 export async function quoteCheckoutShippingAction(input: {

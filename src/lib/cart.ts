@@ -205,6 +205,44 @@ export function addCartItem(
   };
 }
 
+/**
+ * Replaces the stored unit price on the lines named, leaving the rest alone.
+ *
+ * A cart line freezes the price it was added at, which is right for a cart —
+ * nothing should change under a shopper while they browse. It stops being right
+ * at checkout, where that stored figure was being totalled and shown while
+ * Stripe was charging the Portal's current price. Repricing is therefore an
+ * explicit step the checkout takes, not something the cart does on its own.
+ *
+ * Keyed by `lineIdOf` so a product held in two variants reprices each
+ * separately, and unknown ids are ignored rather than appended: this only ever
+ * corrects lines that are already here.
+ */
+export function repriceCartItems(
+  state: CartState,
+  prices: { lineId: string; unitPrice: Money }[],
+): CartState {
+  const byLine = new Map(
+    prices.map((entry) => [entry.lineId, entry.unitPrice]),
+  );
+
+  return {
+    items: state.items.map((line) => {
+      const next = byLine.get(lineIdOf(line));
+
+      if (next === undefined) return line;
+      if (
+        next.amountMinor === line.unitPrice.amountMinor &&
+        next.currency === line.unitPrice.currency
+      ) {
+        return line;
+      }
+
+      return { ...line, unitPrice: next };
+    }),
+  };
+}
+
 export function removeCartItem(state: CartState, lineId: string): CartState {
   return {
     items: state.items.filter((line) => lineIdOf(line) !== lineId),
