@@ -24,6 +24,17 @@ import { useSelectedSku } from './selected-sku';
  * row's height either way — which matters now that a buyer arrives with nothing
  * selected and the code is absent until they choose.
  *
+ * ## Why there is no sentence under it
+ *
+ * It carried one — "Sals3's own code for the option selected above.
+ * Searchable." — and the owner removed it on 2026-08-31. Two lines of
+ * explanation beside a two-word label is the label admitting it does not work,
+ * and this one does: a code sitting on the specifications heading, labelled
+ * `Sals3 SKU`, is legible without being told what it is for.
+ *
+ * The label and the token now carry it alone, which is also why neither may be
+ * trimmed further. `Sals3 SKU` is the whole remaining explanation.
+ *
  * ## Why the code is set in the page's own face
  *
  * It was `font-mono`, and no monospaced family is loaded anywhere on this site:
@@ -55,17 +66,12 @@ export default function Sals3SkuLine() {
   if (sku === undefined) return null;
 
   return (
-    <div className="flex flex-col items-start gap-0.5 sm:items-end">
-      <div className="flex items-center gap-2">
-        <span className="text-[13.5px] font-medium text-ink-muted">
-          Sals3 SKU
-        </span>
-        <span className="rounded-md border border-border bg-surface-sunken px-2 py-0.5 text-[13px] font-semibold tracking-[0.04em] text-ink tabular-nums">
-          {sku}
-        </span>
-      </div>
-      <span className="text-xs text-ink-subtle">
-        Sals3&rsquo;s own code for the option selected above. Searchable.
+    <div className="flex items-center gap-2">
+      <span className="text-[13.5px] font-medium text-ink-muted">
+        Sals3 SKU
+      </span>
+      <span className="rounded-md border border-border bg-surface-sunken px-2 py-0.5 text-[13px] font-semibold tracking-[0.04em] text-ink tabular-nums">
+        {sku}
       </span>
     </div>
   );

@@ -130,7 +130,14 @@ export default function ProductReviews({
         </span>
       </div>
 
-      <div className="mt-5 rounded-[10px] border border-border bg-surface p-5">
+      {/*
+        White, matching `ProductSupplierDetails` — owner decision 2026-08-31.
+        It was `bg-surface`, the page's own ground, so the panel read as a
+        tinted area of the page rather than as a bounded record. On a page
+        whose every other panel is white on that ground, the odd one out looked
+        disabled rather than distinct.
+      */}
+      <div className="mt-5 rounded-[10px] border border-border bg-white p-5">
         <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[12.5rem_1fr]">
           <div className="flex flex-col gap-2">
             <span className="font-display text-[40px] leading-none font-semibold tracking-[-0.03em] text-ink tabular-nums">

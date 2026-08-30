@@ -48,6 +48,24 @@ describe('Sals3SkuLine', () => {
   });
 
   /**
+   * The explanation is gone, by owner decision 2026-08-31, and the label is the
+   * whole of what is left to carry it. Two lines of prose beside a two-word
+   * label is the label admitting it does not work — and this one does.
+   */
+  it('prints the label and the code, and no sentence explaining them', () => {
+    render(
+      <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
+        <Sals3SkuLine />
+      </SelectedSkuProvider>,
+    );
+
+    expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
+    expect(screen.getByText('S3V-463ADA8A9E11')).toBeInTheDocument();
+    expect(screen.queryByText(/own code for the option/i)).toBeNull();
+    expect(screen.queryByText(/searchable/i)).toBeNull();
+  });
+
+  /**
    * The face is the page's own, not the OS's. `font-mono` resolved to whatever
    * monospaced family the reader happened to have, because this site loads none
    * — which is the whole defect this line had.
