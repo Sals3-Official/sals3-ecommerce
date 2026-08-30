@@ -7,7 +7,6 @@ import type { ProductOptionAxis, ProductVariant } from '@/lib/product-detail';
 import type { VariantSelection } from '@/lib/product-variants';
 import {
   deriveVariantLabelStructure,
-  variantCombinationKey,
   variantLabelTokens,
 } from '@/lib/variant-label-structure';
 import {
@@ -285,8 +284,49 @@ export default function ProductOptionList({
   }
 
   // ---- 1. Token rows -------------------------------------------------------
-  if (structure !== undefined && selected?.label !== undefined) {
-    const chosen = variantLabelTokens(selected.label);
+  //
+  // Renders with nothing chosen as well as with a full selection, which it has
+  // to: a buyer now arrives having chosen nothing, and if this branch still
+  // required a selection the page would open on the flat one-chip-per-variant
+  // list and then change shape under the buyer's first click.
+  if (structure !== undefined) {
+    const chosen =
+      selected?.label === undefined ? [] : variantLabelTokens(selected.label);
+
+    /**
+     * The variant a token chip should link to, given what is decided so far.
+     *
+     * Not a `byCombination` lookup on a fully substituted label: that needs
+     * every position answered, which is exactly what is not true before the
+     * first click, and it would render every chip dead on arrival. This narrows
+     * instead — match the positions already chosen plus this one, prefer an
+     * available variant — which is the same rule the named-axis branch above
+     * uses, for the same reason.
+     *
+     * With a complete `chosen` it resolves to exactly what the lookup did: the
+     * decided positions plus the substituted one describe one whole label.
+     */
+    function tokenTarget(position: number, token: string) {
+      const matches = variants.filter((variant) => {
+        if (variant.label === undefined) return false;
+
+        const tokens = variantLabelTokens(variant.label);
+
+        if (tokens[position] !== token) return false;
+
+        return chosen.every(
+          (value, index) =>
+            index === position ||
+            value === undefined ||
+            tokens[index] === value,
+        );
+      });
+
+      return (
+        matches.find((variant) => variant.availability !== 'UNAVAILABLE') ??
+        matches[0]
+      );
+    }
 
     return (
       <>
@@ -302,16 +342,8 @@ export default function ProductOptionList({
               className="flex flex-wrap gap-2"
             >
               {values.map((token) => {
-                const target = [...chosen];
-
-                target[position] = token;
-
-                const targetId = structure.byCombination.get(
-                  variantCombinationKey(target),
-                );
-                const targetVariant = variants.find(
-                  (variant) => variant.id === targetId,
-                );
+                const targetVariant = tokenTarget(position, token);
+                const targetId = targetVariant?.id;
                 const isChosen = chosen[position] === token;
                 const unavailable =
                   targetVariant?.availability === 'UNAVAILABLE';

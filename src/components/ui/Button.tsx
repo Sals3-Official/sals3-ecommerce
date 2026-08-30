@@ -58,12 +58,48 @@ const BASE =
  * codebase treats it as a border-only token. WCAG exempts an inactive control,
  * but a token split by role is only worth anything if it is absolute.
  */
+/**
+ * `confirm` is not a third call to action. It is what `outline` becomes for a
+ * moment after it is pressed, so it deliberately keeps the same geometry and
+ * changes only its skin — the button must not resize or move under the finger
+ * that just pressed it.
+ *
+ * `teal-500` rather than the brand gradient, on purpose: the gradient means "do
+ * this" everywhere else on the site, and this state means "that is done". White
+ * on `#157f7f` measures 4.9:1, so the label clears AA as text and does not need
+ * the split-by-role treatment the blue pair does.
+ */
 const VARIANTS = {
   outline:
     'border border-brand-blue-500 text-brand-blue-900 hover:bg-brand-blue-900/8 disabled:border-border-strong disabled:text-ink-subtle disabled:hover:bg-transparent',
   solid:
-    'bg-brand-gradient text-white hover:opacity-90 disabled:bg-surface-sunken disabled:bg-none disabled:text-ink-subtle disabled:hover:opacity-100',
+    'text-white hover:opacity-90 disabled:bg-surface-sunken disabled:text-ink-subtle disabled:hover:opacity-100',
+  confirm: 'border border-teal-500 bg-teal-500 text-white',
 } as const;
+
+/**
+ * The gradient is applied conditionally rather than sitting in `solid` with a
+ * `disabled:bg-none` beside it, because that pair **did not work**.
+ *
+ * `.bg-brand-gradient` is a plain unlayered rule in `globals.css` — a
+ * `@keyframes`-style escape hatch, since a gradient cannot be expressed as a
+ * Tailwind utility — and CSS gives unlayered declarations priority over layered
+ * ones regardless of specificity. Every Tailwind utility is emitted inside
+ * `@layer utilities`, so `disabled:bg-none` lost, silently: a disabled Buy Now
+ * kept the full navy-to-blue fill and put `--color-ink-subtle` text on top of
+ * it, which is unreadable as well as a lie about the control being live.
+ *
+ * That is the same cascade trap `globals.css` documents for its bare `a`
+ * selector. It went unnoticed here because the PDP's solid button was almost
+ * never disabled — until the buyer stopped arriving with a variant preselected
+ * (2026-08-31) and every options product started painting one on first load.
+ *
+ * Keeping the class off the element entirely is what makes the disabled skin
+ * reachable. Moving `.bg-brand-gradient` into a layer would fix it globally, but
+ * it also re-ranks that class against every utility on the cart and all three
+ * checkout steps, which is a bigger change than this button needs.
+ */
+const SOLID_FILL = 'bg-brand-gradient';
 
 type ButtonProps = {
   variant: keyof typeof VARIANTS;
@@ -83,6 +119,7 @@ export default function Button({
   className = '',
 }: ButtonProps) {
   const isBlocked = disabled || isPending;
+  const fill = variant === 'solid' && !isBlocked ? SOLID_FILL : '';
 
   return (
     <button
@@ -91,7 +128,7 @@ export default function Button({
       disabled={isBlocked}
       aria-disabled={isBlocked}
       aria-busy={isPending}
-      className={`${BASE} ${VARIANTS[variant]} ${className} inline-flex items-center justify-center gap-2`}
+      className={`${BASE} ${VARIANTS[variant]} ${fill} ${className} inline-flex items-center justify-center gap-2`}
     >
       {isPending ? <Spinner /> : null}
       {children}

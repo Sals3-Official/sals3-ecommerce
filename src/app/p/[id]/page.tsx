@@ -21,7 +21,7 @@ import type { Product as HomeProduct } from '@/lib/home-placeholder-data';
 import type { ProductDetail } from '@/lib/product-detail';
 import { breadcrumbTrail } from '@/lib/product-breadcrumb';
 import { fetchProductReviews } from '@/services/storefront/reviews';
-import { defaultVariantFor, variantById } from '@/lib/product-variants';
+import { variantById } from '@/lib/product-variants';
 import {
   fetchProductBySlug,
   fetchProductsByCategory,
@@ -61,7 +61,13 @@ function firstParam(value: string | string[] | undefined): string | undefined {
  *
  * `cache()` is doing real work here: both used to call this independently, and
  * `cache: 'no-store'` defeats Next's own fetch memoisation, so every PDP made
- * two identical requests to the portal.
+ * two identical requests to the portal. It still earns its place now that the
+ * read is cached across requests — this is the per-request half, and it is what
+ * keeps a cold cache from costing two round trips instead of one.
+ *
+ * `readFor: 'page'` is what lets that read be cached at all. It is deliberately
+ * opt-in and named for the caller rather than the endpoint: the same function
+ * serves `validateCheckoutCart`, where a cached price would be charged.
  *
  * Failures are **not** swallowed. `undefined` means the product genuinely does
  * not exist (invalid slug shape, or a 404) and becomes `notFound()`. Anything
@@ -71,7 +77,7 @@ function firstParam(value: string | string[] | undefined): string | undefined {
  */
 const getProductDetail = cache(
   async (id: string): Promise<ProductDetail | undefined> => {
-    const product = await fetchProductBySlug(id);
+    const product = await fetchProductBySlug(id, { readFor: 'page' });
 
     return product === undefined ? undefined : toProductDetail(product);
   },
@@ -245,14 +251,24 @@ export default async function ProductPage({
   // value falls back rather than 404s: a stale or hand-edited link is a normal
   // way to arrive at a crawlable URL.
   const fromUrl = variantById(variants, firstParam(query.variant));
-  // Every product lands preselected, axes or not: `defaultVariantFor` picks an
-  // available variant priced at the product's own displayed price, so the buy
-  // buttons are live on arrival instead of greyed out behind a choice the buyer
-  // has not been asked for yet. The chips render that combination as chosen, so
-  // the selection is visible rather than implied — and any chip click replaces
-  // it. Preselecting cannot move the lead price off the feed price (ADR-016)
-  // because the base-price match is what the default prefers.
-  const selectedVariant = fromUrl ?? defaultVariantFor(variants, detail.price);
+  /*
+    Nothing is chosen on the buyer's behalf. This reverses the 2026-08-21 owner
+    decision that had `defaultVariantFor` preselect on every product so the buy
+    buttons were live on arrival; the owner asked for the deliberate first choice
+    back on 2026-08-31, and it is that choice — not a default — that now decides
+    what goes in the cart.
+
+    The one product that still arrives resolved is the one with a single variant:
+    there is no choice to make, so demanding one would be a gate in front of a
+    door with nothing behind it. A product with no variants at all stays
+    `undefined` and buys against its own price, exactly as before.
+
+    ADR-016's constraint — that preselecting must not move the lead price off the
+    feed price — stops applying here, because nothing is preselected. The lead
+    price is the feed price and says "From" until the buyer narrows it.
+  */
+  const selectedVariant =
+    fromUrl ?? (variants.length === 1 ? variants[0] : undefined);
   const trail = breadcrumbTrail(detail);
   const summary = answerSummary(detail);
   // The lead is promoted out of the description so it renders once, not twice.
@@ -358,7 +374,15 @@ export default async function ProductPage({
           <ProductSpecifications
             specification={detail.specification}
             specs={detail.specs}
-            sals3Sku={selectedVariant?.sku ?? detail.specs?.sku}
+            /*
+              Existence, not content: any code this product could ever show is
+              enough to earn the band. What gets printed is the buyer's live
+              selection, and on arrival there is none — deciding the band from
+              the printed value would leave the code nowhere to appear.
+            */
+            sals3Sku={
+              selectedVariant?.sku ?? variants[0]?.sku ?? detail.specs?.sku
+            }
           />
           <div className="mx-auto w-full max-w-6xl px-6">
             <ProductDescription blocks={remainingBlocks} />

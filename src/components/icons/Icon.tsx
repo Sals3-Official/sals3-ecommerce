@@ -236,3 +236,65 @@ export function CheckBadgeIcon({
     </svg>
   );
 }
+
+export function MinusIcon({ width = 16, height = 16, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function PlusIcon({ width = 16, height = 16, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+/**
+ * A bare check mark. Distinct from `CheckBadgeIcon`, which carries its own ring
+ * and belongs on a coloured success dot; this one sits inside a button that is
+ * already the confirmation, where a second enclosure would read as two marks.
+ */
+export function CheckIcon({ width = 17, height = 17, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m4.5 12.5 5 5 10-11" />
+    </svg>
+  );
+}

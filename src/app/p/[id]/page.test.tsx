@@ -307,14 +307,26 @@ describe('Product page', () => {
         params: Promise.resolve({ id: 'air-cooler' }),
       }),
     );
-    const readable = container.cloneNode(true) as HTMLElement;
+    function visibleCodes(): string[] {
+      const readable = container.cloneNode(true) as HTMLElement;
 
-    readable.querySelectorAll('script').forEach((node) => node.remove());
+      readable.querySelectorAll('script').forEach((node) => node.remove());
 
-    const shown = (readable.textContent ?? '').match(/S3V-[0-9A-F]{12}/g) ?? [];
+      return (readable.textContent ?? '').match(/S3V-[0-9A-F]{12}/g) ?? [];
+    }
 
-    // One code on the page: the selected variant's, on the identity line.
-    expect(shown).toEqual(['S3V-AAAABBBBCCCC']);
+    /*
+      Nothing is chosen on arrival since 2026-08-31, and every variant carries
+      its own code — so there is no honest one to print yet. Printing either of
+      these two would be right for one colour and quietly wrong for the other.
+    */
+    expect(visibleCodes()).toEqual([]);
+    expect(screen.queryByText('Sals3 SKU')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Black' }));
+
+    // One code on the page: the chosen variant's, on the identity line.
+    expect(visibleCodes()).toEqual(['S3V-AAAABBBBCCCC']);
     expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
 
     // Never as a chip. The chips carry the supplier's words for the option.
@@ -404,9 +416,21 @@ describe('Product page', () => {
       screen.queryByRole('link', { name: 'White' }),
     ).not.toBeInTheDocument();
     expect(colour.textContent).toContain('White');
-    // Black — available, and the only variant priced at the product's own
-    // price — arrives chosen, so purchase is live on first paint and no
-    // "choose a colour" blocker is rendered (owner decision 2026-08-21).
+    /*
+      Nothing arrives chosen (owner decision 2026-08-31, reversing 2026-08-21):
+      no chip is current, purchase is blocked, and the block is stated in words
+      naming the axis in the seller's own term for it.
+    */
+    expect(screen.getByRole('link', { name: 'Black' })).not.toHaveAttribute(
+      'aria-current',
+    );
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(
+      screen.getByText('Choose a colour to continue.'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Black' }));
+
     expect(screen.getByRole('link', { name: 'Black' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -415,7 +439,7 @@ describe('Product page', () => {
     expect(screen.queryByText(/choose a colour/i)).not.toBeInTheDocument();
   });
 
-  it('renders option links and preselects the variant matching the base price', async () => {
+  it('renders option links and chooses none of them for the buyer', async () => {
     mockFetch({
       productOverrides: {
         priceMinor: 451,
@@ -453,10 +477,12 @@ describe('Product page', () => {
 
     // These variants carry no supplier label, so chips are positional. A SKU
     // hash is never a chip label, a fallback, or a title attribute.
-    const selected = screen.getByRole('link', { name: /option 2/i });
+    const base = screen.getByRole('link', { name: /option 2/i });
 
-    expect(selected).toHaveAttribute('aria-current', 'page');
-    expect(selected.getAttribute('href')).toContain('?variant=v-base');
+    // No chip is current: the buyer has not chosen, and the page no longer
+    // chooses the base-priced one for them (owner decision 2026-08-31).
+    expect(base).not.toHaveAttribute('aria-current');
+    expect(base.getAttribute('href')).toContain('?variant=v-base');
     expect(
       screen.getByRole('list', { name: /choose an option/i }).textContent,
     ).not.toMatch(/S3V-/);
@@ -467,7 +493,11 @@ describe('Product page', () => {
     expect(
       screen.getByText(/one of the two options cost more than this/i),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
+    // With no axis to name, the sentence falls back to the generic noun.
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(
+      screen.getByText('Choose an option to continue.'),
+    ).toBeInTheDocument();
   });
 
   /**
@@ -514,10 +544,14 @@ describe('Product page', () => {
     // reached the price block and a price extractor can pick it over the floor
     // the feed reports — the ADR-016 mismatch this design exists to prevent.
     expect(screen.getAllByText('US$20')).toHaveLength(1);
-    // Purchase stays enabled. Disabling it would break a page that completes a
-    // sale; the buyer already has an honestly-priced default selection.
-    expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+    /*
+      Purchase is blocked until one of the ten is picked. That is the point of
+      the gate on a page like this one: the ten options run from US$4.51 to
+      US$20, so a default would have decided a four-fold price difference on the
+      buyer's behalf and shown them the answer as though they had chosen it.
+    */
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
     expect(
       screen.getByText(/fixed when published, 14 august 2026/i),
     ).toBeVisible();
@@ -622,7 +656,7 @@ describe('Product page', () => {
       id: `v-${index}`,
       sku: `S3V-${String(index).padStart(12, '0')}`,
       currency: 'USD',
-      // Black-S is the floor, so `defaultVariantFor` preselects it.
+      // Black-S is the floor, so it is the price the unchosen page quotes.
       priceMinor: label === 'Black-S' ? 451 : 780,
       availability: 'AVAILABLE',
       label,
@@ -656,11 +690,22 @@ describe('Product page', () => {
     // And never a digest.
     expect(optionArea).not.toMatch(/S3V-/);
 
-    expect(screen.getByRole('link', { name: 'Black' })).toHaveAttribute(
+    /*
+      The rows render with nothing chosen, which is the state a buyer now
+      arrives in. Before 2026-08-31 this branch required a selection to render
+      at all, so an unchosen product fell through to the flat one-chip-per-
+      variant list and then changed shape under the buyer's first click.
+    */
+    expect(screen.getByRole('link', { name: 'Black' })).not.toHaveAttribute(
       'aria-current',
-      'page',
     );
-    expect(screen.getByRole('link', { name: 'S' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'S' })).not.toHaveAttribute(
+      'aria-current',
+    );
+
+    fireEvent.click(screen.getByRole('link', { name: 'Black' }));
+
+    expect(screen.getByRole('link', { name: 'Black' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -695,7 +740,7 @@ describe('Product page', () => {
       id: `v-${index}`,
       sku: `S3V-${String(index).padStart(12, '0')}`,
       currency: 'USD',
-      // `Black Men-L` is the floor, so `defaultVariantFor` preselects it.
+      // `Black Men-L` is the floor, so it is the price the unchosen page quotes.
       priceMinor: label === 'Black Men-L' ? 451 : 780,
       availability: 'AVAILABLE',
       label,
@@ -718,7 +763,16 @@ describe('Product page', () => {
     // Two rows rather than twelve chips in one.
     expect(rows).toHaveLength(2);
 
-    // `M` is unreachable from the selected `Black Men`, so it is not a link.
+    /*
+      With nothing chosen every size is still reachable, because two of the four
+      groups stock `M`. The dead chips are a consequence of a choice, so they
+      appear once one has been made — not before it.
+    */
+    expect(screen.getByRole('link', { name: 'M' })).toBeVisible();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Black Men' }));
+
+    // `M` is unreachable from the chosen `Black Men`, so it is not a link.
     expect(screen.queryByRole('link', { name: 'M' })).toBeNull();
 
     // It is still shown, as a dead chip naming itself. Scoped to the size row,

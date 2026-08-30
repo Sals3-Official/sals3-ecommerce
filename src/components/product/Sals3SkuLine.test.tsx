@@ -14,49 +14,95 @@ vi.mock('next/navigation', async (importOriginal) => {
 });
 
 describe('Sals3SkuLine', () => {
-  it('prints the server-resolved code with nothing wrapping it', () => {
-    render(<Sals3SkuLine fallbackSku="S3V-463ADA8A9E11" />);
+  it('prints the resolved code with its label and its sentence', () => {
+    render(
+      <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
+        <Sals3SkuLine />
+      </SelectedSkuProvider>,
+    );
 
     expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
     expect(screen.getByText('S3V-463ADA8A9E11')).toBeInTheDocument();
   });
 
   /** No code, no row. A "—" would claim we recorded an unknown one. */
-  it('renders nothing at all when there is no code', () => {
+  it('renders nothing at all when nothing is selected', () => {
+    const { container } = render(
+      <SelectedSkuProvider>
+        <Sals3SkuLine />
+      </SelectedSkuProvider>,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  /**
+   * The selection is the only source. There is no prop to fall back to any more,
+   * because a fallback is how a code gets printed that no choice stands behind —
+   * and a buyer now arrives having chosen nothing.
+   */
+  it('renders nothing outside a provider', () => {
     const { container } = render(<Sals3SkuLine />);
 
     expect(container).toBeEmptyDOMElement();
   });
 
   /**
-   * The provider's value wins over the server fallback: once the panel has
-   * published the buyer's choice, the printed code is that choice's.
+   * The face is the page's own, not the OS's. `font-mono` resolved to whatever
+   * monospaced family the reader happened to have, because this site loads none
+   * — which is the whole defect this line had.
    */
-  it('prefers the published selection over the fallback', () => {
+  it('does not set the code in a font this site never loads', () => {
     render(
-      <SelectedSkuProvider initialSku="S3V-BBBBBBBBBBBB">
-        <Sals3SkuLine fallbackSku="S3V-AAAAAAAAAAAA" />
+      <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
+        <Sals3SkuLine />
       </SelectedSkuProvider>,
     );
 
-    expect(screen.getByText('S3V-BBBBBBBBBBBB')).toBeInTheDocument();
-    expect(screen.queryByText('S3V-AAAAAAAAAAAA')).not.toBeInTheDocument();
+    expect(screen.getByText('S3V-463ADA8A9E11')).not.toHaveClass('font-mono');
   });
 });
 
 describe('ProductSpecifications with a Sals3 SKU', () => {
   const SPECIFICATION = [{ label: 'Material', value: 'Denim' }];
 
-  it('shows the code above the seller-entered grid', () => {
+  it('shows the code beside the heading, above the seller-entered grid', () => {
     render(
-      <ProductSpecifications
-        specification={SPECIFICATION}
-        sals3Sku="S3V-463ADA8A9E11"
-      />,
+      <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
+        <ProductSpecifications
+          specification={SPECIFICATION}
+          sals3Sku="S3V-463ADA8A9E11"
+        />
+      </SelectedSkuProvider>,
     );
 
     expect(screen.getByText('S3V-463ADA8A9E11')).toBeInTheDocument();
     expect(screen.getByText('Denim')).toBeInTheDocument();
+  });
+
+  /**
+   * The band's existence and the printed code are two different questions, and
+   * this is the case that proves it: a buyer arrives having chosen nothing, so
+   * there is no honest code to print — but the band has to be there already for
+   * the code to appear in when they choose. Deciding the band from the printed
+   * value would leave it unreachable.
+   */
+  it('renders the band with no code until something is selected', () => {
+    render(
+      <SelectedSkuProvider>
+        <ProductSpecifications
+          specification={SPECIFICATION}
+          sals3Sku="S3V-463ADA8A9E11"
+        />
+      </SelectedSkuProvider>,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Product specifications' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Denim')).toBeInTheDocument();
+    expect(screen.queryByText('S3V-463ADA8A9E11')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sals3 SKU')).not.toBeInTheDocument();
   });
 
   /**
@@ -66,10 +112,12 @@ describe('ProductSpecifications with a Sals3 SKU', () => {
    */
   it('keeps the code out of the seller-declared attribute list', () => {
     render(
-      <ProductSpecifications
-        specification={SPECIFICATION}
-        sals3Sku="S3V-463ADA8A9E11"
-      />,
+      <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
+        <ProductSpecifications
+          specification={SPECIFICATION}
+          sals3Sku="S3V-463ADA8A9E11"
+        />
+      </SelectedSkuProvider>,
     );
 
     const terms = screen.getAllByRole('term').map((node) => node.textContent);
@@ -80,7 +128,11 @@ describe('ProductSpecifications with a Sals3 SKU', () => {
 
   /** The code alone still earns the band — it is what somebody copies out. */
   it('renders the band for a product with a code and no attributes', () => {
-    render(<ProductSpecifications sals3Sku="S3V-463ADA8A9E11" />);
+    render(
+      <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
+        <ProductSpecifications sals3Sku="S3V-463ADA8A9E11" />
+      </SelectedSkuProvider>,
+    );
 
     expect(
       screen.getByRole('heading', { name: 'Product specifications' }),

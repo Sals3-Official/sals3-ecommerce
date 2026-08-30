@@ -54,6 +54,17 @@ type CartContextValue = {
    * already made and the receipt beside it is the feedback.
    */
   clear: () => void;
+  /**
+   * When the last add happened, as the toast's own id — `undefined` before the
+   * first one and after that toast is dismissed.
+   *
+   * The header count animates on this rather than on `itemCount` changing,
+   * because the count also changes when the cart hydrates from `localStorage`
+   * after mount. A badge that reacts to the count would therefore bump on every
+   * page load with a non-empty cart, which is decoration rather than feedback —
+   * and it would say "something was added" when nothing was.
+   */
+  lastAddedAt?: number;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -150,8 +161,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clear: () => {
         store.update(() => EMPTY_CART);
       },
+      lastAddedAt: toast?.id,
     }),
-    [state, store],
+    [state, store, toast?.id],
   );
 
   return (
