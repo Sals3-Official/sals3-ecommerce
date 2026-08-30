@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import CategoryBreadcrumbSchema from '@/components/schema/CategoryBreadcrumbSchema';
 import SiteFooter from '@/components/layout/SiteFooter';
 import SiteHeader from '@/components/layout/SiteHeader';
@@ -40,6 +41,107 @@ type CategoryPageProps = {
   searchParams?: Promise<RawSearchParams>;
 };
 
+const SORT_TO_API: Record<CategoryQuery['sort'], CategoryProductsSort> = {
+  best: 'newest',
+  'price-asc': 'price-asc',
+  'price-desc': 'price-desc',
+};
+
+type BrowseScope = {
+  name: string;
+  slug: string;
+  /** The scope's ancestry, present only for a level below a department. */
+  trail?: { name: string; slug?: string }[];
+};
+
+type DepartmentPage = {
+  products: CategoryProduct[];
+  total: number;
+  totalPages: number;
+  /** True when the portal could not be reached — distinct from "nothing published". */
+  unavailable: boolean;
+  /**
+   * What the producer resolved the slug to.
+   *
+   * The storefront holds the 21 department names and no taxonomy past them, so
+   * for `/c/paper-products-956` this is the only source of a heading — the
+   * alternative was de-slugifying the URL and guessing at capitalisation.
+   */
+  scope?: BrowseScope;
+  /**
+   * The producer answered 404 for a slug only it could judge. Kept apart from
+   * `unavailable` because they are opposite pages: this is "no such category",
+   * that is "we could not read the catalogue".
+   */
+  missing: boolean;
+};
+
+const EMPTY_PAGE: DepartmentPage = {
+  products: [],
+  total: 0,
+  totalPages: 1,
+  unavailable: false,
+  missing: false,
+};
+
+/**
+ * One page of this department, filtered and sorted by the portal.
+ *
+ * ## A producer 404 means two different things, and the slug says which
+ *
+ * For one of the 21 departments, this page's own list already said the address
+ * is real, so a producer 404 means the portal serving this storefront does not
+ * have the endpoint — deployment skew. Treating that as `notFound()` would put
+ * "No such category" on every real department page for as long as the two
+ * repositories were out of step, which is the most misleading thing this page
+ * could say. So it stays an outage.
+ *
+ * For any other slug — a `<slug>-<id>` level — the producer's seeded taxonomy is
+ * the *only* authority: this storefront cannot tell a real id from an invented
+ * one. There a 404 is the answer, and rendering an empty category instead would
+ * tell a buyer that an address they made up exists and happens to be empty.
+ *
+ * A thrown fetch is the same class of failure and takes the same path:
+ * `unavailable` keeps it apart from an empty department, so the page never
+ * reports "nothing published" about a catalogue it could not read.
+ */
+const getDepartmentPage = cache(
+  async (slug: string, query: CategoryQuery): Promise<DepartmentPage> => {
+    const range = activePriceRange(query.band, query.priceMin, query.priceMax);
+
+    try {
+      const response = await fetchCategoryProducts(slug, {
+        sort: SORT_TO_API[query.sort],
+        page: query.page,
+        limit: CATEGORY_PRODUCTS_PAGE_SIZE,
+        ...(range.minMinor > 0 ? { minPriceMinor: range.minMinor } : {}),
+        ...(range.maxMinor === Infinity
+          ? {}
+          : { maxPriceMinor: range.maxMinor }),
+      });
+
+      if (response === undefined) {
+        return isDepartmentId(slug)
+          ? { ...EMPTY_PAGE, unavailable: true }
+          : { ...EMPTY_PAGE, missing: true };
+      }
+
+      return {
+        products: toCategoryProducts(response.products),
+        total: response.total,
+        totalPages: response.totalPages,
+        unavailable: false,
+        missing: false,
+        ...(response.category === undefined
+          ? {}
+          : { scope: response.category }),
+      };
+    } catch {
+      return { ...EMPTY_PAGE, unavailable: true };
+    }
+  },
+);
+
 /**
  * The canonical is self-referential, and now there is one of it.
  *
@@ -52,20 +154,43 @@ type CategoryPageProps = {
  * returns `undefined` rather than guessing a domain, and this omits the field
  * rather than inventing one.
  */
+/**
+ * ## Every browsable level is indexed, and it costs no extra request
+ *
+ * A department's name comes from this repository's own 21-entry list. A
+ * `<slug>-<id>` level's name exists only in the producer's seeded taxonomy, so it
+ * has to be asked for — and `getDepartmentPage` is wrapped in React `cache()`,
+ * so asking here and asking again in the page below is **one** fetch per request,
+ * not two. That is what makes indexing these pages free rather than a third
+ * round trip.
+ *
+ * `searchParams` is parsed the same way the page parses it, so both calls share
+ * a cache key. A different query here would silently double the fetch.
+ *
+ * Still `noindex, follow` when neither side can name the level: an untitled page
+ * is not one to offer a crawler, and inventing a title from the URL segment would
+ * mean guessing the capitalisation of a name the taxonomy spells exactly.
+ */
 export async function generateMetadata({
   params,
+  searchParams,
 }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const category = categories.find((entry) => entry.id === slug);
+  const department = categories.find((entry) => entry.id === slug);
+  const query = parseCategoryQuery((await searchParams) ?? {});
+  const resolvedName =
+    department?.name ??
+    (await getDepartmentPage(slug, query)).scope?.name ??
+    undefined;
 
-  if (category === undefined) {
+  if (resolvedName === undefined) {
     return { robots: { index: false, follow: true } };
   }
 
-  const title = `${category.name} — ${SITE_NAME}`;
-  const description = `Browse every ${category.name} product published in the ${SITE_NAME} catalogue, with one clear US dollar price per item.`;
+  const title = `${resolvedName} — ${SITE_NAME}`;
+  const description = `Browse every ${resolvedName} product published in the ${SITE_NAME} catalogue, with one clear US dollar price per item.`;
   const siteUrl = getSiteUrl();
-  const canonical = siteUrl ? `${siteUrl}/c/${category.id}` : undefined;
+  const canonical = siteUrl ? `${siteUrl}/c/${slug}` : undefined;
 
   return {
     title,
@@ -80,72 +205,6 @@ export async function generateMetadata({
     },
     ...(canonical ? { alternates: { canonical } } : {}),
   };
-}
-
-const SORT_TO_API: Record<CategoryQuery['sort'], CategoryProductsSort> = {
-  best: 'newest',
-  'price-asc': 'price-asc',
-  'price-desc': 'price-desc',
-};
-
-type DepartmentPage = {
-  products: CategoryProduct[];
-  total: number;
-  totalPages: number;
-  /** True when the portal could not be reached — distinct from "nothing published". */
-  unavailable: boolean;
-};
-
-const EMPTY_PAGE: DepartmentPage = {
-  products: [],
-  total: 0,
-  totalPages: 1,
-  unavailable: false,
-};
-
-/**
- * One page of this department, filtered and sorted by the portal.
- *
- * ## Why a producer 404 is an outage here, not a 404
- *
- * `isDepartmentId` has already run against this page's own allow-list, so the
- * slug *is* one of the 21 departments by the time this is called. A 404 from
- * the producer therefore does not mean "no such department" — it means the
- * portal serving this storefront does not have the endpoint, which is
- * deployment skew. Treating it as `notFound()` would put "No such category" on
- * every real department page for as long as the two repositories were out of
- * step, which is the most misleading thing this page could say.
- *
- * A thrown fetch is the same class of failure and takes the same path:
- * `unavailable` keeps it apart from an empty department, so the page never
- * reports "nothing published" about a catalogue it could not read.
- */
-async function getDepartmentPage(
-  slug: string,
-  query: CategoryQuery,
-): Promise<DepartmentPage> {
-  const range = activePriceRange(query.band, query.priceMin, query.priceMax);
-
-  try {
-    const response = await fetchCategoryProducts(slug, {
-      sort: SORT_TO_API[query.sort],
-      page: query.page,
-      limit: CATEGORY_PRODUCTS_PAGE_SIZE,
-      ...(range.minMinor > 0 ? { minPriceMinor: range.minMinor } : {}),
-      ...(range.maxMinor === Infinity ? {} : { maxPriceMinor: range.maxMinor }),
-    });
-
-    if (response === undefined) return { ...EMPTY_PAGE, unavailable: true };
-
-    return {
-      products: toCategoryProducts(response.products),
-      total: response.total,
-      totalPages: response.totalPages,
-      unavailable: false,
-    };
-  } catch {
-    return { ...EMPTY_PAGE, unavailable: true };
-  }
 }
 
 /**
@@ -215,17 +274,36 @@ export default async function CategoryPage({
 }: CategoryPageProps) {
   const { slug } = await params;
 
-  if (!isDepartmentId(slug)) {
-    notFound();
-  }
-
-  const category = categories.find((entry) => entry.id === slug)!;
   const query: CategoryQuery = parseCategoryQuery((await searchParams) ?? {});
 
   const [result, facts] = await Promise.all([
     getDepartmentPage(slug, query),
     getDepartmentFacts(slug),
   ]);
+
+  if (result.missing) {
+    notFound();
+  }
+
+  /**
+   * The heading, from the producer where it said one and from this page's own
+   * department list otherwise.
+   *
+   * The local list is the fallback rather than the source: it holds 21 names and
+   * the taxonomy has 5,595 rows, so it can only ever answer for a department. It
+   * still answers first-class for those, which keeps the page rendering a real
+   * heading during the window where the producer has not started sending
+   * `category` yet.
+   */
+  const department = categories.find((entry) => entry.id === slug);
+  const scopeName = result.scope?.name ?? department?.name;
+
+  if (scopeName === undefined) {
+    // Neither side can name it, so there is nothing honest to head the page
+    // with. A producer that answered without a category, for a slug that is not
+    // a department, is a state no real address produces.
+    notFound();
+  }
 
   const range = activePriceRange(query.band, query.priceMin, query.priceMax);
   const filtering = hasActiveFilters(query);
@@ -245,13 +323,18 @@ export default async function CategoryPage({
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
-      <CategoryBreadcrumbSchema
-        categoryName={category.name}
-        categorySlug={category.id}
-      />
+      <CategoryBreadcrumbSchema categoryName={scopeName} categorySlug={slug} />
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl px-6 py-4 pb-16">
-        <CategoryBreadcrumb categoryName={category.name} />
+        {/*
+          The ancestry for a level below a department, so a buyer can climb out of
+          it. A department has none to show — its parents are Home and All
+          categories, which this breadcrumb already renders.
+        */}
+        <CategoryBreadcrumb
+          categoryName={scopeName}
+          ancestors={result.scope?.trail?.slice(0, -1) ?? []}
+        />
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[248px_minmax(0,1fr)]">
           <aside className="hidden lg:sticky lg:top-4 lg:flex lg:flex-col">
@@ -266,7 +349,7 @@ export default async function CategoryPage({
 
           <div className="min-w-0">
             <h1 className="m-0 text-2xl font-bold tracking-tight text-ink">
-              {category.name}
+              {scopeName}
             </h1>
             <p className="mt-1.5 mb-0 text-[13px] text-ink-muted">
               Every published product filed under this category, in US dollars.
@@ -298,7 +381,7 @@ export default async function CategoryPage({
               resultLine={buildResultLine(
                 result.total,
                 departmentTotal,
-                category.name,
+                scopeName,
               )}
             />
 
@@ -312,7 +395,7 @@ export default async function CategoryPage({
               isUnavailable={result.unavailable}
               isEmptyCategory={isEmptyCategory}
               isFilteredEmpty={isFilteredEmpty}
-              categoryName={category.name}
+              categoryName={scopeName}
               totalCount={departmentTotal}
               chips={chips}
               clearAllHref={clearHref}

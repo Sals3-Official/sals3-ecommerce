@@ -158,12 +158,38 @@ export const StorefrontProductSchema = StorefrontProductBaseSchema.extend({
   imageAlt: truncatedText(160),
 });
 
+/**
+ * One category level with its own `/c/[slug]` address, where it has one.
+ *
+ * `slug` is optional because the producer omits it for a level that is not
+ * addressable — a CJ-mirrored path, or one the seeded taxonomy does not carry.
+ * Optional rather than nullable so an absent address cannot be mistaken for a
+ * present empty one, and the consumer renders text.
+ */
+export const CategoryTrailEntrySchema = z.object({
+  name: truncatedText(120),
+  slug: truncatedText(160).optional(),
+});
+
+export const BrowseCategorySchema = z.object({
+  name: truncatedText(120),
+  slug: truncatedText(160),
+  /** The scope's own ancestry, so a deeper browse page can offer a way up. */
+  trail: salvagedArray(CategoryTrailEntrySchema, 8).optional(),
+});
+
 export const ProductsResponseSchema = z.object({
   products: z.array(StorefrontProductSchema),
   total: z.number().int().nonnegative(),
   page: z.number().int().positive(),
   limit: z.number().int().positive(),
   totalPages: z.number().int().positive(),
+  /**
+   * Present on the department/category browse only. The whole-catalogue feed and
+   * search return the same shape and have no category to name, which is why this
+   * is optional rather than required.
+   */
+  category: BrowseCategorySchema.optional(),
 });
 
 const ProductImageSchema = z.object({
@@ -323,6 +349,15 @@ export const StorefrontProductDetailSchema = StorefrontProductBaseSchema.extend(
     imageAlt: truncatedText(160).optional(),
     publishedAt: z.string().datetime().optional(),
     categoryPath: truncatedText(200).optional(),
+    /**
+     * The same path with an address per level, so a breadcrumb can link every
+     * one of them rather than only the department.
+     *
+     * `salvagedArray` bounds it and drops a malformed entry rather than the whole
+     * trail: a breadcrumb losing one level is a worse page, and losing the
+     * product because of it would be absurd.
+     */
+    categoryTrail: salvagedArray(CategoryTrailEntrySchema, 8).optional(),
     images: salvagedArray(ProductImageSchema, 12).optional(),
     description: z
       .object({ blocks: salvagedArray(DescriptionBlockSchema, 60) })

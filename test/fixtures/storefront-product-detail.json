@@ -13,6 +13,17 @@
     "category": "cat-app-100412",
     "categoryName": "Men's Jackets",
     "categoryPath": "Apparel > Outerwear > Men's Jackets",
+    "categoryTrail": [
+      {
+        "name": "Apparel"
+      },
+      {
+        "name": "Outerwear"
+      },
+      {
+        "name": "Men's Jackets"
+      }
+    ],
     "availability": "AVAILABLE",
     "publishedAt": "2026-08-13T01:02:03.000Z",
     "images": [

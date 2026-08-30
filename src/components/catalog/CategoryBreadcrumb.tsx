@@ -1,7 +1,17 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 
 type CategoryBreadcrumbProps = {
   categoryName: string;
+  /**
+   * The levels above this one, nearest-last, so a buyer can climb out of a
+   * category below a department.
+   *
+   * Empty for a department: its parents are Home and All categories, which this
+   * already renders. An ancestor with no `slug` renders as text — the producer
+   * omits one it cannot address, and a guessed link would 404.
+   */
+  ancestors?: { name: string; slug?: string }[];
 };
 
 /** Every link here is real — `/categories` and `/c/[slug]` both exist — so
@@ -17,6 +27,7 @@ type CategoryBreadcrumbProps = {
  * walk the buyer out of the shopfront they were standing in. */
 export default function CategoryBreadcrumb({
   categoryName,
+  ancestors = [],
 }: CategoryBreadcrumbProps) {
   return (
     <nav aria-label="Breadcrumb" className="mb-3">
@@ -32,6 +43,20 @@ export default function CategoryBreadcrumb({
             All categories
           </Link>
         </li>
+        {ancestors.map((ancestor) => (
+          <Fragment key={`${ancestor.name}-${ancestor.slug ?? 'text'}`}>
+            <li aria-hidden="true">/</li>
+            <li>
+              {ancestor.slug === undefined ? (
+                ancestor.name
+              ) : (
+                <Link href={`/c/${ancestor.slug}`} className="text-brand-600">
+                  {ancestor.name}
+                </Link>
+              )}
+            </li>
+          </Fragment>
+        ))}
         <li aria-hidden="true">/</li>
         <li aria-current="page" className="text-ink">
           {categoryName}

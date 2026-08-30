@@ -139,6 +139,16 @@ export type ProductDetail = {
   /** Display name for the breadcrumb. Absent when the product is unmapped. */
   categoryName?: string;
   categoryPath?: string;
+  /**
+   * The same path, one entry per level, each with its own `/c/[slug]` where it
+   * has one.
+   *
+   * `categoryPath` stays beside it: a display string is what renders when this is
+   * absent, which is every payload from a producer that predates it. A level with
+   * no `slug` is not addressable and must render as text — see
+   * `product-breadcrumb.ts`.
+   */
+  categoryTrail?: { name: string; slug?: string }[];
   price: Money;
   /** Only ever evidence-backed. Absent means no comparison price exists. */
   oldPrice?: Money;
