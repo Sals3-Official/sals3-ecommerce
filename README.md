@@ -749,6 +749,46 @@ Do not commit service account JSON files or `.env.local`.
 `jwks-rsa`/`jose` combination that crashed the Vercel Node runtime while
 loading `firebase-admin/auth`.
 
+## Legal pages
+
+`/legal/terms` and `/legal/privacy`. The footer's Legal column and
+`auth-links.ts` — which the sign-up and login cards use — both pointed at these
+routes before they existed, so a shopper was asked to agree to terms that
+answered 404.
+
+**The text is lifted, not written.** Both documents come from sals3.com and are
+reproduced verbatim: not rewritten, not summarised, not shortened. They live as
+block lists in `lib/legal/` rather than as HTML or Markdown strings, and
+`LegalDocumentView` renders every block as a **text node** — no markdown pass,
+no link detection, no emphasis. That is the point: a renderer able to introduce
+a link or a bold run could change what a reader understands a binding agreement
+to say. There is a test asserting literal `<strong>` in the source renders as
+those characters.
+
+**Structure is derived, never edited in.** WordPress authored almost every line
+as a plain paragraph, so `N. Title` becomes a section and a standalone
+`N.N Title` a clause. Where a clause label shares its paragraph with the body
+(`11.2 Satisfaction Guarantee: We want you to be...`) the paragraph stays one
+block, because splitting it would change the text. The contents rail is derived
+from the sections rather than maintained beside them — a second list of section
+names would be a second source of truth able to disagree.
+
+**Two gaps are marked rather than filled.** The Terms promise to revise a
+"Last Updated" date and the source publishes none, so `[EFFECTIVE DATE]` stays
+visible until someone supplies the real one; rendering today's date would invent
+a fact about a binding agreement. The Terms also refer to a Return and Refund
+Policy and an Intellectual Property Policy, which do not exist here yet, so
+those names render as plain text and never as links to a 404.
+
+**The entity is checked, not copied.** sals3.com's own footer says
+"Sals3 Pty. Ltd", but the Australian Business Register gives ACN 685 740 514 to
+ANYTHING SUPPLIES PTY LTD, with SALS3.COM registered as a business name under
+it — which is what both documents say. These pages carry the registered name;
+the old footer is the thing that is wrong.
+
+To change the wording, change it at the source and re-extract. The block lists
+are generated, not hand-edited.
+
 ## Klaviyo Analytics
 
 Sals3 loads Klaviyo only after the visitor accepts the analytics consent banner.
