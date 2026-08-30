@@ -357,6 +357,7 @@ export default async function ProductPage({
                 detail={detail}
                 selectedVariant={selectedVariant}
                 selectedFromUrl={fromUrl !== undefined}
+                reviewsAnchored={reviews.length > 0}
                 indicativeRate={indicative.rate}
                 fxBufferPercent={indicative.bufferPercent}
               />

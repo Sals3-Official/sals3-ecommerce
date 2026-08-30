@@ -34,6 +34,30 @@ function detail(overrides: Partial<ProductDetail> = {}): ProductDetail {
 }
 
 describe('ProductRecordPanel', () => {
+  /**
+   * The panel built the evidence ledger without passing the rating, so a
+   * reviewed product declared it had no reviews. The wiring is the bug — the
+   * ledger reads correctly on its own — so it is the wiring this asserts.
+   */
+  it('hands the buyer rating to the evidence ledger', () => {
+    renderWithCart(
+      <ProductRecordPanel
+        detail={detail({ rating: { average: 4, count: 1 } })}
+        selectedFromUrl={false}
+        reviewsAnchored
+        indicativeRate={null}
+        fxBufferPercent={0}
+      />,
+    );
+
+    expect(
+      screen.getByRole('link', {
+        name: '4.0 out of 5, from 1 verified purchase.',
+      }),
+    ).toHaveAttribute('href', '#reviews-heading');
+    expect(screen.queryByText(/no reviews/i)).not.toBeInTheDocument();
+  });
+
   const SPREAD = {
     variants: [
       priced('black', 451),

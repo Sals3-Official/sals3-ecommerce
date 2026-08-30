@@ -5,6 +5,18 @@ type ProductEvidenceLedgerProps = {
   availability?: ProductAvailability;
   /** ISO-8601 publish time, when the payload carries one. */
   publishedAt?: string;
+  /** Real Sals3 buyer ratings. Absent means nobody has reviewed this product. */
+  rating?: { average: number; count: number };
+  /**
+   * Whether the reviews section rendered on this page.
+   *
+   * `ProductReviews` bows out when the review list could not be fetched, even
+   * though the product payload still carries the rating. Linking on the rating
+   * alone would therefore produce a dead anchor exactly when the review read is
+   * failing, so the row states the rating either way and only becomes a link
+   * when there is something to land on.
+   */
+  reviewsAnchored?: boolean;
 };
 
 /**
@@ -45,7 +57,43 @@ type ProductEvidenceLedgerProps = {
  */
 const DELIVERY =
   'No estimate until checkout, where it is quoted for your address and added to this price.';
-const REVIEWS = 'None. Sals3 has no reviews yet.';
+/**
+ * The reviews row.
+ *
+ * This used to be the constant `'None. Sals3 has no reviews yet.'`, and the
+ * ledger was never handed a rating — so on a product with published reviews the
+ * page said it had none, directly above the reviews themselves. That is the
+ * worst available failure on the one element whose entire purpose is to be the
+ * part a buyer can trust: a visible self-contradiction there discredits the
+ * other three rows as well.
+ *
+ * The mark is filled when a review exists, because it then rests on evidence the
+ * payload carries, and the row links to that evidence — the reviews section sits
+ * far below the fold, so a claim the reader cannot get to is barely a claim.
+ */
+function reviewsRow(
+  rating: { average: number; count: number } | undefined,
+  anchored: boolean,
+): {
+  filled: boolean;
+  value: string;
+  href?: string;
+} {
+  if (rating === undefined || rating.count === 0) {
+    return { filled: false, value: 'None yet. Nobody has reviewed this one.' };
+  }
+
+  const count =
+    rating.count === 1
+      ? '1 verified purchase'
+      : `${rating.count} verified purchases`;
+
+  return {
+    filled: true,
+    value: `${rating.average.toFixed(1)} out of 5, from ${count}.`,
+    href: anchored ? '#reviews-heading' : undefined,
+  };
+}
 
 /**
  * `14 August 2026`. Day-first because both approved buyer destinations read it
@@ -95,16 +143,20 @@ function Row({
   term,
   value,
   filled,
+  href,
 }: {
   term: string;
   value: string;
   filled: boolean;
+  href?: string;
 }) {
   return (
     <div className="grid grid-cols-[9px_minmax(0,110px)_minmax(0,1fr)] items-start gap-x-2.5">
       <Mark filled={filled} />
       <dt className="text-sm text-ink">{term}</dt>
-      <dd className="text-sm text-ink-muted">{value}</dd>
+      <dd className="text-sm text-ink-muted">
+        {href === undefined ? value : <a href={href}>{value}</a>}
+      </dd>
     </div>
   );
 }
@@ -112,8 +164,11 @@ function Row({
 export default function ProductEvidenceLedger({
   availability,
   publishedAt,
+  rating,
+  reviewsAnchored = false,
 }: ProductEvidenceLedgerProps) {
   const stock = stockRow(availability);
+  const reviews = reviewsRow(rating, reviewsAnchored);
   const publishedOn =
     publishedAt === undefined ? undefined : formatPublishedOn(publishedAt);
   /*
@@ -133,7 +188,12 @@ export default function ProductEvidenceLedger({
       filled: true,
     },
     { term: 'Delivery', value: DELIVERY, filled: false },
-    { term: 'Buyer reviews', value: REVIEWS, filled: false },
+    {
+      term: 'Buyer reviews',
+      value: reviews.value,
+      filled: reviews.filled,
+      href: reviews.href,
+    },
   ];
 
   return (
@@ -148,6 +208,7 @@ export default function ProductEvidenceLedger({
         {rows.map((row) => (
           <Row
             key={row.term}
+            href={row.href}
             term={row.term}
             value={row.value}
             filled={row.filled}

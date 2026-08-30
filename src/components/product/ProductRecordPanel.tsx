@@ -28,6 +28,11 @@ type ProductRecordPanelProps = {
   /** Whether the selection came from the URL rather than from the default. */
   selectedFromUrl: boolean;
   /**
+   * Whether the page below rendered its reviews section, which decides whether
+   * the evidence ledger's reviews row can link down to it.
+   */
+  reviewsAnchored?: boolean;
+  /**
    * The indicative FX rate for the buyer's destination, fetched once by the
    * page and handed down.
    *
@@ -84,6 +89,7 @@ export default function ProductRecordPanel({
   detail,
   selectedVariant,
   selectedFromUrl,
+  reviewsAnchored,
   indicativeRate,
   fxBufferPercent,
 }: ProductRecordPanelProps) {
@@ -270,6 +276,8 @@ export default function ProductRecordPanel({
         <ProductEvidenceLedger
           availability={availability}
           publishedAt={detail.publishedAt}
+          rating={detail.rating}
+          reviewsAnchored={reviewsAnchored}
         />
       </CardSection>
     </Card>
