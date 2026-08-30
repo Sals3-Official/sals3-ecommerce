@@ -670,6 +670,75 @@ describe('Product page', () => {
     ).toContain('?variant=v-5');
   });
 
+  /**
+   * The real tactical pants, trimmed to the same shape: a sparse grid. Four
+   * colour-and-gender values by four sizes describes 16 combinations and the
+   * supplier stocks 12 — the `Men`/`Male` values carry `5XL` and no `M`, the
+   * `Female`/`Women` values the reverse.
+   *
+   * On the live product this is 8 x 8 over 52 variants, and until sparse grids
+   * were offered the buyer met all 52 labels in one flat wall. What matters here
+   * is that the four absent combinations reach them as disabled chips rather than
+   * as links that go nowhere.
+   */
+  function sparseGriddedVariants() {
+    const labels = [
+      ...['Black Men', 'Gray Male'].flatMap((group) =>
+        ['L', 'XL', '5XL'].map((size) => `${group}-${size}`),
+      ),
+      ...['Black Female', 'Khaki Women'].flatMap((group) =>
+        ['M', 'L', 'XL'].map((size) => `${group}-${size}`),
+      ),
+    ];
+
+    return labels.map((label, index) => ({
+      id: `v-${index}`,
+      sku: `S3V-${String(index).padStart(12, '0')}`,
+      currency: 'USD',
+      // `Black Men-L` is the floor, so `defaultVariantFor` preselects it.
+      priceMinor: label === 'Black Men-L' ? 451 : 780,
+      availability: 'AVAILABLE',
+      label,
+    }));
+  }
+
+  it('offers a sparse grid as two rows and disables the combinations that do not exist', async () => {
+    mockFetch({
+      productOverrides: { priceMinor: 451, variants: sparseGriddedVariants() },
+    });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+
+    const rows = screen.getAllByRole('list', { name: /choose an option/i });
+
+    // Two rows rather than twelve chips in one.
+    expect(rows).toHaveLength(2);
+
+    // `M` is unreachable from the selected `Black Men`, so it is not a link.
+    expect(screen.queryByRole('link', { name: 'M' })).toBeNull();
+
+    // It is still shown, as a dead chip naming itself. Scoped to the size row,
+    // because plenty of other page text begins with an M.
+    const deadChips = [
+      ...(rows[1]?.querySelectorAll(':scope > li > span') ?? []),
+    ].map((chip) => chip.textContent ?? '');
+
+    expect(deadChips).toEqual(['MUnavailable']);
+
+    // Every size the selected group does stock still navigates.
+    expect(screen.getByRole('link', { name: 'XL' })).toBeVisible();
+    expect(screen.getByRole('link', { name: '5XL' })).toBeVisible();
+
+    // And swapping the group keeps the chosen size: Gray Male + L is v-3.
+    expect(
+      screen.getByRole('link', { name: 'Gray Male' }).getAttribute('href'),
+    ).toContain('?variant=v-3');
+  });
+
   /*
    * The panel stopped printing a "label · count" line under the price when the
    * default preselection landed, so the supplier's own words for the chosen

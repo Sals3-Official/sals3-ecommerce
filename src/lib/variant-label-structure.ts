@@ -31,14 +31,36 @@ import type { ProductVariant } from '@/lib/product-detail';
  * axes require a person assigning them once in the portal editor, or a structured
  * source the supplier does not currently provide.
  *
- * ## Why the cross-product test has to be exact
+ * ## Why the split still has to be provable, and where it stopped being exact
  *
- * Splitting is only safe when the result is provably complete. If ten variants
- * yield token sets of 2 and 5, then 2 × 5 = 10 means every combination exists
- * exactly once — there is nothing left to guess about. Anything short of that
- * (a ragged set, a missing combination, a duplicate, a single token, inconsistent
- * token counts) means the label is not a clean encoding and the caller must fall
- * back to showing labels whole.
+ * Splitting is only safe when the tokens themselves are unambiguous: a ragged
+ * set, a duplicate label, a single token or inconsistent token counts means the
+ * label is not a clean encoding and the caller must fall back to showing labels
+ * whole.
+ *
+ * A **missing combination is not one of those.** Requiring the cross-product to
+ * equal the variant count exactly was the original rule and it refused a shape
+ * that is ordinary in apparel. The live tactical pants sells 52 variants over 8
+ * colour-and-gender values by 8 sizes — 64 combinations, 12 of which do not
+ * exist, systematically: the `Male`/`Men` values carry `5XL` and `6XL` and no
+ * `M`, the `Female`/`Women` values carry `M` and stop at `4XL`. That is
+ * womenswear sizing, and the buyer met all 52 labels whole because of it.
+ *
+ * Nothing about a hole has to be guessed, and this module's only renderer was
+ * already built for one: `ProductOptionList` swaps a token, misses in
+ * `byCombination`, and draws a disabled `Unavailable` chip. The exactness test
+ * was stricter than its own consumer needed.
+ *
+ * ## What replaces it
+ *
+ * A sparse grid is offered only when it is a genuine compression of the flat
+ * list — when the chips a buyer scans (the sum of the position sizes) is fewer
+ * than one chip per variant. Three variants labelled `A-1`, `B-2`, `C-3` are a
+ * 3 × 3 grid holding its diagonal: six chips to reach three products, four of
+ * them dead. That is a loss, so it stays flat. 16 chips instead of 52 is not.
+ *
+ * A complete grid is unaffected and still passes on exactness alone, which is
+ * what keeps a full 2 × 2 — where the two counts are equal — working.
  *
  * Costs nothing at the supplier: every input is already stored. No CJ call, no
  * points, no network.
@@ -70,8 +92,11 @@ export function variantLabelTokens(label: string): string[] {
 
 /**
  * The key `byCombination` is stored under. Callers build a target combination by
- * swapping one token and looking the result up — which always hits, because the
- * structure only exists when the cross-product is complete.
+ * swapping one token and looking the result up.
+ *
+ * **That lookup can miss.** A sparse grid is offered now, so an absent entry is
+ * the normal way of saying that combination is not purchasable, and the caller
+ * must render it as unavailable rather than treat it as an error.
  */
 export function variantCombinationKey(tokens: string[]): string {
   return tokens.join(DELIMITER);
@@ -119,8 +144,19 @@ export function deriveVariantLabelStructure(
     (total, values) => total * values.length,
     1,
   );
+  // What the buyer scans as rows of chips, against what the flat fallback costs
+  // them — one chip per variant.
+  const chipCount = positions.reduce(
+    (total, values) => total + values.length,
+    0,
+  );
 
-  if (expected !== variants.length) return undefined;
+  // Completeness first, so a full 2 x 2 — four variants, four chips — is not
+  // refused by the compression test. `>=` keeps the break-even sparse case flat:
+  // the same number of chips with some of them dead is a loss, not a tie.
+  if (expected !== variants.length && chipCount >= variants.length) {
+    return undefined;
+  }
 
   const byCombination = new Map<string, string>();
 
