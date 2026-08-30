@@ -56,13 +56,86 @@ describe('deriveVariantLabelStructure', () => {
     expect(JSON.stringify(result?.positions)).not.toMatch(/colour|color|size/i);
   });
 
-  it('refuses an incomplete cross-product rather than guessing the gaps', () => {
-    // Black-1XL and Red-2XL imply 2 x 2 = 4 combinations but only 2 exist. The
-    // missing Black-2XL and Red-1XL are unknowable, so this is not an encoding.
+  it('refuses a sparse grid that would cost more chips than showing labels whole', () => {
+    // Black-1XL and Red-2XL imply 2 x 2 = 4 combinations and only 2 exist, so as
+    // rows this is four chips to reach two products. Sparse grids are offered
+    // now, but only where they compress — this one does the opposite.
     expect(
       deriveVariantLabelStructure([
         variant('a', 'Black-1XL'),
         variant('b', 'Red-2XL'),
+      ]),
+    ).toBe(undefined);
+  });
+
+  /**
+   * The real `Three-proof Casual Sports Mountaineering Tactical Pants`, read off
+   * the live storefront payload on 2026-08-31: 52 variants over 8
+   * colour-and-gender values by 8 sizes, so 12 of the 64 combinations are absent.
+   * Before this the buyer met all 52 labels as one flat wall of chips.
+   */
+  const SPARSE_LABELS = [
+    ...['Black Men', 'Gray Male', 'Khaki Male', 'Light Brown Male'].flatMap(
+      (group) =>
+        ['L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL'].map(
+          (size) => `${group}-${size}`,
+        ),
+    ),
+    ...[
+      'Black Female',
+      'Female, Gray',
+      'Khaki Women',
+      'Light Brown Women',
+    ].flatMap((group) =>
+      ['M', 'L', 'XL', '2XL', '3XL', '4XL'].map((size) => `${group}-${size}`),
+    ),
+  ];
+
+  it('offers the real sparse 8 x 8 grid, turning 52 chips into 16', () => {
+    const result = deriveVariantLabelStructure(
+      SPARSE_LABELS.map((label, index) => variant(`v${index}`, label)),
+    );
+
+    expect(SPARSE_LABELS).toHaveLength(52);
+    expect(result?.positions.map((values) => values.length)).toEqual([8, 8]);
+    expect(
+      result?.positions.reduce((total, values) => total + values.length, 0),
+    ).toBe(16);
+  });
+
+  it('leaves the twelve absent combinations absent, for the caller to draw disabled', () => {
+    const result = deriveVariantLabelStructure(
+      SPARSE_LABELS.map((label, index) => variant(`v${index}`, label)),
+    );
+
+    // Real, so a swap onto it navigates.
+    expect(result?.byCombination.get('Khaki Women-4XL')).toBe('v45');
+    // Absent. `ProductOptionList` renders a miss as a disabled `Unavailable`
+    // chip, which is the whole reason a hole needs no guessing.
+    expect(result?.byCombination.get('Khaki Women-6XL')).toBe(undefined);
+    expect(result?.byCombination.get('Black Men-M')).toBe(undefined);
+    // `size` counts purchasable variants, never the cross-product.
+    expect(result?.byCombination.size).toBe(52);
+  });
+
+  it('still offers a complete grid whose chip count equals its variant count', () => {
+    // 2 x 2 = 4 variants, 4 chips. Completeness is checked first, or this
+    // regresses.
+    const result = deriveVariantLabelStructure(
+      ['Black-S', 'Black-M', 'Red-S', 'Red-M'].map((label, index) =>
+        variant(`v${index}`, label),
+      ),
+    );
+
+    expect(result?.positions.map((values) => values.length)).toEqual([2, 2]);
+  });
+
+  it('refuses a diagonal, where every extra chip is a dead end', () => {
+    expect(
+      deriveVariantLabelStructure([
+        variant('a', 'A-1'),
+        variant('b', 'B-2'),
+        variant('c', 'C-3'),
       ]),
     ).toBe(undefined);
   });

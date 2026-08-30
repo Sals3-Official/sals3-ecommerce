@@ -1347,6 +1347,47 @@ After hydration, a normal left-click on a variant option updates
 `?variant=<id>` and the price from the already-loaded payload; direct URL visits,
 reloads, copied links, and modified clicks still use the server-rendered route.
 
+### Variant options: three tiers, and a sparse grid is now the second one
+
+`ProductOptionList` renders options at whichever of three tiers the payload can
+support, and never claims more than it knows:
+
+1. **Named axes** — the portal has a saved Variant Matrix, so the payload carries
+   `options: [{name, value}]` and the rows are labelled `Colour`, `Size`.
+2. **Unnamed token rows** — no mapping exists, but `deriveVariantLabelStructure`
+   recovers the positional structure from the supplier's own hyphen. Rows of
+   chips, deliberately unlabelled: nothing in CJ's payload says position 0 is a
+   colour, and an invented axis name renders to a buyer as a product attribute.
+3. **One chip per variant** — the labels encode nothing splittable, so each is
+   shown whole.
+
+**Tier 2 now accepts a sparse grid (2026-08-31).** It used to require the
+cross-product of the position sizes to equal the variant count exactly, which
+refused a shape that is ordinary in apparel. The live
+`Three-proof Casual Sports Mountaineering Tactical Pants` is 8
+colour-and-gender values by 8 sizes = 64 combinations over 52 real variants,
+because the `Male`/`Men` values carry `5XL` and `6XL` and no `M` while the
+`Female`/`Women` values carry `M` and stop at `4XL`. It fell to tier 3 and a
+buyer met all 52 labels in one flat wall.
+
+Nothing about a hole has to be guessed, and **the renderer was already built for
+one**: swapping a token, missing in `byCombination`, and drawing a disabled
+`Unavailable` chip is behaviour tier 2 has always had. The exactness test was
+stricter than its own consumer needed.
+
+What replaces it is not a tuned threshold. A sparse grid is offered only when it
+compresses — when the chips a buyer scans (the sum of the position sizes) is fewer
+than one chip per variant. 16 instead of 52 qualifies; a 3 x 3 grid holding its
+diagonal, six chips to reach three products with four dead ends, does not. A
+complete grid is unaffected and still passes on exactness alone, which is what
+keeps a full 2 x 2 — where the counts are equal — working. `sals3-portal`'s
+`deriveOptionSplit` carries the identical rule, so the two repositories cannot
+disagree about which products get rows.
+
+`byCombination.size` is therefore the number of purchasable variants and never the
+size of the cross-product. A lookup **can** miss, and a miss means that
+combination is not purchasable.
+
 ### Section order, and why it is this one
 
 Rebuilt 2026-08-21 to the approved **PDP Redesign v3.1** shell.
