@@ -10,6 +10,7 @@ import ProductReviews from '@/components/product/ProductReviews';
 import ProductGallery from '@/components/product/ProductGallery';
 import ProductRecordPanel from '@/components/product/ProductRecordPanel';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
+import { SelectedSkuProvider } from '@/components/product/selected-sku';
 import ProductSupplierDetails from '@/components/product/ProductSupplierDetails';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import BreadcrumbSchema from '@/components/schema/BreadcrumbSchema';
@@ -269,24 +270,32 @@ export default async function ProductPage({
         total: a third stops reading as structure and starts reading as
         decoration.
       */}
-      <main className="w-full pb-16">
-        <div className="mx-auto w-full max-w-6xl px-6 pt-5">
-          <ProductBreadcrumb trail={trail} />
-          <div className="grid grid-cols-1 items-start gap-9 md:grid-cols-2">
-            <KlaviyoViewedProduct
-              productId={detail.id}
-              title={detail.title}
-              imageUrl={detail.imageUrl}
-              unitPrice={detail.price}
-              category={detail.category}
-            />
-            <ProductGallery
-              images={detail.images}
-              tone={detail.tone}
-              variants={detail.variants}
-              selectedVariantId={selectedVariant?.id}
-            />
-            {/*
+      {/*
+        The provider spans the buy panel and the specifications band, which is
+        the whole reason it is here rather than inside either: the panel owns
+        the option selection, and the band prints the SKU that selection names.
+        Server children pass through untouched — only the two client components
+        that opt in read it.
+      */}
+      <SelectedSkuProvider initialSku={selectedVariant?.sku}>
+        <main className="w-full pb-16">
+          <div className="mx-auto w-full max-w-6xl px-6 pt-5">
+            <ProductBreadcrumb trail={trail} />
+            <div className="grid grid-cols-1 items-start gap-9 md:grid-cols-2">
+              <KlaviyoViewedProduct
+                productId={detail.id}
+                title={detail.title}
+                imageUrl={detail.imageUrl}
+                unitPrice={detail.price}
+                category={detail.category}
+              />
+              <ProductGallery
+                images={detail.images}
+                tone={detail.tone}
+                variants={detail.variants}
+                selectedVariantId={selectedVariant?.id}
+              />
+              {/*
               Neither column sticks. Owner's call, 2026-08-21, after seeing it
               on production twice.
 
@@ -305,18 +314,18 @@ export default async function ProductPage({
               extending the sticky container past the grid, which is a different
               layout, not a class.
             */}
-            <div className="flex flex-col gap-3.5">
-              <div>
-                <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-ink text-pretty md:text-[28px]">
-                  {detail.title}
-                </h1>
-                {summary === undefined ? null : (
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted text-pretty">
-                    {summary}
-                  </p>
-                )}
-              </div>
-              {/*
+              <div className="flex flex-col gap-3.5">
+                <div>
+                  <h1 className="font-display text-2xl font-semibold tracking-[-0.02em] text-ink text-pretty md:text-[28px]">
+                    {detail.title}
+                  </h1>
+                  {summary === undefined ? null : (
+                    <p className="mt-2 text-sm leading-relaxed text-ink-muted text-pretty">
+                      {summary}
+                    </p>
+                  )}
+                </div>
+                {/*
               One panel for every product. The axes and no-axes paths used to be
               two different compositions — a client purchase panel with its own
               price state, or the server price box — which meant a change to one
@@ -324,16 +333,16 @@ export default async function ProductPage({
               after paint (ADR-016). Both now resolve selection from the URL and
               render on the server.
             */}
-              <ProductRecordPanel
-                detail={detail}
-                selectedVariant={selectedVariant}
-                selectedFromUrl={fromUrl !== undefined}
-                reviewsAnchored={reviews.length > 0}
-              />
+                <ProductRecordPanel
+                  detail={detail}
+                  selectedVariant={selectedVariant}
+                  selectedFromUrl={fromUrl !== undefined}
+                  reviewsAnchored={reviews.length > 0}
+                />
+              </div>
             </div>
           </div>
-        </div>
-        {/*
+          {/*
           ## Why specifications come before the description
 
           Specifications exist on every categorised product — the workbook
@@ -346,23 +355,25 @@ export default async function ProductPage({
           one. With the old order, the first thing below the fold on a typical
           product was nothing at all.
         */}
-        <ProductSpecifications
-          specification={detail.specification}
-          specs={detail.specs}
-        />
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <ProductDescription blocks={remainingBlocks} />
-          <ProductReviews
-            rating={detail.rating}
-            breakdown={detail.ratingBreakdown}
-            reviews={reviews}
+          <ProductSpecifications
+            specification={detail.specification}
+            specs={detail.specs}
+            sals3Sku={selectedVariant?.sku ?? detail.specs?.sku}
           />
-          <ProductSupplierDetails specs={detail.specs} />
-          <RelatedProducts products={relatedProducts} />
-          <ProductSchema detail={detail} />
-          <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
-        </div>
-      </main>
+          <div className="mx-auto w-full max-w-6xl px-6">
+            <ProductDescription blocks={remainingBlocks} />
+            <ProductReviews
+              rating={detail.rating}
+              breakdown={detail.ratingBreakdown}
+              reviews={reviews}
+            />
+            <ProductSupplierDetails specs={detail.specs} />
+            <RelatedProducts products={relatedProducts} />
+            <ProductSchema detail={detail} />
+            <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
+          </div>
+        </main>
+      </SelectedSkuProvider>
       <SiteFooter />
     </div>
   );

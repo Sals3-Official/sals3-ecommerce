@@ -1,4 +1,5 @@
 import type { ProductSpecification, ProductSpecs } from '@/lib/product-detail';
+import Sals3SkuLine from './Sals3SkuLine';
 
 type ProductSpecificationsProps = {
   /** Seller-declared category attributes, in the order the portal sent them. */
@@ -10,6 +11,12 @@ type ProductSpecificationsProps = {
    * `ProductSupplierDetails`.
    */
   specs?: ProductSpecs;
+  /**
+   * The Sals3 SKU for the variant this request resolved. Printed above the
+   * grid rather than in it — see `Sals3SkuLine` for why the provenance line
+   * beneath the grid cannot be stretched to cover it.
+   */
+  sals3Sku?: string;
 };
 
 /**
@@ -46,6 +53,7 @@ function namesBrand(label: string): boolean {
 export default function ProductSpecifications({
   specification,
   specs,
+  sals3Sku,
 }: ProductSpecificationsProps) {
   const declared = specification ?? [];
   // The declared brand only when the seller's own attribute set did not already
@@ -57,7 +65,9 @@ export default function ProductSpecifications({
       : [];
   const rows = [...brand, ...declared];
 
-  if (rows.length === 0) return null;
+  // A code with no attributes behind it still earns the band: it is the one
+  // thing on this page somebody copies out to quote a listing.
+  if (rows.length === 0 && sals3Sku === undefined) return null;
 
   return (
     <section className="border-y border-border bg-white">
@@ -65,6 +75,7 @@ export default function ProductSpecifications({
         <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
           Product specifications
         </h2>
+        <Sals3SkuLine fallbackSku={sals3Sku} />
         <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
           {rows.map((row) => (
             <div

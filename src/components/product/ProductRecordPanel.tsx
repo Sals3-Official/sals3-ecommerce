@@ -18,6 +18,7 @@ import ProductAddToCartButtons from '@/components/product/ProductAddToCartButton
 import ProductEvidenceLedger from '@/components/product/ProductEvidenceLedger';
 import ProductOptionList from '@/components/product/ProductOptionList';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
+import { usePublishSelectedSku } from './selected-sku';
 
 type ProductRecordPanelProps = {
   detail: ProductDetail;
@@ -83,6 +84,11 @@ export default function ProductRecordPanel({
   const price = selected?.price ?? detail.price;
   const availability = selected?.availability ?? detail.availability;
   const unavailable = selected?.availability === 'UNAVAILABLE';
+
+  // Mirrored outward for the specifications band, which prints the code and sits
+  // in a different branch of the page. Publish only — the selection above stays
+  // owned here, so this cannot affect what the buttons act on.
+  usePublishSelectedSku(selected?.sku);
 
   // "From" only while the figure is the floor of a range the buyer has not
   // narrowed. Once a variant is chosen the price is that variant's exact price

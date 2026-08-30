@@ -41,7 +41,8 @@ export type ProductVariant = {
    *
    * Absent when the supplier reported none, which is every product until the
    * portal ships the field. It is the only human-readable per-variant string that
-   * exists: `sku` is an `S3V-<hex>` digest and must never be shown to a buyer.
+   * exists: `sku` is an `S3V-<hex>` digest, which the page prints as the Sals3
+   * SKU but cannot use as a variant's name.
    *
    * Supplier-authored and unreviewed — expect `default`, CJK, and junk. Display
    * it verbatim and **never parse it into option axes**.
