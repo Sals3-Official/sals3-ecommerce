@@ -3,6 +3,35 @@ import ProductRatingBreakdown from './ProductRatingBreakdown';
 import ProductReviewList from './ProductReviewList';
 import StarRating from './StarRating';
 
+/** Five zeros, so an unreviewed product draws the same five bars as any other. */
+const EMPTY_BREAKDOWN: [number, number, number, number, number] = [
+  0, 0, 0, 0, 0,
+];
+
+/**
+ * What stands where the review list would be on an unreviewed product.
+ *
+ * The same reframe the card uses, and for the same reason: "no reviews yet"
+ * states a deficit and asks the shopper for nothing, while going first is the one
+ * thing that is reliably true here — somebody has to. Quiet on purpose. No
+ * urgency, no count of people looking, no scarcity; an unreviewed product is new,
+ * not bad.
+ *
+ * Text, not a button, exactly as on the card. Reviewing is gated on the parcel
+ * being delivered, which is weeks out on this catalogue, so a control offering it
+ * now could not be honoured. The second sentence says so rather than leaving the
+ * buyer to find out — an invitation is only worth making if its terms are stated.
+ */
+function FirstReviewInvitation() {
+  return (
+    <p className="mt-5 text-[13.5px] leading-relaxed text-ink-muted">
+      <span className="font-medium text-ink">Be the first to review this.</span>{' '}
+      Once Sals3 has delivered it to you, you can say how it turned out — and
+      yours is the review the next buyer reads.
+    </p>
+  );
+}
+
 type ProductReviewsProps = {
   rating?: { average: number; count: number };
   breakdown?: [number, number, number, number, number];
@@ -43,31 +72,44 @@ type ProductReviewsProps = {
  * as a Sals3 rating is the fabrication the wiki's corrected external facts exist
  * to prevent.
  *
- * ## No reviews means no section
+ * ## No reviews still means a section — reversed 2026-08-30, owner's call
  *
- * The page renders nothing here rather than an empty state — this repo's
- * standing rule, which `page.test.tsx` asserts for the page as a whole. A
- * heading reading "Ratings and reviews" above a sentence saying there are none
- * is a section about an absence, which on a catalogue where most products have
- * no reviews yet would be noise on almost every page.
+ * This used to render nothing at all on an unreviewed product, under the repo's
+ * "no section for data the portal did not send" rule. The owner overrode it, and
+ * the override is right for this one section: a buyer who scrolls past the
+ * description and finds no reviews block cannot tell whether the product has no
+ * reviews or whether the page is broken. Zero is itself the answer to the
+ * question they came here with, and stating it plainly costs less trust than
+ * leaving a hole where they expected to look. It also puts the provenance
+ * sentence — that every review comes from a delivered Sals3 order — on every
+ * product rather than only on the ones already carrying reviews.
  *
- * A filter the buyer *chose* returning nothing is the opposite case and does get
- * a sentence; that one lives in `ProductReviewList`.
+ * The average is the one figure the empty state does NOT print as a number.
+ * "0.0" beside five hollow stars does not read as "not yet rated"; it reads as
+ * "rated zero out of five", which is the single worst thing this page could say
+ * about a product nobody has complained about. An em dash says the true thing.
+ * The counts are all rendered as the zeros they are.
  *
- * Consequence, accepted: a product whose rating exists but whose list could not
- * be fetched shows nothing here. The card's stars still carry the number, and a
- * summary above an empty list would look broken rather than honest.
+ * A filter the buyer *chose* returning nothing is a different case and gets its
+ * own sentence; that one lives in `ProductReviewList`.
+ *
+ * ## The one case that still renders nothing
+ *
+ * A rating that claims reviews exist while the list came back empty — the review
+ * read failed, and the product payload's rating outlived it. Neither branch can
+ * be told honestly there: the summary would head an empty list, and the
+ * first-review invitation would be a fabrication on a product with reviews. So
+ * that case still hides, and the card's stars still carry the number.
  */
 export default function ProductReviews({
   rating,
   breakdown,
   reviews,
 }: ProductReviewsProps) {
-  if (reviews.length === 0) return null;
-
   const hasRating = rating !== undefined && rating.count > 0;
 
-  if (!hasRating) return null;
+  // The rating says there are reviews and none arrived: see the doc block.
+  if (hasRating && reviews.length === 0) return null;
 
   return (
     <section
@@ -82,7 +124,9 @@ export default function ProductReviews({
           Ratings and reviews
         </h2>
         <span className="text-[13.5px] font-medium text-ink-muted">
-          {rating.count} {rating.count === 1 ? 'review' : 'reviews'}
+          {hasRating
+            ? `${rating.count} ${rating.count === 1 ? 'review' : 'reviews'}`
+            : 'No reviews yet'}
         </span>
       </div>
 
@@ -90,25 +134,30 @@ export default function ProductReviews({
         <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[12.5rem_1fr]">
           <div className="flex flex-col gap-2">
             <span className="font-display text-[40px] leading-none font-semibold tracking-[-0.03em] text-ink tabular-nums">
-              {rating.average.toFixed(1)}
+              {hasRating ? rating.average.toFixed(1) : '—'}
             </span>
             <StarRating
-              rating={Math.round(rating.average)}
+              rating={hasRating ? Math.round(rating.average) : 0}
               size="lg"
-              label={`${rating.average.toFixed(1)} out of 5`}
+              label={
+                hasRating
+                  ? `${rating.average.toFixed(1)} out of 5`
+                  : 'Not yet rated'
+              }
             />
             <span className="text-xs leading-normal text-ink-subtle">
-              Out of 5, from {rating.count}{' '}
-              {rating.count === 1 ? 'review' : 'reviews'} of this product.
+              {hasRating
+                ? `Out of 5, from ${rating.count} ${rating.count === 1 ? 'review' : 'reviews'} of this product.`
+                : 'Out of 5. Nobody has reviewed this product yet.'}
             </span>
           </div>
 
-          {breakdown === undefined ? null : (
-            <ProductRatingBreakdown
-              breakdown={breakdown}
-              total={rating.count}
-            />
-          )}
+          <ProductRatingBreakdown
+            breakdown={
+              hasRating ? (breakdown ?? EMPTY_BREAKDOWN) : EMPTY_BREAKDOWN
+            }
+            total={hasRating ? rating.count : 0}
+          />
         </div>
 
         <p className="mt-5 border-t border-border pt-3.5 text-[12.5px] leading-relaxed text-ink-muted">
@@ -118,7 +167,11 @@ export default function ProductReviews({
         </p>
       </div>
 
-      <ProductReviewList reviews={reviews} />
+      {reviews.length > 0 ? (
+        <ProductReviewList reviews={reviews} />
+      ) : (
+        <FirstReviewInvitation />
+      )}
     </section>
   );
 }

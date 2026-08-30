@@ -15,29 +15,66 @@ const REVIEW: ProductReview = {
 
 describe('ProductReviews', () => {
   /**
-   * The repo's standing rule — no section for data the portal did not send —
-   * which `page.test.tsx` asserts for the page as a whole. A heading about an
-   * absence would be noise on nearly every product today.
+   * The section used to disappear entirely on an unreviewed product. A buyer who
+   * scrolls to where reviews live and finds nothing cannot tell "no reviews yet"
+   * apart from a broken page, so zero is now stated rather than implied.
    */
-  it('renders nothing at all when there are no reviews', () => {
-    const { container } = render(<ProductReviews reviews={[]} />);
+  it('still renders the section when there are no reviews', () => {
+    render(<ProductReviews reviews={[]} />);
 
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  /** A rating with a zero count must not render as a nought-star product. */
-  it('renders nothing for a zero-count rating', () => {
-    const { container } = render(
-      <ProductReviews rating={{ average: 0, count: 0 }} reviews={[]} />,
-    );
-
-    expect(container).toBeEmptyDOMElement();
+    expect(
+      screen.getByRole('heading', { name: 'Ratings and reviews' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('No reviews yet')).toBeInTheDocument();
+    expect(
+      screen.getByText(/nobody has reviewed this product yet/i),
+    ).toBeInTheDocument();
   });
 
   /**
-   * A rating whose list could not be fetched hides the section rather than
-   * showing a summary above an empty list. The card's stars still carry the
-   * number.
+   * The one number the empty state must not print. "0.0" beside five hollow
+   * stars reads as "rated zero out of five", not as "not yet rated".
+   */
+  it('never shows a nought-out-of-five average on an unreviewed product', () => {
+    render(<ProductReviews rating={{ average: 0, count: 0 }} reviews={[]} />);
+
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+    expect(screen.getByText('\u2014')).toBeInTheDocument();
+    expect(screen.getByText('Not yet rated')).toBeInTheDocument();
+  });
+
+  /** The bars are the zeros the owner asked to see, not an absent block. */
+  it('draws all five bars at zero when nothing has been reviewed', () => {
+    render(<ProductReviews reviews={[]} />);
+
+    expect(screen.getAllByText('0')).toHaveLength(5);
+  });
+
+  /** The card's reframe, in the card's voice: an opening, not a demand. */
+  it('invites the first review without offering a control it cannot honour', () => {
+    render(<ProductReviews reviews={[]} />);
+
+    expect(
+      screen.getByText(/be the first to review this/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  /** The provenance line is what the section is for, so it ships unreviewed too. */
+  it('states where reviews come from even before there are any', () => {
+    render(<ProductReviews reviews={[]} />);
+
+    expect(
+      screen.getByText(/we do not carry ratings from our supplier/i),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * The one case that still renders nothing: the rating says reviews exist and
+   * the list came back empty, so the read failed. A summary would head an empty
+   * list, and the first-review invitation would be a lie about a reviewed
+   * product. The card's stars still carry the number.
    */
   it('renders nothing when a rating exists but the list is empty', () => {
     const { container } = render(
