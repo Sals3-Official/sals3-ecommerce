@@ -1,4 +1,5 @@
 import type { ProductSpecs } from '@/lib/product-detail';
+import { PRODUCT_FACT_GRID, PRODUCT_FACT_ROW } from './product-label-styles';
 
 type ProductSupplierDetailsProps = {
   specs?: ProductSpecs;
@@ -113,12 +114,9 @@ export default function ProductSupplierDetails({
         <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
           Supplier details
         </h2>
-        <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
+        <dl className={PRODUCT_FACT_GRID}>
           {rows.map((row) => (
-            <div
-              key={row.label}
-              className="grid grid-cols-[minmax(0,8.625rem)_minmax(0,1fr)] gap-4 border-b border-border py-2.5"
-            >
+            <div key={row.label} className={PRODUCT_FACT_ROW}>
               <dt className="text-sm text-ink-subtle">{row.label}</dt>
               <dd className="text-sm text-ink tabular-nums">{row.value}</dd>
             </div>
