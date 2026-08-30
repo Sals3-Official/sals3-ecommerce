@@ -18,8 +18,6 @@ import ProductAddToCartButtons from '@/components/product/ProductAddToCartButton
 import ProductEvidenceLedger from '@/components/product/ProductEvidenceLedger';
 import ProductOptionList from '@/components/product/ProductOptionList';
 import ProductPriceDisplay from '@/components/product/ProductPriceDisplay';
-import IndicativePriceLine from '@/components/fx/IndicativePriceLine';
-import type { IndicativeRate } from '@/lib/fx/rates';
 
 type ProductRecordPanelProps = {
   detail: ProductDetail;
@@ -32,26 +30,6 @@ type ProductRecordPanelProps = {
    * the evidence ledger's reviews row can link down to it.
    */
   reviewsAnchored?: boolean;
-  /**
-   * The indicative FX rate for the buyer's destination, fetched once by the
-   * page and handed down.
-   *
-   * A prop rather than a fetch here, and required rather than optional: this
-   * panel is a client component, the rate resolves on the server, and the
-   * approximate figure has to follow the variant the buyer picks — the price
-   * above it changes on a chip click without a navigation, and a server-rendered
-   * conversion would go stale beside it.
-   *
-   * `null` is a first-class value, not a missing one: it means no usable rate,
-   * and the panel then renders no local price at all.
-   */
-  indicativeRate: IndicativeRate | null;
-  /**
-   * The Market Rules funding buffer, fetched by the page beside the rate. A
-   * prop for the same reason the rate is one, and `null` is likewise a
-   * first-class value meaning "render no local price".
-   */
-  fxBufferPercent: number | null;
 };
 
 /**
@@ -90,8 +68,6 @@ export default function ProductRecordPanel({
   selectedVariant,
   selectedFromUrl,
   reviewsAnchored,
-  indicativeRate,
-  fxBufferPercent,
 }: ProductRecordPanelProps) {
   const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
   const axes = useMemo(() => detail.options ?? [], [detail.options]);
@@ -217,20 +193,6 @@ export default function ProductRecordPanel({
             {note}
           </p>
         )}
-        {/*
-          Below the price *and* below its qualifier, deliberately. `ProductPriceDisplay`
-          still contains exactly one currency-formatted string — the offer price a
-          price extractor should read — and the approximate figure sits outside
-          that block rather than inside it, following whichever variant is
-          selected. It renders nothing at all without a rate.
-        */}
-        <IndicativePriceLine
-          price={price}
-          rate={indicativeRate}
-          bufferPercent={fxBufferPercent}
-          fromLabel={showFrom ? 'From' : undefined}
-          className="mt-2.5"
-        />
       </CardSection>
 
       {hasOptions ? (

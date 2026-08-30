@@ -71,6 +71,32 @@ describe('ProductSupplierDetails', () => {
     expect(screen.getByText('30 cm × 25 cm × 8 cm')).toBeInTheDocument();
   });
 
+  /**
+   * These are the parcel's figures, not the product's — CJ reports them as
+   * packed weight and box size, and checkout quotes freight from the same
+   * `weightGrams`. Labelled "Weight" and "Dimensions", they read as the item
+   * itself, which is a different and wrong claim: a buyer weighing up a 640 g
+   * pair of jeans is reading the box.
+   */
+  it('names the weight and dimensions as the parcel, not the product', () => {
+    render(
+      <ProductSupplierDetails
+        specs={{
+          weightGrams: 4200,
+          lengthMillimeters: 300,
+          widthMillimeters: 250,
+          heightMillimeters: 80,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Package weight')).toBeInTheDocument();
+    expect(screen.getByText('Package dimensions')).toBeInTheDocument();
+    expect(
+      screen.getByText(/the packed parcel, not the product itself/i),
+    ).toBeInTheDocument();
+  });
+
   it('labels a condition and a manufacturer part number', () => {
     render(
       <ProductSupplierDetails

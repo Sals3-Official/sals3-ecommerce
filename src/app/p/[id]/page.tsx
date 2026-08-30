@@ -27,37 +27,9 @@ import {
   toHomeProduct,
   toProductDetail,
 } from '@/services/products';
-import destinationToIndicativeCurrency from '@/lib/fx/destination-currency';
-import { resolveDestination } from '@/lib/destination/resolve';
-import { fetchIndicativeRate } from '@/lib/fx/rates';
-import fetchFxBuffer from '@/lib/fx/buffer';
 
 const RELATED_PRODUCT_COUNT = 6;
 
-/**
- * The approximate local price beside the USD one, for the destination the buyer
- * is shopping to rather than for a market's own currency.
- *
- * `null` covers three different absences on purpose — no currency we can source
- * a rate for, a rate that failed, and a rate we recently failed to fetch — and
- * the panel renders nothing for all three. A figure is either sourced from a
- * named central bank or it is not shown.
- */
-async function indicativeRateFor() {
-  const destination = await resolveDestination();
-  const currency = destinationToIndicativeCurrency(destination.code);
-
-  if (currency === undefined) return { rate: null, bufferPercent: null };
-
-  // Resolved together because they are rendered together: a rate without the
-  // buffer shows nothing, so fetching one without the other buys no page.
-  const [rate, bufferPercent] = await Promise.all([
-    fetchIndicativeRate(currency),
-    fetchFxBuffer(),
-  ]);
-
-  return { rate, bufferPercent };
-}
 const META_DESCRIPTION_MAX_LENGTH = 155;
 
 type ProductPageProps = {
@@ -262,10 +234,9 @@ export default async function ProductPage({
   // props. Both are cached for an hour by their own modules, so this costs an
   // upstream request on a small fraction of renders, and each resolves to
   // `null` on every failure rather than throwing into this `Promise.all`.
-  const [relatedProducts, reviews, indicative] = await Promise.all([
+  const [relatedProducts, reviews] = await Promise.all([
     getRelatedProducts(detail.category, detail.id),
     fetchProductReviews(detail.id),
-    indicativeRateFor(),
   ]);
   const variants = detail.variants ?? [];
 
@@ -358,8 +329,6 @@ export default async function ProductPage({
                 selectedVariant={selectedVariant}
                 selectedFromUrl={fromUrl !== undefined}
                 reviewsAnchored={reviews.length > 0}
-                indicativeRate={indicative.rate}
-                fxBufferPercent={indicative.bufferPercent}
               />
             </div>
           </div>

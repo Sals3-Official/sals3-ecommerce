@@ -80,7 +80,7 @@ function reviewsRow(
   href?: string;
 } {
   if (rating === undefined || rating.count === 0) {
-    return { filled: false, value: 'None yet. Nobody has reviewed this one.' };
+    return { filled: false, value: 'None yet. Be the first to review this.' };
   }
 
   const count =
