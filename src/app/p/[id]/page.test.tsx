@@ -939,94 +939,30 @@ describe('Product page', () => {
   });
 
   /**
-   * The approximate local price, wired end to end: the page resolves the rate on
-   * the server and hands it to the record panel. USD stays the price in every
-   * case — the only question is whether the extra appears.
+   * The page used to resolve an indicative rate on every render and hand it to
+   * the record panel, which drew an approximate local figure under the USD
+   * price. The owner removed that block 2026-08-30.
+   *
+   * Two things are asserted here, not one. The figure is gone from the page,
+   * and the upstream rate host is never called — the fetch went with the panel
+   * that consumed it, so a page still paying for a rate it cannot show would be
+   * a silent regression rather than a visible one.
    */
-  describe('the approximate local price', () => {
-    function fxCalls(fetchMock: ReturnType<typeof mockFetch>) {
-      // Matched as a substring rather than parsed: not every call in here is
-      // made with a URL string, and `new URL()` throws on the ones that are not.
-      return fetchMock.mock.calls.filter((call) =>
-        String(call[0]).includes(FX_HOST),
-      );
-    }
+  it('shows no approximate local price and asks no rate host for one', async () => {
+    const fetchMock = mockFetch({ indicativeRate: 2 });
 
-    it('renders the local figure and its note beneath the USD price', async () => {
-      mockFetch({ indicativeRate: 2 });
+    const { container } = renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+    const text = container.textContent ?? '';
 
-      renderWithCart(
-        await ProductPage({
-          params: Promise.resolve({ id: 'air-cooler' }),
-        }),
-      );
-
-      expect(screen.getByText('US$1,999')).toBeInTheDocument();
-      // 199900 x 2 x 1.015 — the Portal's buffer, applied end to end.
-      expect(screen.getByText(/A\$4,057\.97/)).toBeInTheDocument();
-      // Text in the DOM, not a `title` attribute — a screen reader has to be
-      // able to reach the sentence that says which figure is the charge.
-      expect(
-        screen.getByText(/you are charged in us dollars/i),
-      ).toBeInTheDocument();
-    });
-
-    it('renders nothing extra when the rate is unavailable', async () => {
-      mockFetch();
-
-      const { container } = renderWithCart(
-        await ProductPage({
-          params: Promise.resolve({ id: 'air-cooler' }),
-        }),
-      );
-      const text = container.textContent ?? '';
-
-      expect(screen.getByText('US$1,999')).toBeInTheDocument();
-      expect(text).not.toMatch(/approximate/i);
-      expect(text).not.toMatch(/A\$/);
-      expect(text).not.toMatch(/≈/);
-    });
-
-    /** One conversion per page: one call, for the market's own currency. */
-    /*
-      The currency follows the destination the buyer chose. Until 2026-08-28 it
-      followed the market in the URL, so `/au/p/x` quoted AUD to a reader in
-      Manila; there is no market in a URL any more.
-    */
-    it("asks for the rate once, in the currency of the buyer's destination", async () => {
-      const fetchMock = mockFetch({ indicativeRate: 2 });
-      vi.mocked(resolveDestination).mockResolvedValueOnce({
-        code: 'PH',
-        label: 'Philippines',
-        isGlobal: false,
-      });
-
-      renderWithCart(
-        await ProductPage({
-          params: Promise.resolve({ id: 'air-cooler' }),
-        }),
-      );
-
-      const calls = fxCalls(fetchMock);
-
-      expect(calls).toHaveLength(1);
-      expect(String(calls[0]?.[0])).toContain('/rate/USD/PHP');
-    });
-
-    /**
-     * A grid of approximate prices multiplies the chance of one being read as
-     * the charge, for no gain. Related products carry the USD price only.
-     */
-    it('keeps the local price off the related-products rail', async () => {
-      mockFetch({ indicativeRate: 2 });
-
-      renderWithCart(
-        await ProductPage({
-          params: Promise.resolve({ id: 'air-cooler' }),
-        }),
-      );
-
-      expect(screen.getAllByText(/A\$/)).toHaveLength(1);
-    });
+    expect(screen.getByText('US$1,999')).toBeInTheDocument();
+    expect(text).not.toMatch(/A\$/);
+    expect(text).not.toMatch(/approximate/i);
+    expect(
+      fetchMock.mock.calls.filter((call) => String(call[0]).includes(FX_HOST)),
+    ).toHaveLength(0);
   });
 });

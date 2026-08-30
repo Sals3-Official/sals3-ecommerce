@@ -45,8 +45,6 @@ describe('ProductRecordPanel', () => {
         detail={detail({ rating: { average: 4, count: 1 } })}
         selectedFromUrl={false}
         reviewsAnchored
-        indicativeRate={null}
-        fxBufferPercent={0}
       />,
     );
 
@@ -74,12 +72,7 @@ describe('ProductRecordPanel', () => {
    */
   it('says how many options cost more than the floor on screen', () => {
     renderWithCart(
-      <ProductRecordPanel
-        detail={detail(SPREAD)}
-        selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
-      />,
+      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
     );
 
     expect(
@@ -99,8 +92,6 @@ describe('ProductRecordPanel', () => {
           options: [{ name: 'Colour', values: ['black', 'navy'] }],
         })}
         selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
       />,
     );
 
@@ -114,12 +105,7 @@ describe('ProductRecordPanel', () => {
    */
   it('keeps a second money value out of the price block', () => {
     const { container } = renderWithCart(
-      <ProductRecordPanel
-        detail={detail(SPREAD)}
-        selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
-      />,
+      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
     );
     const money = (container.textContent ?? '').match(/US\$[\d,.]+/g) ?? [];
 
@@ -132,8 +118,6 @@ describe('ProductRecordPanel', () => {
         detail={detail(SPREAD)}
         selectedVariant={SPREAD.variants[1]}
         selectedFromUrl
-        indicativeRate={null}
-        fxBufferPercent={0}
       />,
     );
 
@@ -150,12 +134,7 @@ describe('ProductRecordPanel', () => {
    */
   it('never claims that nothing is added to the price at checkout', () => {
     const { container } = renderWithCart(
-      <ProductRecordPanel
-        detail={detail(SPREAD)}
-        selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
-      />,
+      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
     );
 
     expect(container.textContent ?? '').not.toMatch(
@@ -170,12 +149,7 @@ describe('ProductRecordPanel', () => {
    */
   it('arrives buyable on a named-axes product, with the default chosen', () => {
     renderWithCart(
-      <ProductRecordPanel
-        detail={detail(SPREAD)}
-        selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
-      />,
+      <ProductRecordPanel detail={detail(SPREAD)} selectedFromUrl={false} />,
     );
 
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeEnabled();
@@ -197,8 +171,6 @@ describe('ProductRecordPanel', () => {
           options: [{ name: 'Colour', values: ['black'] }],
         })}
         selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
       />,
     );
 
@@ -209,109 +181,31 @@ describe('ProductRecordPanel', () => {
   });
 
   /**
-   * The approximate local price is an **extra**. The USD figure is what the
-   * buyer is charged and stays present and prominent in both of the next two
-   * tests; the difference between them is only whether the extra appears.
+   * The panel used to carry an approximate local figure under the price — the
+   * converted amount, the rate's date, and a note about conversion costs. The
+   * owner removed it 2026-08-30: the buy box is where a shopper decides, and a
+   * second currency with three lines of qualification competes with the one
+   * number they are actually charged.
+   *
+   * This is the guard, not a leftover. The panel takes no rate any more and the
+   * page no longer fetches one, so the only way the block returns is
+   * deliberately — and that should mean rewriting this test, not passing it.
+   * `IndicativePriceLine` still ships; the cart renders it.
    */
-  describe('the approximate local price', () => {
-    const AUD_RATE = { currency: 'AUD', rate: 2, asOf: '2026-08-27' } as const;
+  it('shows one currency and nothing approximate beneath it', () => {
+    const { container } = renderWithCart(
+      <ProductRecordPanel
+        detail={detail({ variants: [priced('black', 451)] })}
+        selectedFromUrl={false}
+      />,
+    );
+    const text = container.textContent ?? '';
 
-    it('renders the local figure and its note beside the USD price', () => {
-      renderWithCart(
-        <ProductRecordPanel
-          detail={detail({ variants: [priced('black', 451)] })}
-          selectedFromUrl={false}
-          indicativeRate={AUD_RATE}
-          fxBufferPercent={0}
-        />,
-      );
-
-      expect(screen.getByText('US$4.51')).toBeInTheDocument();
-      expect(screen.getByText(/A\$9\.02/)).toBeInTheDocument();
-      // Readable text in the DOM, not a `title` attribute: a screen reader has
-      // to reach the label that says which figure is the real one.
-      expect(
-        screen.getByText(/you are charged in us dollars/i),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/27 Aug 2026/)).toBeInTheDocument();
-    });
-
-    /**
-     * The rule the whole feature turns on: no rate means **nothing extra** — no
-     * dash, no placeholder, no "unavailable". The USD price is complete alone.
-     */
-    it('renders nothing extra when there is no rate', () => {
-      const { container } = renderWithCart(
-        <ProductRecordPanel
-          detail={detail({ variants: [priced('black', 451)] })}
-          selectedFromUrl={false}
-          indicativeRate={null}
-          fxBufferPercent={0}
-        />,
-      );
-      const text = container.textContent ?? '';
-
-      expect(screen.getByText('US$4.51')).toBeInTheDocument();
-      expect(text).not.toMatch(/approximate/i);
-      expect(text).not.toMatch(/A\$/);
-      expect(text).not.toMatch(/≈/);
-      expect(text).not.toMatch(/unavailable\./i);
-    });
-
-    it('lifts the figure by the buffer', () => {
-      renderWithCart(
-        <ProductRecordPanel
-          detail={detail({ variants: [priced('black', 451)] })}
-          selectedFromUrl={false}
-          indicativeRate={AUD_RATE}
-          fxBufferPercent={10}
-        />,
-      );
-
-      // 451 x 2 = A$9.02 mid, +10% = A$9.92. Asserted against the unbuffered
-      // figure the case above proves, so a dropped buffer fails here rather
-      // than passing quietly as "still renders something".
-      expect(screen.getByText(/A\$9\.92/)).toBeInTheDocument();
-      expect(screen.queryByText(/A\$9\.02/)).not.toBeInTheDocument();
-    });
-
-    /**
-     * A buffer the Portal could not supply is not a reason to fall back to the
-     * mid-market figure: it is knowingly below what the card will charge, and
-     * the buyer cannot tell that apart from an ordinary approximation.
-     */
-    it('renders nothing extra when there is a rate but no buffer', () => {
-      const { container } = renderWithCart(
-        <ProductRecordPanel
-          detail={detail({ variants: [priced('black', 451)] })}
-          selectedFromUrl={false}
-          indicativeRate={AUD_RATE}
-          fxBufferPercent={null}
-        />,
-      );
-      const text = container.textContent ?? '';
-
-      expect(screen.getByText('US$4.51')).toBeInTheDocument();
-      expect(text).not.toMatch(/approximate/i);
-      expect(text).not.toMatch(/A\$/);
-      expect(text).not.toMatch(/≈/);
-    });
-
-    /** It follows the chosen variant, because the price above it does. */
-    it('converts the selected variant price, not the floor', () => {
-      renderWithCart(
-        <ProductRecordPanel
-          detail={detail(SPREAD)}
-          selectedVariant={SPREAD.variants[1]}
-          selectedFromUrl
-          indicativeRate={AUD_RATE}
-          fxBufferPercent={0}
-        />,
-      );
-
-      expect(screen.getByText('US$20')).toBeInTheDocument();
-      expect(screen.getByText(/A\$40\.00/)).toBeInTheDocument();
-    });
+    expect(screen.getByText('US$4.51')).toBeInTheDocument();
+    expect(text).not.toMatch(/approximate/i);
+    expect(text).not.toMatch(/you are charged in us dollars/i);
+    expect(text).not.toMatch(/≈/);
+    expect(text).not.toMatch(/A\$/);
   });
 
   it('says nothing about a spread when there is only one option', () => {
@@ -319,8 +213,6 @@ describe('ProductRecordPanel', () => {
       <ProductRecordPanel
         detail={detail({ variants: [priced('black', 451)] })}
         selectedFromUrl={false}
-        indicativeRate={null}
-        fxBufferPercent={0}
       />,
     );
 

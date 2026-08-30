@@ -71,7 +71,7 @@ describe('ProductEvidenceLedger', () => {
     render(<ProductEvidenceLedger />);
 
     expect(
-      screen.getByText(/nobody has reviewed this one/i),
+      screen.getByText(/be the first to review this/i),
     ).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
@@ -125,7 +125,7 @@ describe('ProductEvidenceLedger', () => {
     render(<ProductEvidenceLedger rating={{ average: 0, count: 0 }} />);
 
     expect(
-      screen.getByText(/nobody has reviewed this one/i),
+      screen.getByText(/be the first to review this/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/out of 5/i)).not.toBeInTheDocument();
   });

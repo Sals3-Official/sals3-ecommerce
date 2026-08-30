@@ -56,7 +56,7 @@ export default function ProductSupplierDetails({
 
   if (specs.weightGrams !== undefined) {
     rows.push({
-      label: 'Weight',
+      label: 'Package weight',
       value: `${specs.weightGrams.toLocaleString('en-US')} g`,
     });
   }
@@ -66,7 +66,7 @@ export default function ProductSupplierDetails({
     specs.heightMillimeters !== undefined
   ) {
     rows.push({
-      label: 'Dimensions',
+      label: 'Package dimensions',
       value: [
         specs.lengthMillimeters,
         specs.widthMillimeters,
@@ -116,7 +116,8 @@ export default function ProductSupplierDetails({
         and the storefront is repeating a claim it did not measure.
       */}
       <p className="mt-2 max-w-[80ch] text-xs leading-relaxed text-ink-subtle">
-        As reported by the supplier.
+        As reported by the supplier. Weight and dimensions are the packed
+        parcel, not the product itself.
       </p>
     </section>
   );
