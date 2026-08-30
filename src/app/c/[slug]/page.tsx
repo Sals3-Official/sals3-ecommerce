@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import CategoryBreadcrumbSchema from '@/components/schema/CategoryBreadcrumbSchema';
 import SiteFooter from '@/components/layout/SiteFooter';
 import SiteHeader from '@/components/layout/SiteHeader';
@@ -39,63 +40,6 @@ type CategoryPageProps = {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<RawSearchParams>;
 };
-
-/**
- * The canonical is self-referential, and now there is one of it.
- *
- * Between 2026-08-27 and 2026-08-28 this listing had one address per market and
- * a canonical each, because `/au/c/electronics` and `/ph/c/electronics` were
- * localized versions of one listing rather than duplicates of it. One storefront
- * means one address, so the reasoning collapses back to the ordinary case.
- *
- * Still `undefined` when `NEXT_PUBLIC_SITE_URL` is unset — `getSiteUrl()`
- * returns `undefined` rather than guessing a domain, and this omits the field
- * rather than inventing one.
- */
-/**
- * ## A level below a department is `noindex, follow` for now
- *
- * This resolves the heading from the 21-department list, which is the only
- * taxonomy this repository holds. A `<slug>-<id>` level renders and browses
- * correctly — that is what the breadcrumb links — but naming it here would need
- * a producer round trip inside `generateMetadata`, on top of the two the page
- * already makes, and inventing a title from the URL segment would mean guessing
- * the capitalisation of a name the taxonomy spells exactly.
- *
- * So those pages are crawlable-through and not indexed, which is strictly better
- * than the 404 they answered before and is deliberately short of where they
- * should end up. Closing it means passing the resolved `category.name` from one
- * cached read to both this and the page.
- */
-export async function generateMetadata({
-  params,
-}: CategoryPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const category = categories.find((entry) => entry.id === slug);
-
-  if (category === undefined) {
-    return { robots: { index: false, follow: true } };
-  }
-
-  const title = `${category.name} — ${SITE_NAME}`;
-  const description = `Browse every ${category.name} product published in the ${SITE_NAME} catalogue, with one clear US dollar price per item.`;
-  const siteUrl = getSiteUrl();
-  const canonical = siteUrl ? `${siteUrl}/c/${category.id}` : undefined;
-
-  return {
-    title,
-    description,
-    robots: { index: true, follow: true },
-    openGraph: {
-      type: 'website',
-      title,
-      description,
-      siteName: SITE_NAME,
-      ...(canonical ? { url: canonical } : {}),
-    },
-    ...(canonical ? { alternates: { canonical } } : {}),
-  };
-}
 
 const SORT_TO_API: Record<CategoryQuery['sort'], CategoryProductsSort> = {
   best: 'newest',
@@ -161,38 +105,106 @@ const EMPTY_PAGE: DepartmentPage = {
  * `unavailable` keeps it apart from an empty department, so the page never
  * reports "nothing published" about a catalogue it could not read.
  */
-async function getDepartmentPage(
-  slug: string,
-  query: CategoryQuery,
-): Promise<DepartmentPage> {
-  const range = activePriceRange(query.band, query.priceMin, query.priceMax);
+const getDepartmentPage = cache(
+  async (slug: string, query: CategoryQuery): Promise<DepartmentPage> => {
+    const range = activePriceRange(query.band, query.priceMin, query.priceMax);
 
-  try {
-    const response = await fetchCategoryProducts(slug, {
-      sort: SORT_TO_API[query.sort],
-      page: query.page,
-      limit: CATEGORY_PRODUCTS_PAGE_SIZE,
-      ...(range.minMinor > 0 ? { minPriceMinor: range.minMinor } : {}),
-      ...(range.maxMinor === Infinity ? {} : { maxPriceMinor: range.maxMinor }),
-    });
+    try {
+      const response = await fetchCategoryProducts(slug, {
+        sort: SORT_TO_API[query.sort],
+        page: query.page,
+        limit: CATEGORY_PRODUCTS_PAGE_SIZE,
+        ...(range.minMinor > 0 ? { minPriceMinor: range.minMinor } : {}),
+        ...(range.maxMinor === Infinity
+          ? {}
+          : { maxPriceMinor: range.maxMinor }),
+      });
 
-    if (response === undefined) {
-      return isDepartmentId(slug)
-        ? { ...EMPTY_PAGE, unavailable: true }
-        : { ...EMPTY_PAGE, missing: true };
+      if (response === undefined) {
+        return isDepartmentId(slug)
+          ? { ...EMPTY_PAGE, unavailable: true }
+          : { ...EMPTY_PAGE, missing: true };
+      }
+
+      return {
+        products: toCategoryProducts(response.products),
+        total: response.total,
+        totalPages: response.totalPages,
+        unavailable: false,
+        missing: false,
+        ...(response.category === undefined
+          ? {}
+          : { scope: response.category }),
+      };
+    } catch {
+      return { ...EMPTY_PAGE, unavailable: true };
     }
+  },
+);
 
-    return {
-      products: toCategoryProducts(response.products),
-      total: response.total,
-      totalPages: response.totalPages,
-      unavailable: false,
-      missing: false,
-      ...(response.category === undefined ? {} : { scope: response.category }),
-    };
-  } catch {
-    return { ...EMPTY_PAGE, unavailable: true };
+/**
+ * The canonical is self-referential, and now there is one of it.
+ *
+ * Between 2026-08-27 and 2026-08-28 this listing had one address per market and
+ * a canonical each, because `/au/c/electronics` and `/ph/c/electronics` were
+ * localized versions of one listing rather than duplicates of it. One storefront
+ * means one address, so the reasoning collapses back to the ordinary case.
+ *
+ * Still `undefined` when `NEXT_PUBLIC_SITE_URL` is unset — `getSiteUrl()`
+ * returns `undefined` rather than guessing a domain, and this omits the field
+ * rather than inventing one.
+ */
+/**
+ * ## Every browsable level is indexed, and it costs no extra request
+ *
+ * A department's name comes from this repository's own 21-entry list. A
+ * `<slug>-<id>` level's name exists only in the producer's seeded taxonomy, so it
+ * has to be asked for — and `getDepartmentPage` is wrapped in React `cache()`,
+ * so asking here and asking again in the page below is **one** fetch per request,
+ * not two. That is what makes indexing these pages free rather than a third
+ * round trip.
+ *
+ * `searchParams` is parsed the same way the page parses it, so both calls share
+ * a cache key. A different query here would silently double the fetch.
+ *
+ * Still `noindex, follow` when neither side can name the level: an untitled page
+ * is not one to offer a crawler, and inventing a title from the URL segment would
+ * mean guessing the capitalisation of a name the taxonomy spells exactly.
+ */
+export async function generateMetadata({
+  params,
+  searchParams,
+}: CategoryPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const department = categories.find((entry) => entry.id === slug);
+  const query = parseCategoryQuery((await searchParams) ?? {});
+  const resolvedName =
+    department?.name ??
+    (await getDepartmentPage(slug, query)).scope?.name ??
+    undefined;
+
+  if (resolvedName === undefined) {
+    return { robots: { index: false, follow: true } };
   }
+
+  const title = `${resolvedName} — ${SITE_NAME}`;
+  const description = `Browse every ${resolvedName} product published in the ${SITE_NAME} catalogue, with one clear US dollar price per item.`;
+  const siteUrl = getSiteUrl();
+  const canonical = siteUrl ? `${siteUrl}/c/${slug}` : undefined;
+
+  return {
+    title,
+    description,
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      siteName: SITE_NAME,
+      ...(canonical ? { url: canonical } : {}),
+    },
+    ...(canonical ? { alternates: { canonical } } : {}),
+  };
 }
 
 /**

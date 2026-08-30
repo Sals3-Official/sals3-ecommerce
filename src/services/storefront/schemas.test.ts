@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -7,6 +8,9 @@ import {
   StorefrontProductResponseSchema,
   StorefrontProductSchema,
 } from './schemas';
+
+/** One path for both readers below. */
+const FIXTURE_PATH = 'test/fixtures/storefront-product-detail.json';
 
 function listItem(overrides: Record<string, unknown> = {}) {
   return {
@@ -241,10 +245,7 @@ describe('StorefrontProductDetailSchema', () => {
  */
 describe('the committed contract fixture', () => {
   it('parses as a detail response with every field intact', () => {
-    const raw = readFileSync(
-      join(process.cwd(), 'test/fixtures/storefront-product-detail.json'),
-      'utf8',
-    );
+    const raw = readFileSync(join(process.cwd(), FIXTURE_PATH), 'utf8');
     const parsed = StorefrontProductResponseSchema.parse(JSON.parse(raw));
 
     expect(parsed.product.images).toHaveLength(2);
@@ -269,5 +270,39 @@ describe('the committed contract fixture', () => {
     expect(parsed.product.variants).toHaveLength(2);
     expect(parsed.product.specs?.brand).toBe('Sals3 Basics');
     expect(parsed.product.currency).toBe('USD');
+  });
+});
+
+/**
+ * The fingerprint of the committed fixture, asserted **identically in
+ * `sals3-portal`**.
+ *
+ * ## Why a hash, and what it does and does not catch
+ *
+ * The two copies are documented as committed identically and drifted anyway: this
+ * one gained the paragraph `runs` field and the other did not, for eight days,
+ * because each repository's test only ever compared its own copy against its own
+ * side of the contract. Neither could see the other.
+ *
+ * A hash cannot fix that on its own — nothing here can read the sibling
+ * repository. What it does is make each copy **tamper-evident**: editing the
+ * fixture without updating this literal fails immediately, and the literal is
+ * then visibly different from the sibling's, which is a two-second check in
+ * review instead of a diff nobody runs.
+ *
+ * So changing the fixture is a **two-repository change, and both hashes move in
+ * the same pair of commits**. If you are reading this because the assertion
+ * failed and you only meant to edit one side, that is the answer.
+ */
+const FIXTURE_SHA256 =
+  'e7600cac48870be3d8978dac239847bb4c1605f7dab06229ef21e0cecd605f19';
+
+describe('the committed fixture is the same bytes in both repositories', () => {
+  it('has the fingerprint sals3-portal asserts too', () => {
+    const bytes = readFileSync(join(process.cwd(), FIXTURE_PATH));
+
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(
+      FIXTURE_SHA256,
+    );
   });
 });

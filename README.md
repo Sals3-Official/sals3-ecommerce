@@ -1441,12 +1441,25 @@ sends it. `CategoryBreadcrumb` gained `ancestors`, so a buyer who lands on
 `/c/paper-products-956` can climb out of it — without that, the feature would let
 someone reach a level and strand them there.
 
-**Known limitation, stated rather than hidden:** a level below a department is
-`noindex, follow`. `generateMetadata` resolves its title from the 21-department
-list, and naming a deeper level there would need a producer round trip on top of
-the two the page already makes. Those pages browse correctly and are crawlable
-through; they are not indexed yet. Closing it means threading one cached read
-through both.
+**Every browsable level is indexed, and it costs no extra request.** A
+department's name comes from this repository's 21-entry list. A `<slug>-<id>`
+level's name exists only in the producer's seeded taxonomy, so it is asked for —
+and `getDepartmentPage` is wrapped in React `cache()`, so `generateMetadata`
+asking and the page asking again is **one** fetch per request rather than two.
+`generateMetadata` parses `searchParams` exactly the way the page does, because a
+different query would silently double the fetch instead of sharing a cache key.
+
+Still `noindex, follow` when neither side can name the level: an untitled page is
+not one to offer a crawler, and inventing a title from the URL segment would mean
+guessing the capitalisation of a name the taxonomy spells exactly.
+
+**The shared contract fixture carries a fingerprint now.** `FIXTURE_SHA256` in
+`schemas.test.ts` is asserted identically in `sals3-portal`. The two copies are
+documented as byte-identical and had drifted — this one carried the paragraph
+`runs` field and the portal's did not, and neither test could see it, because each
+compares its own copy against its own side of the contract. A fixture change is a
+**two-repository change and both hashes move in the same pair of commits**; the
+hash makes each copy tamper-evident and gives both sides one literal to compare.
 
 ### The PDP breadcrumb links the department (2026-08-31)
 
