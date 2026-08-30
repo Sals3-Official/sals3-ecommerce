@@ -339,6 +339,44 @@ describe('Product page', () => {
   });
 
   /**
+   * Owner decision 2026-08-31: the two tables about one product sit together.
+   *
+   * Asserted on DOM order rather than on a class, because the requirement is
+   * "supplier details reads straight after specifications" — how that is laid
+   * out may change, and this should not fail when it does. What must fail is
+   * the description or the reviews sliding back between them.
+   */
+  it('reads specifications, then supplier details, then the reviews', async () => {
+    mockFetch({
+      productOverrides: {
+        specs: { weightGrams: 4200 },
+        specification: [{ label: 'Material', value: 'ABS plastic' }],
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+
+    const order = screen
+      .getAllByRole('heading')
+      .map((heading) => heading.textContent ?? '')
+      .filter((text) =>
+        /product specifications|supplier details|ratings and reviews/i.test(
+          text,
+        ),
+      );
+
+    expect(order).toEqual([
+      'Product specifications',
+      'Supplier details',
+      'Ratings and reviews',
+    ]);
+  });
+
+  /**
    * Two sections, two provenance lines. One footnote cannot cover both: "as
    * reported by the supplier" becomes false the moment a seller-entered
    * attribute appears under it.

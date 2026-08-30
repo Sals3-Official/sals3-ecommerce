@@ -385,13 +385,27 @@ export default async function ProductPage({
             }
           />
           <div className="mx-auto w-full max-w-6xl px-6">
+            {/*
+              Supplier details follows specifications directly, by owner
+              decision 2026-08-31. The two are the same kind of thing read back
+              to back — what the seller declared, then what the supplier
+              reported — and the provenance line under each is what keeps them
+              apart. Putting the description and the reviews between them made a
+              buyer scroll past both to compare two tables about one product.
+
+              It stays on the 1152px measure rather than joining the white
+              full-bleed band above it. The band is the page's one rhythm break
+              and its second background colour; a second full-bleed white
+              section would merge with the first and read as one enormous table
+              with two headings.
+            */}
+            <ProductSupplierDetails specs={detail.specs} />
             <ProductDescription blocks={remainingBlocks} />
             <ProductReviews
               rating={detail.rating}
               breakdown={detail.ratingBreakdown}
               reviews={reviews}
             />
-            <ProductSupplierDetails specs={detail.specs} />
             <RelatedProducts products={relatedProducts} />
             <ProductSchema detail={detail} />
             <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
