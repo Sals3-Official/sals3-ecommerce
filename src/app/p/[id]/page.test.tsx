@@ -412,6 +412,22 @@ describe('Product page', () => {
     expect(grids[0]?.className).toBe(grids[1]?.className);
     expect(grids[0]?.className).toContain('auto-fill');
     expect(grids[0]?.className).not.toContain('auto-fit');
+
+    /*
+      And no rule under a row. The browser fills these columns, so the last one
+      is orphaned whenever the attribute count does not divide by the column
+      count — thirteen specifications across three columns leaves one alone on a
+      fifth row, and a rule under it hangs a row lower than its neighbours at a
+      third of the width. There is no column count that divides every product,
+      so the only arrangement that cannot go ragged is the one with no rule to
+      go ragged.
+    */
+    const cells = [...grids.flatMap((list) => [...list.children])];
+
+    expect(cells.length).toBeGreaterThan(0);
+    cells.forEach((cell) => {
+      expect(cell.className.split(' ')).not.toContain('border-b');
+    });
   });
 
   /**
