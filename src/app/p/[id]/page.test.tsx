@@ -381,6 +381,40 @@ describe('Product page', () => {
   });
 
   /**
+   * The two fact tables must render at the same column width, on every product.
+   *
+   * They already carried an identical class and still did not: `auto-fit`
+   * deletes tracks with nothing in them and stretches the survivors, so six
+   * specification attributes filled three columns while two supplier rows
+   * collapsed the third and stretched to half the band. Same class, same page,
+   * two visibly different tables — which is why this asserts the resolved
+   * class rather than trusting that the two strings look alike.
+   */
+  it('renders both fact tables on one grid that does not collapse', async () => {
+    mockFetch({
+      productOverrides: {
+        specs: { weightGrams: 4200 },
+        specification: [{ label: 'Material', value: 'ABS plastic' }],
+      },
+    });
+
+    const { container } = renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+
+    const grids = [...container.querySelectorAll('dl')].filter((list) =>
+      list.className.includes('grid-cols-1'),
+    );
+
+    expect(grids).toHaveLength(2);
+    expect(grids[0]?.className).toBe(grids[1]?.className);
+    expect(grids[0]?.className).toContain('auto-fill');
+    expect(grids[0]?.className).not.toContain('auto-fit');
+  });
+
+  /**
    * Two sections, two provenance lines. One footnote cannot cover both: "as
    * reported by the supplier" becomes false the moment a seller-entered
    * attribute appears under it.

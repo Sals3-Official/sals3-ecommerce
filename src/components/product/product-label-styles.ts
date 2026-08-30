@@ -54,3 +54,31 @@ export const PRODUCT_MICRO_LABEL = 'text-[13.5px] font-medium text-ink-muted';
  * render a dangling colon.
  */
 export const PRODUCT_MICRO_LABEL_VALUE = 'font-bold text-ink';
+
+/**
+ * The two-column fact table shared by Product specifications and Supplier
+ * details — the `dl` and one row of it.
+ *
+ * Exported rather than written twice because the requirement is that the two
+ * tables **match**, and two copies of a class string is how they stop matching.
+ * They were identical by coincidence until 2026-08-31 and still rendered at
+ * different column widths, which is the other half of this note.
+ *
+ * ## `auto-fill`, never `auto-fit`
+ *
+ * `auto-fit` removes tracks with nothing in them and lets the survivors
+ * stretch, so a table's column width ends up depending on how many facts the
+ * payload happened to carry: six specification attributes filled three columns
+ * at 347px, while two supplier rows collapsed the third track and stretched the
+ * remaining two to 536px. Same class, same page, two visibly different tables.
+ *
+ * `auto-fill` keeps the empty track, so two rows sit in the first two columns
+ * of three at the width every other table uses. Below `sm` both rules collapse
+ * to a single column and neither applies.
+ */
+export const PRODUCT_FACT_GRID =
+  'mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))]';
+
+/** One label/value pair. `8.625rem` is the label column both tables share. */
+export const PRODUCT_FACT_ROW =
+  'grid grid-cols-[minmax(0,8.625rem)_minmax(0,1fr)] gap-4 border-b border-border py-2.5';

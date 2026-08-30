@@ -1,5 +1,6 @@
 import type { ProductSpecification, ProductSpecs } from '@/lib/product-detail';
 import Sals3SkuLine from './Sals3SkuLine';
+import { PRODUCT_FACT_GRID, PRODUCT_FACT_ROW } from './product-label-styles';
 
 type ProductSpecificationsProps = {
   /** Seller-declared category attributes, in the order the portal sent them. */
@@ -90,12 +91,9 @@ export default function ProductSpecifications({
           </h2>
           <Sals3SkuLine fallbackSku={sals3Sku} />
         </div>
-        <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
+        <dl className={PRODUCT_FACT_GRID}>
           {rows.map((row) => (
-            <div
-              key={row.label}
-              className="grid grid-cols-[minmax(0,8.625rem)_minmax(0,1fr)] gap-4 border-b border-border py-2.5"
-            >
+            <div key={row.label} className={PRODUCT_FACT_ROW}>
               <dt className="text-sm text-ink-subtle">{row.label}</dt>
               <dd className="text-sm text-ink">{row.value}</dd>
             </div>
