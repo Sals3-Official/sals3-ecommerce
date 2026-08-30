@@ -1198,7 +1198,8 @@ excluded by the active filters shows "No product here matches all of those
 filters" with per-filter "Remove" chips. `CategoryBreadcrumbSchema` emits
 `BreadcrumbList` JSON-LD (gated on `NEXT_PUBLIC_SITE_URL`, unset in this repo
 today) — safe now that `Home` → `All categories` → the category are all real,
-linkable routes, unlike the PDP breadcrumb.
+linkable routes. The PDP breadcrumb now links the same levels — see
+"The PDP breadcrumb links the department" below.
 
 ## Primary actions: gradient and loaders
 
@@ -1392,9 +1393,49 @@ combination is not purchasable.
 
 Rebuilt 2026-08-21 to the approved **PDP Redesign v3.1** shell.
 
+### The PDP breadcrumb links the department (2026-08-31)
+
+`Home / Apparel & Accessories / Clothing / Pants / <product>` rendered the three
+category levels as **dead `<span>`s** on the live jeans PDP, while
+`/c/apparel-accessories` answered 200 with **107 published products** behind it.
+
+`product-breadcrumb.ts` had been right and went stale. Its own doc said
+`/c/[category]` and `/categories` "do not exist as routes", which was true when
+it was written and stopped being true when the department page shipped — so the
+rule it enforced (an `href` only where a real URL exists) kept refusing a level
+that had since become routable. Two other comments repeated the same claim, in
+`BreadcrumbSchema.tsx` and `CategoryBreadcrumb.tsx`; all three are corrected.
+
+The trail is now `Home / All categories / <L1 department> / … / <product>`,
+matching `CategoryBreadcrumb` so the two surfaces describe one hierarchy the same
+way.
+
+**The department link is a lookup, not a slugifier.** `departmentIdForName` in
+`src/lib/departments.ts` maps a display name to its `/c/[slug]` segment from the
+same 21-department list `isDepartmentId` and every browse surface already use.
+`sals3-portal`'s `slugBaseFromTitle` is the forward direction on its side and its
+own doc says no expression inverts it, so a second slug implementation here would
+be a drift generator. A name that resolves to nothing renders as text.
+
+**Only the first category segment is eligible.** That is the only position an L1
+department can occupy; a deeper segment sharing a department's name is a different
+category, and linking it would send a buyer where the product is not. So
+`Business & Industrial > Electronics > Cable` links the first and not the second.
+
+**The levels below the department stay text, now for a live reason.**
+`/c/clothing` and `/c/pants` were both verified to answer **404** — only the 21
+departments are routable — and `categoryPath` is a display string carrying no
+ancestor slug. A CJ-mirrored product, whose whole supplier path sits in one
+segment, matches no department and is left unlinked without anything else having
+to notice.
+
+`BreadcrumbSchema` needed no change: it emits `item` for any entry with an `href`,
+so the JSON-LD gained the new levels on its own — which is exactly what
+`product-breadcrumb.ts` predicted it would.
+
 | #   | Section                                      | Band              |
 | --- | -------------------------------------------- | ----------------- |
-| 1   | Breadcrumb                                   | surface           |
+| 1   | Breadcrumb — see below                       | surface           |
 | 2   | Gallery 4:5 + the sticky record panel        | surface           |
 | 3   | **Product specifications** — seller-declared | white, full-bleed |
 | 4   | **About this product** — description, 70ch   | surface           |

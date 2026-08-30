@@ -772,7 +772,7 @@ describe('Product page', () => {
     });
   });
 
-  it('links only Home in the breadcrumb and never guesses a BreadcrumbList URL', async () => {
+  it('never guesses a breadcrumb URL for a level with no route', async () => {
     mockFetch({
       productOverrides: {
         categoryPath: "Apparel > Outerwear > Men's Jackets",
@@ -787,10 +787,12 @@ describe('Product page', () => {
 
     const nav = screen.getByRole('navigation', { name: /breadcrumb/i });
 
-    // `/c/[category]` does not exist and `categoryPath` carries no ancestor
-    // slug, so every level except Home is text rather than a dead link.
-    expect(nav.querySelectorAll('a')).toHaveLength(1);
-    expect(nav.querySelector('a')).toHaveAttribute('href', '/');
+    // `Apparel` alone is not one of the 21 departments, so it resolves to no
+    // route and stays text — as do the levels below it, which have no slug on
+    // the payload at all. Only Home and All categories are links here.
+    expect(
+      [...nav.querySelectorAll('a')].map((a) => a.getAttribute('href')),
+    ).toEqual(['/', '/categories']);
     expect(screen.getByText('Outerwear')).toBeVisible();
 
     const breadcrumb = [
@@ -799,7 +801,7 @@ describe('Product page', () => {
       .map((script) => JSON.parse(script.textContent ?? '{}'))
       .find((entry) => entry['@type'] === 'BreadcrumbList');
 
-    expect(breadcrumb.itemListElement).toHaveLength(5);
+    expect(breadcrumb.itemListElement).toHaveLength(6);
     // No NEXT_PUBLIC_SITE_URL in tests, so no absolute URL can be built and no
     // `item` is emitted at all — rather than pointing one at a guess.
     expect(
@@ -807,6 +809,46 @@ describe('Product page', () => {
         (item: { item?: string }) => item.item === undefined,
       ),
     ).toBe(true);
+  });
+
+  /**
+   * The real jeans PDP, read off production on 2026-08-31: `Apparel &
+   * Accessories / Clothing / Pants` rendered as three dead `<span>`s while
+   * `/c/apparel-accessories` was live with 107 published products behind it. The
+   * breadcrumb had been correct when written and the route it was waiting for
+   * shipped without it.
+   */
+  it('links the L1 department in the breadcrumb, and only that level', async () => {
+    mockFetch({
+      productOverrides: {
+        categoryPath: 'Apparel & Accessories > Clothing > Pants',
+      },
+    });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+
+    const nav = screen.getByRole('navigation', { name: /breadcrumb/i });
+
+    expect(
+      [...nav.querySelectorAll('a')].map((a) => [
+        a.textContent,
+        a.getAttribute('href'),
+      ]),
+    ).toEqual([
+      ['Home', '/'],
+      ['All categories', '/categories'],
+      ['Apparel & Accessories', '/c/apparel-accessories'],
+    ]);
+
+    // Both answer 404 on production — only departments are routable — so they
+    // stay as text rather than becoming dead links.
+    ['Clothing', 'Pants'].forEach((name) => {
+      expect(screen.getByText(name).tagName).toBe('SPAN');
+    });
   });
 
   it('adds the selected no-option variant id to the cart', async () => {

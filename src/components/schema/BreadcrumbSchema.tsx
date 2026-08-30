@@ -14,11 +14,20 @@ type BreadcrumbSchemaProps = {
  *
  * Every `ListItem` carries a `name` and a `position`, which is valid on its own —
  * Google documents a name-only final item. `item` is added only for entries with
- * a genuine URL: today Home and the product itself. Intermediate category levels
- * have no route (`/c/[category]` does not exist) and no slug on the payload, so
- * pointing them anywhere would be a guessed structured-data value — the failure
- * mode that risks a manual action against the whole domain rather than one bad
- * link.
+ * a genuine URL: Home, `All categories`, the **L1 department**, and the product
+ * itself.
+ *
+ * The levels below the department still carry no `item`. `categoryPath` is a
+ * display string with no slug for any ancestor, and only the 21 L1 departments
+ * are routable — `/c/clothing` and `/c/pants` were both verified to answer 404 —
+ * so pointing them anywhere would be a guessed structured-data value, the
+ * failure mode that risks a manual action against the whole domain rather than
+ * one bad link.
+ *
+ * This comment used to say `/c/[category]` does not exist. It does now, and the
+ * department page has 107 published products behind it; nothing in this file
+ * changed to pick that up, because `product-breadcrumb.ts` decides which entries
+ * have an `href` and this only reads them.
  *
  * With `NEXT_PUBLIC_SITE_URL` unset there is no way to build an absolute URL, so
  * no `item` is emitted at all and the list degrades to names. That mirrors how
