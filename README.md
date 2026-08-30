@@ -1393,6 +1393,61 @@ combination is not purchasable.
 
 Rebuilt 2026-08-21 to the approved **PDP Redesign v3.1** shell.
 
+### Every breadcrumb level is a link (2026-08-31)
+
+Owner decision, the day after the department link shipped: a breadcrumb that
+shows four levels and links one is not a breadcrumb. On the live
+`Cash Savings Book` page, `Office Supplies / General Office Supplies / Paper
+Products / Notebooks & Notepads` had one link and three plain spans.
+
+**The addresses come from the producer, not from here.** A level's id lives on its
+own `sals3_categories` row and no slug can be inverted back to it, so the portal
+resolves every level and sends `categoryTrail`: one entry per level, each with its
+own `/c/[slug]` where the taxonomy can address it. `categoryPath` stays beside it
+for anything that reads the display string.
+
+**The trail wins whole, or not at all.** `categoryEntries` takes the producer's
+trail if it has one and otherwise falls back to linking the L1 department from
+`categoryPath` — the previous behaviour, deliberately kept, because the two
+repositories deploy independently and during that window a breadcrumb should keep
+the one link it already had. What it never does is mix them: a page whose first
+crumb came from one contract and whose second came from another would hide their
+disagreement.
+
+An entry with no `slug` renders as text. The producer omits one it cannot address
+— a CJ-mirrored path, or a level the seeded taxonomy does not carry — and a
+guessed link would 404.
+
+### `/c/[slug]` browses any addressed level
+
+The page no longer gates on `isDepartmentId`. It cannot: this repository holds 21
+department names and the taxonomy has 5,595 rows, so it is unable to tell a real
+`<slug>-<id>` from an invented one. **The producer is the authority for those**,
+and the page reads its answer.
+
+That splits what a producer 404 means, and the slug says which:
+
+- for one of the 21 departments, this page's own list already said the address is
+  real, so a 404 is **deployment skew** and still renders the outage page —
+  putting "No such category" on every real department page while the two
+  repositories were out of step would be the most misleading thing it could say;
+- for any other slug, the producer is the only judge, so a 404 is **`notFound()`**
+  — rendering an empty category would tell a buyer an address they made up exists.
+
+The heading comes from the producer's `category.name`, read from the seeded
+taxonomy rather than de-slugified from the URL, with the local department list as
+the fallback so a department still renders during the window before the producer
+sends it. `CategoryBreadcrumb` gained `ancestors`, so a buyer who lands on
+`/c/paper-products-956` can climb out of it — without that, the feature would let
+someone reach a level and strand them there.
+
+**Known limitation, stated rather than hidden:** a level below a department is
+`noindex, follow`. `generateMetadata` resolves its title from the 21-department
+list, and naming a deeper level there would need a producer round trip on top of
+the two the page already makes. Those pages browse correctly and are crawlable
+through; they are not indexed yet. Closing it means threading one cached read
+through both.
+
 ### The PDP breadcrumb links the department (2026-08-31)
 
 `Home / Apparel & Accessories / Clothing / Pants / <product>` rendered the three

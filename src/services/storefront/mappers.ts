@@ -231,6 +231,9 @@ export function toProductDetail(
     ...(product.categoryPath === undefined
       ? {}
       : { categoryPath: product.categoryPath }),
+    ...(product.categoryTrail === undefined
+      ? {}
+      : { categoryTrail: product.categoryTrail }),
     price: money(product.priceMinor, product.currency),
     ...(oldPrice === undefined ? {} : { oldPrice }),
     ...(product.ratingLine === undefined

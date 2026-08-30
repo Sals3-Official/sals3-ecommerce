@@ -34,18 +34,32 @@ import type { ProductDetail } from '@/lib/product-detail';
  * levels render as text and are omitted from the JSON-LD rather than pointed at
  * a 404.
  *
- * ## Only the first segment is eligible, and it is a lookup
+ * ## Every level is linked when the producer addresses it
  *
- * `departmentIdForName` resolves a name against the 21-department list — the same
- * list every other browse surface uses, so there is no second slug
- * implementation to drift. It is applied to the **first** middle segment alone,
- * because that is the only position an L1 department can occupy; a deeper
- * segment that happened to share a department's name would be a different
- * category, and linking it would send a buyer somewhere the product is not.
+ * `categoryTrail` arrives with one entry per level, each carrying its own
+ * `/c/[slug]` where the taxonomy can address it — owner decision 2026-08-31,
+ * because a breadcrumb that shows four levels and links one is not a
+ * breadcrumb. The producer resolves those addresses from the seeded taxonomy,
+ * which is the only place they exist: a level's id is on its own
+ * `sals3_categories` row, and no slug can be inverted back to it here.
  *
- * A name that resolves to nothing renders as text. That is what keeps a
- * CJ-mirrored product — whose entire supplier path sits in one segment — off a
+ * An entry with no `slug` renders as text. That is what keeps a CJ-mirrored
+ * product — whose entire supplier path sits in one segment, never seeded — off a
  * route that would 404.
+ *
+ * ## The fallback is the old behaviour, deliberately kept
+ *
+ * A producer that predates `categoryTrail` sends `categoryPath` alone, and this
+ * still links the L1 department from it by looking the name up in the
+ * 21-department list. Not defensiveness: the two repositories deploy
+ * independently, so there is always a window where the storefront is ahead, and
+ * during it a breadcrumb should keep the one link it already had rather than
+ * lose it.
+ *
+ * In that path only the **first** middle segment is eligible, because that is
+ * the only position an L1 department can occupy — a deeper segment sharing a
+ * department's name is a different category, and linking it would send a buyer
+ * somewhere the product is not.
  */
 
 export type BreadcrumbEntry = {
@@ -66,6 +80,37 @@ function pathSegments(categoryPath: string): string[] {
     .split(PATH_SEPARATOR)
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
+}
+
+/**
+ * The category levels, from the producer's addresses when it sends them.
+ *
+ * Two sources, and the newer one wins whole rather than per-level: mixing them
+ * would mean a page whose first crumb came from one contract and whose second
+ * came from another, and a disagreement between them would be invisible.
+ */
+function categoryEntries(
+  detail: ProductDetail,
+  fallbackNames: string[],
+): BreadcrumbEntry[] {
+  const trail = detail.categoryTrail;
+
+  if (trail !== undefined && trail.length > 0) {
+    return trail.map((entry) =>
+      entry.slug === undefined
+        ? { name: entry.name }
+        : { name: entry.name, href: `/c/${entry.slug}` },
+    );
+  }
+
+  return fallbackNames.map((name, index) => {
+    // First segment only — see the note above.
+    const departmentId = index === 0 ? departmentIdForName(name) : undefined;
+
+    return departmentId === undefined
+      ? { name }
+      : { name, href: `/c/${departmentId}` };
+  });
 }
 
 /**
@@ -96,14 +141,7 @@ export function breadcrumbTrail(detail: ProductDetail): BreadcrumbEntry[] {
   return [
     { name: 'Home', href: '/' },
     { name: 'All categories', href: '/categories' },
-    ...middle.map((name, index) => {
-      // First segment only — see the note above.
-      const departmentId = index === 0 ? departmentIdForName(name) : undefined;
-
-      return departmentId === undefined
-        ? { name }
-        : { name, href: `/c/${departmentId}` };
-    }),
+    ...categoryEntries(detail, middle),
     { name: detail.title },
   ];
 }

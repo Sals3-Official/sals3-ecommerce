@@ -16,6 +16,94 @@ function detail(overrides: Partial<ProductDetail> = {}): ProductDetail {
 }
 
 describe('breadcrumbTrail', () => {
+  /**
+   * The real `Cash Savings Book` PDP: four levels, three of them plain text
+   * before the producer started addressing them. Owner: a breadcrumb that shows
+   * four levels and links one is not a breadcrumb.
+   */
+  it('links every level the producer addressed', () => {
+    const trail = breadcrumbTrail(
+      detail({
+        title: 'Cash Savings Book',
+        categoryPath:
+          'Office Supplies > General Office Supplies > Paper Products > Notebooks & Notepads',
+        categoryTrail: [
+          { name: 'Office Supplies', slug: 'office-supplies' },
+          {
+            name: 'General Office Supplies',
+            slug: 'general-office-supplies-932',
+          },
+          { name: 'Paper Products', slug: 'paper-products-956' },
+          { name: 'Notebooks & Notepads', slug: 'notebooks-notepads-961' },
+        ],
+      }),
+    );
+
+    expect(trail).toEqual([
+      { name: 'Home', href: '/' },
+      { name: 'All categories', href: '/categories' },
+      { name: 'Office Supplies', href: '/c/office-supplies' },
+      {
+        name: 'General Office Supplies',
+        href: '/c/general-office-supplies-932',
+      },
+      { name: 'Paper Products', href: '/c/paper-products-956' },
+      { name: 'Notebooks & Notepads', href: '/c/notebooks-notepads-961' },
+      { name: 'Cash Savings Book' },
+    ]);
+  });
+
+  it('renders an unaddressed level as text, never as a dead link', () => {
+    const trail = breadcrumbTrail(
+      detail({
+        categoryPath: 'Men Clothing > Pants',
+        // A CJ-mirrored path: the producer knows it cannot address these.
+        categoryTrail: [{ name: 'Men Clothing' }, { name: 'Pants' }],
+      }),
+    );
+
+    expect(trail.filter((entry) => entry.href?.startsWith('/c/'))).toEqual([]);
+    expect(trail.map((entry) => entry.name)).toContain('Pants');
+  });
+
+  it('prefers the producer trail whole, rather than mixing it with the fallback', () => {
+    const trail = breadcrumbTrail(
+      detail({
+        // The display string still says Apparel & Accessories, which the fallback
+        // would have linked. The trail says it is not addressable, and the trail
+        // wins — a page built from two contracts at once hides their disagreement.
+        categoryPath: 'Apparel & Accessories > Clothing',
+        categoryTrail: [
+          { name: 'Apparel & Accessories' },
+          { name: 'Clothing' },
+        ],
+      }),
+    );
+
+    expect(trail.filter((entry) => entry.href?.startsWith('/c/'))).toEqual([]);
+  });
+
+  it('keeps the old department link when the producer sends no trail', () => {
+    // The two repositories deploy independently, so there is always a window
+    // where this storefront is ahead. During it a breadcrumb should keep the one
+    // link it already had rather than lose it.
+    const trail = breadcrumbTrail(
+      detail({ categoryPath: 'Apparel & Accessories > Clothing > Pants' }),
+    );
+
+    expect(trail.filter((entry) => entry.href?.startsWith('/c/'))).toEqual([
+      { name: 'Apparel & Accessories', href: '/c/apparel-accessories' },
+    ]);
+  });
+
+  it('ignores an empty trail rather than dropping every level', () => {
+    const trail = breadcrumbTrail(
+      detail({ categoryPath: 'Apparel & Accessories', categoryTrail: [] }),
+    );
+
+    expect(trail.map((entry) => entry.name)).toContain('Apparel & Accessories');
+  });
+
   it('links only what has a route when the first segment is no department', () => {
     const trail = breadcrumbTrail(
       detail({ categoryPath: "Apparel > Outerwear > Men's Jackets" }),
