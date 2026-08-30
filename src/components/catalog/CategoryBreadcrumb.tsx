@@ -5,8 +5,12 @@ type CategoryBreadcrumbProps = {
 };
 
 /** Every link here is real — `/categories` and `/c/[slug]` both exist — so
- * this can safely pair with `BreadcrumbList` JSON-LD, unlike the PDP's
- * breadcrumb (only `Home` is linkable there; see the PDP redesign notes).
+ * this can safely pair with `BreadcrumbList` JSON-LD.
+ *
+ * The PDP's breadcrumb now shares that shape: `product-breadcrumb.ts` links
+ * Home, `All categories` and the L1 department, and leaves the levels below it as
+ * text because only departments are routable. This note used to say only `Home`
+ * was linkable over there, which stopped being true the day this route shipped.
  *
  * Home is `/`. It was the market's own home for the day the markets existed,
  * because `/` was then a dispatcher that re-resolved the destination and could

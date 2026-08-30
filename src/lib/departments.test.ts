@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { departmentsOrTaxonomy, isDepartmentId } from './departments';
+import {
+  departmentIdForName,
+  departmentsOrTaxonomy,
+  isDepartmentId,
+} from './departments';
 import { categories as taxonomyDepartments } from './home-placeholder-data';
 
 const LEAF_FEED = [
@@ -50,5 +54,43 @@ describe('departmentsOrTaxonomy', () => {
     result.pop();
 
     expect(taxonomyDepartments).toHaveLength(21);
+  });
+});
+
+describe('departmentIdForName', () => {
+  it('turns a department name into its browse slug', () => {
+    // The PDP breadcrumb's first category segment is exactly this string, and
+    // `/c/apparel-accessories` is a live route with 107 products behind it.
+    expect(departmentIdForName('Apparel & Accessories')).toBe(
+      'apparel-accessories',
+    );
+    expect(departmentIdForName('Food, Beverages & Tobacco')).toBe(
+      'food-beverages-tobacco',
+    );
+  });
+
+  it('tolerates the whitespace a display path can carry', () => {
+    expect(departmentIdForName('  Apparel & Accessories  ')).toBe(
+      'apparel-accessories',
+    );
+  });
+
+  it('answers undefined for anything that is not one of the 21', () => {
+    // `Clothing` and `Pants` are real taxonomy levels and neither is a
+    // department, so neither has a route. Returning a slug for them would point
+    // a buyer at a 404 — both were verified to 404 on production.
+    expect(departmentIdForName('Clothing')).toBe(undefined);
+    expect(departmentIdForName('Pants')).toBe(undefined);
+    // A CJ-mirrored product carries its whole supplier path in one segment.
+    expect(departmentIdForName('Men Clothing > Pants > Jeans')).toBe(undefined);
+    expect(departmentIdForName('')).toBe(undefined);
+  });
+
+  it('agrees with isDepartmentId in both directions', () => {
+    // One list, two readings. If these ever disagree, a taxonomy change landed
+    // on one direction only.
+    ['apparel-accessories', 'electronics', 'baby-toddler'].forEach((id) => {
+      expect(isDepartmentId(id)).toBe(true);
+    });
   });
 });
