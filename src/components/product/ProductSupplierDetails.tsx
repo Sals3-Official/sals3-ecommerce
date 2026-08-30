@@ -22,12 +22,22 @@ function millimetresToCentimetres(value: number): string {
 /**
  * The product's physical and identifier facts, as the supplier reported them.
  *
- * ## Deliberately demoted
+ * ## It used to be deliberately demoted
  *
- * A 16px bold heading against the other sections' 20px display type, and
- * 13.5px rows against their 14px. These are claims Sals3 **repeats** rather
- * than facts it holds, and the hierarchy should say so before the footnote
- * does. Product specifications — the seller's own declarations — outranks this.
+ * A 16px bold heading against the other sections' 20px display type, 13.5px
+ * rows against their 14px, and a rounded card of its own on the page's grey
+ * ground. The reasoning was that these are claims Sals3 **repeats** rather than
+ * facts it holds, so the hierarchy should say so before the footnote does.
+ *
+ * The owner overruled it on 2026-08-31 — *"sobrang awkward ng design"* — and
+ * they were right about what it looked like: the card sat below a full-bleed
+ * white band with a strip of grey between them, so the page read as a table,
+ * then a gap, then a smaller table in a box, for two halves of one subject.
+ * It now takes the same format as `ProductSpecifications` — same heading size,
+ * same grid, same row rule — in a band that shares the hairline above it.
+ *
+ * What that costs: the footnote below is now the only thing separating a
+ * supplier's claim from a seller's declaration. See the note beside it.
  *
  * ## No SKU row
  *
@@ -93,32 +103,44 @@ export default function ProductSupplierDetails({
   if (rows.length === 0) return null;
 
   return (
-    <section className="mt-10">
-      <h2 className="font-display text-base font-bold tracking-[-0.01em] text-ink">
-        Supplier details
-      </h2>
-      <dl className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border bg-white">
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className="flex flex-col gap-0.5 px-4.5 py-3 sm:flex-row sm:gap-4"
-          >
-            <dt className="text-[13.5px] text-ink-subtle sm:w-55 sm:shrink-0">
-              {row.label}
-            </dt>
-            <dd className="text-[13.5px] text-ink tabular-nums">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-      {/*
-        Provenance, and the one sentence that must not appear over
-        `ProductSpecifications`: these values are what the supplier reported,
-        and the storefront is repeating a claim it did not measure.
-      */}
-      <p className="mt-2 max-w-[80ch] text-xs leading-relaxed text-ink-subtle">
-        As reported by the supplier. Weight and dimensions are the packed
-        parcel, not the product itself.
-      </p>
+    /*
+      `border-b` only. The band above closes with its own bottom border, so the
+      two share one hairline instead of stacking two, and the pair reads as one
+      white region divided rather than as two slabs with a grey seam.
+    */
+    <section className="border-b border-border bg-white">
+      <div className="mx-auto w-full max-w-6xl px-6 py-9">
+        <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
+          Supplier details
+        </h2>
+        <dl className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-[minmax(0,8.625rem)_minmax(0,1fr)] gap-4 border-b border-border py-2.5"
+            >
+              <dt className="text-sm text-ink-subtle">{row.label}</dt>
+              <dd className="text-sm text-ink tabular-nums">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {/*
+          Provenance, and now the **only** thing keeping these two tables apart.
+
+          It was never carrying that alone: the heading and the rows were a size
+          smaller than the section above, so the hierarchy said "repeated, not
+          held" before this sentence did. The owner removed both the demotion
+          and the specifications footnote on 2026-08-31, which leaves one
+          sentence doing the whole job — so it must stay directly under this
+          grid, and it must never be moved, shortened to "as reported", or
+          allowed to sit where it could read as covering the seller's
+          declarations above.
+        */}
+        <p className="mt-4 max-w-[80ch] text-xs leading-relaxed text-ink-subtle">
+          As reported by the supplier. Weight and dimensions are the packed
+          parcel, not the product itself.
+        </p>
+      </div>
     </section>
   );
 }

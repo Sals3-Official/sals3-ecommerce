@@ -35,6 +35,12 @@ describe('ProductSpecifications', () => {
    * The whole reason this section is separate from Supplier details. Carrying
    * the supplier's provenance line over the seller's own declarations would
    * misattribute them to CJ.
+   *
+   * This used to assert the presence of "Entered by the seller against this
+   * category's attribute set." too. The owner removed that line on 2026-08-31,
+   * and the removal is not what this test is for: the half that matters is the
+   * absence below, and it matters **more** now that the two sections share a
+   * format and a white region with nothing but one sentence between them.
    */
   it('never claims the values were reported by the supplier', () => {
     render(
@@ -43,11 +49,12 @@ describe('ProductSpecifications', () => {
       />,
     );
 
-    expect(
-      screen.getByText(/entered by the seller against this category/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Cotton corduroy')).toBeInTheDocument();
     expect(
       screen.queryByText(/as reported by the supplier/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/entered by the seller against this category/i),
     ).not.toBeInTheDocument();
   });
 

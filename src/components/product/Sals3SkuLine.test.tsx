@@ -14,7 +14,7 @@ vi.mock('next/navigation', async (importOriginal) => {
 });
 
 describe('Sals3SkuLine', () => {
-  it('prints the resolved code with its label and its sentence', () => {
+  it('prints the resolved code with its label', () => {
     render(
       <SelectedSkuProvider initialSku="S3V-463ADA8A9E11">
         <Sals3SkuLine />
@@ -26,7 +26,7 @@ describe('Sals3SkuLine', () => {
   });
 
   /** No code, no row. A "—" would claim we recorded an unknown one. */
-  it('renders nothing at all when nothing is selected', () => {
+  it('renders nothing when the product has no code at all', () => {
     const { container } = render(
       <SelectedSkuProvider>
         <Sals3SkuLine />
@@ -36,15 +36,23 @@ describe('Sals3SkuLine', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  /**
-   * The selection is the only source. There is no prop to fall back to any more,
-   * because a fallback is how a code gets printed that no choice stands behind —
-   * and a buyer now arrives having chosen nothing.
-   */
-  it('renders nothing outside a provider', () => {
+  /** No provider and no product code: nothing to print, so nothing prints. */
+  it('renders nothing outside a provider with no code to fall back on', () => {
     const { container } = render(<Sals3SkuLine />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  /** A chosen variant's code replaces the product's, which is the whole point. */
+  it('prefers the selection over the product’s own code', () => {
+    render(
+      <SelectedSkuProvider initialSku="S3V-BBBBBBBBBBBB">
+        <Sals3SkuLine fallbackSku="S3V-AAAAAAAAAAAA" />
+      </SelectedSkuProvider>,
+    );
+
+    expect(screen.getByText('S3V-BBBBBBBBBBBB')).toBeInTheDocument();
+    expect(screen.queryByText('S3V-AAAAAAAAAAAA')).not.toBeInTheDocument();
   });
 
   /**
@@ -99,13 +107,15 @@ describe('ProductSpecifications with a Sals3 SKU', () => {
   });
 
   /**
-   * The band's existence and the printed code are two different questions, and
-   * this is the case that proves it: a buyer arrives having chosen nothing, so
-   * there is no honest code to print — but the band has to be there already for
-   * the code to appear in when they choose. Deciding the band from the printed
-   * value would leave it unreachable.
+   * The regression this file now guards.
+   *
+   * For one release the line printed nothing until a variant was chosen, on the
+   * reasoning that no single variant's code speaks for the product. On live that
+   * removed the SKU from every product page reached without a `?variant=` link
+   * — nearly all of them — while the page went on publishing the same code to
+   * Google as `Product.sku`. The product's own code is the honest default.
    */
-  it('renders the band with no code until something is selected', () => {
+  it('prints the product’s own code before anything is selected', () => {
     render(
       <SelectedSkuProvider>
         <ProductSpecifications
@@ -119,14 +129,14 @@ describe('ProductSpecifications with a Sals3 SKU', () => {
       screen.getByRole('heading', { name: 'Product specifications' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Denim')).toBeInTheDocument();
-    expect(screen.queryByText('S3V-463ADA8A9E11')).not.toBeInTheDocument();
-    expect(screen.queryByText('Sals3 SKU')).not.toBeInTheDocument();
+    expect(screen.getByText('Sals3 SKU')).toBeInTheDocument();
+    expect(screen.getByText('S3V-463ADA8A9E11')).toBeInTheDocument();
   });
 
   /**
-   * The provenance boundary this section exists to hold. The grid's footnote
-   * says the seller entered these against their category's attribute set; a
-   * Sals3 SKU is entered by nobody, so it must not become a row under it.
+   * The provenance boundary this section exists to hold. These rows are the
+   * seller's own declarations; a Sals3 SKU is entered by nobody, so it must
+   * never become one of them — which is why it sits on the heading line.
    */
   it('keeps the code out of the seller-declared attribute list', () => {
     render(
@@ -169,10 +179,10 @@ describe('ProductSpecifications with a Sals3 SKU', () => {
 /**
  * The point of the whole publish mechanism, asserted end to end.
  *
- * There is no product-level Sals3 SKU — every variant carries its own — so a
- * code that did not follow the chips would be right for one combination and
- * quietly wrong for the rest. That matters more than it would for a decorative
- * field: the only reason to print a code is that somebody intends to quote it.
+ * Every variant carries its own SKU, so a code that did not follow the chips
+ * would stay right for one combination and go quietly wrong for the rest. That
+ * matters more than it would for a decorative field: the only reason to print a
+ * code is that somebody intends to quote it.
  */
 describe('the printed code and the chosen option', () => {
   function variant(id: string, sku: string, colour: string): ProductVariant {
