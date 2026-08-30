@@ -12,10 +12,22 @@ import {
 
 vi.mock('server-only', () => ({}));
 
+/*
+  A distinct caller per request, because `checkRateLimit` keeps its buckets in a
+  module-level Map with no reset. With one fixed address every call in this file
+  shared a bucket, so adding a test anywhere could push a later, unrelated one
+  over the limit and fail it with "Too many checkout attempts" — which is what
+  happened when the price-change cases below were added. Rate limiting has its
+  own coverage; it should not be an implicit budget every other test spends.
+*/
+let callerCount = 0;
+
 vi.mock('next/headers', () => ({
-  headers: vi.fn(
-    async () => new Headers({ 'x-forwarded-for': '203.0.113.10' }),
-  ),
+  headers: vi.fn(async () => {
+    callerCount += 1;
+
+    return new Headers({ 'x-forwarded-for': `203.0.113.${callerCount}` });
+  }),
 }));
 
 vi.mock('@/services/checkout/cart-validation', () => ({
@@ -124,6 +136,116 @@ describe('createCheckoutSessionAction', () => {
     expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
     expect(createPortalCheckoutIntent).not.toHaveBeenCalled();
     expect(createStripeCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The last gate before money moves.
+   *
+   * `useCartReprice` corrects the summary when checkout opens, but a buyer
+   * spends minutes on the address form and a seller can reprice inside that
+   * window. Without this the defect just moved: right on arrival, wrong at the
+   * card form. Nothing downstream may run — no freight quota, no portal intent,
+   * no Stripe session — because the buyer has not agreed to this price.
+   */
+  it('refuses to charge a price the buyer was not shown', async () => {
+    vi.mocked(validateCheckoutCart).mockResolvedValue({
+      lines: [
+        {
+          productId: 'beanie',
+          title: 'Mohair Knit Beanie',
+          unitPrice: { amountMinor: 8769, currency: 'USD' },
+          quantity: 1,
+        },
+      ],
+      subtotal: { amountMinor: 8769, currency: 'USD' },
+    });
+
+    const result = await createCheckoutSessionAction({
+      cart: {
+        items: [{ productId: 'beanie', quantity: 1, unitPriceMinor: 8640 }],
+      },
+      address,
+      shippingSelection,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({
+      priceChanged: [
+        {
+          title: 'Mohair Knit Beanie',
+          previousUnitPrice: { amountMinor: 8640, currency: 'USD' },
+          unitPrice: { amountMinor: 8769, currency: 'USD' },
+        },
+      ],
+    });
+    expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
+    expect(createPortalCheckoutIntent).not.toHaveBeenCalled();
+    expect(createStripeCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  /** The price that still matches must not cost the buyer a second press. */
+  it('charges without interruption when the shown price still holds', async () => {
+    vi.mocked(validateCheckoutCart).mockResolvedValue({
+      lines: [
+        {
+          productId: 'beanie',
+          title: 'Mohair Knit Beanie',
+          unitPrice: { amountMinor: 8769, currency: 'USD' },
+          quantity: 1,
+        },
+      ],
+      subtotal: { amountMinor: 8769, currency: 'USD' },
+    });
+    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
+      checkoutIntentId: 'intent-1',
+    });
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_1',
+    });
+
+    const result = await createCheckoutSessionAction({
+      cart: {
+        items: [{ productId: 'beanie', quantity: 1, unitPriceMinor: 8769 }],
+      },
+      address,
+      shippingSelection,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(createStripeCheckoutSession).toHaveBeenCalledTimes(1);
+  });
+
+  /** An older client sends no price. Absent is not a mismatch. */
+  it('does not interrupt a cart that sent no shown price', async () => {
+    vi.mocked(validateCheckoutCart).mockResolvedValue({
+      lines: [
+        {
+          productId: 'beanie',
+          title: 'Mohair Knit Beanie',
+          unitPrice: { amountMinor: 8769, currency: 'USD' },
+          quantity: 1,
+        },
+      ],
+      subtotal: { amountMinor: 8769, currency: 'USD' },
+    });
+    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
+      checkoutIntentId: 'intent-1',
+    });
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      clientSecret: 'cs_test_secret',
+      sessionId: 'cs_test_1',
+    });
+
+    const result = await createCheckoutSessionAction({
+      cart: { items: [{ productId: 'beanie', quantity: 1 }] },
+      address,
+      shippingSelection,
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it('rejects an empty cart', async () => {

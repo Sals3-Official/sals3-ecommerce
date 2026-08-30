@@ -11,6 +11,7 @@ import useShippingQuote, {
 } from '@/components/checkout/useShippingQuote';
 import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
 import { createCheckoutSessionAction } from '@/app/checkout/actions';
+import type { RepricedLine } from '@/lib/checkout/price-change';
 
 const INVALID_ADDRESS_MESSAGE = 'Check the highlighted address fields.';
 
@@ -58,6 +59,12 @@ export default function useCheckout(
   subtotal: Money,
   initialCountry?: CheckoutCountry,
   initialEmail?: string,
+  /**
+   * Called when the pay attempt is refused because a price moved. It writes the
+   * corrected prices onto the cart and raises the notice, so the buyer's second
+   * press is against the figure they can now see.
+   */
+  onPriceChanged?: (changed: RepricedLine[]) => void,
 ) {
   const [message, setMessage] = useState<string | null>(null);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
@@ -170,6 +177,13 @@ export default function useCheckout(
           return;
         }
 
+        // Not an error the buyer caused, and not one they can fix by retrying
+        // blindly: the summary has to be corrected before the message beside it
+        // means anything.
+        if (result.priceChanged !== undefined) {
+          onPriceChanged?.(result.priceChanged);
+        }
+
         setMessage(result.message);
       });
     },
@@ -178,6 +192,7 @@ export default function useCheckout(
       allPackagesSelected,
       clearPreparedPayment,
       items,
+      onPriceChanged,
       requireValidAddress,
       selectedShipping,
       stripeClientSecret,

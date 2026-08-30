@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { formatMoney } from '@/lib/money';
 import { lineIdOf } from '@/lib/cart';
 import { useCart } from '@/components/cart/CartProvider';
+import useCartReprice from '@/components/checkout/useCartReprice';
+import CheckoutPriceChangeNotice from '@/components/checkout/CheckoutPriceChangeNotice';
 import CartLineItemRow from '@/components/cart/CartLineItemRow';
 import {
   trackKlaviyoCartItemRemoved,
@@ -47,6 +49,16 @@ export default function CartPageClient({
   fxBufferPercent,
 }: CartPageClientProps) {
   const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
+  /*
+    The cart froze the price each line was added at, and showed it back
+    indefinitely. That is right while someone is browsing — nothing should move
+    under them — and wrong the moment they are looking at a total they intend to
+    act on, because the Portal is the price authority and it may have moved on.
+
+    Same one-shot read the checkout uses, and the same notice, so a shopper who
+    left a tab open for a week is told here rather than two steps into checkout.
+  */
+  const { changes: priceChanges } = useCartReprice(items);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -74,6 +86,7 @@ export default function CartPageClient({
 
   return (
     <div>
+      <CheckoutPriceChangeNotice changes={priceChanges} />
       <h1 className="mb-3.5 text-xl font-bold">
         Cart ({itemCount} {itemCount === 1 ? 'item' : 'items'})
       </h1>

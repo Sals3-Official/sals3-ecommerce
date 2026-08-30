@@ -21,6 +21,7 @@ import {
   lineIdOf,
   parseCartState,
   removeCartItem,
+  repriceCartItems,
   setCartItemQuantity,
   type CartLineItem,
   type CartState,
@@ -37,6 +38,15 @@ type CartContextValue = {
   /** `lineId`, not a product id: two variants of one product are two lines. */
   setQuantity: (lineId: string, quantity: number) => void;
   removeItem: (lineId: string) => void;
+  /**
+   * Writes today's prices onto the lines named.
+   *
+   * Called by the checkout, which asks the server what everything costs now
+   * before it shows a total. Silent by design — the notice belongs beside the
+   * summary, where the buyer is looking, not in a toast that has moved on by
+   * the time they read the figure.
+   */
+  reprice: (prices: { lineId: string; unitPrice: Money }[]) => void;
   /**
    * Empties the cart outright. Used once a checkout is paid — those lines are
    * an order now, not purchase intent. Deliberately silent: `removeItem` is a
@@ -135,6 +145,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ),
       removeItem: (lineId) =>
         store.update((current) => removeCartItem(current, lineId)),
+      reprice: (prices) =>
+        store.update((current) => repriceCartItems(current, prices)),
       clear: () => {
         store.update(() => EMPTY_CART);
       },

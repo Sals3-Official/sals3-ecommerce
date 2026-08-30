@@ -3,6 +3,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import useCheckout from '@/components/checkout/useCheckout';
+import useCartReprice from '@/components/checkout/useCartReprice';
+import type { CheckoutPriceChange } from '@/lib/checkout/price-change';
 import type { CartLineItem } from '@/lib/cart';
 import type { CheckoutCountry } from '@/lib/checkout/locations';
 import type { Money } from '@/lib/money';
@@ -11,6 +13,11 @@ type CheckoutFlowValue = ReturnType<typeof useCheckout> & {
   items: CartLineItem[];
   itemCount: number;
   subtotal: Money;
+  /**
+   * Lines whose price moved between the cart and this checkout. Empty on the
+   * ordinary path; the summary renders a notice when it is not.
+   */
+  priceChanges: CheckoutPriceChange[];
 };
 
 const CheckoutFlowContext = createContext<CheckoutFlowValue | undefined>(
@@ -46,11 +53,20 @@ export function CheckoutFlowProvider({
   initialEmail?: string | undefined;
 }) {
   const { items, itemCount, subtotal } = useCart();
-  const checkout = useCheckout(items, subtotal, initialCountry, initialEmail);
+  // Before anything is totalled. This rewrites the cart's stored prices, so
+  // `items` and `subtotal` below are already the corrected ones.
+  const { changes: priceChanges, applyServerChanges } = useCartReprice(items);
+  const checkout = useCheckout(
+    items,
+    subtotal,
+    initialCountry,
+    initialEmail,
+    applyServerChanges,
+  );
 
   const value = useMemo<CheckoutFlowValue>(
-    () => ({ ...checkout, items, itemCount, subtotal }),
-    [checkout, items, itemCount, subtotal],
+    () => ({ ...checkout, items, itemCount, subtotal, priceChanges }),
+    [checkout, items, itemCount, subtotal, priceChanges],
   );
 
   return <CheckoutFlowContext value={value}>{children}</CheckoutFlowContext>;

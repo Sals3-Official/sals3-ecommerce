@@ -21,6 +21,9 @@ import { createStripeCheckoutSession } from '@/services/stripe/checkout';
 import { ProductsApiError } from '@/services/storefront/client';
 import requestCheckoutFreightQuotes from '@/services/checkout/freight-quotes';
 import createPortalCheckoutIntent from '@/services/checkout/intent';
+import repriceCheckoutCart from '@/services/checkout/reprice';
+import type { RepricedLine } from '@/lib/checkout/price-change';
+import type { Money } from '@/lib/money';
 import type { CheckoutFreightQuoteResponse } from '@/services/storefront/schemas';
 
 /**
@@ -55,7 +58,13 @@ const QUOTE_UNAVAILABLE_MESSAGE =
 
 export type CreateCheckoutSessionResult =
   | { ok: true; clientSecret: string; sessionId: string }
-  | { ok: false; message: string };
+  /**
+   * A price moved between the summary the buyer read and this call. No Stripe
+   * session is created: the buyer is shown what changed and presses pay again,
+   * which is the difference between a corrected price and a silent one.
+   */
+  | { ok: false; message: string; priceChanged: RepricedLine[] }
+  | { ok: false; message: string; priceChanged?: undefined };
 export type QuoteCheckoutShippingResult =
   | { ok: true; quote: CheckoutFreightQuoteResponse }
   | { ok: false; message: string };
@@ -111,6 +120,68 @@ function validateShippingSelection(
   }
 
   return { packageSelections: selections };
+}
+
+export type RepriceCartResult =
+  | { ok: true; lines: RepricedLine[]; changed: RepricedLine[] }
+  | { ok: false; message: string };
+
+/**
+ * Today's price for every line in the cart, before the buyer is shown a total.
+ *
+ * The checkout summary used to render the price each line was *added* at, while
+ * Stripe was handed the price read back from the Portal at pay time. When those
+ * differed the buyer saw one total through Information and Delivery and was
+ * charged another on the card form, with nothing saying so.
+ *
+ * No session check, unlike the two actions below. This spends no money and no
+ * supplier quota, it reads only prices already public on every product page,
+ * and requiring a session would mean a signed-out buyer browsing to checkout
+ * still gets shown stale figures — the exact defect. Rate limited all the same,
+ * because it fans out one Portal read per line.
+ */
+export async function repriceCartAction(input: {
+  cart: { items: CheckoutCartLineInput[] };
+  carriedPrices?: (Money | undefined)[];
+}): Promise<RepriceCartResult> {
+  const parsed = CreateCheckoutSessionInputSchema.pick({
+    cart: true,
+  }).safeParse({ cart: input.cart });
+
+  if (!parsed.success) {
+    return { ok: false, message: 'Check your cart, then try again.' };
+  }
+
+  const headersList = await headers();
+  const allowed = checkRateLimit({
+    key: `checkout-reprice:${requestKey(headersList)}`,
+    limit: 20,
+    windowMs: 60_000,
+  });
+
+  if (!allowed) {
+    return { ok: false, message: 'Too many attempts. Wait a minute.' };
+  }
+
+  try {
+    const repriced = await repriceCheckoutCart(
+      parsed.data.cart.items,
+      input.carriedPrices ?? [],
+    );
+
+    return { ok: true, lines: repriced.lines, changed: repriced.changed };
+  } catch (error) {
+    if (error instanceof CheckoutValidationError) {
+      return { ok: false, message: error.message };
+    }
+
+    logCheckoutFailure('reprice', classifyStorefrontFailure(error), error);
+
+    return {
+      ok: false,
+      message: 'We could not confirm prices just now. Try again.',
+    };
+  }
 }
 
 export async function quoteCheckoutShippingAction(input: {
@@ -208,6 +279,52 @@ export async function createCheckoutSessionAction(
 
   try {
     const cart = await validateCheckoutCart(parsed.data.cart.items);
+    /*
+      The last gate before money moves.
+
+      `useCartReprice` corrects the summary when checkout opens, but a buyer
+      spends minutes on the address form and a seller can reprice inside that
+      window. Without this the old defect simply moved: the summary would be
+      right on arrival and wrong at the card form. Comparing here means the
+      charge can never be a figure the buyer was not shown — it either matches
+      what they read, or they are told and asked again.
+
+      Compared against `unitPriceMinor`, which is what the client displayed;
+      `cart` is still what gets charged, so a tampered value can only ever cause
+      an extra confirmation, never a wrong price.
+    */
+    const moved = cart.lines
+      .map((line, index) => {
+        const shown = parsed.data.cart.items[index]?.unitPriceMinor;
+
+        if (shown === undefined || shown === line.unitPrice.amountMinor) {
+          return null;
+        }
+
+        return {
+          productId: line.productId,
+          ...(line.variantId === undefined
+            ? {}
+            : { variantId: line.variantId }),
+          unitPrice: line.unitPrice,
+          previousUnitPrice: {
+            amountMinor: shown,
+            currency: line.unitPrice.currency,
+          },
+          title: line.title,
+        };
+      })
+      .filter((line) => line !== null);
+
+    if (moved.length > 0) {
+      return {
+        ok: false,
+        message:
+          'A price changed while you were checking out. The total below is updated — press pay again to continue.',
+        priceChanged: moved,
+      };
+    }
+
     const quoted = await requestCheckoutFreightQuotes({
       cart: parsed.data.cart,
       address: parsed.data.address,

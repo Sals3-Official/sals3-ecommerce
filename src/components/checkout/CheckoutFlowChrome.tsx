@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
+import CheckoutPriceChangeNotice from '@/components/checkout/CheckoutPriceChangeNotice';
 import CheckoutStepper, {
   type CheckoutStep,
 } from '@/components/checkout/CheckoutStepper';
@@ -41,7 +42,8 @@ export default function CheckoutFlowChrome({
 }: {
   children: ReactNode;
 }) {
-  const { items, itemCount, selectedShipping, isPending } = useCheckoutFlow();
+  const { items, itemCount, selectedShipping, isPending, priceChanges } =
+    useCheckoutFlow();
   const pathname = usePathname();
   const step = STEP_BY_PATH[pathname] ?? 1;
   const showsSummary = step !== 3;
@@ -105,11 +107,20 @@ export default function CheckoutFlowChrome({
           {children}
         </section>
         {showsSummary ? (
-          <CheckoutOrderSummary
-            items={items}
-            itemCount={itemCount}
-            shipping={selectedShipping}
-          />
+          <div className="flex flex-col">
+            {/*
+              Above the summary rather than inside it, and outside the sticky
+              card: the notice is about how the figures below got here, so it
+              has to be read before them, and it is not itself a line of the
+              order.
+            */}
+            <CheckoutPriceChangeNotice changes={priceChanges} />
+            <CheckoutOrderSummary
+              items={items}
+              itemCount={itemCount}
+              shipping={selectedShipping}
+            />
+          </div>
         ) : null}
       </div>
     </div>
