@@ -93,6 +93,23 @@ export type ProductDescriptionBlock =
   | { type: 'bulletList'; items: string[] }
   | { type: 'keyValueList'; entries: { label: string; value: string }[] }
   /**
+   * A seller-authored table — the shape a size chart actually has, instead of
+   * every measurement for a size crushed into one comma-separated line.
+   *
+   * Every row that reaches this type holds exactly one cell per header: the
+   * mapper drops a ragged one rather than rendering it, because a missing cell
+   * does not look wrong, it **reads** wrong — every measurement after the gap
+   * sits under the heading to its left, and a buyer picks a size by it.
+   *
+   * A header or a cell may be the empty string, unlike every other text
+   * position in this union. A grid needs holes: the corner cell above a column
+   * of size codes is blank in every size chart ever printed.
+   *
+   * `caption` is the table's accessible name, and the only place the units are
+   * stated. Unlike an image's, it is not decoration.
+   */
+  | { type: 'table'; headers: string[]; rows: string[][]; caption?: string }
+  /**
    * A seller-placed description photo, already re-checked against the image
    * host allow-list by the mapper — a block that reaches this type renders.
    * `alt` is always present: the mapper falls back to the product title.

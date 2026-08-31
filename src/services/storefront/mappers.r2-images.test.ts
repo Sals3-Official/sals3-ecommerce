@@ -131,3 +131,58 @@ describe('toProductDetail description image blocks', () => {
     expect(detail.description).toBeUndefined();
   });
 });
+
+/**
+ * A ragged table is the one description defect that *misinforms* rather than
+ * merely looking wrong.
+ *
+ * Drop one cell from the middle of a size chart and every measurement after it
+ * shifts one column left, so a buyer reads a thigh measurement labelled `Hips`
+ * and orders a size that does not fit. There is no rendering that repairs that,
+ * and padding the row would invent a cell the seller never wrote and place it
+ * exactly where the wrong one used to be — so the block is dropped, the same
+ * per-block salvage a disallowed image address gets.
+ */
+describe('toProductDetail description table blocks', () => {
+  const chart = (rows: string[][]) => ({
+    type: 'table' as const,
+    headers: ['Size', 'Waist', 'Hips'],
+    rows,
+  });
+
+  it('keeps a rectangular table, blank cells and all', async () => {
+    const { toProductDetail } = await loadMappers(R2_BASE_URL);
+
+    const block = chart([
+      ['M', '65', '100'],
+      ['L', '69', ''],
+    ]);
+    const detail = toProductDetail(
+      detailPayload({ description: { blocks: [block] } }),
+    );
+
+    // The blank `Hips` for L must survive the wire. It is content — a
+    // measurement that does not apply — and a schema that rejected it would
+    // take the whole size chart off the page with no error anywhere.
+    expect(detail.description).toEqual([block]);
+  });
+
+  it('drops a ragged table and keeps the words around it', async () => {
+    const { toProductDetail } = await loadMappers(R2_BASE_URL);
+
+    const detail = toProductDetail(
+      detailPayload({
+        description: {
+          blocks: [
+            { type: 'paragraph' as const, text: 'Runs one size small.' },
+            chart([['M', '65']]),
+          ],
+        },
+      }),
+    );
+
+    expect(detail.description).toEqual([
+      { type: 'paragraph', text: 'Runs one size small.' },
+    ]);
+  });
+});

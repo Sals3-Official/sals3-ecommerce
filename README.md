@@ -1347,6 +1347,35 @@ with an unrecognised mark costs that paragraph under the usual per-block
 salvage, never the whole description. `strong` and `em` render as elements, so
 the emphasis is heard by a screen reader rather than merely seen.
 
+**A `table` block renders as a real table (2026-08-31).** Sellers can now
+author a size chart as a grid instead of squeezing every measurement for a size
+into one comma-separated `keyValueList` value, which the 70ch reading measure
+then set as a wall of prose. `DescriptionTable` renders it, and three of its
+choices are load-bearing:
+
+- **It leaves the reading measure**, the way `DescriptionImageRow` does — by
+  simply not applying `max-w-[70ch]`. 70ch is sized for sentences; a six-column
+  chart held to it collapses into wrapped headings and numbers that stop lining
+  up, which is the one property that made it worth being a table.
+- **It scrolls sideways rather than squeezing**, and **pins its first column**
+  while it does (`sticky left-0`, with `border-separate` so the cell keeps its
+  own border through the scroll). On a phone a six-column chart cannot fit, and
+  without the pin a buyer scrolls right and loses which row they are reading.
+  There is deliberately no sticky header row: the table has no height cap, so
+  `sticky top-0` would stick to the viewport and collide with the site header.
+- **The first cell of each row is a `<th scope="row">`** and `<caption>` is the
+  table's accessible name — a heading block above it is a sibling, not a label,
+  and the caption is also the only place the units are stated.
+
+A **ragged** table — any row not the width of the header row — is dropped in
+the mapper, alongside the disallowed-image-address check, because a missing cell
+does not look wrong, it _reads_ wrong: every measurement after the gap sits
+under the heading to its left, and a buyer picks a size by it. A **blank** cell
+is kept: it is the hole a grid legitimately has, so `truncatedOrBlankText` drops
+the usual `.min(1)` for headers and cells only. The caps (8 columns, 40 rows,
+120-character heading, 200-character cell) are hand-copied from the portal like
+every other number in `schemas.ts` and must move in the same pair of commits.
+
 ## Product Page (PDP)
 
 `src/app/p/[id]/page.tsx` renders a product detail page at `/p/<slug>`. Every

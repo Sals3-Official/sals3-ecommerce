@@ -4,6 +4,7 @@ import type {
   ProductDescriptionRun,
 } from '@/lib/product-detail';
 import DescriptionImageRow from './DescriptionImageRow';
+import DescriptionTable from './DescriptionTable';
 
 type DescriptionBlockListProps = {
   blocks: ProductDescriptionBlock[];
@@ -178,6 +179,18 @@ export default function DescriptionBlockList({
               {block.text}
             </h4>
           );
+        }
+
+        /*
+          A table leaves the reading column for the same reason an image row
+          does, and more urgently: 70ch is sized for sentences, and a
+          six-column size chart held to it collapses into wrapped headings and
+          numbers that no longer line up — which is the one property that made
+          it worth being a table. The component owns its own horizontal
+          scroller; see its header for why the first column sticks.
+        */
+        if (block.type === 'table') {
+          return <DescriptionTable key={key} block={block} />;
         }
 
         if (block.type === 'bulletList') {

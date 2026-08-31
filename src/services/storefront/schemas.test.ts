@@ -249,12 +249,30 @@ describe('the committed contract fixture', () => {
     const parsed = StorefrontProductResponseSchema.parse(JSON.parse(raw));
 
     expect(parsed.product.images).toHaveLength(2);
-    expect(parsed.product.description?.blocks).toHaveLength(5);
+    expect(parsed.product.description?.blocks).toHaveLength(6);
     // The image block survives the parse whole — a fixture image silently
     // salvaged away would read as "the block type shipped" when it did not.
-    expect(parsed.product.description?.blocks[4]).toMatchObject({
+    expect(parsed.product.description?.blocks[5]).toMatchObject({
       type: 'image',
       alt: 'Size chart for the shell jacket',
+    });
+    /*
+      The same discipline for the table, and one cell of it carries the weight:
+      the last row's empty `Length`. `salvagedArray` drops a block that fails to
+      parse, so a `.min(1)` left on a cell would take the entire size chart off
+      the page with no error anywhere — which is precisely how a block type
+      reads as "shipped" while nothing reaches a buyer. Asserted whole rather
+      than by `toMatchObject`, so a lost row or a shifted cell fails here too.
+    */
+    expect(parsed.product.description?.blocks[4]).toEqual({
+      type: 'table',
+      caption: 'Body measurements in centimetres. Allow 1–2 cm variance.',
+      headers: ['Size', 'Waist', 'Hips', 'Length'],
+      rows: [
+        ['M', '65', '100', '103'],
+        ['L', '69', '104', '104'],
+        ['XL', '73', '108', ''],
+      ],
     });
     // Same discipline as the image assertion above, for the same reason: the
     // emphasis a seller applied is a block field that once vanished silently.
@@ -295,7 +313,7 @@ describe('the committed contract fixture', () => {
  * failed and you only meant to edit one side, that is the answer.
  */
 const FIXTURE_SHA256 =
-  'e7600cac48870be3d8978dac239847bb4c1605f7dab06229ef21e0cecd605f19';
+  '0851988670867f807ec93b3fafd28fd3483ea9136d6b69c002f64f11db0443b4';
 
 describe('the committed fixture is the same bytes in both repositories', () => {
   it('has the fingerprint sals3-portal asserts too', () => {
