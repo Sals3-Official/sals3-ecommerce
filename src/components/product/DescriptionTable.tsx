@@ -85,39 +85,42 @@ export default function DescriptionTable({ block }: DescriptionTableProps) {
           </tr>
         </thead>
         <tbody>
-          {block.rows.map((row, rowIndex) => (
-            <tr key={`row-${rowIndex}`}>
-              {row.map((cell, columnIndex) =>
-                /*
-                  The first cell of a row is its name, not one of its values —
-                  in a size chart it is the size, and it identifies every
-                  number beside it. `<th scope="row">` is what tells a screen
-                  reader that, so a cell is announced as "Hips, XL, 100" rather
-                  than as a bare number in a grid.
-                */
-                columnIndex === 0 ? (
-                  <th
-                    key={`cell-${columnIndex}`}
-                    scope="row"
-                    className={`sticky left-0 z-10 px-3 py-2 text-left font-medium whitespace-nowrap text-ink ${
-                      rowIndex === 0 ? '' : 'border-t border-border'
-                    } bg-white`}
-                  >
-                    {cell}
-                  </th>
-                ) : (
-                  <td
-                    key={`cell-${columnIndex}`}
-                    className={`px-3 py-2 text-ink-muted ${
-                      rowIndex === 0 ? '' : 'border-t border-border'
-                    }`}
-                  >
-                    {cell}
-                  </td>
-                ),
-              )}
-            </tr>
-          ))}
+          {block.rows.map((row, rowIndex) => {
+            // One value per row, not per cell: every cell in a row shares the
+            // same top border (only the first row has none), so it is
+            // computed once here rather than re-selected in each cell below.
+            const rowBorder = rowIndex === 0 ? '' : 'border-t border-border';
+
+            return (
+              <tr key={`row-${rowIndex}`}>
+                {row.map((cell, columnIndex) =>
+                  /*
+                    The first cell of a row is its name, not one of its values
+                    — in a size chart it is the size, and it identifies every
+                    number beside it. `<th scope="row">` is what tells a
+                    screen reader that, so a cell is announced as
+                    "Hips, XL, 100" rather than as a bare number in a grid.
+                  */
+                  columnIndex === 0 ? (
+                    <th
+                      key={`cell-${columnIndex}`}
+                      scope="row"
+                      className={`sticky left-0 z-10 bg-white px-3 py-2 text-left font-medium whitespace-nowrap text-ink ${rowBorder}`}
+                    >
+                      {cell}
+                    </th>
+                  ) : (
+                    <td
+                      key={`cell-${columnIndex}`}
+                      className={`px-3 py-2 text-ink-muted ${rowBorder}`}
+                    >
+                      {cell}
+                    </td>
+                  ),
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

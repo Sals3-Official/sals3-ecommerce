@@ -44,19 +44,26 @@ function describe(detail: ProductDetail): string | undefined {
       if (block.type === 'image') return '';
 
       /*
-        A table flattens the way the portal's own plain-text projection
-        flattens it — caption, then the headings, then a row per line with the
-        cells separated — so the two repositories give one answer to "what does
-        this table say without its columns". A second flattening rule here
-        would be a second answer, and the one that drifted would be the one
-        Google reads.
+        Included here, unlike an image's alt text: unlike alt text, a table's
+        cells *are* the seller's own words about the product and they are on
+        the page — Google's requirement is that `description` matches what a
+        visitor sees, and a size chart is often the most-read part of a
+        description. Blank cells are dropped from a line — there is no column
+        left in prose for a hole to hold open.
 
-        Included rather than dropped like an image, because unlike alt text
-        these *are* the seller's words about the product and they are on the
-        page: Google's requirement is that `description` matches what a visitor
-        sees, and a size chart is the most-read thing in some descriptions.
-        Blank cells are dropped from a line — there is no column left in prose
-        for a hole to hold open.
+        Deliberately **not** the same choice the portal makes for its own
+        `descriptionBlocksToPlainText`, which excludes a table entirely. That
+        projection feeds `firstSentence()` in the meta-description seam, so a
+        table there would risk becoming the entire "sentence" for a
+        table-led description — a failure mode this whole-description JSON-LD
+        string doesn't share, since a table here is one part of a longer
+        string a crawler reads in full rather than a fragment extracted and
+        possibly saved verbatim as hidden metadata. The row/cell flattening
+        shape (caption, then headings, then one line per row, blank cells
+        dropped) still matches the portal's shape for readability, but the
+        outer join is `' '` here and `'\n'` there — this string is one
+        crawler-facing sentence, that one is a multi-line editor preview —
+        so the two are not byte-identical and are not meant to be.
       */
       if (block.type === 'table') {
         return [
