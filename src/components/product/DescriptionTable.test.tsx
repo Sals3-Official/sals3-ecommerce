@@ -85,6 +85,19 @@ describe('DescriptionTable', () => {
     expect(scroller?.className).toContain('overflow-x-auto');
   });
 
+  it('bulges out symmetrically instead of only to the right', () => {
+    // Escaping the 70ch measure with no cap and no `mx-auto` fills the full
+    // section width, so every pixel gained over the narrower text column
+    // above lands on the right only — capped and centered is what makes the
+    // table read as a deliberate wide breakout instead of a lopsided one.
+    render(<DescriptionBlockList blocks={[SIZE_CHART]} />);
+
+    const scroller = screen.getByRole('table').parentElement;
+
+    expect(scroller?.className).toContain('max-w-[760px]');
+    expect(scroller?.className).toContain('mx-auto');
+  });
+
   it('renders a blank cell as an empty cell rather than closing the gap', () => {
     render(<DescriptionBlockList blocks={[SIZE_CHART]} />);
 

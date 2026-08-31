@@ -17,16 +17,33 @@ type DescriptionTableProps = {
 /**
  * A seller-authored table inside a product description — a size chart, mostly.
  *
- * ## It breaks out of the reading measure, the same way an image does
+ * ## It breaks out of the reading measure, the same way an image does — but
+ * not all the way to the section's own edge
  *
  * Every other block in `DescriptionBlockList` is held to `max-w-[70ch]`,
  * because that is the width prose is readable at. A grid is the opposite case:
  * a six-column size chart squeezed into a column sized for sentences collapses
  * — every heading wraps onto three lines and the numbers stop lining up, which
  * is the entire property that made it worth being a table. So this component
- * simply does not apply the measure, exactly as `DescriptionImageRow` does not,
- * and the section's own width becomes its ceiling. No card around a card: the
- * bordered scroller *is* the container.
+ * does not apply the 70ch measure, exactly as `DescriptionImageRow` does not.
+ *
+ * Unlike an image row, it does not simply fill the section either. An image
+ * is meant to run the full section width — that is a deliberate, already-
+ * correct decision this component does not touch. A table left with no cap
+ * at all inherits the section's full width by default and sits flush-left
+ * against the same edge the narrower 70ch text above it uses, so every pixel
+ * it gains over that text column lands on the right only — it reads as
+ * lopsided, not as a deliberate wide breakout. `max-w-[760px] mx-auto` caps it
+ * short of the section edge and centers it, so it bulges out symmetrically on
+ * both sides of the text column instead. 760px matches the portal's own
+ * Description Studio canvas (`StudioCanvas.tsx`'s `IMAGE_SIZES` full-width
+ * figure) — the same number the editor already treats as "as wide as this
+ * content ever needs to draw," not a value invented for this one case, and
+ * keeping the two repositories' numbers identical is what keeps the studio's
+ * preview from quietly drifting out of sync with what a buyer actually sees.
+ * The cap does not fight the horizontal scroll below: an 8-column chart still
+ * scrolls inside this now-narrower, now-centered box exactly as it did in the
+ * wider one.
  *
  * ## It scrolls sideways rather than squeezing
  *
@@ -60,7 +77,7 @@ type DescriptionTableProps = {
  */
 export default function DescriptionTable({ block }: DescriptionTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <div className="mx-auto max-w-[760px] overflow-x-auto rounded-xl border border-border">
       <table className="w-full border-separate border-spacing-0 text-sm">
         {block.caption === undefined ? null : (
           <caption className="border-b border-border bg-white px-3 py-2 text-left text-xs text-ink-muted">

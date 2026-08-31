@@ -1353,10 +1353,23 @@ into one comma-separated `keyValueList` value, which the 70ch reading measure
 then set as a wall of prose. `DescriptionTable` renders it, and three of its
 choices are load-bearing:
 
-- **It leaves the reading measure**, the way `DescriptionImageRow` does — by
-  simply not applying `max-w-[70ch]`. 70ch is sized for sentences; a six-column
-  chart held to it collapses into wrapped headings and numbers that stop lining
-  up, which is the one property that made it worth being a table.
+- **It leaves the reading measure** by not applying `max-w-[70ch]`. 70ch is
+  sized for sentences; a six-column chart held to it collapses into wrapped
+  headings and numbers that stop lining up, which is the one property that
+  made it worth being a table.
+- **Unlike `DescriptionImageRow`, it does not simply fill the section
+  (2026-09-01).** An image is meant to run the full section width — a
+  separate, already-correct decision this does not touch. A table left with
+  no cap at all inherited the section's full width and sat flush-left against
+  the same edge as the narrower text above it, so every pixel it gained over
+  that text landed on the right only — lopsided, not a deliberate wide
+  breakout. `max-w-[760px] mx-auto` caps and centers it instead, so it bulges
+  symmetrically on both sides. 760px matches the portal's own Description
+  Studio canvas (`StudioCanvas.tsx`'s `IMAGE_SIZES` full-width figure) —
+  keeping the number identical across both repositories is what keeps the
+  studio's preview from drifting out of sync with what a buyer sees. The cap
+  does not fight the horizontal scroll below it: a wide chart still scrolls
+  inside this narrower, centered box exactly as it did in the wider one.
 - **It scrolls sideways rather than squeezing**, and **pins its first column**
   while it does (`sticky left-0`, with `border-separate` so the cell keeps its
   own border through the scroll). On a phone a six-column chart cannot fit, and
