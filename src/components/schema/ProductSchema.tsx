@@ -43,6 +43,36 @@ function describe(detail: ProductDetail): string | undefined {
       // picture, and its alt inside JSON-LD prose would read as padding.
       if (block.type === 'image') return '';
 
+      /*
+        A table flattens the way the portal's own plain-text projection
+        flattens it — caption, then the headings, then a row per line with the
+        cells separated — so the two repositories give one answer to "what does
+        this table say without its columns". A second flattening rule here
+        would be a second answer, and the one that drifted would be the one
+        Google reads.
+
+        Included rather than dropped like an image, because unlike alt text
+        these *are* the seller's words about the product and they are on the
+        page: Google's requirement is that `description` matches what a visitor
+        sees, and a size chart is the most-read thing in some descriptions.
+        Blank cells are dropped from a line — there is no column left in prose
+        for a hole to hold open.
+      */
+      if (block.type === 'table') {
+        return [
+          ...(block.caption === undefined ? [] : [block.caption]),
+          block.headers,
+          ...block.rows,
+        ]
+          .map((line) =>
+            typeof line === 'string'
+              ? line
+              : line.filter((cell) => cell.trim() !== '').join(' · '),
+          )
+          .filter((line) => line.trim() !== '')
+          .join(' ');
+      }
+
       return block.entries
         .map((entry) => `${entry.label}: ${entry.value}`)
         .join(' ');

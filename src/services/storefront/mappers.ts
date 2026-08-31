@@ -181,12 +181,32 @@ function toProductImages(
  * disallowed or malformed image address costs that photo, never the seller's
  * words around it. `alt` falls back to the product title, the same non-claim
  * the gallery uses when the portal supplies no per-image text.
+ *
+ * A `table` whose rows are not all the width of its header row is dropped the
+ * same way, and for a sharper reason than a bad image address. A ragged row is
+ * not a rendering defect — it is a **wrong number under a correct heading**:
+ * drop one cell from the middle of a size chart and every measurement after it
+ * shifts one column left, so a buyer reads a thigh measurement labelled `Hips`
+ * and orders a size that does not fit. There is no rendering that repairs it,
+ * and padding the row would invent a cell the seller never wrote and place it
+ * exactly where the wrong one used to be. The producer refuses to *store* one,
+ * so this is the backstop for a payload written by something else — the same
+ * posture the image host allow-list takes about an address the producer
+ * already checked.
  */
 export function toDescriptionBlocks(
   blocks: ProductDescriptionBlockPayload[],
   title: string,
 ): ProductDescriptionBlock[] {
   return blocks.flatMap((block): ProductDescriptionBlock[] => {
+    if (block.type === 'table') {
+      const isRectangular = block.rows.every(
+        (row) => row.length === block.headers.length,
+      );
+
+      return isRectangular ? [block] : [];
+    }
+
     if (block.type !== 'image') return [block];
 
     const url = getAllowedProductImageUrl(block.url);

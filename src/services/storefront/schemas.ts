@@ -69,6 +69,21 @@ export function truncatedText(maxLength: number) {
 }
 
 /**
+ * The same truncation without the non-empty floor.
+ *
+ * `.min(1)` is right everywhere else and wrong inside a table: a grid needs
+ * holes — a measurement that does not apply to one size, and the blank corner
+ * cell above a column of size codes. Rejecting a blank cell would fail the
+ * whole block and `salvagedArray` would drop it, so a seller's size chart
+ * would disappear from the page because one square was deliberately left open.
+ * The producer allows blank cells for the same reason and refuses a *ragged*
+ * row instead, which is the shape that actually misinforms.
+ */
+export function truncatedOrBlankText(maxLength: number) {
+  return z.string().transform((value) => value.slice(0, maxLength));
+}
+
+/**
  * An array whose bad rows are dropped rather than failing their parent. The
  * same reasoning as `truncatedText`, applied one level up: a malformed variant
  * should cost that variant, not the product page.
@@ -222,7 +237,8 @@ const ProductImageSchema = z.object({
 
 /**
  * The producer's allow-listed block union, matched exactly —
- * `paragraph`, `heading`, `bulletList`, `keyValueList`, `image`. There is no
+ * `paragraph`, `heading`, `bulletList`, `keyValueList`, `table`, `image`. There
+ * is no
  * `html` block and no raw-string passthrough on either side, so there is
  * nothing for a renderer to interpret as markup even before escaping. CJ's own
  * `description` **is** supplier HTML and never enters this document.
@@ -233,6 +249,14 @@ const ProductImageSchema = z.object({
  * `alt` is optional on the wire (tolerant, like every post-2026-08-13 field)
  * even though the producer always sends it; the mapper falls back to the
  * product title.
+ *
+ * The `table` block's **rectangularity** is likewise checked in the mapper
+ * rather than here: the rule spans two fields (`rows[n].length` against
+ * `headers.length`), and a cross-field `superRefine` on a member of a
+ * `discriminatedUnion` turns it into a `ZodEffects` the discriminator can no
+ * longer resolve through — the same structural constraint the producer
+ * documents on its own schema. Per-block salvage in the mapper is where a
+ * ragged table costs that table and not the description around it.
  */
 export const DescriptionBlockSchema = z.discriminatedUnion('type', [
   z.object({
@@ -277,6 +301,27 @@ export const DescriptionBlockSchema = z.discriminatedUnion('type', [
       )
       .min(1)
       .max(40),
+  }),
+  /**
+   * A real multi-column table — a size chart, mostly.
+   *
+   * The caps are the portal's, hand-copied like every other number in this
+   * file: `MAX_TABLE_COLUMNS` 8, `MAX_TABLE_ROWS` 40, `MAX_LABEL_LENGTH` 120
+   * for a heading, `MAX_TABLE_CELL_LENGTH` 200 for a cell. A table it accepts
+   * is therefore never truncated on arrival.
+   *
+   * Headers and cells use `truncatedOrBlankText`: blank is content in a grid,
+   * and the producer permits it deliberately. What neither side permits is a
+   * ragged row — see the union's own note above for where that is caught.
+   */
+  z.object({
+    type: z.literal('table'),
+    headers: z.array(truncatedOrBlankText(120)).min(1).max(8),
+    rows: z
+      .array(z.array(truncatedOrBlankText(200)).min(1).max(8))
+      .min(1)
+      .max(40),
+    caption: truncatedText(4000).optional(),
   }),
   z.object({
     type: z.literal('image'),
