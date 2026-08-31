@@ -75,6 +75,17 @@ export default function CheckoutShippingOptions({
       </div>
       {quote === null ? null : (
         <div className="mt-4 flex flex-col gap-4">
+          {/*
+            Leads the option list rather than trailing it. This used to
+            render after every package's tier cards, so a buyer often saw and
+            picked a paid option before the nudge to add more even appeared —
+            the one moment the nudge could still be acted on without leaving
+            checkout. The progress module needs no data the cards don't
+            already have; only its position changed.
+          */}
+          {quote.freeShipping === undefined ? null : (
+            <CheckoutFreeShippingProgress progress={quote.freeShipping} />
+          )}
           {quote.packages.map((pkg) => {
             const optionsByTier = optionsByPackage.get(pkg.packageId);
 
@@ -105,9 +116,6 @@ export default function CheckoutShippingOptions({
               </fieldset>
             );
           })}
-          {quote.freeShipping === undefined ? null : (
-            <CheckoutFreeShippingProgress progress={quote.freeShipping} />
-          )}
         </div>
       )}
     </section>

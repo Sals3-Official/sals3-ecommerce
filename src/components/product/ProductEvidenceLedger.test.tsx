@@ -35,6 +35,22 @@ describe('ProductEvidenceLedger', () => {
     ).toBeInTheDocument();
   });
 
+  /**
+   * Added 2026-09-01. No dollar figure and no country: the PDP has no
+   * address to check a threshold against, so the row states the mechanism
+   * exists without promising a number for this specific buyer.
+   */
+  it('mentions free Standard delivery without naming a country or an amount', () => {
+    render(<ProductEvidenceLedger />);
+
+    expect(
+      screen.getByText(
+        /some orders qualify for free standard delivery once your address is known/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\$\d/)).not.toBeInTheDocument();
+  });
+
   it('states an unconfirmed stock claim as unknown rather than as unavailable', () => {
     render(<ProductEvidenceLedger />);
 
