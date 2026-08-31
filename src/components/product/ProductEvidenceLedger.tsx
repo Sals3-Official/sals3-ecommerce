@@ -54,9 +54,17 @@ type ProductEvidenceLedgerProps = {
  * unknown here is what delivery will cost *this* buyer, because it depends on
  * an address the PDP does not have. The row now states that unknown and where
  * it resolves, instead of making a price claim on its behalf.
+ *
+ * Extended 2026-09-01 with one clause: some orders qualify for free Standard
+ * delivery, once a destination is known. Deliberately no dollar figure and no
+ * country here — the PDP has no address to check a threshold against
+ * (`CartPageClient`'s own comment says the same is true one step later, at
+ * the cart: "there is one storefront to continue shopping in"), so the mark
+ * stays hollow. This states that the mechanism exists without promising a
+ * number nobody here can verify for this buyer yet.
  */
 const DELIVERY =
-  'No estimate until checkout, where it is quoted for your address and added to this price.';
+  'No estimate until checkout, where it is quoted for your address and added to this price. Some orders qualify for free Standard delivery once your address is known.';
 /**
  * The reviews row.
  *

@@ -111,6 +111,38 @@ describe('Cart page', () => {
     ).toHaveAttribute('href', '/checkout');
   });
 
+  /**
+   * Added 2026-09-01. No dollar figure and no named country: this page does
+   * not know the buyer's destination (see `CartPageClient`'s own comment),
+   * so the teaser states that the mechanism exists without anchoring a
+   * specific threshold to a guess.
+   */
+  it('mentions free Standard delivery without naming a country or an amount', async () => {
+    const seeded = addCartItem(
+      EMPTY_CART,
+      {
+        productId: '1',
+        title: 'Essence Mascara Lash Princess',
+        imageAlt: 'Essence Mascara Lash Princess product image',
+        tone: 'ocean',
+        unitPrice: usd(99900),
+      },
+      1,
+    );
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
+
+    renderWithCart(await CartPage());
+
+    const teaser = await screen.findByText(
+      /some destinations get free standard delivery on qualifying orders/i,
+    );
+
+    expect(teaser).toBeInTheDocument();
+    // The page legitimately shows real prices elsewhere (the subtotal); the
+    // assertion is that the teaser's OWN text carries no dollar figure.
+    expect(teaser.textContent ?? '').not.toMatch(/\$\d/);
+  });
+
   it('is not indexed', () => {
     expect(generateMetadata().robots).toMatchObject({
       index: false,
