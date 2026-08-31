@@ -105,11 +105,24 @@ export default function ProductSupplierDetails({
 
   return (
     /*
-      `border-b` only. The band above closes with its own bottom border, so the
-      two share one hairline instead of stacking two, and the pair reads as one
-      white region divided rather than as two slabs with a grey seam.
+      `-mt-px` is what removes the last line the owner kept seeing.
+
+      The two bands are both white and sit flush, so the only thing between them
+      was the specifications band's own bottom border — one hairline, deliberate,
+      and wrong. It cut in half the very thing the last three changes were for:
+      two tables about one product, read as one. Pulling this section up a pixel
+      puts its white background over that border, so the pair is a single
+      unbroken white region with the seller's facts above and the supplier's
+      below, separated by nothing but the heading.
+
+      Not simply dropping the border from the band above: that band closes the
+      white region on its own whenever this section renders nothing — a product
+      whose payload carries no weight, dimensions, condition, part number or
+      GTIN — and it would then bleed into the grey with no edge at all.
+
+      `border-b` here is what closes the region when this section *does* render.
     */
-    <section className="border-b border-border bg-white">
+    <section className="-mt-px border-b border-border bg-white">
       <div className="mx-auto w-full max-w-6xl px-6 py-9">
         <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-ink">
           Supplier details

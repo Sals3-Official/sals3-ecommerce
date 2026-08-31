@@ -431,6 +431,42 @@ describe('Product page', () => {
   });
 
   /**
+   * No hairline between the two tables.
+   *
+   * They are both white and sit flush, so the only thing dividing them was the
+   * specifications band's own bottom border. It was deliberate, and it was
+   * wrong: it cut in half the very thing three changes had been for. Supplier
+   * details pulls up a pixel so its white background covers that border.
+   *
+   * Asserted on the class rather than a rendered pixel because jsdom computes
+   * no layout, and the whole mechanism is a one-pixel overlap. The band above
+   * keeps `border-y` on purpose — it has to close the white region on its own
+   * when this section renders nothing at all.
+   */
+  it('leaves no seam between the two fact tables', async () => {
+    mockFetch({
+      productOverrides: {
+        specs: { weightGrams: 4200 },
+        specification: [{ label: 'Material', value: 'ABS plastic' }],
+      },
+    });
+
+    const { container } = renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+
+    const bands = [...container.querySelectorAll('section')].filter((band) =>
+      band.className.includes('bg-white'),
+    );
+
+    expect(bands).toHaveLength(2);
+    expect(bands[0]?.className).toContain('border-y');
+    expect(bands[1]?.className).toContain('-mt-px');
+  });
+
+  /**
    * Two sections, two provenance lines. One footnote cannot cover both: "as
    * reported by the supplier" becomes false the moment a seller-entered
    * attribute appears under it.
