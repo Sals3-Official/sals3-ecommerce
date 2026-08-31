@@ -165,6 +165,58 @@ describe('ProductSchema', () => {
   });
 
   /**
+   * A size chart is real seller-authored content on the page, unlike an
+   * image's alt text — Google's own requirement is that `description` match
+   * what a visitor sees, and a chart is often the most-read part of a
+   * description. So a table contributes text here, unlike an image.
+   */
+  it('flattens a table into its caption, headings, and rows', () => {
+    const schema = parseSchema(
+      render(
+        <ProductSchema
+          detail={detail({
+            description: [
+              {
+                type: 'table',
+                caption: 'Measurements in centimetres',
+                headers: ['Size', 'Waist'],
+                rows: [
+                  ['M', '65'],
+                  ['L', ''],
+                ],
+              },
+            ],
+          })}
+        />,
+      ),
+    );
+
+    expect(schema.description).toBe(
+      'Measurements in centimetres Size · Waist M · 65 L',
+    );
+  });
+
+  it('omits an unnamed table from the description rather than crashing', () => {
+    const schema = parseSchema(
+      render(
+        <ProductSchema
+          detail={detail({
+            description: [
+              {
+                type: 'table',
+                headers: ['Size'],
+                rows: [['M']],
+              },
+            ],
+          })}
+        />,
+      ),
+    );
+
+    expect(schema.description).toBe('Size M');
+  });
+
+  /**
    * Supplier-originated text, unlike the static organisation schema — a
    * `</script>` in a title must not be able to close the tag.
    */
