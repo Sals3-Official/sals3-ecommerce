@@ -343,111 +343,16 @@ describe('Product page', () => {
   });
 
   /**
-   * Owner decision 2026-08-31: the two tables about one product sit together.
+   * Owner decision 2026-08-31, after three attempts at fixing this from the
+   * outside: the seller's facts and the supplier's are one band with a group
+   * inside it, not two sections.
    *
-   * Asserted on DOM order rather than on a class, because the requirement is
-   * "supplier details reads straight after specifications" — how that is laid
-   * out may change, and this should not fail when it does. What must fail is
-   * the description or the reviews sliding back between them.
+   * Asserted on structure rather than pixels — one white band, one 20px
+   * heading, the supplier's rows under a quiet label inside the same band, and
+   * the description and the reviews after all of it. What must fail is either
+   * group growing its own section again, or anything sliding between them.
    */
-  it('reads specifications, then supplier details, then the reviews', async () => {
-    mockFetch({
-      productOverrides: {
-        specs: { weightGrams: 4200 },
-        specification: [{ label: 'Material', value: 'ABS plastic' }],
-      },
-    });
-
-    renderWithCart(
-      await ProductPage({
-        params: Promise.resolve({ id: 'air-cooler' }),
-      }),
-    );
-
-    const order = screen
-      .getAllByRole('heading')
-      .map((heading) => heading.textContent ?? '')
-      .filter((text) =>
-        /product specifications|supplier details|ratings and reviews/i.test(
-          text,
-        ),
-      );
-
-    expect(order).toEqual([
-      'Product specifications',
-      'Supplier details',
-      'Ratings and reviews',
-    ]);
-  });
-
-  /**
-   * The two fact tables must render at the same column width, on every product.
-   *
-   * They already carried an identical class and still did not: `auto-fit`
-   * deletes tracks with nothing in them and stretches the survivors, so six
-   * specification attributes filled three columns while two supplier rows
-   * collapsed the third and stretched to half the band. Same class, same page,
-   * two visibly different tables — which is why this asserts the resolved
-   * class rather than trusting that the two strings look alike.
-   */
-  it('renders both fact tables on one grid that does not collapse', async () => {
-    mockFetch({
-      productOverrides: {
-        specs: { weightGrams: 4200 },
-        specification: [{ label: 'Material', value: 'ABS plastic' }],
-      },
-    });
-
-    const { container } = renderWithCart(
-      await ProductPage({
-        params: Promise.resolve({ id: 'air-cooler' }),
-      }),
-    );
-
-    const grids = [...container.querySelectorAll('dl')].filter((list) =>
-      list.className.includes('grid-cols-1'),
-    );
-
-    expect(grids).toHaveLength(2);
-    expect(grids[0]?.className).toBe(grids[1]?.className);
-    expect(grids[0]?.className).toContain('auto-fill');
-    expect(grids[0]?.className).not.toContain('auto-fit');
-
-    /*
-      The rules are back, exactly as the approved design drew them.
-
-      They were deleted once to kill a short line under an orphaned last row —
-      thirteen specifications across three columns leaves one cell alone on a
-      fifth row. That was the wrong line to chase: the one being reported was
-      the seam between the two bands, and deleting these left both tables
-      sparse and unbound.
-
-      The orphan's short rule is a known, accepted artefact. `fact-table-styles`
-      records what does not fix it, including the clip that does and costs the
-      closing rule of every single-row table.
-    */
-    const cells = grids.flatMap((list) => [...list.children]);
-
-    expect(cells.length).toBeGreaterThan(0);
-    cells.forEach((cell) => {
-      expect(cell.className.split(' ')).toContain('border-b');
-    });
-  });
-
-  /**
-   * No hairline between the two tables.
-   *
-   * They are both white and sit flush, so the only thing dividing them was the
-   * specifications band's own bottom border. It was deliberate, and it was
-   * wrong: it cut in half the very thing three changes had been for. Supplier
-   * details pulls up a pixel so its white background covers that border.
-   *
-   * Asserted on the class rather than a rendered pixel because jsdom computes
-   * no layout, and the whole mechanism is a one-pixel overlap. The band above
-   * keeps `border-y` on purpose — it has to close the white region on its own
-   * when this section renders nothing at all.
-   */
-  it('leaves no seam between the two fact tables', async () => {
+  it('renders the seller and supplier facts as one band', async () => {
     mockFetch({
       productOverrides: {
         specs: { weightGrams: 4200 },
@@ -465,16 +370,45 @@ describe('Product page', () => {
       band.className.includes('bg-white'),
     );
 
-    expect(bands).toHaveLength(2);
-    expect(bands[0]?.className).toContain('border-y');
-    expect(bands[1]?.className).toContain('-mt-px');
+    expect(bands).toHaveLength(1);
+
+    const band = bands[0];
+
+    // One heading of section weight; the supplier's group is a label, not a peer.
+    expect(band?.querySelectorAll('h2')).toHaveLength(1);
+    expect(
+      screen.getByRole('heading', { name: /product specifications/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /supplier details/i }),
+    ).not.toBeInTheDocument();
+
+    // Both groups live in that band, in order, on the same grid.
+    const grids = [...(band?.querySelectorAll('dl') ?? [])];
+
+    expect(grids).toHaveLength(2);
+    expect(grids[0]?.className).toContain('sm:grid-cols-2');
+    expect(grids[1]?.className).toContain('sm:grid-cols-2');
+    expect(band?.textContent).toContain('ABS plastic');
+    expect(band?.textContent).toContain('As reported by the supplier');
+
+    /*
+      And the prose still comes after the facts. This fixture carries no
+      description, so `About this product` is absent by design — the page
+      renders no section for data the portal did not send.
+    */
+    const order = screen
+      .getAllByRole('heading')
+      .map((heading) => heading.textContent ?? '')
+      .filter((text) =>
+        /product specifications|about this product|ratings and reviews/i.test(
+          text,
+        ),
+      );
+
+    expect(order).toEqual(['Product specifications', 'Ratings and reviews']);
   });
 
-  /**
-   * Two sections, two provenance lines. One footnote cannot cover both: "as
-   * reported by the supplier" becomes false the moment a seller-entered
-   * attribute appears under it.
-   */
   it('separates seller declarations from supplier-reported facts', async () => {
     mockFetch({
       productOverrides: {
@@ -491,9 +425,6 @@ describe('Product page', () => {
 
     expect(
       screen.getByRole('heading', { name: /product specifications/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /supplier details/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('ABS plastic')).toBeInTheDocument();
     /*
