@@ -318,3 +318,70 @@ describe('ProductReviews', () => {
     ).toBeNull();
   });
 });
+
+/**
+ * Reported from live on 2026-08-31: the summary said "No reviews yet", "—" out
+ * of 5 and five empty bars, directly above a review somebody had written.
+ *
+ * A timing gap rather than bad data. The product payload carries the aggregate
+ * and is cached for 60s on the product page, while the review list is read
+ * `no-store`, so a review posted inside that window reaches the list before the
+ * summary that counts it. The two numbers are from different moments.
+ *
+ * The section must never contradict itself while that is true.
+ */
+describe('when the reviews arrive before the aggregate that counts them', () => {
+  const review = {
+    id: 'r1',
+    rating: 5,
+    body: 'hey, this box is good!',
+    displayName: 'Mayleen S.',
+    createdAt: '2026-08-31T05:00:00.000Z',
+    variantLabel: 'Storage box',
+    reply: null,
+  };
+
+  it('says nothing about there being no reviews', () => {
+    render(<ProductReviews reviews={[review]} />);
+
+    expect(screen.getByText(/hey, this box is good!/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no reviews yet/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/nobody has reviewed this product yet/i),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * Withheld rather than printed as zero. An em dash over five empty bars is
+   * still a verdict when a five-star review is sitting underneath it.
+   */
+  it('withholds the score block rather than showing it at zero', () => {
+    render(<ProductReviews reviews={[review]} />);
+
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/not yet rated/i)).not.toBeInTheDocument();
+  });
+
+  /** The one sentence that says where these reviews come from still renders. */
+  it('keeps the provenance line', () => {
+    render(<ProductReviews reviews={[review]} />);
+
+    expect(
+      screen.getByText(/every review here was written by a customer/i),
+    ).toBeInTheDocument();
+  });
+
+  /** And the moment the aggregate lands, the score block is back. */
+  it('shows the score once the aggregate catches up', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 1 }}
+        breakdown={[0, 0, 0, 0, 1]}
+        reviews={[review]}
+      />,
+    );
+
+    expect(screen.getByText('5.0')).toBeInTheDocument();
+    expect(screen.getByText('1 review')).toBeInTheDocument();
+  });
+});

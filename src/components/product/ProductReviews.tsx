@@ -107,6 +107,24 @@ export default function ProductReviews({
   reviews,
 }: ProductReviewsProps) {
   const hasRating = rating !== undefined && rating.count > 0;
+  /*
+    The mirror of the guard below, and the one that was missing.
+
+    The reviews arrived and the aggregate did not, so the summary would say
+    "No reviews yet", "—" out of 5 and five empty bars directly above a review
+    somebody wrote. Reported from live on 2026-08-31.
+
+    It is a timing gap rather than bad data: the product payload carries the
+    aggregate and is cached for 60s on this page, while the review list is read
+    `no-store`, so a review posted inside that window reaches the list before
+    the summary that counts it. Nothing is wrong with either number — they are
+    from different moments.
+
+    So the score block is withheld until the aggregate catches up, rather than
+    printed as zero. The reviews still render, the provenance sentence still
+    renders, and the section never contradicts itself.
+  */
+  const aggregateLags = !hasRating && reviews.length > 0;
 
   // The rating says there are reviews and none arrived: see the doc block.
   if (hasRating && reviews.length === 0) return null;
@@ -123,11 +141,13 @@ export default function ProductReviews({
         >
           Ratings and reviews
         </h2>
-        <span className="text-[13.5px] font-medium text-ink-muted">
-          {hasRating
-            ? `${rating.count} ${rating.count === 1 ? 'review' : 'reviews'}`
-            : 'No reviews yet'}
-        </span>
+        {aggregateLags ? null : (
+          <span className="text-[13.5px] font-medium text-ink-muted">
+            {hasRating
+              ? `${rating.count} ${rating.count === 1 ? 'review' : 'reviews'}`
+              : 'No reviews yet'}
+          </span>
+        )}
       </div>
 
       {/*
@@ -138,36 +158,42 @@ export default function ProductReviews({
         disabled rather than distinct.
       */}
       <div className="mt-5 rounded-[10px] border border-border bg-white p-5">
-        <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[12.5rem_1fr]">
-          <div className="flex flex-col gap-2">
-            <span className="font-display text-[40px] leading-none font-semibold tracking-[-0.03em] text-ink tabular-nums">
-              {hasRating ? rating.average.toFixed(1) : '—'}
-            </span>
-            <StarRating
-              rating={hasRating ? Math.round(rating.average) : 0}
-              size="lg"
-              label={
-                hasRating
-                  ? `${rating.average.toFixed(1)} out of 5`
-                  : 'Not yet rated'
+        {aggregateLags ? null : (
+          <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-[12.5rem_1fr]">
+            <div className="flex flex-col gap-2">
+              <span className="font-display text-[40px] leading-none font-semibold tracking-[-0.03em] text-ink tabular-nums">
+                {hasRating ? rating.average.toFixed(1) : '—'}
+              </span>
+              <StarRating
+                rating={hasRating ? Math.round(rating.average) : 0}
+                size="lg"
+                label={
+                  hasRating
+                    ? `${rating.average.toFixed(1)} out of 5`
+                    : 'Not yet rated'
+                }
+              />
+              <span className="text-xs leading-normal text-ink-subtle">
+                {hasRating
+                  ? `Out of 5, from ${rating.count} ${rating.count === 1 ? 'review' : 'reviews'} of this product.`
+                  : 'Out of 5. Nobody has reviewed this product yet.'}
+              </span>
+            </div>
+
+            <ProductRatingBreakdown
+              breakdown={
+                hasRating ? (breakdown ?? EMPTY_BREAKDOWN) : EMPTY_BREAKDOWN
               }
+              total={hasRating ? rating.count : 0}
             />
-            <span className="text-xs leading-normal text-ink-subtle">
-              {hasRating
-                ? `Out of 5, from ${rating.count} ${rating.count === 1 ? 'review' : 'reviews'} of this product.`
-                : 'Out of 5. Nobody has reviewed this product yet.'}
-            </span>
           </div>
+        )}
 
-          <ProductRatingBreakdown
-            breakdown={
-              hasRating ? (breakdown ?? EMPTY_BREAKDOWN) : EMPTY_BREAKDOWN
-            }
-            total={hasRating ? rating.count : 0}
-          />
-        </div>
-
-        <p className="mt-5 border-t border-border pt-3.5 text-[12.5px] leading-relaxed text-ink-muted">
+        <p
+          className={`border-t border-border pt-3.5 text-[12.5px] leading-relaxed text-ink-muted ${
+            aggregateLags ? '' : 'mt-5'
+          }`}
+        >
           Every review here was written by a customer after Sals3 delivered this
           item to them. We do not accept reviews from anyone else, and we do not
           carry ratings from our supplier.
