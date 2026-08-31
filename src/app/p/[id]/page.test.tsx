@@ -414,19 +414,23 @@ describe('Product page', () => {
     expect(grids[0]?.className).not.toContain('auto-fit');
 
     /*
-      And no rule under a row. The browser fills these columns, so the last one
-      is orphaned whenever the attribute count does not divide by the column
-      count — thirteen specifications across three columns leaves one alone on a
-      fifth row, and a rule under it hangs a row lower than its neighbours at a
-      third of the width. There is no column count that divides every product,
-      so the only arrangement that cannot go ragged is the one with no rule to
-      go ragged.
+      The rules are back, exactly as the approved design drew them.
+
+      They were deleted once to kill a short line under an orphaned last row —
+      thirteen specifications across three columns leaves one cell alone on a
+      fifth row. That was the wrong line to chase: the one being reported was
+      the seam between the two bands, and deleting these left both tables
+      sparse and unbound.
+
+      The orphan's short rule is a known, accepted artefact. `fact-table-styles`
+      records what does not fix it, including the clip that does and costs the
+      closing rule of every single-row table.
     */
-    const cells = [...grids.flatMap((list) => [...list.children])];
+    const cells = grids.flatMap((list) => [...list.children]);
 
     expect(cells.length).toBeGreaterThan(0);
     cells.forEach((cell) => {
-      expect(cell.className.split(' ')).not.toContain('border-b');
+      expect(cell.className.split(' ')).toContain('border-b');
     });
   });
 

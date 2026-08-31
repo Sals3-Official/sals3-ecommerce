@@ -1,5 +1,5 @@
 import type { ProductSpecs } from '@/lib/product-detail';
-import { PRODUCT_FACT_GRID, PRODUCT_FACT_ROW } from './product-label-styles';
+import { PRODUCT_FACT_GRID, PRODUCT_FACT_ROW } from './fact-table-styles';
 
 type ProductSupplierDetailsProps = {
   specs?: ProductSpecs;
