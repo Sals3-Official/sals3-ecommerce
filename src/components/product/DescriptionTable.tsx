@@ -17,8 +17,7 @@ type DescriptionTableProps = {
 /**
  * A seller-authored table inside a product description — a size chart, mostly.
  *
- * ## It breaks out of the reading measure, the same way an image does — but
- * not all the way to the section's own edge
+ * ## It is exactly as wide as its own content, and no wider
  *
  * Every other block in `DescriptionBlockList` is held to `max-w-[70ch]`,
  * because that is the width prose is readable at. A grid is the opposite case:
@@ -27,23 +26,23 @@ type DescriptionTableProps = {
  * is the entire property that made it worth being a table. So this component
  * does not apply the 70ch measure, exactly as `DescriptionImageRow` does not.
  *
- * Unlike an image row, it does not simply fill the section either. An image
- * is meant to run the full section width — that is a deliberate, already-
- * correct decision this component does not touch. A table left with no cap
- * at all inherits the section's full width by default and sits flush-left
- * against the same edge the narrower 70ch text above it uses, so every pixel
- * it gains over that text column lands on the right only — it reads as
- * lopsided, not as a deliberate wide breakout. `max-w-[760px] mx-auto` caps it
- * short of the section edge and centers it, so it bulges out symmetrically on
- * both sides of the text column instead. 760px matches the portal's own
- * Description Studio canvas (`StudioCanvas.tsx`'s `IMAGE_SIZES` full-width
- * figure) — the same number the editor already treats as "as wide as this
- * content ever needs to draw," not a value invented for this one case, and
- * keeping the two repositories' numbers identical is what keeps the studio's
- * preview from quietly drifting out of sync with what a buyer actually sees.
- * The cap does not fight the horizontal scroll below: an 8-column chart still
- * scrolls inside this now-narrower, now-centered box exactly as it did in the
- * wider one.
+ * It does not fill the section either, and it carries no width number of its
+ * own. `w-fit max-w-full` on the wrapper with no `w-full` on the table: the
+ * grid measures itself from its columns, the bordered box shrink-wraps that
+ * measurement, and the whole thing stops at the section edge. A five-column
+ * chart draws narrow, a nine-column chart draws wide, and neither was told a
+ * pixel figure to aim for.
+ *
+ * A fixed cap was tried here (`max-w-[760px] mx-auto`) and removed the same
+ * day. Two things were wrong with it. It is a magic number the content knows
+ * nothing about, so the moment a real chart measured wider than it — the live
+ * harem-pants size chart measures ~843px — the cap did not make the table
+ * tidier, it just started a horizontal scrollbar on a desktop screen with
+ * three hundred spare pixels beside it. And centering the box detached the
+ * chart from the copy above it: every other block in the description starts at
+ * the same left edge, so a centered island reads as a different document
+ * rather than as part of this one. Flush-left and content-width keeps the
+ * chart aligned with the paragraphs and headings it belongs to.
  *
  * ## It scrolls sideways rather than squeezing
  *
@@ -77,8 +76,8 @@ type DescriptionTableProps = {
  */
 export default function DescriptionTable({ block }: DescriptionTableProps) {
   return (
-    <div className="mx-auto max-w-[760px] overflow-x-auto rounded-xl border border-border">
-      <table className="w-full border-separate border-spacing-0 text-sm">
+    <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-border">
+      <table className="border-separate border-spacing-0 text-sm">
         {block.caption === undefined ? null : (
           <caption className="border-b border-border bg-white px-3 py-2 text-left text-xs text-ink-muted">
             {block.caption}
