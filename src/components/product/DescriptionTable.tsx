@@ -92,7 +92,7 @@ export default function DescriptionTable({ block }: DescriptionTableProps) {
                 // re-rendered whole from one payload, never reordered.
                 key={`header-${index}`}
                 scope="col"
-                className={`border-b border-border bg-surface-sunken px-3 py-2 text-left font-semibold whitespace-nowrap text-ink ${
+                className={`border-b border-border bg-surface-sunken px-3 py-2 text-center font-semibold whitespace-nowrap text-ink ${
                   index === 0 ? 'sticky left-0 z-10' : ''
                 }`}
               >
@@ -122,14 +122,14 @@ export default function DescriptionTable({ block }: DescriptionTableProps) {
                     <th
                       key={`cell-${columnIndex}`}
                       scope="row"
-                      className={`sticky left-0 z-10 bg-white px-3 py-2 text-left font-medium whitespace-nowrap text-ink ${rowBorder}`}
+                      className={`sticky left-0 z-10 bg-white px-3 py-2 text-center font-medium whitespace-nowrap text-ink ${rowBorder}`}
                     >
                       {cell}
                     </th>
                   ) : (
                     <td
                       key={`cell-${columnIndex}`}
-                      className={`px-3 py-2 text-ink-muted ${rowBorder}`}
+                      className={`px-3 py-2 text-center text-ink-muted ${rowBorder}`}
                     >
                       {cell}
                     </td>
