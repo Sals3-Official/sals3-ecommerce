@@ -570,6 +570,16 @@ export const CheckoutFreightQuoteResponseSchema = z.object({
 
 export const CheckoutIntentResponseSchema = z.object({
   checkoutIntentId: z.uuid(),
+  /**
+   * When the portal's own internal freight re-quote actually ran, inside
+   * `createCheckoutIntent`. Recorded on the Stripe session for audit rather
+   * than used to gate anything here — the portal already rejected a stale
+   * shipping selection before this response exists at all.
+   *
+   * The storefront no longer runs its own freight quote before this call, so
+   * this is the only place that moment is now visible from.
+   */
+  shippingQuotedAt: z.string(),
 });
 
 export const CheckoutOrderAcceptResponseSchema = z.object({

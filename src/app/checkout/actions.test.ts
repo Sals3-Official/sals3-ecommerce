@@ -101,6 +101,16 @@ const freightQuote = {
   ],
 };
 
+/**
+ * What `createPortalCheckoutIntent` resolves with once it has re-quoted
+ * freight and validated the selection against it — the portal's own doing,
+ * not this app's. `shippingQuotedAt` is the moment *that* live quote ran.
+ */
+const portalIntent = {
+  checkoutIntentId: '11111111-1111-4111-8111-111111111111',
+  shippingQuotedAt: '2026-08-17T14:00:05.000Z',
+};
+
 const mockedGetBuyerSession = vi.mocked(getRevocationCheckedBuyerSession);
 
 describe('createCheckoutSessionAction', () => {
@@ -196,10 +206,7 @@ describe('createCheckoutSessionAction', () => {
       ],
       subtotal: { amountMinor: 8769, currency: 'USD' },
     });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
-    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
-      checkoutIntentId: 'intent-1',
-    });
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue(portalIntent);
     vi.mocked(createStripeCheckoutSession).mockResolvedValue({
       clientSecret: 'cs_test_secret',
       sessionId: 'cs_test_1',
@@ -215,6 +222,9 @@ describe('createCheckoutSessionAction', () => {
 
     expect(result.ok).toBe(true);
     expect(createStripeCheckoutSession).toHaveBeenCalledTimes(1);
+    // The regression this whole rewrite guards against: a second live CJ
+    // freight computation on the one button that most needed to be fast.
+    expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
   });
 
   /** An older client sends no price. Absent is not a mismatch. */
@@ -230,10 +240,7 @@ describe('createCheckoutSessionAction', () => {
       ],
       subtotal: { amountMinor: 8769, currency: 'USD' },
     });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
-    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
-      checkoutIntentId: 'intent-1',
-    });
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue(portalIntent);
     vi.mocked(createStripeCheckoutSession).mockResolvedValue({
       clientSecret: 'cs_test_secret',
       sessionId: 'cs_test_1',
@@ -261,19 +268,31 @@ describe('createCheckoutSessionAction', () => {
     });
   });
 
+  /**
+   * The regression test for the duplicate-freight-quote fix.
+   *
+   * Before: this action re-quoted freight itself (`requestCheckoutFreightQuotes`)
+   * and matched the buyer's selection against that quote before ever calling
+   * the portal, which then re-quoted and re-matched the exact same selection
+   * again inside `createCheckoutIntent`. Two full live CJ freight computations
+   * for one Pay press.
+   *
+   * Now the portal's re-quote is the only one, and the selection reaches it
+   * completely unmodified — no local match rewrites `quoteId` or any other
+   * field first, which is why the assertions below check for `'quote-old'`
+   * (what the buyer actually submitted) rather than a value a local quote would
+   * have produced.
+   */
   it('returns an embedded Stripe Checkout client secret for a valid checkout', async () => {
     vi.mocked(validateCheckoutCart).mockResolvedValue({
       lines: [],
       subtotal: { amountMinor: 0, currency: 'USD' },
     });
-    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
-      checkoutIntentId: '11111111-1111-4111-8111-111111111111',
-    });
+    vi.mocked(createPortalCheckoutIntent).mockResolvedValue(portalIntent);
     vi.mocked(createStripeCheckoutSession).mockResolvedValue({
       clientSecret: 'cs_test_secret',
       sessionId: 'cs_test_123',
     });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
 
     await expect(
       createCheckoutSessionAction({
@@ -286,12 +305,16 @@ describe('createCheckoutSessionAction', () => {
       clientSecret: 'cs_test_secret',
       sessionId: 'cs_test_123',
     });
+
+    // No local freight re-quote at all — the portal's is the only one.
+    expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
+
     expect(createPortalCheckoutIntent).toHaveBeenCalledWith(
       expect.objectContaining({
         shippingSelection: {
           packageSelections: [
             expect.objectContaining({
-              quoteId: 'quote-new',
+              quoteId: 'quote-old',
               optionId: 'option-1',
               amountMinor: 409,
             }),
@@ -301,11 +324,12 @@ describe('createCheckoutSessionAction', () => {
     );
     expect(createStripeCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        checkoutIntentId: '11111111-1111-4111-8111-111111111111',
+        checkoutIntentId: portalIntent.checkoutIntentId,
+        shippingQuotedAt: portalIntent.shippingQuotedAt,
         shippingSelection: {
           packageSelections: [
             expect.objectContaining({
-              quoteId: 'quote-new',
+              quoteId: 'quote-old',
               optionId: 'option-1',
               amountMinor: 409,
             }),
@@ -434,15 +458,25 @@ describe('createCheckoutSessionAction', () => {
     consoleError.mockRestore();
   });
 
+  /**
+   * A stale or mismatched selection is now the portal's own `validateSelection`
+   * to catch — inside `createCheckoutIntent`, against its own fresh quote — not
+   * a local re-quote's job. `createPortalCheckoutIntent` surfaces that refusal
+   * as a `ProductsApiError` carrying the portal's own buyer-facing sentence in
+   * `safeMessage`, and this action must still show it without alteration.
+   */
   it('rejects a stale shipping selection', async () => {
     vi.mocked(validateCheckoutCart).mockResolvedValue({
       lines: [],
       subtotal: { amountMinor: 0, currency: 'USD' },
     });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue({
-      ...freightQuote,
-      quotes: [{ ...freightQuote.quotes[0]!, amountMinor: 499 }],
-    });
+    vi.mocked(createPortalCheckoutIntent).mockRejectedValue(
+      new ProductsApiError('Storefront checkout intent API failed.', {
+        status: 422,
+        safeMessage:
+          'Shipping changed. Refresh delivery options and choose again.',
+      }),
+    );
 
     await expect(
       createCheckoutSessionAction({
@@ -454,73 +488,22 @@ describe('createCheckoutSessionAction', () => {
       ok: false,
       message: 'Shipping changed. Refresh delivery options and choose again.',
     });
+    expect(requestCheckoutFreightQuotes).not.toHaveBeenCalled();
     expect(createStripeCheckoutSession).not.toHaveBeenCalled();
   });
 
-  it('accepts an earned zero-priced Standard selection after re-quote', async () => {
-    const freeSelection = {
-      packageSelections: [
-        { ...shippingSelection.packageSelections[0]!, amountMinor: 0 },
-      ],
-    };
-    const freeQuote = {
-      ...freightQuote,
-      quotes: [
-        {
-          ...freightQuote.quotes[0]!,
-          amountMinor: 0,
-          regularAmountMinor: 409,
-        },
-      ],
-      freeShipping: {
-        thresholdAmountMinor: 1200,
-        subtotalAmountMinor: 1200,
-        amountRemainingMinor: 0,
-        eligible: true,
-        currency: 'USD' as const,
-      },
-    };
-    vi.mocked(validateCheckoutCart).mockResolvedValue({
-      lines: [],
-      subtotal: { amountMinor: 1200, currency: 'USD' },
-    });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freeQuote);
-    vi.mocked(createPortalCheckoutIntent).mockResolvedValue({
-      checkoutIntentId: '11111111-1111-4111-8111-111111111111',
-    });
-    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
-      clientSecret: 'cs_test_secret',
-      sessionId: 'cs_test_123',
-    });
-
-    await expect(
-      createCheckoutSessionAction({
-        cart: { items: [{ productId: 'jacket', quantity: 1 }] },
-        address,
-        shippingSelection: freeSelection,
-      }),
-    ).resolves.toMatchObject({ ok: true });
-    expect(createPortalCheckoutIntent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        shippingSelection: {
-          packageSelections: [
-            expect.objectContaining({
-              quoteId: 'quote-new',
-              amountMinor: 0,
-              shippingTier: 'Standard',
-            }),
-          ],
-        },
-      }),
-    );
-  });
-
-  it('rejects a buyer-supplied tier that differs from the fresh quote', async () => {
+  it('rejects a buyer-supplied tier the portal no longer recognises', async () => {
     vi.mocked(validateCheckoutCart).mockResolvedValue({
       lines: [],
       subtotal: { amountMinor: 0, currency: 'USD' },
     });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
+    vi.mocked(createPortalCheckoutIntent).mockRejectedValue(
+      new ProductsApiError('Storefront checkout intent API failed.', {
+        status: 422,
+        safeMessage:
+          'Shipping changed. Refresh delivery options and choose again.',
+      }),
+    );
 
     await expect(
       createCheckoutSessionAction({
@@ -547,7 +530,12 @@ describe('createCheckoutSessionAction', () => {
       lines: [],
       subtotal: { amountMinor: 0, currency: 'USD' },
     });
-    vi.mocked(requestCheckoutFreightQuotes).mockResolvedValue(freightQuote);
+    vi.mocked(createPortalCheckoutIntent).mockRejectedValue(
+      new ProductsApiError('Storefront checkout intent API failed.', {
+        status: 422,
+        safeMessage: 'Choose a delivery option for every package.',
+      }),
+    );
     const selected = shippingSelection.packageSelections[0]!;
 
     await expect(
