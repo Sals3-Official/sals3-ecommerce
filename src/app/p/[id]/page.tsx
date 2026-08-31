@@ -11,7 +11,6 @@ import ProductGallery from '@/components/product/ProductGallery';
 import ProductRecordPanel from '@/components/product/ProductRecordPanel';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
 import { SelectedSkuProvider } from '@/components/product/selected-sku';
-import ProductSupplierDetails from '@/components/product/ProductSupplierDetails';
 import RelatedProducts from '@/components/product/RelatedProducts';
 import BreadcrumbSchema from '@/components/schema/BreadcrumbSchema';
 import ProductSchema from '@/components/schema/ProductSchema';
@@ -387,24 +386,7 @@ export default async function ProductPage({
               selectedVariant?.sku ?? detail.specs?.sku ?? variants[0]?.sku
             }
           />
-          {/*
-            Supplier details reads straight after specifications, in the same
-            white region and the same format — owner decision 2026-08-31, after
-            seeing the first attempt on live.
 
-            That attempt kept this on the 1152px measure as a rounded card, on
-            the argument that a second full-bleed white section would merge with
-            the first. It did not read as a merge; it read as a table, a strip
-            of grey, and then a smaller table in a box, for two halves of one
-            subject. The owner's word for it was "sobrang awkward".
-
-            So the two bands are deliberately continuous now, sharing one
-            hairline. What keeps them apart is no longer a gap or a type scale —
-            it is the sentence under the supplier grid, which is the only thing
-            left saying whose claim is whose. That sentence is load-bearing;
-            `ProductSupplierDetails` says so beside it.
-          */}
-          <ProductSupplierDetails specs={detail.specs} />
           <div className="mx-auto w-full max-w-6xl px-6">
             <ProductDescription blocks={remainingBlocks} />
             <ProductReviews
