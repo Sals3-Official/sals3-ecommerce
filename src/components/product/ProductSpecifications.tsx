@@ -1,6 +1,6 @@
 import type { ProductSpecification, ProductSpecs } from '@/lib/product-detail';
 import Sals3SkuLine from './Sals3SkuLine';
-import { PRODUCT_FACT_GRID, PRODUCT_FACT_ROW } from './product-label-styles';
+import { PRODUCT_FACT_GRID, PRODUCT_FACT_ROW } from './fact-table-styles';
 
 type ProductSpecificationsProps = {
   /** Seller-declared category attributes, in the order the portal sent them. */
