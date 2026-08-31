@@ -85,17 +85,23 @@ describe('DescriptionTable', () => {
     expect(scroller?.className).toContain('overflow-x-auto');
   });
 
-  it('bulges out symmetrically instead of only to the right', () => {
-    // Escaping the 70ch measure with no cap and no `mx-auto` fills the full
-    // section width, so every pixel gained over the narrower text column
-    // above lands on the right only — capped and centered is what makes the
-    // table read as a deliberate wide breakout instead of a lopsided one.
+  it('sizes itself from its own content and stays flush-left', () => {
+    // A fixed cap (`max-w-[760px] mx-auto`) was tried here and removed: a real
+    // chart measuring ~843px scrolled sideways on a desktop screen with spare
+    // room beside it, and centering detached the grid from the copy above it,
+    // which starts at the section's left edge like every other block.
     render(<DescriptionBlockList blocks={[SIZE_CHART]} />);
 
-    const scroller = screen.getByRole('table').parentElement;
+    const table = screen.getByRole('table');
+    const scroller = table.parentElement;
 
-    expect(scroller?.className).toContain('max-w-[760px]');
-    expect(scroller?.className).toContain('mx-auto');
+    expect(scroller?.className).toContain('w-fit');
+    expect(scroller?.className).toContain('max-w-full');
+    expect(scroller?.className).not.toContain('mx-auto');
+    // No width number anywhere: the columns decide, not a pixel figure.
+    expect(scroller?.className).not.toMatch(/max-w-\[\d/);
+    // `w-full` on the table would stretch it to the wrapper and defeat `w-fit`.
+    expect(table.className).not.toContain('w-full');
   });
 
   it('renders a blank cell as an empty cell rather than closing the gap', () => {
