@@ -4,7 +4,6 @@ import { headers } from 'next/headers';
 import {
   CreateCheckoutSessionInputSchema,
   type CreateCheckoutSessionInput,
-  type CheckoutShippingSelection,
   type CheckoutCartLineInput,
 } from '@/lib/checkout/schema';
 import { getRevocationCheckedBuyerSession } from '@/lib/auth/dal';
@@ -73,53 +72,6 @@ function requestKey(headersList: Headers): string {
   const forwarded = headersList.get('x-forwarded-for')?.split(',')[0]?.trim();
 
   return forwarded || headersList.get('x-real-ip') || 'unknown';
-}
-
-function validateShippingSelection(
-  quoted: CheckoutFreightQuoteResponse,
-  selection: CheckoutShippingSelection,
-): CheckoutShippingSelection {
-  const selections = selection.packageSelections.map((selected) => {
-    const match = quoted.quotes.find(
-      (quote) =>
-        quote.packageId === selected.packageId &&
-        quote.shippingTier === selected.shippingTier &&
-        quote.optionId === selected.optionId &&
-        quote.channelId === selected.channelId &&
-        quote.amountMinor === selected.amountMinor &&
-        quote.currency === selected.currency,
-    );
-
-    if (match === undefined) {
-      throw new CheckoutValidationError(
-        'Shipping changed. Refresh delivery options and choose again.',
-      );
-    }
-
-    return {
-      packageId: match.packageId,
-      shippingTier: match.shippingTier,
-      quoteId: match.quoteId,
-      optionId: match.optionId,
-      channelId: match.channelId,
-      cjLogisticName: match.cjLogisticName,
-      arrivalTime: match.arrivalTime,
-      amountMinor: match.amountMinor,
-      currency: match.currency,
-    };
-  });
-  const selectedPackages = new Set(selections.map((quote) => quote.packageId));
-
-  if (
-    selections.length !== quoted.packages.length ||
-    selectedPackages.size !== quoted.packages.length
-  ) {
-    throw new CheckoutValidationError(
-      'Choose a delivery option for every package.',
-    );
-  }
-
-  return { packageSelections: selections };
 }
 
 export type RepriceCartResult =
@@ -281,7 +233,8 @@ export async function createCheckoutSessionAction(
     /*
       Deliberately sequential, and it must stay that way.
 
-      Overlapping this with the freight quote looks free — the quote takes
+      Overlapping this with the portal's own freight re-quote (inside
+      `createPortalCheckoutIntent`, below) looks free — that call takes
       `parsed.data.cart`, not the validated one — but the price check below
       returns before paying, and a quote started in parallel would already have
       spent CJ freight quota on a checkout that is not going to complete. CJ
@@ -289,9 +242,10 @@ export async function createCheckoutSessionAction(
       the case is guarded by a test that says so.
 
       It is also a poor trade even ignoring the budget: this is one Portal round
-      trip and the quote is several live CJ requests deep, so running them
-      together saves the shorter of the two and the button still waits on the
-      longer. The cost of the sequence is bounded; the cost of the quote is not.
+      trip and the quote behind it is several live CJ requests deep, so running
+      them together saves the shorter of the two and the button still waits on
+      the longer. The cost of the sequence is bounded; the cost of the quote is
+      not.
     */
     const cart = await validateCheckoutCart(parsed.data.cart.items);
     /*
@@ -340,14 +294,25 @@ export async function createCheckoutSessionAction(
       };
     }
 
-    const quoted = await requestCheckoutFreightQuotes({
-      cart: parsed.data.cart,
-      address: parsed.data.address,
-    });
-    const shippingSelection = validateShippingSelection(
-      quoted,
-      parsed.data.shippingSelection,
-    );
+    /*
+      No freight re-quote here. `createPortalCheckoutIntent` (below) already
+      re-quotes freight live and validates this exact selection against it —
+      that is `createCheckoutIntent`'s own `quoteCheckoutFreight` +
+      `validateSelection` on the portal side, and it is the authoritative
+      check: its result is what gets persisted for the order this intent
+      becomes. Quoting again here first was a second full live CJ freight
+      computation on every Pay press for a check the portal was about to
+      repeat anyway — the duplicate `sals3-portal` was measured making on the
+      one button that most needed to be fast.
+
+      A stale or mismatched selection still produces the exact same buyer
+      sentence it always did: the portal throws `CheckoutOrderError` for it,
+      `createPortalCheckoutIntent` surfaces that as a `ProductsApiError` with
+      `safeMessage` set to the portal's own text, and the catch block below
+      already knows how to show a 422's `safeMessage` — nothing about that
+      path changed, only where the check itself runs.
+    */
+    const { shippingSelection } = parsed.data;
     const intent = await createPortalCheckoutIntent({
       cart: parsed.data.cart,
       address: parsed.data.address,
@@ -358,7 +323,7 @@ export async function createCheckoutSessionAction(
       cart,
       address: parsed.data.address,
       shippingSelection,
-      shippingQuotedAt: quoted.quotedAt,
+      shippingQuotedAt: intent.shippingQuotedAt,
       checkoutIntentId: intent.checkoutIntentId,
       buyerUid: buyer.uid,
     });
