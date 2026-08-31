@@ -5,8 +5,9 @@ import { useActionState, useState } from 'react';
 import submitReviewAction, {
   type SubmitReviewFormState,
 } from '@/app/orders/[orderNumber]/review/[lineId]/actions';
+import ReviewPhotoPicker from '@/components/orders/ReviewPhotoPicker';
 import StarRatingInput from '@/components/orders/StarRatingInput';
-import { MAX_BODY } from '@/lib/orders/review-form';
+import { DELIVERY_VERDICTS, MAX_BODY } from '@/lib/orders/review-form';
 
 type WriteReviewFormProps = {
   orderNumber: string;
@@ -56,6 +57,13 @@ export default function WriteReviewForm({
     FormData
   >(submitReviewAction, { status: 'idle' });
   const [rating, setRating] = useState(0);
+  /**
+   * `0` is "not answered", and it reaches the action as an empty value the
+   * schema drops before coercion. It must never arrive as a score: an
+   * unanswered delivery is excluded from the average, while a nought would be a
+   * verdict on a courier from somebody who said nothing.
+   */
+  const [deliveryRating, setDeliveryRating] = useState(0);
   const [body, setBody] = useState('');
 
   const tooLong = body.trim().length > MAX_BODY;
@@ -75,6 +83,56 @@ export default function WriteReviewForm({
           value={rating}
           onChange={setRating}
         />
+        <span className="text-[12.5px] leading-relaxed text-ink-subtle">
+          The item itself — what it is made of, whether it does the job.
+        </span>
+      </fieldset>
+
+      {/*
+        Delivery, scored apart and genuinely optional.
+
+        Apart because it is a different party's work: a buyer who waited three
+        weeks for a good product used to rate the product one star, and the
+        listing carried a courier's failure for as long as it existed.
+
+        Skipping it costs nothing — an unanswered delivery is excluded from the
+        average rather than counted as a nought. Radios cannot be un-chosen, so
+        there is a Clear beside them: a buyer who tapped a star by accident has
+        to be able to get back to having said nothing, and without it the
+        mis-tap becomes a permanent score against the courier.
+
+        The hidden input is what the form actually posts. The radios inside
+        `StarRatingInput` are named `delivery` so they never collide with it,
+        and this one carries the value the action reads.
+      */}
+      <fieldset className="flex flex-col gap-2.5">
+        <legend className="text-[13.5px] font-semibold text-ink">
+          How did it arrive?{' '}
+          <span className="font-medium text-ink-subtle">Optional</span>
+        </legend>
+        <input type="hidden" name="deliveryRating" value={deliveryRating} />
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <StarRatingInput
+            name="delivery"
+            idPrefix="delivery"
+            value={deliveryRating}
+            onChange={setDeliveryRating}
+            verdicts={DELIVERY_VERDICTS}
+          />
+          {deliveryRating === 0 ? null : (
+            <button
+              type="button"
+              onClick={() => setDeliveryRating(0)}
+              className="text-[12.5px] font-medium text-ink-subtle underline underline-offset-2 transition hover:text-ink"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <span className="text-[12.5px] leading-relaxed text-ink-subtle">
+          Speed and condition of the parcel. This is Sals3 and the courier, not
+          the seller&rsquo;s product, so it is averaged separately.
+        </span>
       </fieldset>
 
       <label className="flex flex-col gap-1.5" htmlFor="review-body">
@@ -101,6 +159,8 @@ export default function WriteReviewForm({
           </span>
         </span>
       </label>
+
+      <ReviewPhotoPicker />
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-[13.5px] font-semibold text-ink">

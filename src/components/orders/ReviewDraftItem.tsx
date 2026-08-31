@@ -2,10 +2,19 @@
 
 import Image from 'next/image';
 import StarRatingInput from '@/components/orders/StarRatingInput';
-import { MAX_BODY } from '@/lib/orders/review-form';
+import { DELIVERY_VERDICTS, MAX_BODY } from '@/lib/orders/review-form';
 import type { ReviewableLine } from '@/lib/orders/reviewable';
 
-export type ReviewDraft = { rating: number; body: string };
+export type ReviewDraft = {
+  rating: number;
+  /**
+   * `0` is "not answered", not a score. The batch action drops it before it
+   * reaches the portal, where an unanswered delivery has to land as NULL — every
+   * read excludes NULL from the average and would fold a nought straight in.
+   */
+  deliveryRating: number;
+  body: string;
+};
 
 type ReviewDraftItemProps = {
   line: ReviewableLine;
@@ -86,6 +95,45 @@ export default function ReviewDraftItem({
             value={draft.rating}
             onChange={(rating) => onChange({ rating })}
           />
+        </div>
+
+        {/*
+          Delivery, scored apart and optional.
+
+          Apart because it is a different party's work: a buyer who waited three
+          weeks for a good product used to rate the product one star, and the
+          listing carried a courier's failure for as long as it existed.
+
+          Radios cannot be un-chosen, so there is a Clear beside them — a buyer
+          who tapped a star by accident has to be able to get back to having
+          said nothing, or the mis-tap becomes a permanent score.
+
+          No photo picker here, unlike the single-review page. Four uploads per
+          item across an order of ten is a very different burst, and each one is
+          its own request; the dedicated page is where a buyer photographing a
+          defect is already working.
+        */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="text-[13.5px] font-semibold text-ink">
+            How did it arrive?{' '}
+            <span className="font-medium text-ink-subtle">Optional</span>
+          </span>
+          <StarRatingInput
+            name={`delivery-${line.id}`}
+            idPrefix={`delivery-${line.id}`}
+            value={draft.deliveryRating}
+            onChange={(deliveryRating) => onChange({ deliveryRating })}
+            verdicts={DELIVERY_VERDICTS}
+          />
+          {draft.deliveryRating === 0 ? null : (
+            <button
+              type="button"
+              onClick={() => onChange({ deliveryRating: 0 })}
+              className="text-[12.5px] font-medium text-ink-subtle underline underline-offset-2 transition hover:text-ink"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </fieldset>
 

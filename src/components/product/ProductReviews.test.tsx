@@ -9,6 +9,8 @@ const REVIEW: ProductReview = {
   body: 'Fits exactly like the size chart said.',
   displayName: 'Hezekiah A.',
   variantLabel: 'Digital Black / 31"-35"',
+  deliveryRating: undefined,
+  photos: [],
   createdAt: '2026-08-19T10:00:00.000Z',
   reply: null,
 };
@@ -331,11 +333,13 @@ describe('ProductReviews', () => {
  * The section must never contradict itself while that is true.
  */
 describe('when the reviews arrive before the aggregate that counts them', () => {
-  const review = {
+  const review: ProductReview = {
     id: 'r1',
     rating: 5,
+    deliveryRating: undefined,
     body: 'hey, this box is good!',
     displayName: 'Mayleen S.',
+    photos: [],
     createdAt: '2026-08-31T05:00:00.000Z',
     variantLabel: 'Storage box',
     reply: null,
@@ -383,5 +387,176 @@ describe('when the reviews arrive before the aggregate that counts them', () => 
 
     expect(screen.getByText('5.0')).toBeInTheDocument();
     expect(screen.getByText('1 review')).toBeInTheDocument();
+  });
+});
+
+describe('the delivery score', () => {
+  /**
+   * The whole reason it is a second number. A buyer who waited three weeks for
+   * a good product scored the product high and the delivery low, and folding
+   * the two would tell the seller their listing is the problem.
+   */
+  it('shows a delivery average apart from the product average', () => {
+    render(
+      <ProductReviews
+        rating={{
+          average: 4.8,
+          count: 20,
+          delivery: { average: 3.2, count: 6 },
+        }}
+        breakdown={[0, 0, 1, 2, 17]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(screen.getByText('4.8')).toBeInTheDocument();
+    expect(screen.getByText('3.2')).toBeInTheDocument();
+    expect(screen.getByText(/Delivery/)).toBeInTheDocument();
+  });
+
+  /**
+   * Six of twenty answering is not the same claim as twenty answering, and a
+   * reader has to be able to tell — this is the number a seller acts on.
+   */
+  it('states its own denominator, not the review count', () => {
+    render(
+      <ProductReviews
+        rating={{
+          average: 4.8,
+          count: 20,
+          delivery: { average: 3.2, count: 6 },
+        }}
+        breakdown={[0, 0, 1, 2, 17]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(screen.getByText(/6 of 20 who answered/i)).toBeInTheDocument();
+  });
+
+  it('says "all" when every reviewer answered', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 3, delivery: { average: 5, count: 3 } }}
+        breakdown={[0, 0, 0, 0, 3]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(screen.getByText(/all 3 who answered/i)).toBeInTheDocument();
+  });
+
+  /**
+   * The failure the nullable column exists to prevent. "Delivery 0.0" on a
+   * product nobody scored reads as a courier catastrophe, and no such verdict
+   * was given.
+   */
+  it('shows nothing at all when nobody scored the delivery', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 4.8, count: 20 }}
+        breakdown={[0, 0, 1, 2, 17]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(screen.queryByText(/Delivery/)).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+  });
+});
+
+describe('a review row', () => {
+  it('shows this buyer’s delivery score beside the product one', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 1, delivery: { average: 2, count: 1 } }}
+        breakdown={[0, 0, 0, 0, 1]}
+        reviews={[{ ...REVIEW, deliveryRating: 2 }]}
+      />,
+    );
+
+    expect(screen.getByText('2/5')).toBeInTheDocument();
+  });
+
+  /** Absence, never a nought and never a dash. */
+  it('says nothing about delivery when this buyer skipped it', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 1 }}
+        breakdown={[0, 0, 0, 0, 1]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(screen.queryByText(/Delivery:/)).not.toBeInTheDocument();
+  });
+
+  it('renders the photos the buyer attached, in their order', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 1 }}
+        breakdown={[0, 0, 0, 0, 1]}
+        reviews={[
+          {
+            ...REVIEW,
+            photos: [
+              { url: 'https://media.example/a.webp', width: 800, height: 600 },
+              { url: 'https://media.example/b.webp', width: 640, height: 640 },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    const links = screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href')?.startsWith('https://media'));
+
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute('href', 'https://media.example/a.webp');
+  });
+
+  /** Quiet, but present on every row — there is a real queue behind it. */
+  it('offers a way to report the review', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 1 }}
+        breakdown={[0, 0, 0, 0, 1]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /report this review/i }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * The reasons are a closed list and they stay out of the way until the buyer
+   * has decided to report something.
+   */
+  it('asks for a reason before it will send anything', () => {
+    render(
+      <ProductReviews
+        rating={{ average: 5, count: 1 }}
+        breakdown={[0, 0, 0, 0, 1]}
+        reviews={[REVIEW]}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /not about this product/i }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /report this review/i }),
+    );
+
+    expect(
+      screen.getByRole('button', { name: /not about this product/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/nothing is removed automatically/i),
+    ).toBeInTheDocument();
   });
 });

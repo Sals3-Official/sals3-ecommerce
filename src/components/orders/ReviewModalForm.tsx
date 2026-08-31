@@ -15,6 +15,13 @@ import type { ReviewableLine } from '@/lib/orders/reviewable';
 const COMPLETED_HREF = ordersHref(DEFAULT_ORDERS_QUERY, { lane: 'completed' });
 
 /**
+ * What an item scores before the buyer has touched it. `0` in both places means
+ * "not answered" — the product one blocks Submit, and the delivery one is
+ * dropped rather than sent.
+ */
+const EMPTY_DRAFT: ReviewDraft = { rating: 0, deliveryRating: 0, body: '' };
+
+/**
  * The Completed lane, carrying the count the toast will name. Built rather than
  * written out, so it stays correct if the lane ever becomes the default view and
  * `ordersHref` starts returning a bare `/orders`.
@@ -107,6 +114,13 @@ export default function ReviewModalForm({
           return {
             orderLineId: line.id,
             rating: draft?.rating ?? 0,
+            // Spread only when answered. `0` is "not answered", and sending it
+            // would fail the portal's own CHECK — an unanswered delivery has to
+            // reach the column as NULL or every read counts it as a one-star
+            // verdict on a courier from somebody who said nothing.
+            ...(draft === undefined || draft.deliveryRating === 0
+              ? {}
+              : { deliveryRating: draft.deliveryRating }),
             ...(body === '' ? {} : { body }),
             attribution,
           };
@@ -156,7 +170,7 @@ export default function ReviewModalForm({
           <ReviewDraftItem
             key={line.id}
             line={line}
-            draft={drafts[line.id] ?? { rating: 0, body: '' }}
+            draft={drafts[line.id] ?? EMPTY_DRAFT}
             onChange={(patch) => onDraftChange(line.id, patch)}
           />
         ))}

@@ -30,6 +30,43 @@ export const MAX_BODY = 1000;
 export const MAX_REVIEW_ITEMS = 10;
 
 /**
+ * How many photos one review may carry. The portal holds the same cap, in a
+ * `CHECK` as well as in a validator.
+ *
+ * Four is enough to show a defect from two angles plus the packaging, and small
+ * enough to finish on a phone connection — each one is its own request, because
+ * the deployed platform caps a serverless request body at 4.5 MB and four at
+ * the 5 MB per-file ceiling is several times that.
+ */
+export const MAX_REVIEW_PHOTOS = 4;
+
+/**
+ * What the buyer is told before they pick a file.
+ *
+ * The real limits live in the portal's upload pipeline, which this side cannot
+ * import — the same split `image-upload-limits.ts` documents over there. One
+ * copy here so the caption cannot drift between the surfaces that show it.
+ */
+export const REVIEW_PHOTO_LIMITS_COPY =
+  'JPG, PNG or WebP · up to 2000 × 2000 px · max 5 MB each';
+
+/**
+ * The word beside the delivery stars.
+ *
+ * `0` says the question is optional rather than scoring nothing. An unanswered
+ * delivery is excluded from the average entirely, and the copy has to say so —
+ * otherwise a buyer skipping it assumes their silence counts against somebody.
+ */
+export const DELIVERY_VERDICTS: Record<number, string> = {
+  0: 'Optional — skip if you would rather not say',
+  1: 'Slow, or it arrived damaged',
+  2: 'Later than I expected',
+  3: 'It arrived',
+  4: 'On time and intact',
+  5: 'Quick and well packed',
+};
+
+/**
  * The word beside the stars. `0` is the unrated state and says what to do
  * rather than scoring nothing.
  */

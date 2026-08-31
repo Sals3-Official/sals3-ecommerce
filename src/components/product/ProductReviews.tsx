@@ -33,7 +33,16 @@ function FirstReviewInvitation() {
 }
 
 type ProductReviewsProps = {
-  rating?: { average: number; count: number };
+  rating?: {
+    average: number;
+    count: number;
+    /**
+     * How the deliveries were scored, over its own denominator. Absent when
+     * nobody answered — not the same fact as a low score, and the summary
+     * renders it as absence for exactly that reason.
+     */
+    delivery?: { average: number; count: number };
+  };
   breakdown?: [number, number, number, number, number];
   reviews: ProductReview[];
 };
@@ -48,19 +57,22 @@ type ProductReviewsProps = {
  *
  * What was not adopted, and why it is not an oversight:
  *
- * - **"With Media" chip** — the most prominent one on Shopee. No review here
- *   carries an image or a video, because the form has never accepted an upload
- *   and `ProductReviewSchema` has no field for one.
  * - **Avatars** — no buyer avatar exists on the wire. The row shows the initial
  *   of the name already published, or `UserIcon` for an anonymous review.
- * - **Helpful votes and the report menu** — no vote table, no buyer-facing
- *   report route.
+ * - **Helpful votes** — no vote table.
  * - **Per-attribute sub-scores** ("Material Quality: 10") — the wire carries one
- *   rating per line, not a rubric.
+ *   product rating per line, not a rubric. The delivery score below is not one
+ *   of these: it is a second party's work, not a facet of the item.
  *
  * Each of those would be a control or a claim with nothing behind it, which is
  * the one thing this section cannot afford: it is the part of the page whose
  * whole value is that a buyer can trust what it says.
+ *
+ * Two of the original absences are now filled, because something real arrived
+ * behind them: reviews carry **photos**, and a buyer can **report** one. The
+ * "With Media" filter chip is still absent — a filter is worth its row of
+ * chrome once enough reviews carry pictures to make filtering them a real
+ * question, and on this catalogue that day has not come.
  *
  * ## The provenance line is still the point of the summary block
  *
@@ -178,6 +190,42 @@ export default function ProductReviews({
                   ? `Out of 5, from ${rating.count} ${rating.count === 1 ? 'review' : 'reviews'} of this product.`
                   : 'Out of 5. Nobody has reviewed this product yet.'}
               </span>
+
+              {/*
+                The delivery score, under the product score and visibly apart
+                from it. Apart is the whole point: the number above stays about
+                the item, and this one is about how the parcel arrived — Sals3
+                and the courier, not the seller's product.
+
+                Hidden entirely when nobody answered, rather than shown as 0.0
+                or as a dash. A buyer reading "Delivery 0.0" would take it as a
+                verdict on the shipping, and no verdict was given.
+
+                It carries its own denominator because it is not the one above:
+                a product can hold forty reviews and six delivery scores.
+              */}
+              {hasRating && rating.delivery !== undefined ? (
+                <div className="mt-1 flex flex-col gap-1 border-t border-border pt-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[13px] font-medium text-ink-muted">
+                      Delivery
+                    </span>
+                    <span className="ml-auto font-display text-lg leading-none font-semibold text-ink tabular-nums">
+                      {rating.delivery.average.toFixed(1)}
+                    </span>
+                    <span className="text-xs font-medium text-ink-subtle">
+                      / 5
+                    </span>
+                  </div>
+                  <span className="text-xs leading-normal text-ink-subtle">
+                    Speed and condition, from{' '}
+                    {rating.delivery.count === rating.count
+                      ? `all ${rating.count}`
+                      : `${rating.delivery.count} of ${rating.count}`}{' '}
+                    who answered.
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             <ProductRatingBreakdown

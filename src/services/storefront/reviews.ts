@@ -1,3 +1,4 @@
+import type { ReviewFlagReason } from '@/lib/reviews/flag-reasons';
 import {
   getStorefrontApiUrl,
   requestStorefrontJson,
@@ -94,6 +95,15 @@ type SubmitReviewInput = {
   verifiedEmail: string;
   orderLineId: string;
   rating: number;
+  /**
+   * How the parcel arrived, 1-5, or absent because the buyer skipped it.
+   *
+   * Omitted from the body rather than sent as `0`. The portal's column refuses
+   * anything outside 1-5 and every read excludes NULL from the average, so an
+   * unanswered delivery must arrive as an absent key — a zero would fail the
+   * write, and if it did not it would be a courier's verdict nobody gave.
+   */
+  deliveryRating?: number;
   body?: string;
   /**
    * A choice, not a name. The portal derives the published string from the
@@ -140,6 +150,9 @@ export async function submitProductReview(
         body: JSON.stringify({
           orderLineId: input.orderLineId,
           rating: input.rating,
+          ...(input.deliveryRating === undefined
+            ? {}
+            : { deliveryRating: input.deliveryRating }),
           ...(input.body === undefined || input.body === ''
             ? {}
             : { body: input.body }),
@@ -168,4 +181,130 @@ export async function submitProductReview(
   if (response.status === 400) return { ok: false, reason: 'invalid' };
 
   return { ok: false, reason: 'failed' };
+}
+
+export type FlagReviewOutcome =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: 'not_found' | 'already_reported' | 'rate_limited' | 'failed';
+    };
+
+/**
+ * Reports one review.
+ *
+ * Reaches the portal exactly the way a submission does: the session-verified
+ * address in `X-Buyer-Email`, never a body field. That address is what the
+ * portal's one-report-per-person index counts, which is the only reason a
+ * report costs anything at all.
+ *
+ * Nothing this returns is a claim that the review was hidden. The portal
+ * answers `202` deliberately — the buyer asked for a look, and the honest
+ * answer is that it was recorded rather than acted on.
+ */
+export async function flagProductReview(
+  input: {
+    /** Session-verified. Never a form field. */
+    verifiedEmail: string;
+    reviewId: string;
+    reason: ReviewFlagReason;
+  },
+  options: { fetcher?: typeof fetch } = {},
+): Promise<FlagReviewOutcome> {
+  const fetcher = options.fetcher ?? fetch;
+
+  let response: Response;
+
+  try {
+    response = await fetcher(
+      getStorefrontApiUrl(
+        `${STOREFRONT_REVIEWS_PATH}/${encodeURIComponent(input.reviewId)}/flag`,
+      ).toString(),
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: authorizationHeader(),
+          'X-Buyer-Email': input.verifiedEmail,
+        },
+        body: JSON.stringify({ reason: input.reason }),
+      },
+    );
+  } catch {
+    return { ok: false, reason: 'failed' };
+  }
+
+  // 202, not 201 — see the portal route. Accepted as a request to look.
+  if (response.status === 202) return { ok: true };
+
+  if (response.status === 404) return { ok: false, reason: 'not_found' };
+  if (response.status === 409) return { ok: false, reason: 'already_reported' };
+  if (response.status === 429) return { ok: false, reason: 'rate_limited' };
+
+  return { ok: false, reason: 'failed' };
+}
+
+export type AttachReviewPhotoOutcome =
+  { ok: true } | { ok: false; message: string };
+
+/**
+ * Attaches one photo to a review that already exists.
+ *
+ * One request per photo, because that is what the portal accepts, and its own
+ * route explains why: the deployed platform caps a serverless request body at
+ * 4.5 MB, and four photos at the 5 MB per-file ceiling is several times that.
+ *
+ * The refusal message comes from the portal rather than being re-derived here.
+ * It is the side that knows which limit was hit, and deciding "too wide" versus
+ * "too large" again on this side would be a second copy able to disagree with
+ * the one actually doing the checking.
+ */
+export async function attachProductReviewPhoto(
+  input: { verifiedEmail: string; reviewId: string; photo: File },
+  options: { fetcher?: typeof fetch } = {},
+): Promise<AttachReviewPhotoOutcome> {
+  const fetcher = options.fetcher ?? fetch;
+  const form = new FormData();
+
+  form.set('photo', input.photo);
+
+  let response: Response;
+
+  try {
+    response = await fetcher(
+      getStorefrontApiUrl(
+        `${STOREFRONT_REVIEWS_PATH}/${encodeURIComponent(input.reviewId)}/photos`,
+      ).toString(),
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          // Deliberately no Content-Type: `fetch` sets `multipart/form-data`
+          // with the boundary it generated, and naming it here without one
+          // produces a body the portal cannot parse.
+          Accept: 'application/json',
+          Authorization: authorizationHeader(),
+          'X-Buyer-Email': input.verifiedEmail,
+        },
+        body: form,
+      },
+    );
+  } catch {
+    return { ok: false, message: 'That photo could not be uploaded.' };
+  }
+
+  if (response.status === 201) return { ok: true };
+
+  const payload: unknown = await response.json().catch(() => null);
+  const message = (payload as { error?: unknown } | null)?.error;
+
+  return {
+    ok: false,
+    message:
+      typeof message === 'string' && message !== ''
+        ? message
+        : 'That photo could not be uploaded.',
+  };
 }
