@@ -18,7 +18,7 @@ const ReviewModalForm = dynamic(
   { ssr: false },
 );
 
-const EMPTY_DRAFT: ReviewDraft = { rating: 0, body: '' };
+const EMPTY_DRAFT: ReviewDraft = { rating: 0, deliveryRating: 0, body: '' };
 
 /**
  * One star, as an icon.

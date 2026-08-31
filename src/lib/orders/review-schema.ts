@@ -24,6 +24,23 @@ export const reviewItemSchema = z.object({
   rating: z.coerce.number().int().min(1).max(5),
   body: z.string().trim().max(MAX_BODY).optional(),
   /**
+   * How the parcel arrived, 1-5, or absent because the buyer skipped it.
+   *
+   * The empty string an untouched star row yields in `FormData` has to reach
+   * the portal as **absent**, never as a zero: an unanswered delivery question
+   * is excluded from the average, while a zero would be folded in as a verdict
+   * on a courier nobody complained about — and the portal's `CHECK` refuses it
+   * outright, so it would cost the whole review rather than merely mislead.
+   *
+   * `z.coerce.number()` turns `''` into `0`, so the empty cases are dropped
+   * *before* coercion. Afterwards the two are indistinguishable.
+   */
+  deliveryRating: z.preprocess(
+    (value) =>
+      value === '' || value === null || value === '0' ? undefined : value,
+    z.coerce.number().int().min(1).max(5).optional(),
+  ),
+  /**
    * `named` credits the buyer; `anonymous` publishes no name. A choice between
    * two known strings, never free text.
    */

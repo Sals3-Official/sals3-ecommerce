@@ -1643,15 +1643,60 @@ where this diverges from Shopee on purpose. A chip says how many two-star review
 exist; a bar shows the shape of the distribution, which is what a buyer reads an
 average to find out.
 
-Four things Shopee has that this deliberately does not, because each would be a
+Things Shopee has that this deliberately does not, because each would be a
 control or a claim with nothing behind it:
 
-| Not built                       | Why                                                                                                        |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **"With Media" chip**           | No review carries an image or video — the form accepts no upload and `ProductReviewSchema` has no field    |
-| **Avatars**                     | Nothing on the wire; the row shows the initial of the already-published name, or `UserIcon` when anonymous |
-| **Helpful votes / report menu** | No vote table, no buyer-facing report route                                                                |
-| **Per-attribute sub-scores**    | The wire carries one rating per line, not a rubric                                                         |
+| Not built                    | Why                                                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **"With Media" chip**        | Reviews carry photos now, but a filter earns its row of chrome only once enough of them do to make filtering a real question              |
+| **Avatars**                  | Nothing on the wire; the row shows the initial of the already-published name, or `UserIcon` when anonymous                                |
+| **Helpful votes**            | No vote table                                                                                                                             |
+| **Per-attribute sub-scores** | The wire carries one _product_ rating per line, not a rubric — the delivery score below is a second party's work, not a facet of the item |
+
+#### Delivery, photos and reporting (2026-08-31)
+
+Three review-lead comments, shipped together with the portal DDL that backs
+them.
+
+**The delivery score is a second number with its own denominator.** A buyer who
+waited three weeks for a good product used to rate the product one star, and the
+listing carried a courier's failure for as long as it existed. Split, the product
+average stays about the product and a low delivery score beside a high product
+score points at the shipping tier.
+
+It is **absent, never `0.0`**, when nobody answered — in the summary and on the
+row. An unanswered question is not a low score, and `deliveryRating` reaches the
+portal as an absent key rather than a zero: `z.coerce.number()` turns `''` into
+`0`, so `reviewItemSchema` drops the empty cases _before_ coercion. The portal's
+column refuses anything outside 1-5, so a zero would cost the whole review.
+
+The star row cannot be un-chosen — radios never can — so both forms put a
+**Clear** beside it. Without one, a mis-tap becomes a permanent score against a
+courier.
+
+**Photos upload one per request, after the review exists.** The portal caps a
+serverless request body at 4.5 MB and four photos at its 5 MB per-file ceiling is
+several times that, so they cannot ride the submission. `submitReviewAction`
+posts the review, then attaches each photo in order and reports a partial outcome
+honestly: _"Your review is posted, but a photo did not attach."_ Saying nothing
+would leave the buyer looking for pictures that never arrived, and reporting it
+as a failed review would invite a second attempt the portal refuses — one review
+per purchased line.
+
+Photos are on the single-review page only. Four uploads per item across a
+ten-item order is a very different burst, and the modal is a bulk-rate
+convenience rather than the place somebody photographs a defect.
+
+**Reporting asks for a look and promises nothing more.** `ReportReviewControl` is
+a ghost link that stays quiet until pressed, then offers five closed reasons —
+no free text, which would be an unmoderated string on a public object reachable
+by anyone signed in. Signing in is required: an anonymous report costs nothing to
+repeat, and the portal's one-report-per-person index has nothing to key on
+without an identity.
+
+The receipt says _"Reported. Someone will look at this."_ Not "removed". No count
+of reports hides anything, because an automatic hide at any threshold would let a
+competitor with four accounts erase a rating.
 
 **`ProductReviewList` filters in the browser, not through the URL.** Everything
 else that narrows a list in this storefront is a `next/link`, because those change

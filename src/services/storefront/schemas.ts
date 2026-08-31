@@ -102,6 +102,29 @@ export function salvagedArray<Schema extends z.ZodTypeAny>(
 export const RatingSummarySchema = z.object({
   average: z.number().min(0).max(5),
   count: z.number().int().nonnegative(),
+  /**
+   * How the deliveries were scored, over **its own denominator**.
+   *
+   * Absent whenever nobody answered — which is not the same fact as "nobody
+   * reviewed the product". A product can carry forty reviews and no delivery
+   * score, and a zero there would be a courier's failing grade invented out of
+   * silence. `count` is how many of those reviews answered, so a reader can say
+   * "from 6 of 40" rather than implying all forty did.
+   *
+   * The portal sends `null` for it, so `.nullish()` and then `undefined` —
+   * absent and explicitly-nothing are the same fact here, and collapsing them
+   * spares every consumer a second empty case to handle. `.catch(undefined)`
+   * for the reason the whole summary has it: a malformed number must cost the
+   * delivery line, never the product.
+   */
+  delivery: z
+    .object({
+      average: z.number().min(0).max(5),
+      count: z.number().int().positive(),
+    })
+    .nullish()
+    .transform((value) => value ?? undefined)
+    .catch(undefined),
 });
 
 const StorefrontProductBaseSchema = z.object({
@@ -401,9 +424,46 @@ export const StorefrontProductResponseSchema = z.object({
 export const ProductReviewSchema = z.object({
   id: z.string().min(1).max(120),
   rating: z.number().int().min(1).max(5),
+  /**
+   * How this buyer scored the delivery, or nothing because they did not answer.
+   *
+   * Rendered as absence, never as a nought and never as a dash in a row of
+   * scores: an unanswered question is not a low score, and this one is about
+   * the courier rather than the seller.
+   */
+  deliveryRating: z
+    .number()
+    .int()
+    .min(1)
+    .max(5)
+    .nullish()
+    .transform((value) => value ?? undefined)
+    .catch(undefined),
   body: truncatedText(1000).nullable(),
   displayName: truncatedText(60).nullable(),
   variantLabel: truncatedText(120).nullable(),
+  /**
+   * Photos the buyer attached, in the order they chose.
+   *
+   * Defaults to `[]` so every consumer can map without a null check, and
+   * `.catch([])` because a malformed photo array must cost the pictures, never
+   * the review — the words and the rating are the part that matters.
+   *
+   * Bounded at four here as well as in the database. A schema that would accept
+   * forty is a schema that renders forty the day something upstream goes wrong.
+   */
+  photos: z
+    .array(
+      z.object({
+        url: z.string().url().max(2048),
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      }),
+    )
+    .max(4)
+    .optional()
+    .catch(undefined)
+    .transform((value) => value ?? []),
   createdAt: z.string(),
   reply: z
     .object({ body: truncatedText(1000), createdAt: z.string() })

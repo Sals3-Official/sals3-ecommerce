@@ -9,6 +9,8 @@ function review(overrides: Partial<ProductReview> = {}): ProductReview {
     body: 'Fits exactly like the size chart said.',
     displayName: 'Hezekiah A.',
     variantLabel: 'Digital Black / 31"-35"',
+    deliveryRating: undefined,
+    photos: [],
     createdAt: '2026-08-19T10:00:00.000Z',
     reply: null,
     ...overrides,

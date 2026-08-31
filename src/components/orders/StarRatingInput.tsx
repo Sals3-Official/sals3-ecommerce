@@ -9,6 +9,15 @@ type StarRatingInputProps = {
   idPrefix: string;
   value: number;
   onChange: (rating: number) => void;
+  /**
+   * The word beside the stars, per score. Defaults to the product wording.
+   *
+   * The delivery row passes its own: "Very good" said about a courier and about
+   * a product are answers to different questions, and its `0` has to say the
+   * question is optional rather than "Choose a rating" — which is the one thing
+   * that is not true of it.
+   */
+  verdicts?: Record<number, string>;
 };
 
 /**
@@ -39,6 +48,7 @@ export default function StarRatingInput({
   idPrefix,
   value,
   onChange,
+  verdicts = VERDICTS,
 }: StarRatingInputProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -72,7 +82,7 @@ export default function StarRatingInput({
         ))}
       </div>
       <span className={`text-sm font-semibold ${verdictTone(value)}`}>
-        {VERDICTS[value]}
+        {verdicts[value]}
       </span>
     </div>
   );

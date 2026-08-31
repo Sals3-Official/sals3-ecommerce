@@ -57,6 +57,12 @@ export type OrderReviewsPayload = {
   items: {
     orderLineId: string;
     rating: number;
+    /**
+     * Absent when the buyer skipped the question. Never `0` — the portal's
+     * column refuses anything outside 1-5, and an unanswered delivery has to
+     * land there as NULL rather than as a verdict nobody gave.
+     */
+    deliveryRating?: number;
     body?: string;
     attribution: 'named' | 'anonymous';
   }[];
@@ -99,6 +105,9 @@ export default async function submitOrderReviewsAction(
         verifiedEmail,
         orderLineId: item.orderLineId,
         rating: item.rating,
+        ...(item.deliveryRating === undefined
+          ? {}
+          : { deliveryRating: item.deliveryRating }),
         ...(item.body === undefined || item.body === ''
           ? {}
           : { body: item.body }),
