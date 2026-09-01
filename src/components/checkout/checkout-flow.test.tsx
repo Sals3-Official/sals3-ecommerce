@@ -2,7 +2,12 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
+import {
+  addCartItem,
+  CART_STORAGE_KEY,
+  EMPTY_CART,
+  setLineSelected,
+} from '@/lib/cart';
 import { usd } from '@/lib/money';
 import {
   createCheckoutSessionAction,
@@ -179,6 +184,43 @@ function seedCartWithTwoLines() {
   );
 
   window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(withBoth));
+}
+
+/**
+ * The two lines above, with the mask deselected on the cart page before
+ * checkout was ever opened — the ordinary path to a partial checkout, as
+ * opposed to the delivery-step removal case covered elsewhere in this file.
+ */
+function seedCartWithOneLineDeselected() {
+  const withFirst = addCartItem(
+    EMPTY_CART,
+    {
+      productId: 'corduroy-jacket',
+      title: "Men's Casual Retro Corduroy Jacket Coat",
+      imageAlt: 'Corduroy jacket',
+      tone: 'ocean',
+      unitPrice: usd(2000),
+    },
+    1,
+  );
+  const withBoth = addCartItem(
+    withFirst,
+    {
+      productId: 'cold-proof-face-mask',
+      title: 'Cold-Proof Face Mask',
+      imageAlt: 'Face mask',
+      tone: 'meadow',
+      unitPrice: usd(336),
+    },
+    1,
+  );
+  const oneDeselected = setLineSelected(
+    withBoth,
+    'cold-proof-face-mask',
+    false,
+  );
+
+  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(oneDeselected));
 }
 
 async function fillValidAddress() {
@@ -663,5 +705,33 @@ describe('checkout flow across routes', () => {
 
     // The address survives — only the quote and the prepared session did not.
     expect(screen.getByDisplayValue('123 Main Street')).toBeInTheDocument();
+  });
+
+  /**
+   * The core promise of cart-page selection: a line unchecked on `/cart`
+   * before checkout was ever opened must never reach the summary, the
+   * freight quote, or the total — not just look absent, actually never be
+   * sent anywhere.
+   */
+  it('never quotes, totals, or shows a line the buyer left unchecked', async () => {
+    seedCartWithOneLineDeselected();
+
+    renderWithCart(<CheckoutFlowHarness />);
+
+    // The exact line title, not a loose regex: the jacket's own Remove
+    // button carries an sr-only "…Corduroy Jacket Coat from this order" that
+    // a substring match against "corduroy jacket" would also catch.
+    await screen.findByText("Men's Casual Retro Corduroy Jacket Coat");
+    expect(screen.queryByText(/cold-proof face mask/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/1 item in cart/i)).toBeInTheDocument();
+    // Only the jacket's own price appears — nothing sums the mask into it.
+    expect(screen.getAllByText('US$20')).toHaveLength(2);
+
+    await reachDelivery();
+
+    const [request] = mockedQuoteShipping.mock.calls[0]!;
+    const quotedProductIds = request.cart.items.map((item) => item.productId);
+
+    expect(quotedProductIds).toEqual(['corduroy-jacket']);
   });
 });

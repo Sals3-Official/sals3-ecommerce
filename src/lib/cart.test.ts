@@ -2,16 +2,26 @@ import { describe, expect, it } from 'vitest';
 import {
   addCartItem,
   cartLineId,
+  clearSelectedItems,
+  deselectAllLines,
   EMPTY_CART,
   getCartItemCount,
   getCartLineTotal,
   getCartSubtotal,
+  getSelectedItemCount,
+  getSelectedSubtotal,
   hasClearedCheckout,
+  isLineSelected,
+  lineIdOf,
   MAX_LINE_QUANTITY,
   parseCartState,
   rememberClearedCheckout,
   removeCartItem,
+  selectAllLines,
+  selectedItemsOf,
+  selectOnlyLine,
   setCartItemQuantity,
+  setLineSelected,
   type CartLineItem,
 } from './cart';
 import { usd } from './money';
@@ -169,6 +179,148 @@ describe('variant-aware line identity', () => {
   });
 });
 
+describe('selection', () => {
+  function twoLines() {
+    let state = addCartItem(EMPTY_CART, lineFixture({ productId: '1' }), 1);
+    state = addCartItem(state, lineFixture({ productId: '2' }), 1);
+    return state;
+  }
+
+  it('is selected by default — the opt-out set starts empty', () => {
+    const state = addCartItem(EMPTY_CART, lineFixture(), 1);
+
+    expect(isLineSelected(state, '1')).toBe(true);
+    expect(selectedItemsOf(state)).toEqual(state.items);
+  });
+
+  it('a newly added line joins selected, never opted out', () => {
+    let state = twoLines();
+    state = setLineSelected(state, '1', false);
+    // Adding a third line must not silently exclude it just because
+    // something else in the cart happens to be deselected right now.
+    state = addCartItem(state, lineFixture({ productId: '3' }), 1);
+
+    expect(isLineSelected(state, '3')).toBe(true);
+    expect(isLineSelected(state, '1')).toBe(false);
+  });
+
+  it('toggles one line without touching the others', () => {
+    let state = twoLines();
+    state = setLineSelected(state, '1', false);
+
+    expect(isLineSelected(state, '1')).toBe(false);
+    expect(isLineSelected(state, '2')).toBe(true);
+    expect(selectedItemsOf(state).map((line) => line.productId)).toEqual(['2']);
+  });
+
+  it('re-selecting a deselected line removes it from the opt-out set', () => {
+    let state = twoLines();
+    state = setLineSelected(state, '1', false);
+    state = setLineSelected(state, '1', true);
+
+    expect(isLineSelected(state, '1')).toBe(true);
+    expect(state.deselectedLineIds).toEqual([]);
+  });
+
+  it('selectOnlyLine narrows to exactly one line — the "Buy Now" case', () => {
+    const state = selectOnlyLine(twoLines(), '2');
+
+    expect(isLineSelected(state, '1')).toBe(false);
+    expect(isLineSelected(state, '2')).toBe(true);
+    // The other line is still in the cart, only its selection changed.
+    expect(state.items).toHaveLength(2);
+  });
+
+  it('selectAllLines clears every opt-out', () => {
+    let state = twoLines();
+    state = deselectAllLines(state);
+    state = selectAllLines(state);
+
+    expect(state.deselectedLineIds).toEqual([]);
+    expect(selectedItemsOf(state)).toEqual(state.items);
+  });
+
+  it('deselectAllLines opts every current line out', () => {
+    const state = deselectAllLines(twoLines());
+
+    expect(selectedItemsOf(state)).toEqual([]);
+  });
+
+  it('counts and totals only the selected subset', () => {
+    let state = addCartItem(
+      EMPTY_CART,
+      lineFixture({ productId: '1', unitPrice: usd(10000) }),
+      2,
+    );
+    state = addCartItem(
+      state,
+      lineFixture({ productId: '2', unitPrice: usd(5000) }),
+      1,
+    );
+    state = setLineSelected(state, '2', false);
+
+    expect(getSelectedItemCount(state)).toBe(2);
+    expect(getSelectedSubtotal(state)).toEqual(usd(20000));
+    // The whole-cart totals are unaffected by selection.
+    expect(getCartItemCount(state)).toBe(3);
+    expect(getCartSubtotal(state)).toEqual(usd(25000));
+  });
+
+  it('removing a line also drops it from the opt-out set', () => {
+    let state = twoLines();
+    state = setLineSelected(state, '1', false);
+    state = removeCartItem(state, '1');
+
+    expect(state.deselectedLineIds).toEqual([]);
+  });
+
+  describe('clearSelectedItems', () => {
+    it('removes only the selected lines and resets selection on what remains', () => {
+      let state = twoLines();
+      state = setLineSelected(state, '2', false);
+
+      const cleared = clearSelectedItems(state);
+
+      expect(cleared.items.map((line) => line.productId)).toEqual(['2']);
+      expect(cleared.deselectedLineIds).toEqual([]);
+      // What remains is fully selected again, ready for the next checkout.
+      expect(isLineSelected(cleared, '2')).toBe(true);
+    });
+
+    it('empties the cart when everything was selected — the ordinary checkout', () => {
+      const cleared = clearSelectedItems(twoLines());
+
+      expect(cleared.items).toEqual([]);
+    });
+
+    it('is a no-op on lines when nothing is selected', () => {
+      const state = deselectAllLines(twoLines());
+      const cleared = clearSelectedItems(state);
+
+      expect(cleared.items).toHaveLength(2);
+    });
+  });
+
+  it('addresses selection by composite line id, like every other mutator', () => {
+    function variantLine(id: string) {
+      return {
+        ...lineFixture(),
+        variant: { id, sku: `SKU-${id}`, optionSummary: id },
+      };
+    }
+
+    const state = addCartItem(
+      addCartItem(EMPTY_CART, variantLine('black')),
+      variantLine('white'),
+    );
+    const blackId = lineIdOf(state.items[0]!);
+    const withoutBlack = setLineSelected(state, blackId, false);
+
+    expect(selectedItemsOf(withoutBlack)).toHaveLength(1);
+    expect(selectedItemsOf(withoutBlack)[0]?.variant?.id).toBe('white');
+  });
+});
+
 describe('parseCartState', () => {
   it('returns an empty cart for null input', () => {
     expect(parseCartState(null)).toEqual(EMPTY_CART);
@@ -190,6 +342,24 @@ describe('parseCartState', () => {
     const state = addCartItem(EMPTY_CART, lineFixture(), 2);
 
     expect(parseCartState(JSON.stringify(state))).toEqual(state);
+  });
+
+  /**
+   * A cart saved before selection existed has no `deselectedLineIds` at all —
+   * not an empty array, the key is simply absent. It must default to "nothing
+   * opted out" rather than being rejected outright: the schema change is
+   * additive, and a buyer's existing purchase intent should not be discarded
+   * over a field that did not exist yet when it was written.
+   */
+  it('defaults selection to everything selected on a pre-selection blob', () => {
+    const preSelectionBlob = JSON.stringify({
+      items: addCartItem(EMPTY_CART, lineFixture(), 2).items,
+    });
+
+    const parsed = parseCartState(preSelectionBlob);
+
+    expect(parsed.deselectedLineIds).toEqual([]);
+    expect(selectedItemsOf(parsed)).toEqual(parsed.items);
   });
 
   /**

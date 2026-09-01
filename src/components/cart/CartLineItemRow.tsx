@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { formatMoney } from '@/lib/money';
 import {
   getCartLineTotal,
+  lineIdOf,
   MAX_LINE_QUANTITY,
   type CartLineItem,
 } from '@/lib/cart';
@@ -9,6 +10,9 @@ import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 
 type CartLineItemRowProps = {
   line: CartLineItem;
+  /** Whether this line is included in the next checkout. */
+  selected: boolean;
+  onToggleSelected: (selected: boolean) => void;
   onDecrease: () => void;
   onIncrease: () => void;
   onRemove: () => void;
@@ -16,12 +20,36 @@ type CartLineItemRowProps = {
 
 export default function CartLineItemRow({
   line,
+  selected,
+  onToggleSelected,
   onDecrease,
   onIncrease,
   onRemove,
 }: CartLineItemRowProps) {
+  const checkboxId = `cart-select-${lineIdOf(line).replace(/:/g, '-')}`;
+
   return (
     <div className="flex gap-3.5 border-b border-border p-3.5 last:border-b-0">
+      {/*
+        44px hit target around a 16px glyph, matching the quantity buttons'
+        own `h-11 w-11` in this row — a checkbox this size is unreliable to tap
+        on its visible box alone.
+      */}
+      <label
+        htmlFor={checkboxId}
+        className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center self-start"
+      >
+        <input
+          id={checkboxId}
+          type="checkbox"
+          checked={selected}
+          onChange={(event) => {
+            onToggleSelected(event.target.checked);
+          }}
+          aria-label={`Select ${line.title} for checkout`}
+          className="h-4 w-4 cursor-pointer accent-brand-600"
+        />
+      </label>
       <div className="relative aspect-square w-20 flex-none overflow-hidden rounded-lg bg-white">
         {line.imageUrl ? (
           <Image

@@ -1,6 +1,14 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  addCartItem,
+  CART_STORAGE_KEY,
+  EMPTY_CART,
+  isLineSelected,
+  parseCartState,
+} from '@/lib/cart';
 import type { ProductDetail, ProductVariant } from '@/lib/product-detail';
+import { usd } from '@/lib/money';
 import renderWithCart from '../../../test/render-with-cart';
 import ProductRecordPanel from './ProductRecordPanel';
 
@@ -123,5 +131,60 @@ describe('the Add to Cart confirmation', () => {
     expect(
       screen.getByText('Choose a colour to continue.'),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * "Buy Now" means this item, not whatever else the cart already held. A
+ * buyer landing on `/cart` after pressing it must see only the thing they
+ * just decided to buy checked — everything else stays in the cart, untouched,
+ * just not part of this purchase.
+ */
+describe('Buy Now selection', () => {
+  function seedExistingLine() {
+    const seeded = addCartItem(
+      EMPTY_CART,
+      {
+        productId: 'already-in-cart',
+        title: 'Something added earlier',
+        imageAlt: 'Something added earlier',
+        tone: 'ocean',
+        unitPrice: usd(1500),
+      },
+      1,
+    );
+
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
+  }
+
+  it('selects only the bought line, leaving the rest of the cart deselected', () => {
+    seedExistingLine();
+    renderWithCart(
+      <ProductRecordPanel detail={DETAIL} selectedFromUrl={false} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /buy now/i }));
+
+    const state = parseCartState(window.localStorage.getItem(CART_STORAGE_KEY));
+
+    expect(state.items.map((line) => line.productId).sort()).toEqual([
+      'already-in-cart',
+      'balaclava',
+    ]);
+    expect(isLineSelected(state, 'balaclava::only')).toBe(true);
+    expect(isLineSelected(state, 'already-in-cart')).toBe(false);
+  });
+
+  it('leaves a lone cart selected — narrowing to one line that is already alone changes nothing observable', () => {
+    renderWithCart(
+      <ProductRecordPanel detail={DETAIL} selectedFromUrl={false} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /buy now/i }));
+
+    const state = parseCartState(window.localStorage.getItem(CART_STORAGE_KEY));
+
+    expect(isLineSelected(state, 'balaclava::only')).toBe(true);
+    expect(state.deselectedLineIds).toEqual([]);
   });
 });

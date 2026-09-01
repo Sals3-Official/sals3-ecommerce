@@ -14,15 +14,24 @@ import {
   addCartItem,
   cartLineId,
   CART_STORAGE_KEY,
+  clearSelectedItems,
+  deselectAllLines,
   EMPTY_CART,
   getCartItemCount,
   getCartSubtotal,
+  getSelectedItemCount,
+  getSelectedSubtotal,
+  isLineSelected,
   LEGACY_CART_STORAGE_KEYS,
   lineIdOf,
   parseCartState,
   removeCartItem,
   repriceCartItems,
+  selectAllLines,
+  selectedItemsOf,
+  selectOnlyLine,
   setCartItemQuantity,
+  setLineSelected,
   type CartLineItem,
   type CartState,
   type CartToastMessage,
@@ -34,6 +43,19 @@ type CartContextValue = {
   items: CartLineItem[];
   itemCount: number;
   subtotal: Money;
+  /**
+   * The subset of `items` not opted out of checkout — see
+   * `CartState.deselectedLineIds`. Everything is selected by default, so this
+   * equals `items` until a buyer unchecks something or "Buy Now" narrows it.
+   */
+  selectedItems: CartLineItem[];
+  selectedItemCount: number;
+  selectedSubtotal: Money;
+  isLineSelected: (lineId: string) => boolean;
+  setLineSelected: (lineId: string, selected: boolean) => void;
+  selectOnly: (lineId: string) => void;
+  selectAll: () => void;
+  selectNone: () => void;
   addItem: (item: Omit<CartLineItem, 'quantity'>, quantity?: number) => void;
   /** `lineId`, not a product id: two variants of one product are two lines. */
   setQuantity: (lineId: string, quantity: number) => void;
@@ -54,6 +76,18 @@ type CartContextValue = {
    * already made and the receipt beside it is the feedback.
    */
   clear: () => void;
+  /**
+   * Removes only the currently-selected lines, resetting selection on what
+   * remains. Called on a paid checkout instead of `clear()` once selection
+   * exists — see `clearSelectedItems`'s own doc comment for why the two are
+   * not interchangeable. Known gap: this reads selection at the moment of the
+   * call, not at the moment the Stripe session was created, so a buyer who
+   * changes checkboxes in another tab while an embedded payment is in flight
+   * in the first could see a different set removed than they paid for. Narrow
+   * enough — and payment stays single-tab in the normal flow — that closing it
+   * is a separate, metadata-threading change rather than part of this one.
+   */
+  clearSelected: () => void;
   /**
    * When the last add happened, as the toast's own id — `undefined` before the
    * first one and after that toast is dismissed.
@@ -130,6 +164,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items: state.items,
       itemCount: getCartItemCount(state),
       subtotal: getCartSubtotal(state),
+      selectedItems: selectedItemsOf(state),
+      selectedItemCount: getSelectedItemCount(state),
+      selectedSubtotal: getSelectedSubtotal(state),
+      isLineSelected: (lineId) => isLineSelected(state, lineId),
+      setLineSelected: (lineId, selected) =>
+        store.update((current) => setLineSelected(current, lineId, selected)),
+      selectOnly: (lineId) =>
+        store.update((current) => selectOnlyLine(current, lineId)),
+      selectAll: () => store.update((current) => selectAllLines(current)),
+      selectNone: () => store.update((current) => deselectAllLines(current)),
       addItem: (item, quantity = 1) => {
         const id = cartLineId(item.productId, item.variant?.id);
         const previousLine = state.items.find((line) => lineIdOf(line) === id);
@@ -160,6 +204,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         store.update((current) => repriceCartItems(current, prices)),
       clear: () => {
         store.update(() => EMPTY_CART);
+      },
+      clearSelected: () => {
+        store.update((current) => clearSelectedItems(current));
       },
       lastAddedAt: toast?.id,
     }),

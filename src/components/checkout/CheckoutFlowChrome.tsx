@@ -49,6 +49,7 @@ export default function CheckoutFlowChrome({
     isPending,
     priceChanges,
     removeLine,
+    cartIsEmpty,
   } = useCheckoutFlow();
   const pathname = usePathname();
   const step = STEP_BY_PATH[pathname] ?? 1;
@@ -67,7 +68,14 @@ export default function CheckoutFlowChrome({
     stepContentRef.current?.focus({ preventScroll: true });
   }, [step]);
 
-  if (items.length === 0) {
+  /*
+    Two different empty states, kept apart rather than collapsed into one: an
+    empty cart needs something added, while a cart that only has deselected
+    lines needs a checkbox ticked, not a product found. Sending the second
+    buyer to the home page would lose them the very items they already chose —
+    "back to your cart" is where their decision actually is.
+  */
+  if (cartIsEmpty) {
     return (
       <div className="rounded-xl border border-border bg-white p-10 text-center">
         <h1 className="mb-1.5 text-xl font-bold">Checkout</h1>
@@ -79,6 +87,23 @@ export default function CheckoutFlowChrome({
           className="inline-block rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 hover:no-underline active:scale-[0.98]"
         >
           Continue shopping
+        </Link>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-border bg-white p-10 text-center">
+        <h1 className="mb-1.5 text-xl font-bold">Checkout</h1>
+        <p className="mb-4 text-sm text-ink-muted">
+          Nothing in your cart is selected for checkout.
+        </p>
+        <Link
+          href="/cart"
+          className="inline-block rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 hover:no-underline active:scale-[0.98]"
+        >
+          Back to cart
         </Link>
       </div>
     );
