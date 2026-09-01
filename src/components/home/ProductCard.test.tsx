@@ -20,6 +20,14 @@ vi.mock('next/link', () => ({
       {children}
     </a>
   ),
+  /*
+    `LinkPendingVeil` inside the card reads this. Stubbed idle rather than left
+    out: the real hook needs a router the card is not rendered inside, and every
+    assertion in this file is about the card at rest, which is the state a card
+    that has not been pressed is actually in. The pending branch is exercised
+    where it belongs — see `LinkPendingVeil.test.tsx`.
+  */
+  useLinkStatus: () => ({ pending: false }),
 }));
 
 const product: Product = {

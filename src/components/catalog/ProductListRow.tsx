@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { formatMoney } from '@/lib/money';
 import { AVAILABILITY_LABELS } from '@/lib/catalog/availability';
 import type { CategoryProduct } from '@/lib/catalog/filter-products';
+import LinkPendingVeil from '@/components/ui/LinkPendingVeil';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 
 type ProductListRowProps = {
@@ -19,8 +20,10 @@ export default function ProductListRow({ product }: ProductListRowProps) {
     <Link
       href={`/p/${product.id}`}
       prefetch={false}
-      className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-border bg-white p-3 transition hover:border-brand-600 hover:no-underline sm:gap-4"
+      className="relative grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-border bg-white p-3 transition hover:border-brand-600 hover:no-underline sm:gap-4"
     >
+      {/* Marks the pressed row while the product page loads. See the grid card. */}
+      <LinkPendingVeil />
       <div className="relative aspect-square overflow-hidden rounded-lg bg-white">
         {product.imageUrl ? (
           <Image

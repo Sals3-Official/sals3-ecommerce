@@ -1,6 +1,5 @@
-import { cache } from 'react';
+import { Suspense, cache } from 'react';
 import type { Metadata } from 'next';
-import { unstable_cache as unstableCache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/layout/SiteHeader';
 import SiteFooter from '@/components/layout/SiteFooter';
@@ -11,24 +10,18 @@ import ProductGallery from '@/components/product/ProductGallery';
 import ProductRecordPanel from '@/components/product/ProductRecordPanel';
 import ProductSpecifications from '@/components/product/ProductSpecifications';
 import { SelectedSkuProvider } from '@/components/product/selected-sku';
-import RelatedProducts from '@/components/product/RelatedProducts';
+import RelatedProductsSection, {
+  RelatedProductsSectionSkeleton,
+} from '@/components/product/RelatedProductsSection';
 import BreadcrumbSchema from '@/components/schema/BreadcrumbSchema';
 import ProductSchema from '@/components/schema/ProductSchema';
 import KlaviyoViewedProduct from '@/components/klaviyo/KlaviyoViewedProduct';
 import { SITE_NAME, getSiteUrl } from '@/lib/site';
-import type { Product as HomeProduct } from '@/lib/home-placeholder-data';
 import type { ProductDetail } from '@/lib/product-detail';
 import { breadcrumbTrail } from '@/lib/product-breadcrumb';
 import { fetchProductReviews } from '@/services/storefront/reviews';
 import { variantById } from '@/lib/product-variants';
-import {
-  fetchProductBySlug,
-  fetchProductsByCategory,
-  toHomeProduct,
-  toProductDetail,
-} from '@/services/products';
-
-const RELATED_PRODUCT_COUNT = 6;
+import { fetchProductBySlug, toProductDetail } from '@/services/products';
 
 const META_DESCRIPTION_MAX_LENGTH = 155;
 
@@ -157,45 +150,6 @@ export async function generateMetadata({
   };
 }
 
-const getCachedRelatedProducts = unstableCache(
-  async (
-    category: string,
-    excludeId: string,
-    limit: number,
-  ): Promise<HomeProduct[]> => {
-    const products = await fetchProductsByCategory(category, {
-      limit: limit + 1,
-    });
-
-    return products
-      .filter((product) => product.slug !== excludeId)
-      .slice(0, limit)
-      .map(toHomeProduct);
-  },
-  ['pdp-related-products'],
-  { revalidate: 30, tags: ['pdp-related-products'] },
-);
-
-/**
- * Related products are best-effort and deliberately short-cached: the main PDP
- * product stays live, while this non-critical rail stops re-scanning the
- * storefront lists on every variant URL.
- */
-async function getRelatedProducts(
-  category: string,
-  excludeId: string,
-): Promise<HomeProduct[]> {
-  try {
-    return await getCachedRelatedProducts(
-      category,
-      excludeId,
-      RELATED_PRODUCT_COUNT,
-    );
-  } catch {
-    return [];
-  }
-}
-
 /**
  * The citation-first lead the GEO/AEO strategy note asks for: a self-contained
  * opening paragraph an answer engine can quote.
@@ -231,19 +185,21 @@ export default async function ProductPage({
   }
 
   const query = searchParams === undefined ? {} : await searchParams;
-  // Fetched alongside the related products rather than before them: the
-  // section is below the fold, and a slow review read must not delay the buy
-  // box. `fetchProductReviews` answers `[]` on failure, so the page still
-  // renders its summary from the product payload if this cannot load.
-  // The indicative rate and its buffer join the same wave, and are fetched
-  // **here only** — one call each per page render, handed down to the panel as
-  // props. Both are cached for an hour by their own modules, so this costs an
-  // upstream request on a small fraction of renders, and each resolves to
-  // `null` on every failure rather than throwing into this `Promise.all`.
-  const [relatedProducts, reviews] = await Promise.all([
-    getRelatedProducts(detail.category, detail.id),
-    fetchProductReviews(detail.id),
-  ]);
+  /*
+    Related products no longer join this wait — see `StreamedRelatedProducts`
+    below. On a cold `pdp-related-products` cache that read is up to four
+    *serial* Portal round trips (two sections × two pages, serialised on purpose
+    in `collectAllProducts`), and holding the buy box behind them was the largest
+    single contributor to the 1,682ms measured on production 2026-09-01.
+
+    Reviews stay awaited here, deliberately: `ProductRecordPanel` takes
+    `reviewsAnchored`, so the buy box genuinely cannot render until this
+    resolves. It is one call, and `fetchProductReviews` answers `[]` on failure,
+    so the page still renders its summary from the product payload if it cannot
+    load. Streaming it too would mean removing that prop, which changes what the
+    panel shows rather than when it shows — a separate decision.
+  */
+  const reviews = await fetchProductReviews(detail.id);
   const variants = detail.variants ?? [];
 
   // Resolved against real ids, so the payload is the allow-list. An unknown
@@ -394,7 +350,12 @@ export default async function ProductPage({
               breakdown={detail.ratingBreakdown}
               reviews={reviews}
             />
-            <RelatedProducts products={relatedProducts} />
+            <Suspense fallback={<RelatedProductsSectionSkeleton />}>
+              <RelatedProductsSection
+                category={detail.category}
+                excludeId={detail.id}
+              />
+            </Suspense>
             <ProductSchema detail={detail} />
             <BreadcrumbSchema trail={trail} productPath={`/p/${detail.id}`} />
           </div>
