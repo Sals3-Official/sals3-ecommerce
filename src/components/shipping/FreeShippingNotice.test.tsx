@@ -58,9 +58,7 @@ describe('FreeShippingNotice', () => {
     );
 
     expect(
-      screen.getByText(
-        'Add US$15 more for free Standard delivery to Australia',
-      ),
+      screen.getByText('Add US$15 more for free Standard delivery'),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Estimated for your likely destination/),
@@ -69,6 +67,15 @@ describe('FreeShippingNotice', () => {
     const progress = screen.getByRole('progressbar');
 
     expect(progress).toHaveAttribute('aria-valuenow', '40');
+    // `destinationLabel` still gates the estimate above — it is a real prop,
+    // not a leftover — but a resolved country is never named out loud,
+    // sighted or announced: naming one asserts *where this buyer is* off a
+    // geo-IP guess, which the dollar figure alone does not.
+    expect(progress).toHaveAttribute(
+      'aria-label',
+      'Estimated progress toward free Standard delivery',
+    );
+    expect(document.body.textContent ?? '').not.toMatch(/australia/i);
   });
 
   it('says the cart already qualifies once the estimate is met', () => {
@@ -85,7 +92,7 @@ describe('FreeShippingNotice', () => {
 
     expect(
       screen.getByText(
-        'Your cart already qualifies for free Standard delivery to Australia',
+        'Your cart already qualifies for free Standard delivery',
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute(

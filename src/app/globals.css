@@ -351,17 +351,17 @@ body {
  * reason as `s3pulse` above: a `@keyframes` cannot live in a utility class,
  * and the `prefers-reduced-motion` block earlier in this file neutralises
  * every duration declared here, which a component-local animation would
- * escape. `border-teal-500/45`, `21 127 127`, is `--color-teal-500` restated
+ * escape. `border-brand-600/45`, `10 92 138`, is `--color-brand-600` restated
  * as bare channels because `box-shadow` cannot reference a Tailwind alpha
  * utility.
  */
 @keyframes s3-free-shipping-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(21 127 127 / 0.32);
+    box-shadow: 0 0 0 0 rgb(10 92 138 / 0.32);
   }
   50% {
-    box-shadow: 0 0 12px 3px rgb(21 127 127 / 0.22);
+    box-shadow: 0 0 12px 3px rgb(10 92 138 / 0.22);
   }
 }
 

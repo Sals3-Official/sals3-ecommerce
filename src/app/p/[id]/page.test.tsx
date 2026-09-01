@@ -1248,13 +1248,14 @@ describe('Product page', () => {
   });
 
   /**
-   * The 2026-09-01 reversal: once a threshold resolves for the destination
-   * `resolveDestination()` guessed, the PDP's notice is allowed to say how
-   * much more is needed. The notice reads the live cart, not this product's
-   * own price — nothing is added to the cart in this test, so the whole
-   * threshold is remaining.
+   * Once a threshold resolves for the destination `resolveDestination()`
+   * guessed, the PDP's notice says how much more is needed — but does not
+   * name the guessed country; see `FreeShippingNotice`'s own doc comment for
+   * why. The notice reads the live cart, not this product's own price —
+   * nothing is added to the cart in this test, so the whole threshold is
+   * remaining.
    */
-  it('names the destination and the amount remaining once a threshold resolves', async () => {
+  it('shows the amount remaining once a threshold resolves, without naming the destination', async () => {
     mockFetch();
     vi.mocked(fetchFreeShippingThresholds).mockResolvedValueOnce({ AU: 2500 });
 
@@ -1265,9 +1266,7 @@ describe('Product page', () => {
     );
 
     expect(
-      screen.getByText(
-        'Add US$25 more for free Standard delivery to Australia',
-      ),
+      screen.getByText('Add US$25 more for free Standard delivery'),
     ).toBeInTheDocument();
   });
 });

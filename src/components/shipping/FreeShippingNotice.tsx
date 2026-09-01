@@ -28,28 +28,27 @@ type FreeShippingNoticeProps = {
 /**
  * The one visual language for "free shipping exists" everywhere it can be
  * shown before checkout knows a destination for certain -- the PDP buy rail
- * and the cart summary both render this. Deliberately the same teal card
- * treatment `CheckoutFreeShippingProgress` already uses
- * (`border-teal-500/45 bg-teal-500/8`), so the offer is visually one thing a
- * buyer recognises three times rather than three different-looking mentions
- * of it.
+ * and the cart summary both render this. Deliberately the same brand-blue
+ * card treatment `CheckoutFreeShippingProgress` already uses
+ * (`border-brand-600/45 bg-brand-600/8`), so the offer is visually one thing
+ * a buyer recognises three times rather than three different-looking
+ * mentions of it.
  *
- * ## Why this now can carry an amount, when it deliberately did not before
+ * ## Why this carries an amount but no longer names a country
  *
- * Neither the PDP nor the cart has a *confirmed* address, and the original
- * version of this component reasoned from that straight to showing no figure
- * at all — the same caution `CartPageClient`'s own comment still states.
- * `resolveDestination()`'s geo-IP guess was ruled "fine for the approximate
- * FX figure, not sound enough to anchor a specific dollar threshold claim
- * on".
+ * Neither the PDP nor the cart has a *confirmed* address. The dollar figure
+ * still hangs off `resolveDestination()`'s geo-IP guess — `IndicativePriceLine`
+ * does the same with the subtotal, and every figure built from
+ * `thresholdAmountMinor` is introduced as "Estimated" and closes on
+ * "confirmed at checkout", the same two-part discipline the FX line uses.
  *
- * The owner's read is that an unlabelled badge does not entice the way a
- * concrete "add $X more" does, and that the same guess is already good enough
- * to hang a priced figure on right next to this card — `IndicativePriceLine`
- * does exactly that with the subtotal. So this follows that precedent rather
- * than overriding it: every figure built from `thresholdAmountMinor` is
- * introduced as "Estimated" and closes on "confirmed at checkout", the same
- * two-part discipline the FX line uses. Nothing here decides eligibility —
+ * A named country in the sentence itself was tried and reversed (2026-09-01,
+ * owner decision): stating a specific destination out loud reads as a claim
+ * about *where this buyer is*, which is a stronger assertion than "here is
+ * roughly what this could cost" and not one a geo-IP guess should make on the
+ * page's behalf. `destinationLabel` stays a prop — it still gates showing an
+ * estimate at all, paired with the threshold it was resolved alongside — it
+ * is simply no longer printed. Nothing here decides eligibility —
  * `CheckoutFreeShippingProgress`, fed by the Portal's real freight quote,
  * still owns that.
  */
@@ -77,13 +76,13 @@ export default function FreeShippingNotice({
     if (!hasEstimate) return 'Free Standard delivery on qualifying orders';
 
     if (eligible) {
-      return `Your cart already qualifies for free Standard delivery to ${destinationLabel}`;
+      return 'Your cart already qualifies for free Standard delivery';
     }
 
     return `Add ${formatMoney({
       amountMinor: remainingMinor,
       currency: subtotal.currency,
-    })} more for free Standard delivery to ${destinationLabel}`;
+    })} more for free Standard delivery`;
   }
 
   const headline = headlineFor();
@@ -94,15 +93,15 @@ export default function FreeShippingNotice({
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border border-teal-500/45 bg-teal-500/8 px-4 py-3 ${
+      className={`flex items-start gap-3 rounded-lg border border-brand-600/45 bg-brand-600/8 px-4 py-3 ${
         emphasize ? 'animate-free-shipping-glow' : ''
       } ${className}`}
     >
-      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-teal-500/15 text-teal-500">
+      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-600/15 text-brand-600">
         <TruckIcon width={17} height={17} />
       </span>
       <div className="min-w-0 flex-1">
-        <p aria-live="polite" className="text-sm font-bold text-teal-500">
+        <p aria-live="polite" className="text-sm font-bold text-brand-600">
           {headline}
         </p>
         <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
@@ -111,14 +110,17 @@ export default function FreeShippingNotice({
         {hasEstimate ? (
           <div
             role="progressbar"
-            aria-label={`Estimated progress toward free Standard delivery to ${destinationLabel}`}
+            // No destination named here either — the same reasoning as the
+            // headline applies to what a screen reader announces, not only to
+            // what a sighted reader sees.
+            aria-label="Estimated progress toward free Standard delivery"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent}
             className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-sunken-strong"
           >
             <div
-              className="h-full rounded-full bg-teal-500 transition-[width] duration-500"
+              className="h-full rounded-full bg-brand-600 transition-[width] duration-500"
               style={{ width: `${percent}%` }}
             />
           </div>
