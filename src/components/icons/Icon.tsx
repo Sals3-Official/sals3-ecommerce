@@ -298,3 +298,25 @@ export function CheckIcon({ width = 17, height = 17, className }: IconProps) {
     </svg>
   );
 }
+
+export function TruckIcon({ width = 18, height = 18, className }: IconProps) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 17V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1" />
+      <path d="M14 9h4l3 3v4a1 1 0 0 1-1 1h-1" />
+      <circle cx="6.5" cy="17.5" r="2.5" />
+      <circle cx="16.5" cy="17.5" r="2.5" />
+    </svg>
+  );
+}

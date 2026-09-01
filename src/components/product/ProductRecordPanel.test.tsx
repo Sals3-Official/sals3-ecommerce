@@ -56,6 +56,29 @@ describe('ProductRecordPanel', () => {
     expect(screen.queryByText(/no reviews/i)).not.toBeInTheDocument();
   });
 
+  /**
+   * Positioned last, right before the buy buttons: a nudge only works if it
+   * lands before the decision, not buried after it in the evidence ledger.
+   */
+  it('shows the free-shipping notice right before the buy buttons', () => {
+    const { container } = renderWithCart(
+      <ProductRecordPanel detail={detail()} selectedFromUrl={false} />,
+    );
+
+    expect(
+      screen.getByText('Free Standard delivery on qualifying orders'),
+    ).toBeInTheDocument();
+
+    const renderedText = container.textContent ?? '';
+    const noticeIndex = renderedText.indexOf(
+      'Free Standard delivery on qualifying orders',
+    );
+    const addToCartIndex = renderedText.indexOf('Add to Cart');
+
+    expect(noticeIndex).toBeGreaterThan(-1);
+    expect(addToCartIndex).toBeGreaterThan(noticeIndex);
+  });
+
   const SPREAD = {
     variants: [
       priced('black', 451),

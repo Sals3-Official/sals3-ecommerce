@@ -15,6 +15,7 @@ import {
 } from '@/lib/klaviyo/client';
 import IndicativePriceLine from '@/components/fx/IndicativePriceLine';
 import type { IndicativeRate } from '@/lib/fx/rates';
+import FreeShippingNotice from '@/components/shipping/FreeShippingNotice';
 
 type CartPageClientProps = {
   /**
@@ -134,22 +135,17 @@ export default function CartPageClient({
             className="mt-1.5 text-right"
           />
           {/*
-            Generic on purpose, same reasoning as the evidence ledger's
-            Delivery row: this page does not know the buyer's destination
-            (see this file's own note above), and `resolveDestination()`'s
-            geo-IP guess is documented as "only a suggestion" -- fine for an
-            approximate FX figure, not sound enough to anchor a specific
-            dollar threshold claim on. No amount, no country; the real
-            number is confirmed once an address exists, at checkout.
+            Same reasoning as the evidence ledger's Delivery row: this page
+            does not know the buyer's destination (see this file's own note
+            above), and `resolveDestination()`'s geo-IP guess is documented
+            as "only a suggestion" -- fine for the approximate FX figure
+            above, not sound enough to anchor a specific dollar threshold
+            claim on. No amount, no country; the real number is confirmed
+            once an address exists, at checkout. Same component and
+            treatment as the PDP, so the offer is one recognisable thing
+            rather than a different-looking mention each time.
           */}
-          <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-muted">
-            <span
-              aria-hidden="true"
-              className="mt-1 size-[7px] shrink-0 rounded-full bg-teal-500"
-            />
-            Some destinations get free Standard delivery on qualifying orders
-            &mdash; confirmed once you enter your address at checkout.
-          </p>
+          <FreeShippingNotice className="mt-3" />
           <Link
             href="/checkout"
             className="bg-brand-gradient mt-3.5 flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
