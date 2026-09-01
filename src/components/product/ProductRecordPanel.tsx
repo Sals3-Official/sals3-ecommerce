@@ -14,6 +14,7 @@ import {
   type ProductVariantChangeDetail,
 } from '@/lib/product-variant-events';
 import Card, { CardSection } from '@/components/ui/Card';
+import FreeShippingNotice from '@/components/shipping/FreeShippingNotice';
 import ProductAddToCartButtons from '@/components/product/ProductAddToCartButtons';
 import ProductEvidenceLedger from '@/components/product/ProductEvidenceLedger';
 import ProductOptionList from '@/components/product/ProductOptionList';
@@ -262,6 +263,15 @@ export default function ProductRecordPanel({
             setQuantity((current) => stepQuantity(current, delta))
           }
         />
+      </CardSection>
+
+      {/*
+        Last thing seen before the buy buttons, on purpose: a nudge only
+        works if it lands before the decision, not after it. See
+        `FreeShippingNotice` for why this carries no amount or country.
+      */}
+      <CardSection>
+        <FreeShippingNotice />
       </CardSection>
 
       <CardSection>
