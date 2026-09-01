@@ -124,6 +124,121 @@ describe('Cart page', () => {
   });
 
   /**
+   * "Only what's checked gets checked out" is the whole feature, so the panel
+   * that answers "what am I about to pay for" has to move the moment a line
+   * is unchecked — the heading above it stays the cart's own total on purpose,
+   * since it answers a different question.
+   */
+  describe('selecting which lines to check out', () => {
+    function seedTwoLines() {
+      const withFirst = addCartItem(
+        EMPTY_CART,
+        {
+          productId: '1',
+          title: 'Essence Mascara Lash Princess',
+          imageAlt: 'Essence Mascara Lash Princess product image',
+          tone: 'ocean',
+          unitPrice: usd(10000),
+        },
+        1,
+      );
+      const withBoth = addCartItem(
+        withFirst,
+        {
+          productId: '2',
+          title: 'Quiet Tower Air Cooler',
+          imageAlt: 'Quiet tower air cooler',
+          tone: 'meadow',
+          unitPrice: usd(5000),
+        },
+        1,
+      );
+
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(withBoth));
+    }
+
+    it('starts with every line checked and the summary reading the whole cart', async () => {
+      seedTwoLines();
+
+      renderWithCart(await CartPage());
+
+      await screen.findByText(/essence mascara/i);
+      expect(
+        screen.getByRole('checkbox', {
+          name: /select essence mascara lash princess/i,
+        }),
+      ).toBeChecked();
+      expect(
+        screen.getByRole('checkbox', {
+          name: /select quiet tower air cooler/i,
+        }),
+      ).toBeChecked();
+      expect(screen.getByText('US$150')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /proceed to checkout/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('narrows the summary to what stays checked', async () => {
+      seedTwoLines();
+
+      renderWithCart(await CartPage());
+
+      await screen.findByText(/essence mascara/i);
+      fireEvent.click(
+        screen.getByRole('checkbox', {
+          name: /select quiet tower air cooler/i,
+        }),
+      );
+
+      // One US$100 line left selected out of the US$150 cart — its own price
+      // and the new summary subtotal now read the same figure, same as the
+      // single-line seed above.
+      expect(screen.getAllByText('US$100')).toHaveLength(2);
+      expect(screen.queryByText('US$150')).not.toBeInTheDocument();
+    });
+
+    it('replaces "Proceed to Checkout" with a disabled control once nothing is selected', async () => {
+      seedTwoLines();
+
+      renderWithCart(await CartPage());
+
+      await screen.findByText(/essence mascara/i);
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: /deselect all items/i }),
+      );
+
+      expect(
+        screen.queryByRole('link', { name: /proceed to checkout/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /select an item to check out/i }),
+      ).toBeDisabled();
+    });
+
+    it('the "select all" checkbox re-checks every line', async () => {
+      seedTwoLines();
+
+      renderWithCart(await CartPage());
+
+      await screen.findByText(/essence mascara/i);
+      fireEvent.click(
+        screen.getByRole('checkbox', {
+          name: /select quiet tower air cooler/i,
+        }),
+      );
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: /select all items/i }),
+      );
+
+      expect(screen.getByText('US$150')).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /proceed to checkout/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  /**
    * Added 2026-09-01, updated the same day once the badge replaced the
    * original grey teaser line. No dollar figure and no named country: this
    * page does not know the buyer's destination (see `CartPageClient`'s own

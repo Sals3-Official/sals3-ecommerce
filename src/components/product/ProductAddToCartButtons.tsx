@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Money } from '@/lib/money';
 import type { PlaceholderTone } from '@/lib/home-placeholder-data';
-import type { CartLineVariant } from '@/lib/cart';
+import { cartLineId, type CartLineVariant } from '@/lib/cart';
 import { useCart } from '@/components/cart/CartProvider';
 import Button from '@/components/ui/Button';
 import { CheckIcon } from '@/components/icons/Icon';
@@ -49,7 +49,7 @@ export default function ProductAddToCartButtons({
   quantity,
   disabledReason,
 }: ProductAddToCartButtonsProps) {
-  const { addItem } = useCart();
+  const { addItem, selectOnly } = useCart();
   const router = useRouter();
   const [isNavigating, startNavigation] = useTransition();
   /**
@@ -110,6 +110,15 @@ export default function ProductAddToCartButtons({
       unitPrice,
     });
     addItem(line(), quantity);
+    /*
+     * "Buy Now" means this item, not whatever else the cart already held.
+     * Landing on a cart where three earlier saves are silently included in
+     * the total would turn one buyer decision into a bill for several. The
+     * rest of the cart is untouched — only *selection* narrows, so nothing is
+     * removed and the buyer can still check everything back on if they meant
+     * to buy it all together.
+     */
+    selectOnly(cartLineId(productId, variant?.id));
     /*
      * The push is wrapped so the button can show it is working. Navigating to
      * the cart is not instant — the route is server-rendered — and without this

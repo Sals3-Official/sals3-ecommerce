@@ -51,8 +51,9 @@ type CartPageClientProps = {
  * the chance of one being read as the charge for no gain, and the subtotal is
  * what `Proceed to Checkout` is actually about.
  *
- * The local figure is display text and stops here. `subtotal` is what reaches
- * checkout, unchanged and in USD.
+ * The local figure is display text and stops here. `selectedSubtotal` — not
+ * the whole cart's — is what reaches checkout, unchanged and in USD: a line
+ * left unchecked here is a line `/checkout` never sees or charges for.
  */
 export default function CartPageClient({
   indicativeRate,
@@ -60,7 +61,22 @@ export default function CartPageClient({
   freeShippingThresholdAmountMinor,
   freeShippingDestinationLabel,
 }: CartPageClientProps) {
-  const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
+  const {
+    items,
+    itemCount,
+    selectedItems,
+    selectedItemCount,
+    selectedSubtotal,
+    isLineSelected,
+    setLineSelected,
+    selectAll,
+    selectNone,
+    setQuantity,
+    removeItem,
+  } = useCart();
+  const allSelected = selectedItems.length === items.length;
+  const noneSelected = selectedItems.length === 0;
+  const someSelected = !allSelected && !noneSelected;
   /*
     The cart froze the price each line was added at, and showed it back
     indefinitely. That is right while someone is browsing — nothing should move
@@ -104,6 +120,42 @@ export default function CartPageClient({
       </h1>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_336px]">
         <div className="rounded-xl border border-border bg-white">
+          {/*
+            The master checkbox toggles the same per-line state each row
+            reads — there is no separate "all" flag to keep in sync, so this
+            can never disagree with the rows under it. Indeterminate is set
+            imperatively because it is DOM-only state with no JSX/React prop.
+          */}
+          <label
+            htmlFor="cart-select-all"
+            className="flex cursor-pointer items-center gap-2.5 border-b border-border p-3.5"
+          >
+            <input
+              id="cart-select-all"
+              type="checkbox"
+              checked={allSelected}
+              ref={(node) => {
+                if (node) {
+                  // eslint-disable-next-line no-param-reassign -- `indeterminate` has no JSX/React prop; a ref callback mutating the DOM node is the only way to set it.
+                  node.indeterminate = someSelected;
+                }
+              }}
+              onChange={(event) => {
+                if (event.target.checked) {
+                  selectAll();
+                } else {
+                  selectNone();
+                }
+              }}
+              aria-label={
+                allSelected ? 'Deselect all items' : 'Select all items'
+              }
+              className="h-4 w-4 cursor-pointer accent-brand-600"
+            />
+            <span className="text-sm font-semibold text-ink">
+              Select all ({items.length})
+            </span>
+          </label>
           {items.map((line) => {
             // The composite line id, not the product id: two variants of one
             // product are two rows, and a product-keyed handler would change
@@ -114,6 +166,10 @@ export default function CartPageClient({
               <CartLineItemRow
                 key={id}
                 line={line}
+                selected={isLineSelected(id)}
+                onToggleSelected={(selected) => {
+                  setLineSelected(id, selected);
+                }}
                 onDecrease={() => {
                   trackKlaviyoCartQuantityChanged(line, line.quantity - 1);
                   setQuantity(id, line.quantity - 1);
@@ -131,16 +187,23 @@ export default function CartPageClient({
           })}
         </div>
         <div className="h-fit rounded-xl border border-border bg-white p-4">
+          {/*
+            Every figure below this point is about the checkout "Proceed"
+            leads to, so every one of them is scoped to the SELECTED lines,
+            not the whole cart — the heading above stays the total, because
+            that answers a different question ("what's in my cart") than
+            this panel does ("what am I about to pay for").
+          */}
           <div className="flex justify-between text-sm">
             <span className="text-ink-muted">Items</span>
-            <span>{itemCount}</span>
+            <span>{selectedItemCount}</span>
           </div>
           <div className="mt-2 flex justify-between border-t border-border pt-2.5 font-display text-xl font-semibold">
             <span>Subtotal</span>
-            <span>{formatMoney(subtotal)}</span>
+            <span>{formatMoney(selectedSubtotal)}</span>
           </div>
           <IndicativePriceLine
-            price={subtotal}
+            price={selectedSubtotal}
             rate={indicativeRate}
             bufferPercent={fxBufferPercent}
             className="mt-1.5 text-right"
@@ -154,18 +217,33 @@ export default function CartPageClient({
             component and treatment as the PDP, so the offer is one
             recognisable thing rather than a different-looking mention each
             time.
+
+            Left reading the whole cart's subtotal rather than the selected
+            one: it is advisory copy ("Estimated... confirmed at checkout"),
+            shares this component with the PDP buy rail where "selection"
+            has no meaning at all, and nothing here charges anyone.
           */}
           <FreeShippingNotice
             className="mt-3"
             thresholdAmountMinor={freeShippingThresholdAmountMinor}
             destinationLabel={freeShippingDestinationLabel}
           />
-          <Link
-            href="/checkout"
-            className="bg-brand-gradient mt-3.5 flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
-          >
-            Proceed to Checkout
-          </Link>
+          {noneSelected ? (
+            <button
+              type="button"
+              disabled
+              className="mt-3.5 flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-lg bg-surface-sunken-strong text-sm font-bold text-ink-faint"
+            >
+              Select an item to check out
+            </button>
+          ) : (
+            <Link
+              href="/checkout"
+              className="bg-brand-gradient mt-3.5 flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
+            >
+              Proceed to Checkout
+            </Link>
+          )}
           <p className="mt-2 text-xs text-ink-faint">
             Payment opens in Stripe. Cards and eligible bank debit are
             supported.

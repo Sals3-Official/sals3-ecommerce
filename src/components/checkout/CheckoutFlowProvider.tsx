@@ -16,9 +16,23 @@ import type { CheckoutCountry } from '@/lib/checkout/locations';
 import type { Money } from '@/lib/money';
 
 type CheckoutFlowValue = ReturnType<typeof useCheckout> & {
+  /**
+   * The lines this checkout operates on — the cart's *selected* subset, not
+   * the whole cart. A line a buyer left unchecked on `/cart` was never
+   * awaited here in the first place, so it is never quoted, priced, or
+   * charged by anything downstream of this provider.
+   */
   items: CartLineItem[];
   itemCount: number;
   subtotal: Money;
+  /**
+   * Whether the cart itself has nothing in it, as opposed to having items
+   * with none of them selected. `CheckoutFlowChrome` needs both empty states
+   * kept apart — "add something" and "go back and check something off" are
+   * different instructions, and conflating them would send a buyer with a
+   * full but fully-deselected cart to the home page instead of back to it.
+   */
+  cartIsEmpty: boolean;
   /**
    * Lines whose price moved between the cart and this checkout. Empty on the
    * ordinary path; the summary renders a notice when it is not.
@@ -63,9 +77,18 @@ export function CheckoutFlowProvider({
   /** The signed-in account's own address, seeded into the contact field. */
   initialEmail?: string | undefined;
 }) {
-  const { items, itemCount, subtotal, removeItem } = useCart();
+  const {
+    selectedItems: items,
+    selectedItemCount: itemCount,
+    selectedSubtotal: subtotal,
+    items: cartItems,
+    removeItem,
+  } = useCart();
+  const cartIsEmpty = cartItems.length === 0;
   // Before anything is totalled. This rewrites the cart's stored prices, so
-  // `items` and `subtotal` below are already the corrected ones.
+  // `items` and `subtotal` below are already the corrected ones. Repriced by
+  // the same subset that is about to be charged — an unselected line's price
+  // moving does not need this checkout's attention.
   const { changes: priceChanges, applyServerChanges } = useCartReprice(items);
   const checkout = useCheckout(
     items,
@@ -103,10 +126,19 @@ export function CheckoutFlowProvider({
       items,
       itemCount,
       subtotal,
+      cartIsEmpty,
       priceChanges,
       removeLine,
     }),
-    [checkout, items, itemCount, subtotal, priceChanges, removeLine],
+    [
+      checkout,
+      items,
+      itemCount,
+      subtotal,
+      cartIsEmpty,
+      priceChanges,
+      removeLine,
+    ],
   );
 
   return <CheckoutFlowContext value={value}>{children}</CheckoutFlowContext>;

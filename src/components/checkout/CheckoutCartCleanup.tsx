@@ -36,7 +36,7 @@ type CheckoutCartCleanupProps = {
 export default function CheckoutCartCleanup({
   sessionId,
 }: CheckoutCartCleanupProps) {
-  const { clear } = useCart();
+  const { clearSelected } = useCart();
 
   useEffect(() => {
     if (sessionId === '') {
@@ -55,8 +55,15 @@ export default function CheckoutCartCleanup({
       CLEARED_CHECKOUTS_STORAGE_KEY,
       rememberClearedCheckout(stored, sessionId),
     );
-    clear();
-  }, [clear, sessionId]);
+    /*
+      Only the lines this checkout charged for, not the whole cart. Since
+      selection existed, a buyer can pay for two of four cart lines and land
+      here — `clear()` would delete the other two, which were never part of
+      this order and were never charged. See `clearSelected`'s own doc
+      comment on `CartProvider` for the one known gap this leaves open.
+    */
+    clearSelected();
+  }, [clearSelected, sessionId]);
 
   return null;
 }

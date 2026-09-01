@@ -102,6 +102,14 @@ export type CartLineItem = {
 
 export type CartState = {
   items: CartLineItem[];
+  /**
+   * The opt-out set, not the opt-in one. A newly added line is never in here,
+   * so it is selected the moment it exists — no separate "select the new
+   * item" step is needed on add, and an old `sals3-cart-v2` blob written
+   * before selection existed parses with this absent, defaulting to
+   * everything selected rather than everything hidden from checkout.
+   */
+  deselectedLineIds: string[];
 };
 
 export type CartToastMessage = {
@@ -109,7 +117,7 @@ export type CartToastMessage = {
   text: string;
 };
 
-export const EMPTY_CART: CartState = { items: [] };
+export const EMPTY_CART: CartState = { items: [], deselectedLineIds: [] };
 
 const MoneySchema = z.object({
   amountMinor: z.number().int(),
@@ -136,6 +144,7 @@ const CartLineItemSchema = z.object({
 
 export const CartStateSchema = z.object({
   items: z.array(CartLineItemSchema),
+  deselectedLineIds: z.array(z.string()).default([]),
 });
 
 /**
@@ -192,13 +201,17 @@ export function addCartItem(
       return state;
     }
 
-    return { items: [...state.items, { ...item, quantity: nextQuantity }] };
+    return {
+      ...state,
+      items: [...state.items, { ...item, quantity: nextQuantity }],
+    };
   }
 
   const existing = state.items[existingIndex]!;
   const nextQuantity = clampQuantity(existing.quantity + quantity);
 
   return {
+    ...state,
     items: state.items.map((line, index) =>
       index === existingIndex ? { ...line, quantity: nextQuantity } : line,
     ),
@@ -227,6 +240,7 @@ export function repriceCartItems(
   );
 
   return {
+    ...state,
     items: state.items.map((line) => {
       const next = byLine.get(lineIdOf(line));
 
@@ -246,6 +260,10 @@ export function repriceCartItems(
 export function removeCartItem(state: CartState, lineId: string): CartState {
   return {
     items: state.items.filter((line) => lineIdOf(line) !== lineId),
+    // Dropped alongside the line rather than left as a dead id: nothing reads
+    // an entry for a line that no longer exists, but a growing pile of stale
+    // ids is still a leak nothing would ever notice.
+    deselectedLineIds: state.deselectedLineIds.filter((id) => id !== lineId),
   };
 }
 
@@ -261,9 +279,74 @@ export function setCartItemQuantity(
   }
 
   return {
+    ...state,
     items: state.items.map((line) =>
       lineIdOf(line) === lineId ? { ...line, quantity: nextQuantity } : line,
     ),
+  };
+}
+
+/** True unless the line was explicitly opted out — see `CartState.deselectedLineIds`. */
+export function isLineSelected(state: CartState, lineId: string): boolean {
+  return !state.deselectedLineIds.includes(lineId);
+}
+
+export function selectedItemsOf(state: CartState): CartLineItem[] {
+  return state.items.filter((line) => isLineSelected(state, lineIdOf(line)));
+}
+
+export function setLineSelected(
+  state: CartState,
+  lineId: string,
+  selected: boolean,
+): CartState {
+  const without = state.deselectedLineIds.filter((id) => id !== lineId);
+
+  return {
+    ...state,
+    deselectedLineIds: selected ? without : [...without, lineId],
+  };
+}
+
+/**
+ * Narrows selection to exactly one line, deselecting every other.
+ *
+ * "Buy Now" needs this: it adds a line to a cart that may already hold
+ * others, and only the line just bought should be checked out with it — the
+ * rest of the cart's own selection is a separate decision the buyer already
+ * made or has yet to.
+ */
+export function selectOnlyLine(state: CartState, lineId: string): CartState {
+  return {
+    ...state,
+    deselectedLineIds: state.items.map(lineIdOf).filter((id) => id !== lineId),
+  };
+}
+
+export function selectAllLines(state: CartState): CartState {
+  return { ...state, deselectedLineIds: [] };
+}
+
+export function deselectAllLines(state: CartState): CartState {
+  return { ...state, deselectedLineIds: state.items.map(lineIdOf) };
+}
+
+/**
+ * Removes exactly the lines that are currently selected, leaving anything
+ * deselected untouched, and resets selection so what remains starts fully
+ * selected again for the next checkout.
+ *
+ * This is what a paid checkout calls instead of emptying the cart outright:
+ * once selection exists, "the whole cart" and "what was just bought" are
+ * different sets, and wiping the former would delete items the buyer
+ * deliberately excluded and never paid for.
+ */
+export function clearSelectedItems(state: CartState): CartState {
+  const deselected = new Set(state.deselectedLineIds);
+
+  return {
+    items: state.items.filter((line) => deselected.has(lineIdOf(line))),
+    deselectedLineIds: [],
   };
 }
 
@@ -277,4 +360,17 @@ export function getCartLineTotal(line: CartLineItem): Money {
 
 export function getCartSubtotal(state: CartState): Money {
   return sumMoney(state.items.map(getCartLineTotal));
+}
+
+/** Same as `getCartItemCount`, restricted to what is selected. */
+export function getSelectedItemCount(state: CartState): number {
+  return selectedItemsOf(state).reduce(
+    (total, line) => total + line.quantity,
+    0,
+  );
+}
+
+/** Same as `getCartSubtotal`, restricted to what is selected. */
+export function getSelectedSubtotal(state: CartState): Money {
+  return sumMoney(selectedItemsOf(state).map(getCartLineTotal));
 }
