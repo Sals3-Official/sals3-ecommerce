@@ -125,38 +125,59 @@ export default function CartPageClient({
             reads — there is no separate "all" flag to keep in sync, so this
             can never disagree with the rows under it. Indeterminate is set
             imperatively because it is DOM-only state with no JSX/React prop.
+
+            The checkbox itself sits inside the same 44px, centred hit target
+            `CartLineItemRow` uses, rather than directly against this label's
+            own padding. Without that wrapper the two glyphs sit at different
+            distances from the card's left edge — this label's `p-3.5` alone
+            puts the box 14px in, while a row's `p-3.5` plus its 44px
+            centring box puts its box 28px in — so the header checkbox and
+            every row checkbox below it read as two separate columns instead
+            of one.
           */}
           <label
             htmlFor="cart-select-all"
             className="flex cursor-pointer items-center gap-2.5 border-b border-border p-3.5"
           >
-            <input
-              id="cart-select-all"
-              type="checkbox"
-              checked={allSelected}
-              ref={(node) => {
-                if (node) {
-                  // eslint-disable-next-line no-param-reassign -- `indeterminate` has no JSX/React prop; a ref callback mutating the DOM node is the only way to set it.
-                  node.indeterminate = someSelected;
+            <span className="flex h-11 w-11 flex-none items-center justify-center">
+              <input
+                id="cart-select-all"
+                type="checkbox"
+                checked={allSelected}
+                ref={(node) => {
+                  if (node) {
+                    // eslint-disable-next-line no-param-reassign -- `indeterminate` has no JSX/React prop; a ref callback mutating the DOM node is the only way to set it.
+                    node.indeterminate = someSelected;
+                  }
+                }}
+                onChange={(event) => {
+                  if (event.target.checked) {
+                    selectAll();
+                  } else {
+                    selectNone();
+                  }
+                }}
+                aria-label={
+                  allSelected ? 'Deselect all items' : 'Select all items'
                 }
-              }}
-              onChange={(event) => {
-                if (event.target.checked) {
-                  selectAll();
-                } else {
-                  selectNone();
-                }
-              }}
-              aria-label={
-                allSelected ? 'Deselect all items' : 'Select all items'
-              }
-              className="h-4 w-4 cursor-pointer accent-brand-600"
-            />
+                className="h-4 w-4 cursor-pointer accent-brand-600"
+              />
+            </span>
             <span className="text-sm font-semibold text-ink">
               Select all ({items.length})
             </span>
           </label>
-          {items.map((line) => {
+          {/*
+            Newest line first. `addCartItem` appends, so the cart's own
+            storage order is oldest-first — correct for `addCartItem` itself
+            (a repeat add has to find the SAME index to update in place, not
+            race a display-only reordering), wrong for what a buyer expects
+            to see: the thing they just added should be the first row they
+            find, not the last. Reversed here, for this list only — nothing
+            else reads `displayItems`, so the underlying order (and every id,
+            selection, and quantity handler keyed off it) is untouched.
+          */}
+          {[...items].reverse().map((line) => {
             // The composite line id, not the product id: two variants of one
             // product are two rows, and a product-keyed handler would change
             // the quantity of whichever row sorted first.

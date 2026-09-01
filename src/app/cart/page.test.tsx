@@ -124,6 +124,51 @@ describe('Cart page', () => {
   });
 
   /**
+   * `addCartItem` appends, so storage order is oldest-first — correct for
+   * finding the same line again on a repeat add. Display order is the
+   * opposite on purpose: a buyer expects the thing they just added to be the
+   * first row they see, not the last.
+   */
+  it('shows the most recently added line first', async () => {
+    const firstAdded = addCartItem(
+      EMPTY_CART,
+      {
+        productId: 'first-added',
+        title: 'Essence Mascara Lash Princess',
+        imageAlt: 'Essence Mascara Lash Princess product image',
+        tone: 'ocean',
+        unitPrice: usd(1000),
+      },
+      1,
+    );
+    const bothAdded = addCartItem(
+      firstAdded,
+      {
+        productId: 'second-added',
+        title: 'Quiet Tower Air Cooler',
+        imageAlt: 'Quiet tower air cooler',
+        tone: 'meadow',
+        unitPrice: usd(2000),
+      },
+      1,
+    );
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(bothAdded));
+
+    renderWithCart(await CartPage());
+
+    await screen.findByText(/essence mascara/i);
+
+    const titles = screen
+      .getAllByText(/essence mascara|quiet tower air cooler/i)
+      .map((el) => el.textContent);
+
+    expect(titles).toEqual([
+      'Quiet Tower Air Cooler',
+      'Essence Mascara Lash Princess',
+    ]);
+  });
+
+  /**
    * "Only what's checked gets checked out" is the whole feature, so the panel
    * that answers "what am I about to pay for" has to move the moment a line
    * is unchecked — the heading above it stays the cart's own total on purpose,
