@@ -22,6 +22,11 @@ import { breadcrumbTrail } from '@/lib/product-breadcrumb';
 import { fetchProductReviews } from '@/services/storefront/reviews';
 import { variantById } from '@/lib/product-variants';
 import { fetchProductBySlug, toProductDetail } from '@/services/products';
+import { resolveDestination } from '@/lib/destination/resolve';
+import destinationToCheckoutCountry from '@/lib/destination/destination-checkout-country';
+import fetchFreeShippingThresholds, {
+  EMPTY_FREE_SHIPPING_THRESHOLDS,
+} from '@/lib/fx/free-shipping-thresholds';
 
 const META_DESCRIPTION_MAX_LENGTH = 155;
 
@@ -178,11 +183,39 @@ export default async function ProductPage({
   searchParams,
 }: ProductPageProps) {
   const { id } = await params;
-  const detail = await getProductDetail(id);
+  /*
+    `resolveDestination()` reads only the request's own cookies and headers —
+    no network wait — so awaiting it first costs nothing and the checkout
+    country it resolves to decides whether the threshold read below is worth
+    starting at all.
+  */
+  const destination = await resolveDestination();
+  const checkoutCountry = destinationToCheckoutCountry(destination.code);
+  /*
+    Run beside the product read rather than after it: this is an estimate for
+    a card the buyer has not reached yet, and the page's own history here is
+    exactly why nothing optional joins the serial chain — see the note below
+    on the 1,682ms measured on production 2026-09-01.
+  */
+  const [detail, freeShippingThresholds] = await Promise.all([
+    getProductDetail(id),
+    checkoutCountry === undefined
+      ? Promise.resolve(EMPTY_FREE_SHIPPING_THRESHOLDS)
+      : fetchFreeShippingThresholds(),
+  ]);
 
   if (!detail) {
     notFound();
   }
+
+  const freeShippingThresholdAmountMinor =
+    checkoutCountry === undefined
+      ? undefined
+      : freeShippingThresholds[checkoutCountry];
+  const freeShippingDestinationLabel =
+    freeShippingThresholdAmountMinor === undefined
+      ? undefined
+      : (destination.proseLabel ?? destination.label);
 
   const query = searchParams === undefined ? {} : await searchParams;
   /*
@@ -309,6 +342,10 @@ export default async function ProductPage({
                   selectedVariant={selectedVariant}
                   selectedFromUrl={fromUrl !== undefined}
                   reviewsAnchored={reviews.length > 0}
+                  freeShippingThresholdAmountMinor={
+                    freeShippingThresholdAmountMinor
+                  }
+                  freeShippingDestinationLabel={freeShippingDestinationLabel}
                 />
               </div>
             </div>

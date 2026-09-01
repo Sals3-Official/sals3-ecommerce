@@ -24,6 +24,7 @@ export const STOREFRONT_REVIEWS_PATH = '/api/storefront/reviews';
 export const STOREFRONT_CHECKOUT_ORDERS_ACCEPT_PATH =
   '/api/storefront/checkout/orders/accept';
 export const STOREFRONT_FX_BUFFER_PATH = '/api/storefront/fx-buffer';
+export const STOREFRONT_FREE_SHIPPING_PATH = '/api/storefront/free-shipping';
 
 export class ProductsApiError extends Error {
   readonly status?: number;

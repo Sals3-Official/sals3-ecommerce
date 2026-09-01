@@ -5,8 +5,12 @@ import DestinationNotice from '@/components/layout/DestinationNotice';
 import CartPageClient from '@/components/cart/CartPageClient';
 import { resolveDestination } from '@/lib/destination/resolve';
 import destinationToIndicativeCurrency from '@/lib/fx/destination-currency';
+import destinationToCheckoutCountry from '@/lib/destination/destination-checkout-country';
 import { fetchIndicativeRate } from '@/lib/fx/rates';
 import fetchFxBuffer from '@/lib/fx/buffer';
+import fetchFreeShippingThresholds, {
+  EMPTY_FREE_SHIPPING_THRESHOLDS,
+} from '@/lib/fx/free-shipping-thresholds';
 import { SITE_NAME } from '@/lib/site';
 
 export function generateMetadata(): Metadata {
@@ -58,14 +62,38 @@ export default async function CartPage() {
   */
   const currency = destinationToIndicativeCurrency(destination.code);
   /*
-    In parallel: the buffer is a first-party Portal call and the rate a
-    third-party one, neither depends on the other, and both sit on the render
-    path. Sequencing them would add the slower one's latency to the faster.
+    Same guess, narrowed to the three countries `free-shipping.ts` has a
+    configured threshold for. `undefined` for the same reasons `currency` can
+    be `undefined`: Global, New Zealand, the United States and Canada have no
+    entry either place.
   */
-  const [indicativeRate, fxBufferPercent] = await Promise.all([
-    currency === undefined ? null : fetchIndicativeRate(currency),
-    currency === undefined ? null : fetchFxBuffer(),
-  ]);
+  const checkoutCountry = destinationToCheckoutCountry(destination.code);
+  /*
+    In parallel: the buffer, the rate and the thresholds are three independent
+    reads that all sit on the render path. Sequencing any of them would add
+    its latency to the slowest of the other two for no gain.
+  */
+  const [indicativeRate, fxBufferPercent, freeShippingThresholds] =
+    await Promise.all([
+      currency === undefined ? null : fetchIndicativeRate(currency),
+      currency === undefined ? null : fetchFxBuffer(),
+      checkoutCountry === undefined
+        ? EMPTY_FREE_SHIPPING_THRESHOLDS
+        : fetchFreeShippingThresholds(),
+    ]);
+  const freeShippingThresholdAmountMinor =
+    checkoutCountry === undefined
+      ? undefined
+      : freeShippingThresholds[checkoutCountry];
+  /*
+    Coupled to the threshold on purpose: a destination with no resolved amount
+    gets no name attached to it either, so `FreeShippingNotice` cannot show a
+    country with nothing to say about it.
+  */
+  const freeShippingDestinationLabel =
+    freeShippingThresholdAmountMinor === undefined
+      ? undefined
+      : (destination.proseLabel ?? destination.label);
 
   return (
     <div className="flex flex-1 flex-col bg-surface">
@@ -75,6 +103,8 @@ export default async function CartPage() {
         <CartPageClient
           indicativeRate={indicativeRate}
           fxBufferPercent={fxBufferPercent}
+          freeShippingThresholdAmountMinor={freeShippingThresholdAmountMinor}
+          freeShippingDestinationLabel={freeShippingDestinationLabel}
         />
       </main>
       <SiteFooter />

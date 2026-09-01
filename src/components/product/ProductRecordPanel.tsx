@@ -39,6 +39,14 @@ type ProductRecordPanelProps = {
    * the evidence ledger's reviews row can link down to it.
    */
   reviewsAnchored?: boolean;
+  /**
+   * The free-shipping threshold for the buyer's likely destination, and the
+   * name to show it under — resolved on the server by `page.tsx` from
+   * `fetchFreeShippingThresholds()` against `resolveDestination()`'s guess.
+   * See `FreeShippingNotice` for what absence of either means.
+   */
+  freeShippingThresholdAmountMinor?: number;
+  freeShippingDestinationLabel?: string;
 };
 
 /**
@@ -90,6 +98,8 @@ export default function ProductRecordPanel({
   selectedVariant,
   selectedFromUrl,
   reviewsAnchored,
+  freeShippingThresholdAmountMinor,
+  freeShippingDestinationLabel,
 }: ProductRecordPanelProps) {
   const variants = useMemo(() => detail.variants ?? [], [detail.variants]);
   const axes = useMemo(() => detail.options ?? [], [detail.options]);
@@ -267,11 +277,18 @@ export default function ProductRecordPanel({
 
       {/*
         Last thing seen before the buy buttons, on purpose: a nudge only
-        works if it lands before the decision, not after it. See
-        `FreeShippingNotice` for why this carries no amount or country.
+        works if it lands before the decision, not after it. `emphasize`
+        pulses this one card for exactly that reason — see
+        `FreeShippingNotice` and the `s3-free-shipping-glow` keyframe in
+        `globals.css`. The cart's copy of this component does not carry it:
+        it sits in an order summary a buyer is already reading line by line.
       */}
       <CardSection>
-        <FreeShippingNotice />
+        <FreeShippingNotice
+          thresholdAmountMinor={freeShippingThresholdAmountMinor}
+          destinationLabel={freeShippingDestinationLabel}
+          emphasize
+        />
       </CardSection>
 
       <CardSection>

@@ -29,6 +29,15 @@ type CartPageClientProps = {
    * `null` means no local figure renders, same as a missing rate.
    */
   fxBufferPercent: number | null;
+  /**
+   * The free-shipping threshold for the buyer's likely destination, and the
+   * name to show it under — resolved on the server from
+   * `fetchFreeShippingThresholds()` against the same `resolveDestination()`
+   * guess the FX figures above use. Absent for the same reasons a rate can be
+   * absent: Global, an unmeasured country, or the Portal read failed.
+   */
+  freeShippingThresholdAmountMinor?: number;
+  freeShippingDestinationLabel?: string;
 };
 
 /**
@@ -48,6 +57,8 @@ type CartPageClientProps = {
 export default function CartPageClient({
   indicativeRate,
   fxBufferPercent,
+  freeShippingThresholdAmountMinor,
+  freeShippingDestinationLabel,
 }: CartPageClientProps) {
   const { items, itemCount, subtotal, setQuantity, removeItem } = useCart();
   /*
@@ -135,17 +146,20 @@ export default function CartPageClient({
             className="mt-1.5 text-right"
           />
           {/*
-            Same reasoning as the evidence ledger's Delivery row: this page
-            does not know the buyer's destination (see this file's own note
-            above), and `resolveDestination()`'s geo-IP guess is documented
-            as "only a suggestion" -- fine for the approximate FX figure
-            above, not sound enough to anchor a specific dollar threshold
-            claim on. No amount, no country; the real number is confirmed
-            once an address exists, at checkout. Same component and
-            treatment as the PDP, so the offer is one recognisable thing
-            rather than a different-looking mention each time.
+            Same signal the FX figure above already runs on:
+            `resolveDestination()`'s geo-IP guess, narrowed to a checkout
+            country by `destinationToCheckoutCountry`. When neither exists —
+            Global, an unmeasured country, or the Portal read failed —
+            `FreeShippingNotice` falls back to its amount-free copy. Same
+            component and treatment as the PDP, so the offer is one
+            recognisable thing rather than a different-looking mention each
+            time.
           */}
-          <FreeShippingNotice className="mt-3" />
+          <FreeShippingNotice
+            className="mt-3"
+            thresholdAmountMinor={freeShippingThresholdAmountMinor}
+            destinationLabel={freeShippingDestinationLabel}
+          />
           <Link
             href="/checkout"
             className="bg-brand-gradient mt-3.5 flex min-h-11 w-full items-center justify-center rounded-lg text-sm font-bold text-white transition-all duration-200 hover:no-underline hover:opacity-90 active:scale-[0.98]"
