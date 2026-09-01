@@ -24,8 +24,8 @@ export default function CheckoutFreeShippingProgress({
       })} more for FREE Standard delivery`;
 
   return (
-    <aside className="rounded-lg border border-teal-500/45 bg-teal-500/8 px-4 py-3">
-      <p aria-live="polite" className="text-sm font-bold text-teal-500">
+    <aside className="rounded-lg border border-brand-600/45 bg-brand-600/8 px-4 py-3">
+      <p aria-live="polite" className="text-sm font-bold text-brand-600">
         {message}
       </p>
       <div
@@ -38,7 +38,7 @@ export default function CheckoutFreeShippingProgress({
         className="mt-2 h-3 overflow-hidden rounded-full bg-surface-sunken-strong"
       >
         <div
-          className="free-shipping-progress-fill h-full rounded-full bg-teal-500"
+          className="free-shipping-progress-fill h-full rounded-full bg-brand-600"
           style={{ width: `${percent}%` }}
         />
       </div>

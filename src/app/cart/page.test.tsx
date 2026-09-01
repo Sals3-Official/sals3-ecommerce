@@ -272,12 +272,16 @@ describe('Cart page', () => {
   });
 
   /**
-   * The 2026-09-01 reversal: once a threshold exists for the resolved
-   * destination, the notice is allowed to name it and say how much more is
-   * needed — see `FreeShippingNotice`'s own doc comment for why this no
-   * longer follows the original "no amount, no country" caution.
+   * Two reversals on the same day. The 2026-09-01 morning change let the
+   * notice name the resolved destination alongside the amount, on the
+   * reasoning that `IndicativePriceLine` already trusted the same geo-IP
+   * guess for a priced figure. The afternoon reversed just the naming: a
+   * specific country stated out loud reads as a claim about *where this
+   * buyer is*, a stronger assertion than "here is roughly what this could
+   * cost" — see `FreeShippingNotice`'s own doc comment. The dollar amount
+   * stays; only the country is gone from the sentence.
    */
-  it('names the destination and the amount remaining once a threshold resolves', async () => {
+  it('shows the amount remaining once a threshold resolves, without naming the destination', async () => {
     vi.mocked(fetchFreeShippingThresholds).mockResolvedValueOnce({
       AU: 2500,
     });
@@ -297,9 +301,7 @@ describe('Cart page', () => {
     renderWithCart(await CartPage());
 
     expect(
-      await screen.findByText(
-        'Add US$15 more for free Standard delivery to Australia',
-      ),
+      await screen.findByText('Add US$15 more for free Standard delivery'),
     ).toBeInTheDocument();
   });
 

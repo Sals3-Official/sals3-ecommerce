@@ -34,10 +34,18 @@ export default function CartLineItemRow({
         44px hit target around a 16px glyph, matching the quantity buttons'
         own `h-11 w-11` in this row — a checkbox this size is unreliable to tap
         on its visible box alone.
+
+        `self-center`, not `self-start`: the row has no `items-center` of its
+        own, so the 80px-square image ends up vertically centered in the
+        row's content box on its own (a flex quirk of a fixed-aspect item
+        under the default `stretch`), while a shorter fixed-height box
+        anchored at the top does not follow it there. Top-anchoring this
+        44px hit target left the checkbox glyph sitting visibly above the
+        image's own centre instead of beside it.
       */}
       <label
         htmlFor={checkboxId}
-        className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center self-start"
+        className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center self-center"
       >
         <input
           id={checkboxId}

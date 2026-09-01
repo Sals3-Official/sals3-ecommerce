@@ -292,7 +292,14 @@ describe('ProductRecordPanel', () => {
     ).not.toBeNull();
   });
 
-  it('shows the destination-scoped estimate once the page resolves one', () => {
+  /**
+   * `freeShippingDestinationLabel` is still passed through and still gates
+   * whether an estimate shows at all (paired with the threshold it was
+   * resolved alongside) — it is simply never printed. See
+   * `FreeShippingNotice`'s own doc comment for why naming the guessed
+   * country was reversed.
+   */
+  it('shows the destination-scoped estimate without naming the destination', () => {
     renderWithCart(
       <ProductRecordPanel
         detail={detail()}
@@ -303,9 +310,7 @@ describe('ProductRecordPanel', () => {
     );
 
     expect(
-      screen.getByText(
-        'Add US$25 more for free Standard delivery to Australia',
-      ),
+      screen.getByText('Add US$25 more for free Standard delivery'),
     ).toBeInTheDocument();
   });
 });
