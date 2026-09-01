@@ -42,8 +42,14 @@ export default function CheckoutFlowChrome({
 }: {
   children: ReactNode;
 }) {
-  const { items, itemCount, selectedShipping, isPending, priceChanges } =
-    useCheckoutFlow();
+  const {
+    items,
+    itemCount,
+    selectedShipping,
+    isPending,
+    priceChanges,
+    removeLine,
+  } = useCheckoutFlow();
   const pathname = usePathname();
   const step = STEP_BY_PATH[pathname] ?? 1;
   const showsSummary = step !== 3;
@@ -119,6 +125,8 @@ export default function CheckoutFlowChrome({
               items={items}
               itemCount={itemCount}
               shipping={selectedShipping}
+              onRemoveLine={removeLine}
+              disabled={isPending}
             />
           </div>
         ) : null}

@@ -153,6 +153,34 @@ function seedCart() {
   );
 }
 
+/** Two lines, so removing one leaves an observably different basket. */
+function seedCartWithTwoLines() {
+  const withFirst = addCartItem(
+    EMPTY_CART,
+    {
+      productId: 'corduroy-jacket',
+      title: "Men's Casual Retro Corduroy Jacket Coat",
+      imageAlt: 'Corduroy jacket',
+      tone: 'ocean',
+      unitPrice: usd(2000),
+    },
+    1,
+  );
+  const withBoth = addCartItem(
+    withFirst,
+    {
+      productId: 'cold-proof-face-mask',
+      title: 'Cold-Proof Face Mask',
+      imageAlt: 'Face mask',
+      tone: 'meadow',
+      unitPrice: usd(336),
+    },
+    1,
+  );
+
+  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(withBoth));
+}
+
 async function fillValidAddress() {
   fireEvent.change(await screen.findByLabelText(/^email$/i), {
     target: { value: 'buyer@example.com' },
@@ -566,5 +594,74 @@ describe('checkout flow across routes', () => {
 
     expect(screen.getByText(/your cart is empty/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/^email$/i)).not.toBeInTheDocument();
+  });
+
+  it('drops a line from the order summary and updates the total', async () => {
+    seedCartWithTwoLines();
+    renderWithCart(<CheckoutFlowHarness />);
+
+    expect(await screen.findByText(/2 items in cart/i)).toBeInTheDocument();
+    expect(screen.getByText('US$23.36')).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /remove.*cold-proof face mask/i,
+      }),
+    );
+
+    expect(screen.getByText(/1 item in cart/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cold-proof face mask/i)).not.toBeInTheDocument();
+    // Whole amounts stay whole — `formatMoney` drops the trailing `.00`. Two
+    // matches, not one: the remaining line's own price and the section total
+    // now read identically, since no shipping has been quoted yet.
+    expect(screen.getAllByText('US$20')).toHaveLength(2);
+  });
+
+  /*
+   * The heavier case: a quote already priced the two-line basket, so dropping
+   * one has to take the courier prices with it rather than let the buyer pay
+   * for a basket that no longer exists. `CheckoutDeliveryStep` reacts to a
+   * cleared quote exactly as it does to a cold reload — see the "bounces a
+   * direct visit" tests above — so the same recovery path is exercised here
+   * for a different cause.
+   */
+  it('invalidates the quote and returns to information when a line is removed on delivery', async () => {
+    seedCartWithTwoLines();
+    renderWithCart(<CheckoutFlowHarness />);
+
+    await reachDelivery();
+    expect(mockedQuoteShipping).toHaveBeenCalledTimes(1);
+
+    /*
+      Real, load-dependent race, found by instrumenting the render: the quote
+      transition can commit `shippingQuote` (which is all `reachDelivery`
+      waits for — the radios it polls for) one or more renders *before*
+      `isPending` itself settles to `false`. The Remove button was still
+      `disabled` at click time on a fraction of runs, and React's own event
+      system silently drops a click dispatched at a disabled element — a raw
+      `addEventListener` on the same node still fired, which is what proved
+      it was React declining the click rather than the DOM never receiving
+      one. `reachDelivery`'s wait is correct for its own callers; it was never
+      meant to guarantee this file's shared `isPending` had also cleared.
+
+      "Go to payment" is the existing idiom for that guarantee — its own
+      label reads "Preparing payment..." until `isPending` is false (see
+      the "mounts Stripe on arrival" test above), so waiting for its settled
+      name is a real synchronization point, not a fixed delay.
+    */
+    await screen.findByRole('button', { name: /go to payment/i });
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /remove.*cold-proof face mask/i,
+      }),
+    );
+
+    await screen.findByLabelText(/^email$/i);
+    expect(replace).toHaveBeenCalledWith('/checkout');
+    expect(screen.getByText(/1 item in cart/i)).toBeInTheDocument();
+
+    // The address survives — only the quote and the prepared session did not.
+    expect(screen.getByDisplayValue('123 Main Street')).toBeInTheDocument();
   });
 });

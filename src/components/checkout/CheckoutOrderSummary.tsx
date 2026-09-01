@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { formatMoney, money } from '@/lib/money';
-import { getCartLineTotal, type CartLineItem } from '@/lib/cart';
+import { getCartLineTotal, lineIdOf, type CartLineItem } from '@/lib/cart';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 import type { SelectedShippingQuote } from '@/lib/checkout/shipping-selection';
 
@@ -8,12 +8,25 @@ type CheckoutOrderSummaryProps = {
   items: CartLineItem[];
   itemCount: number;
   shipping: SelectedShippingQuote[];
+  /**
+   * Drops a line. Must be the flow's `removeLine`, not the cart's `removeItem`
+   * — removing a line invalidates the courier quote priced against the old
+   * basket, and the flow's version does both.
+   */
+  onRemoveLine: (lineId: string) => void;
+  /**
+   * A quote or a payment preparation is in flight. Removal is refused for its
+   * duration rather than racing a request that is already pricing this basket.
+   */
+  disabled: boolean;
 };
 
 export default function CheckoutOrderSummary({
   items,
   itemCount,
   shipping,
+  onRemoveLine,
+  disabled,
 }: CheckoutOrderSummaryProps) {
   const shippingTotal = shipping.reduce(
     (total, selected) => total + selected.amountMinor,
@@ -67,9 +80,31 @@ export default function CheckoutOrderSummary({
                     {line.variant.optionSummary}
                   </p>
                 )}
-                <p className="mt-1 text-xs text-ink-muted">
-                  Qty {line.quantity}
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs text-ink-muted">Qty {line.quantity}</p>
+                  <span aria-hidden className="text-xs text-border-strong">
+                    ·
+                  </span>
+                  {/*
+                    Named for the product it drops, not a bare "Remove": the
+                    summary lists several lines and an accessible name of
+                    "Remove" repeated three times says nothing about which.
+                  */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemoveLine(lineIdOf(line));
+                    }}
+                    disabled={disabled}
+                    className="rounded text-xs font-semibold text-ink-subtle underline underline-offset-2 transition-colors duration-200 hover:text-deal disabled:cursor-default disabled:text-ink-faint disabled:no-underline"
+                  >
+                    Remove
+                    <span className="sr-only">
+                      {' '}
+                      {line.title} from this order
+                    </span>
+                  </button>
+                </div>
               </div>
               <p className="font-display text-base font-semibold text-ink">
                 {formatMoney(getCartLineTotal(line))}
