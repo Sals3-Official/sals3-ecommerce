@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Product } from '@/lib/home-placeholder-data';
 import { formatMoney } from '@/lib/money';
 import StarRating from '@/components/product/StarRating';
+import LinkPendingVeil from '@/components/ui/LinkPendingVeil';
 import ProductImagePlaceholder from '@/components/ui/ProductImagePlaceholder';
 
 type ProductCardProps = {
@@ -18,8 +19,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     <Link
       href={`/p/${product.id}`}
       prefetch={false}
-      className="flex flex-col overflow-hidden rounded-xl border border-border bg-white transition hover:-translate-y-1 hover:border-brand-600 hover:no-underline hover:shadow-[0_16px_34px_rgba(11,44,77,0.15)]"
+      className="relative flex flex-col overflow-hidden rounded-xl border border-border bg-white transition hover:-translate-y-1 hover:border-brand-600 hover:no-underline hover:shadow-[0_16px_34px_rgba(11,44,77,0.15)]"
     >
+      {/*
+        `relative` above exists only to anchor this. The veil marks the pressed
+        card while the product page loads — the route skeleton says a page is
+        coming, this says which card it belongs to. It renders nothing when idle.
+      */}
+      <LinkPendingVeil />
       {product.imageUrl ? (
         <div className="relative aspect-square bg-white">
           <Image

@@ -56,9 +56,18 @@ test('the header box searches from the home page', async ({ page }) => {
     .press('Enter');
 
   await expect(page).toHaveURL(/\/search\?q=a/, { timeout: UPSTREAM_TIMEOUT });
+  /*
+    `UPSTREAM_TIMEOUT` rather than the 5s default, since `search/loading.tsx`
+    landed on 2026-09-01. The page now answers immediately with its skeleton and
+    streams the results in, so `goto` returns at first paint instead of blocking
+    until the Portal has answered. That is the point of the change, and it moves
+    the wait off the navigation and onto this assertion. The assertion itself is
+    unchanged and still fails on a wrong or missing heading — it is only given
+    the same upstream budget every other wait in this file already has.
+  */
   await expect(
     page.getByRole('heading', { level: 1, name: /results for/i }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: UPSTREAM_TIMEOUT });
 });
 
 /** Submitting nothing must not land on "no results for" an unentered term. */

@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Category } from '@/lib/home-placeholder-data';
 import CATEGORY_ICON_PATHS from '@/components/home/category-icons';
+import LinkPendingVeil from '@/components/ui/LinkPendingVeil';
 import categoryImageSrc, {
   CATEGORY_IMAGE_PX,
 } from '@/components/home/category-images';
@@ -85,8 +86,16 @@ export default function CategoryTile({ category }: CategoryTileProps) {
     <Link
       href={`/c/${category.id}`}
       title={category.name}
-      className="group flex flex-col items-center gap-2 bg-white px-2 pt-3.5 pb-3 transition duration-200 ease-out hover:bg-surface hover:no-underline focus-visible:-outline-offset-2 md:gap-2.5 md:px-3.5 md:pt-4.5 md:pb-4"
+      className="group relative flex flex-col items-center gap-2 bg-white px-2 pt-3.5 pb-3 transition duration-200 ease-out hover:bg-surface hover:no-underline focus-visible:-outline-offset-2 md:gap-2.5 md:px-3.5 md:pt-4.5 md:pb-4"
     >
+      {/*
+        `/c/[slug]` has no `loading.tsx` — one there would turn an unknown
+        department's 404 into a 200, because a streamed response cannot set a
+        status. So the pressed tile is where that route's feedback lives, and
+        `relative` above is here to anchor it. Square, because the carousel's
+        grid shell owns the corners.
+      */}
+      <LinkPendingVeil radiusClass="rounded-none" />
       {/* White behind a photograph, sunken grey behind an icon or initials:
           these photos are shot on white, and a grey plate around them reads as
           a border the photo does not have. */}

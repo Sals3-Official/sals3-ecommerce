@@ -39,6 +39,28 @@ vi.mock('@/components/layout/HeaderDestination', () => ({
   default: () => null,
 }));
 
+/*
+  Same reason as `HeaderDestination` above, one step worse: since 2026-09-01 the
+  related rail is an async Server Component behind the page's one `<Suspense>`,
+  so that boundary never resolves under `@testing-library/react`. A suspended
+  boundary makes React hold updates, which turned every post-click assertion in
+  this file — variant selection, the SKU line, Add to Cart — into a silent
+  no-op reported as a wrong value rather than as an unrendered click.
+
+  Stubbed to `null` rather than to a fake rail: nothing in this file asserts on
+  related products, and the component's own fetching and caching are not this
+  file's subject.
+
+  Note what this mock therefore cannot see: that the rail is genuinely outside
+  the page's critical path. Mocking the module removes the boundary's cost along
+  with its hazard, so this suite would stay green if someone moved the fetch back
+  into `ProductPage`'s own `await`. That guard does not exist yet.
+*/
+vi.mock('@/components/product/RelatedProductsSection', () => ({
+  default: () => null,
+  RelatedProductsSectionSkeleton: () => null,
+}));
+
 vi.mock('next/navigation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/navigation')>();
 

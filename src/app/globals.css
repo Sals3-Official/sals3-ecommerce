@@ -418,3 +418,71 @@ body {
 .animate-s3-count-in {
   animation: s3-count-in 260ms cubic-bezier(0.32, 0.72, 0, 1) 90ms both;
 }
+
+/*
+ * Navigation feedback, added 2026-09-01 with the route skeletons.
+ *
+ * Measured cause: clicking a product card left the previous page on screen for
+ * 754ms warm and 1,682ms cold with nothing rendered — no `aria-busy` region, no
+ * skeleton, not one changed character. `/orders` was the only route with a
+ * `loading.tsx`, so every other navigation had no fallback for Next to paint.
+ *
+ * Same reasons as every keyframe above for living here: a `@keyframes` cannot
+ * live in an arbitrary Tailwind value, and the `prefers-reduced-motion` block
+ * earlier in this file neutralises every duration declared here. Note that block
+ * matches `*`, `*::before` and `*::after` only — if page-level view transitions
+ * are ever added, their `::view-transition-old/new` pseudo-elements are none of
+ * those and need their own reduced-motion rule.
+ */
+
+/*
+ * Real content arriving after a skeleton. The blur clearing is what makes it
+ * read as coming into focus rather than merely sliding; without it the swap
+ * still registers as a jolt at this duration.
+ */
+@keyframes s3-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.animate-s3-content-in {
+  animation: s3-content-in 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/*
+ * The pressed card, while its page loads.
+ *
+ * Every route into a product page sets `prefetch={false}` — a real cost decision
+ * about CJ points, not an oversight — which is precisely the case Next's own
+ * `useLinkStatus` documentation names: prefetching off, destination dynamic. The
+ * route skeleton answers "a page is coming"; this answers "the one you touched".
+ *
+ * An overlay rather than an opacity on the card itself, so nothing inherits the
+ * fade and no text goes grey mid-press. It is `absolute` over a `relative` card
+ * and therefore cannot move anything in the grid.
+ *
+ * Held at zero for 140ms before fading: most presses resolve inside that, and a
+ * veil that flashes on every click is noise rather than feedback. The delay is
+ * in the animation, not a timer, so the reduced-motion sweep above collapses it
+ * to an instant state change for anyone who asked for that.
+ */
+@keyframes s3-veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.s3-pending-veil {
+  animation: s3-veil-in 200ms ease-out 140ms both;
+}
