@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import useCheckout from '@/components/checkout/useCheckout';
 import useCartReprice from '@/components/checkout/useCartReprice';
@@ -18,6 +24,11 @@ type CheckoutFlowValue = ReturnType<typeof useCheckout> & {
    * ordinary path; the summary renders a notice when it is not.
    */
   priceChanges: CheckoutPriceChange[];
+  /**
+   * Drop a line from the order summary. Writes the cart and invalidates the
+   * quote in one call, so no caller can do the first without the second.
+   */
+  removeLine: (lineId: string) => void;
 };
 
 const CheckoutFlowContext = createContext<CheckoutFlowValue | undefined>(
@@ -52,7 +63,7 @@ export function CheckoutFlowProvider({
   /** The signed-in account's own address, seeded into the contact field. */
   initialEmail?: string | undefined;
 }) {
-  const { items, itemCount, subtotal } = useCart();
+  const { items, itemCount, subtotal, removeItem } = useCart();
   // Before anything is totalled. This rewrites the cart's stored prices, so
   // `items` and `subtotal` below are already the corrected ones.
   const { changes: priceChanges, applyServerChanges } = useCartReprice(items);
@@ -64,9 +75,38 @@ export function CheckoutFlowProvider({
     applyServerChanges,
   );
 
+  const { invalidateQuote } = checkout;
+
+  /*
+    Removing a line is a cart write *and* an invalidation, and the two cannot be
+    separated — which is why the summary is given this rather than the cart's own
+    `removeItem`.
+
+    A courier quote is priced for one basket. Drop an item and the prices on the
+    delivery step, the selected option, and any Stripe session already prepared
+    all belong to an order the buyer is no longer placing. `invalidateQuote`
+    already exists for the address edit, whose argument is identical: paying
+    against a session created for something else is the failure either way. The
+    buyer re-quotes, which is the honest cost of changing their mind here.
+  */
+  const removeLine = useCallback(
+    (lineId: string) => {
+      removeItem(lineId);
+      invalidateQuote();
+    },
+    [removeItem, invalidateQuote],
+  );
+
   const value = useMemo<CheckoutFlowValue>(
-    () => ({ ...checkout, items, itemCount, subtotal, priceChanges }),
-    [checkout, items, itemCount, subtotal, priceChanges],
+    () => ({
+      ...checkout,
+      items,
+      itemCount,
+      subtotal,
+      priceChanges,
+      removeLine,
+    }),
+    [checkout, items, itemCount, subtotal, priceChanges, removeLine],
   );
 
   return <CheckoutFlowContext value={value}>{children}</CheckoutFlowContext>;

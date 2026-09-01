@@ -231,5 +231,12 @@ export default function useCheckout(
     preparePayment,
     refreshQuote,
     selectShipping: selectShippingOption,
+    /*
+      Exposed so removing a line from the order summary can invalidate the same
+      two things editing the address does. A quote is priced for one basket: drop
+      an item and both the courier prices and any prepared Stripe session belong
+      to an order the buyer is no longer placing.
+    */
+    invalidateQuote,
   };
 }
