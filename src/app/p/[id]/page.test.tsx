@@ -5,6 +5,7 @@ import { CART_STORAGE_KEY } from '@/lib/cart';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { STOREFRONT_PRODUCTS_PATH } from '@/services/products';
 import { resetRateMemoForTests } from '@/lib/fx/rates';
+import fetchFreeShippingThresholds from '@/lib/fx/free-shipping-thresholds';
 import renderWithCart from '../../../../test/render-with-cart';
 import ProductPage, { generateMetadata } from './page';
 
@@ -26,8 +27,9 @@ vi.mock('@/lib/fx/buffer', () => ({
 */
 /*
   `resolveDestination` reads `cookies()`, which jsdom has no request for. The
-  page itself stopped asking when the approximate local price was removed, but
-  the header still does, so the mock stays.
+  page stopped asking when the approximate local price was removed, and
+  started again 2026-09-01 for the free-shipping estimate below — the header
+  also still asks on its own, so the mock stays for both reasons now.
 */
 vi.mock('@/lib/destination/resolve', () => ({
   resolveDestination: vi
@@ -37,6 +39,17 @@ vi.mock('@/lib/destination/resolve', () => ({
 
 vi.mock('@/components/layout/HeaderDestination', () => ({
   default: () => null,
+}));
+
+/*
+  Same reasoning as the FX buffer mock above: unmocked, this would put a real
+  request to the Portal on the render path of every test in this file. `{}` is
+  the default because it is the state that must render the panel's original
+  amount-free copy — the tests that want a destination-scoped estimate opt in.
+*/
+vi.mock('@/lib/fx/free-shipping-thresholds', () => ({
+  default: vi.fn().mockResolvedValue({}),
+  EMPTY_FREE_SHIPPING_THRESHOLDS: {},
 }));
 
 /*
@@ -1232,5 +1245,29 @@ describe('Product page', () => {
     expect(
       fetchMock.mock.calls.filter((call) => String(call[0]).includes(FX_HOST)),
     ).toHaveLength(0);
+  });
+
+  /**
+   * The 2026-09-01 reversal: once a threshold resolves for the destination
+   * `resolveDestination()` guessed, the PDP's notice is allowed to say how
+   * much more is needed. The notice reads the live cart, not this product's
+   * own price — nothing is added to the cart in this test, so the whole
+   * threshold is remaining.
+   */
+  it('names the destination and the amount remaining once a threshold resolves', async () => {
+    mockFetch();
+    vi.mocked(fetchFreeShippingThresholds).mockResolvedValueOnce({ AU: 2500 });
+
+    renderWithCart(
+      await ProductPage({
+        params: Promise.resolve({ id: 'air-cooler' }),
+      }),
+    );
+
+    expect(
+      screen.getByText(
+        'Add US$25 more for free Standard delivery to Australia',
+      ),
+    ).toBeInTheDocument();
   });
 });

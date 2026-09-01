@@ -5,6 +5,7 @@ import { addCartItem, CART_STORAGE_KEY, EMPTY_CART } from '@/lib/cart';
 import { findDestination } from '@/lib/destination/destinations';
 import { resolveDestination } from '@/lib/destination/resolve';
 import { fetchIndicativeRate } from '@/lib/fx/rates';
+import fetchFreeShippingThresholds from '@/lib/fx/free-shipping-thresholds';
 import { KLAVIYO_CONSENT_ACCEPTED } from '@/lib/klaviyo/consent';
 import { usd } from '@/lib/money';
 import renderWithCart from '../../../test/render-with-cart';
@@ -61,6 +62,17 @@ vi.mock('@/lib/fx/rates', () => ({
 */
 vi.mock('@/lib/fx/buffer', () => ({
   default: vi.fn().mockResolvedValue(1.5),
+}));
+
+/*
+  Same reasoning as the FX mocks above: unmocked, this would put a real
+  request to the Portal into every assertion in this file. `{}` is the
+  default because it is the state that must render the original amount-free
+  copy — the tests that want a destination-scoped estimate opt in.
+*/
+vi.mock('@/lib/fx/free-shipping-thresholds', () => ({
+  default: vi.fn().mockResolvedValue({}),
+  EMPTY_FREE_SHIPPING_THRESHOLDS: {},
 }));
 
 describe('Cart page', () => {
@@ -142,6 +154,38 @@ describe('Cart page', () => {
     // The page legitimately shows real prices elsewhere (the subtotal); the
     // assertion is that the notice's OWN text carries no dollar figure.
     expect(notice.textContent ?? '').not.toMatch(/\$\d/);
+  });
+
+  /**
+   * The 2026-09-01 reversal: once a threshold exists for the resolved
+   * destination, the notice is allowed to name it and say how much more is
+   * needed — see `FreeShippingNotice`'s own doc comment for why this no
+   * longer follows the original "no amount, no country" caution.
+   */
+  it('names the destination and the amount remaining once a threshold resolves', async () => {
+    vi.mocked(fetchFreeShippingThresholds).mockResolvedValueOnce({
+      AU: 2500,
+    });
+    const seeded = addCartItem(
+      EMPTY_CART,
+      {
+        productId: '1',
+        title: 'Essence Mascara Lash Princess',
+        imageAlt: 'Essence Mascara Lash Princess product image',
+        tone: 'ocean',
+        unitPrice: usd(1000),
+      },
+      1,
+    );
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(seeded));
+
+    renderWithCart(await CartPage());
+
+    expect(
+      await screen.findByText(
+        'Add US$15 more for free Standard delivery to Australia',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('is not indexed', () => {

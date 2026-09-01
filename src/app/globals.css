@@ -341,6 +341,35 @@ body {
 }
 
 /*
+ * The PDP's free-shipping notice, singled out from its cart twin: it sits
+ * right before Add to Cart / Buy Now, and a nudge in that spot only earns its
+ * keep if it is the thing a scanning eye catches before the decision. A
+ * breathing box-shadow rather than movement or scale, because the card sits
+ * beside price and option controls that must not appear to shift.
+ *
+ * Declared here rather than as an arbitrary Tailwind value for the same
+ * reason as `s3pulse` above: a `@keyframes` cannot live in a utility class,
+ * and the `prefers-reduced-motion` block earlier in this file neutralises
+ * every duration declared here, which a component-local animation would
+ * escape. `border-teal-500/45`, `21 127 127`, is `--color-teal-500` restated
+ * as bare channels because `box-shadow` cannot reference a Tailwind alpha
+ * utility.
+ */
+@keyframes s3-free-shipping-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(21 127 127 / 0.32);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgb(21 127 127 / 0.22);
+  }
+}
+
+.animate-free-shipping-glow {
+  animation: s3-free-shipping-glow 2.6s ease-in-out infinite;
+}
+
+/*
  * The Add to Cart confirmation, in two places at once: the button answers where
  * the press happened, and the header count answers where the buyer has to look
  * next. Declared here for the same reason as the two above — a `@keyframes`

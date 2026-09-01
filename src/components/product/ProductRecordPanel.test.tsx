@@ -276,4 +276,36 @@ describe('ProductRecordPanel', () => {
     expect(container.textContent ?? '').not.toMatch(/cost more than this/i);
     expect(container.textContent ?? '').not.toMatch(/every option is/i);
   });
+
+  /**
+   * The PDP's copy of `FreeShippingNotice` pulses; the cart's does not. This
+   * is the one place that emphasis is asserted, so a future edit that drops
+   * `emphasize` here fails a test instead of quietly flattening the nudge.
+   */
+  it('pulses its free-shipping notice, unlike the cart', () => {
+    const { container } = renderWithCart(
+      <ProductRecordPanel detail={detail()} selectedFromUrl={false} />,
+    );
+
+    expect(
+      container.querySelector('.animate-free-shipping-glow'),
+    ).not.toBeNull();
+  });
+
+  it('shows the destination-scoped estimate once the page resolves one', () => {
+    renderWithCart(
+      <ProductRecordPanel
+        detail={detail()}
+        selectedFromUrl={false}
+        freeShippingThresholdAmountMinor={2500}
+        freeShippingDestinationLabel="Australia"
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Add US$25 more for free Standard delivery to Australia',
+      ),
+    ).toBeInTheDocument();
+  });
 });
