@@ -17,11 +17,9 @@ homeViewports.forEach((viewport) => {
       page.getByRole('region', { name: /featured deals/i }),
     ).toBeVisible();
     await expect(
-      page.getByRole('link', { name: /portable air cooler/i }),
+      page.getByRole('link', { name: /one clear price/i }),
     ).toBeVisible();
-    const promoImage = page.getByAltText(
-      /portable hydrocooling air cooler promotion/i,
-    );
+    const promoImage = page.getByAltText(/one clear price promotion/i);
     await expect
       .poll(() =>
         promoImage.evaluate(
