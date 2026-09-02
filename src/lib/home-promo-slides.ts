@@ -6,54 +6,75 @@ export type HomePromoSlide = {
   href: string;
 };
 
+/**
+ * Seven trust slides, not seven product ads.
+ *
+ * The previous set were supplier promo images copied out of a Downloads folder
+ * on 2026-08-05 and never replaced. Every one of them linked to
+ * `/deals?promo=<id>`, which has always returned 404 — the highest-intent click
+ * on the home page failed every time — and one of them printed `MID YEAR SALE`
+ * over a catalogue that has no discount concept at all, the same unbacked
+ * marketing claim that was stripped out of `DealsSection` in August.
+ *
+ * This set answers the only question a first-time visitor to an unknown shop is
+ * actually asking, which the build spec states as "Is this shop safe?": one
+ * clear price, real breadth, real sizes, free delivery over the cart threshold,
+ * tracked parcels, an encrypted checkout, and the brand itself. Nothing here
+ * claims a saving, a deadline, a rating or a stock level, so nothing here can
+ * go stale or turn out to be false.
+ *
+ * Every `href` below is verified to return 200 in production. Keep it that way:
+ * a hero that promises something and lands on a 404 costs more trust than it
+ * ever buys.
+ */
 export const homePromoSlides: HomePromoSlide[] = [
   {
-    id: 'air-cooler',
-    title: 'Portable air cooler',
-    imageSrc: '/home-promos/air-cooler.png',
-    imageAlt: 'Portable hydrocooling air cooler promotion',
-    href: '/deals?promo=air-cooler',
+    id: 'one-price',
+    title: 'One clear price',
+    imageSrc: '/home-promos/one-price.png',
+    imageAlt: 'One clear price promotion',
+    href: '/categories',
   },
   {
-    id: 'nightstand-lamp',
-    title: 'Smart LED nightstand',
-    imageSrc: '/home-promos/nightstand-lamp.png',
-    imageAlt: 'Smart LED nightstand promotion',
-    href: '/deals?promo=nightstand-lamp',
+    id: 'departments',
+    title: '21 categories, one cart',
+    imageSrc: '/home-promos/departments.png',
+    imageAlt: 'Twenty-one categories promotion',
+    href: '/categories',
   },
   {
-    id: 'portable-blender',
-    title: 'Portable blender',
-    imageSrc: '/home-promos/portable-blender.png',
-    imageAlt: 'Portable blender promotion',
-    href: '/deals?promo=portable-blender',
+    id: 'sizes',
+    title: 'Many styles go up to 8XL',
+    imageSrc: '/home-promos/sizes.png',
+    imageAlt: 'Extended clothing sizes promotion',
+    href: '/c/apparel-accessories',
   },
   {
-    id: 'sunscreen',
-    title: 'SPF 90 sunscreen',
-    imageSrc: '/home-promos/sunscreen.png',
-    imageAlt: 'SPF 90 isolation sunscreen promotion',
-    href: '/deals?promo=sunscreen',
+    id: 'free-delivery',
+    title: 'Free standard delivery',
+    imageSrc: '/home-promos/free-delivery.png',
+    imageAlt: 'Free standard delivery promotion',
+    href: '/categories',
   },
   {
-    id: 'waterproof-sandals',
-    title: 'Waterproof sandals',
-    imageSrc: '/home-promos/waterproof-sandals.png',
-    imageAlt: 'Mens waterproof sandals promotion',
-    href: '/deals?promo=waterproof-sandals',
+    id: 'tracking',
+    title: 'We track every parcel',
+    imageSrc: '/home-promos/tracking.png',
+    imageAlt: 'Order tracking promotion',
+    href: '/orders',
   },
   {
-    id: 'gym-tote',
-    title: 'Large capacity gym tote',
-    imageSrc: '/home-promos/gym-tote.png',
-    imageAlt: 'Large capacity gym tote promotion',
-    href: '/deals?promo=gym-tote',
+    id: 'secure-checkout',
+    title: 'Safe and secure checkout',
+    imageSrc: '/home-promos/secure-checkout.png',
+    imageAlt: 'Safe and secure checkout promotion',
+    href: '/categories',
   },
   {
-    id: 'mid-year-sale',
-    title: 'Sals3 mid year sale',
-    imageSrc: '/home-promos/mid-year-sale.png',
-    imageAlt: 'Sals3 mid year sale promotion',
-    href: '/deals?promo=mid-year-sale',
+    id: 'brand',
+    title: 'Smart affordable lifestyle shopping',
+    imageSrc: '/home-promos/brand.png',
+    imageAlt: 'Sals3 brand promotion',
+    href: '/categories',
   },
 ];

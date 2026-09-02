@@ -318,14 +318,37 @@ describe('Home page', () => {
       screen.getByRole('region', { name: /featured deals/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /portable air cooler/i }),
-    ).toHaveAttribute('href', '/deals?promo=air-cooler');
+      screen.getByRole('link', { name: /one clear price/i }),
+    ).toHaveAttribute('href', '/categories');
     expect(
-      screen.getByAltText(/portable hydrocooling air cooler promotion/i),
+      screen.getByAltText(/one clear price promotion/i),
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole('button', { name: /show featured deal/i }),
     ).toHaveLength(homePromoSlides.length);
+  });
+
+  /*
+    Every slide used to link to `/deals?promo=<id>`, a route that has never
+    existed — so the most prominent click on the home page 404'd, seven times
+    out of seven, for as long as the carousel had been shipping. Assert the
+    destinations instead of trusting them: a hero that lands on a missing page
+    costs more trust than the hero was ever going to buy.
+  */
+  it('points every promo slide at a route that exists', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    mockProductsFetch();
+
+    renderWithCart(await Home({}));
+
+    const shippedRoutes = ['/categories', '/orders', '/c/apparel-accessories'];
+
+    homePromoSlides.forEach((slide) => {
+      expect(shippedRoutes).toContain(slide.href);
+      expect(
+        screen.getByRole('link', { name: new RegExp(slide.title, 'i') }),
+      ).toHaveAttribute('href', slide.href);
+    });
   });
 
   it('fetches 14 for-you products so the ad grid has no desktop gap', async () => {

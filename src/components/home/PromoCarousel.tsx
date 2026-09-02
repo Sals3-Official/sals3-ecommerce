@@ -91,7 +91,14 @@ export default function PromoCarousel() {
             ))}
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-y-0 right-3 left-3 flex items-center justify-between">
+        {/* Arrows from `lg` up only. The buttons are a fixed 44px so the touch
+            target stays legal, but the banner is fluid: at 375px the image is
+            325px wide and each arrow eats 13.5% of it, landing squarely on the
+            last word of the headline. The width where the type finally clears
+            them is 1024px. Below that the slides are still reachable by swipe
+            (embla binds the drag) and by the seven dots underneath, which are
+            real buttons that jump straight to a slide — so nothing is lost. */}
+        <div className="pointer-events-none absolute inset-y-0 right-3 left-3 hidden items-center justify-between lg:flex">
           <button
             type="button"
             onClick={() => emblaApi?.scrollPrev()}
