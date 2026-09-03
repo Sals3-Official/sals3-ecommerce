@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-08-17
+updated: 2026-09-04
 status: canonical
 authority: navigation
 owner_approved: true
@@ -24,7 +24,9 @@ related:
 - [[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014 — Admin Portal Platform Governance]] — approved future separation of internal platform authority from seller accounts: global market policy, seller-account governance, global marketing, provider controls, versioned publication, and immutable audit; not implemented.
 - [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments|ADR-015 — Commercial Pricing Governance]] — approved multi-seller boundary: Seller Portal owns tenant margins, category PICs, product/variant overrides, and merchant FX adjustments; Admin Portal owns only platform FX inputs/fees/guardrails; not implemented.
 - [[ADR-016-google-merchant-center-product-feed-compliance|ADR-016 — Google Merchant Center Product Feed Compliance]] — approved schema constraint on the future Product/Offer/Media/Promotion build: GTIN/MPN/brand/identifierExists, googleProductCategory, condition/ageGroup/gender, micros-safe price, and a real promotion entity, targeting the Merchant API only (Content API sunsets 2026-08-18); not implemented, feed/API connection stays gated behind the existing catalog-readiness order.
+- [[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data|ADR-017 — No Local CJ API Calls; Vercel-Sourced Development Data]] — approved hard rule that a CJ Dropshipping call must never originate from a local machine; local catalogue data is a scoped, credential-excluded copy of the Vercel/Neon database. The database half is enforced by a remote-write guard; the CJ half is still convention only.
 - [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery|ADR-018 — Phase 1 Returns, Refunds, and No-Warehouse CJ Recovery]] — proposed Sals3-owned buyer remedy model: CJ stays internal supplier recovery, returnless-first with guardrails, PH filing-based redress clock, AU major/minor remedy structure, delivered-not-received investigation split, and AU/PH legal/accounting review as launch blocker.
+- [[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate|ADR-019 — GitHub Org Boundary and the SIT → Pre-prod → Main Promotion Gate]] — approved hard rule: `anythingsupplies` is the only org for application code across every Sals3 property (including per-country storefront forks), `Sals3-Official` is vault-only; every app repo runs the same three-stage promotion, solid-tested at each stage before the next. Audited 2026-09-04: enforced in `sals3-portal`, partially missing in `sals3-ecommerce` and `sals3.com.fj`.
 
 - [[../CLAUDE|Agent Entry Point]] — mandatory reading gate for every agent.
 - [[agent-operating-contract|Agent Operating Contract]] — anti-yesman reasoning, evidence, challenge, and verification rules.
