@@ -435,15 +435,14 @@ References:
 
 ## Active risks and blockers
 
-### Open: a paused product stayed buyable on the SIT storefront (2026-09-04)
+### Closed: the SIT storefront does hide a paused product (2026-09-04)
 
-Observed directly this session, not inferred. While *Vintage Jewelry Stainless Steel Animal Bat Cast Ring* was genuinely `PAUSED` in the SIT Portal — product row and every offer, confirmed in the Portal UI and by the `Listing is paused.` reason line — `https://sit.sals3.com/p/vintage-jewelry-stainless-steel-animal-bat-cast-ring` kept serving it with an Add to Cart button for roughly five minutes.
+Recorded as an open defect earlier the same day and **withdrawn on the owner's own testing** — `sit.sals3.com` does drop a paused listing. What was observed during the first verification pass was a propagation delay, not a permanent gap: the Portal's storefront read is `unstable_cache(..., revalidate: 30)` and the storefront's own product read is `next: { revalidate: 60 }` with no cache tag, so a pause takes up to ~90 seconds to reach a buyer, and the checks that hour were misread as unbounded.
 
-**Not page caching.** A `cache: no-store` request answered `x-vercel-cache: MISS`, `age: 0`, HTTP 200 — a fresh server render, minutes after the pause, still carrying the product.
+Two things from that pass are still worth keeping:
 
-The Portal side is correct and was re-verified: `publishedScope()` (`modules/catalog/storefront/read-model.ts`) requires `publication_state = 'PUBLISHED'` **and** inner-joins a `PUBLISHED` offer, and `modules/checkout/freight-quotes.ts` re-checks both before quoting freight. The storefront's own product read is `next: { revalidate: 60 }` with no cache tag — and `services/storefront/product-read-cache.test.ts` already says in its own words that *a tag nothing ever invalidates is a promise the code does not keep* — but the window observed was far longer than 60 seconds.
-
-The owner states `sit.sals3.com` is meant to read the SIT Portal, which makes this a real defect rather than environment wiring. It belongs to `sals3-ecommerce`, is not caused by [[sals3-session-2026-09-04-part132-a-pause-that-persists-a-resume-that-does-not-reprice|part 132]]'s portal work, and is unresolved. Until it is, **a seller pausing a listing cannot be told the item is off sale for buyers** — only that the Portal has stopped offering it.
+- **The untagged 60s fetch cache is real.** `services/storefront/client.ts` says so itself — *a tag nothing ever invalidates is a promise the code does not keep* — and the Portal never calls the storefront back on a publication change. So a pause is not instant for buyers, and nothing in either repository makes it instant. That is a bounded staleness window, not a defect, but it is the honest number to quote.
+- **A Portal state change is not a buyer-visible change.** The buyer-facing surface is a separate deployment with its own cache; never report an item as off sale on the strength of the Portal alone without allowing for that window.
 
 ### Two of four `anythingsupplies` repositories are missing pieces of the promotion gate - found 2026-09-04
 
