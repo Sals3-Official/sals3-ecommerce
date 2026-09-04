@@ -25,9 +25,11 @@ function respond() {
 }
 
 function initFor(call: unknown): RequestInit & {
-  next?: { revalidate?: number };
+  next?: { revalidate?: number; tags?: string[] };
 } {
-  return (call ?? {}) as RequestInit & { next?: { revalidate?: number } };
+  return (call ?? {}) as RequestInit & {
+    next?: { revalidate?: number; tags?: string[] };
+  };
 }
 
 afterEach(() => {
@@ -80,14 +82,33 @@ describe('the product read’s cache policy', () => {
   });
 
   /**
-   * No cache tag. A tag nothing ever invalidates is a promise the code does not
-   * keep — pushing a publish through from the Portal is the follow-up, and until
-   * it exists the honest statement is the revalidate window alone.
+   * This used to assert the opposite — no cache tag, because "a tag nothing
+   * ever invalidates is a promise the code does not keep". The follow-up it was
+   * waiting on is built: `POST /api/internal/revalidate` expires these exact
+   * tags and the Portal calls it on every publication change, so declaring them
+   * is now a promise that is kept.
    */
-  it('declares a window and no tag it cannot honour', () => {
-    expect(productPageCachePolicy()).toEqual({
-      next: { revalidate: PRODUCT_PAGE_REVALIDATE_SECONDS },
+  it('tags the page read so a publish can expire it', () => {
+    expect(productPageCachePolicy('balaclava')).toEqual({
+      next: {
+        revalidate: PRODUCT_PAGE_REVALIDATE_SECONDS,
+        tags: ['storefront-product', 'storefront-product:balaclava'],
+      },
     });
     expect(productCachePolicy()).toEqual({ cache: 'no-store' });
+  });
+
+  /** The tag has to name the product actually being read, or a pause expires someone else's page. */
+  it('tags the page read with the slug it fetched', async () => {
+    vi.stubEnv('SALS3_STOREFRONT_API_TOKEN', 'secret');
+
+    const fetcher = vi.fn<typeof fetch>(async () => respond());
+
+    await fetchProductBySlug('balaclava', { fetcher, readFor: 'page' });
+
+    expect(initFor(fetcher.mock.calls[0]?.[1]).next?.tags).toEqual([
+      'storefront-product',
+      'storefront-product:balaclava',
+    ]);
   });
 });

@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { productTags } from '@/lib/storefront/revalidation-tags';
 
 /**
  * The HTTP boundary to `sals3-portal`'s storefront API: URL building, the
@@ -112,15 +113,18 @@ export const PRODUCT_PAGE_REVALIDATE_SECONDS = 60;
  * endpoint is the whole point; one flag on the shared function would have
  * cached both.
  *
- * ## What a publish now costs
+ * ## What a publish costs
  *
- * Up to a minute before a change reaches the product page. That is the trade,
- * and it is deliberate: the note above this used to say `no-store` kept a
- * publish visible immediately, and it did. Making it instant again means the
- * Portal calling a revalidation route here on publish, which is the follow-up
- * this leaves open rather than pretends to have done — which is also why no
- * cache tag is declared. A tag nothing ever invalidates is a promise the code
- * does not keep.
+ * Nothing, now. The follow-up this comment used to leave open — "the Portal
+ * calling a revalidation route here on publish" — is built: the reads are
+ * tagged (`lib/storefront/revalidation-tags.ts`), `POST /api/internal/revalidate`
+ * expires those tags, and the Portal calls it on every publication change. The
+ * 60s window below is the fallback for when that call does not arrive (secret
+ * unset, storefront down, network), not the normal path.
+ *
+ * The tags are declared here and nowhere else, so the promise the old comment
+ * refused to make — a tag something actually invalidates — is kept by
+ * construction.
  *
  * ## What this does not fix
  *
@@ -128,8 +132,13 @@ export const PRODUCT_PAGE_REVALIDATE_SECONDS = 60;
  * Portal outage every render still issues a live request, exactly as today —
  * this makes good days cheap and changes nothing about bad ones.
  */
-export function productPageCachePolicy(): StorefrontCachePolicy {
-  return { next: { revalidate: PRODUCT_PAGE_REVALIDATE_SECONDS } };
+export function productPageCachePolicy(slug: string): StorefrontCachePolicy {
+  return {
+    next: {
+      revalidate: PRODUCT_PAGE_REVALIDATE_SECONDS,
+      tags: productTags(slug),
+    },
+  };
 }
 
 type RequestOptions = {

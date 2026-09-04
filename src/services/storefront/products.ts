@@ -195,7 +195,9 @@ export async function fetchProductBySlug(
       fetcher,
       signal,
       cachePolicy:
-        readFor === 'page' ? productPageCachePolicy() : productCachePolicy(),
+        readFor === 'page'
+          ? productPageCachePolicy(parsedSlug.data)
+          : productCachePolicy(),
     },
   );
 
