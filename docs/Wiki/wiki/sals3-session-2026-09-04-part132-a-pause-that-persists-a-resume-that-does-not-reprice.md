@@ -28,6 +28,7 @@ related:
 | PR | Title | Merged |
 |---|---|---|
 | [#53](https://github.com/anythingsupplies/sals3-portal/pull/53) | fix(catalogue): a pause that persists, a resume that does not reprice, tabs with addresses | 2026-09-04T16:24:27Z |
+| [#54](https://github.com/anythingsupplies/sals3-portal/pull/54) | fix(catalogue): a resume now shows you where the listing went | 2026-09-04 |
 
 No DDL. No CJ call. No dependency change.
 
@@ -170,24 +171,44 @@ paused product is absent from the feed, search, category listings and its own
 slug, and `modules/checkout/freight-quotes.ts` re-checks both columns before
 quoting freight.
 
-> [!WARNING] Open: a paused product stayed buyable on the SIT storefront
-> During the ~5 minutes the ring was genuinely `PAUSED` in the Portal,
-> `https://sit.sals3.com/p/vintage-jewelry-stainless-steel-animal-bat-cast-ring`
-> continued to serve it with an Add to Cart button. This was **not** page
-> caching: a `cache: no-store` request answered `x-vercel-cache: MISS`,
-> `age: 0`, HTTP 200 — a fresh server render, minutes after the pause.
+> [!NOTE] Withdrawn: the SIT storefront does hide a paused product
+> During this session's first verification pass, the ring appeared to stay buyable on
+> `sit.sals3.com` for several minutes after being paused, and that was written up here as an
+> open defect. **The owner's own testing showed the storefront does drop a paused listing**,
+> and the entry is withdrawn.
 >
-> The storefront's own product read is `next: { revalidate: 60 }` with **no
-> cache tag**, and `services/storefront/product-read-cache.test.ts` says as much
-> in its own words: *a tag nothing ever invalidates is a promise the code does
-> not keep*. But the window observed was far longer than 60 seconds.
+> What was really being seen is a bounded propagation delay: the Portal's storefront read is
+> `unstable_cache(..., revalidate: 30)`, the storefront's own product read is
+> `next: { revalidate: 60 }` with **no cache tag**, and the Portal never calls the storefront
+> back on a publication change. So a pause reaches a buyer in up to ~90 seconds, and nothing in
+> either repository makes it instant — `services/storefront/client.ts` says as much in its own
+> words: *a tag nothing ever invalidates is a promise the code does not keep*.
 >
-> The owner states `sit.sals3.com` is meant to read the SIT Portal, which makes
-> this a real defect rather than environment wiring. It belongs to
-> `sals3-ecommerce`, not to PR #53, and is unresolved at the time of writing.
+> The lesson that survives: a Portal state change is not a buyer-visible change, and the two
+> surfaces are separate deployments with separate caches.
 
 Also still preview-only on this screen: bulk Archive, the single-row Archive
 dialog, and the per-variant pause toggle. Each says so in its own copy.
+
+## 7. The follow-up: a resume left the seller with nothing to look at (#54)
+
+Reported within the hour. Resuming from the Paused tab empties that tab — correct, the
+listing is not paused any more — and in doing so removes the only thing on screen showing
+what just happened. The owner was reloading the browser *"para makita itong naka live"*.
+
+Not a refresh defect: all four paths (bulk pause, bulk resume, row-menu pause, row-menu
+resume) were re-run on SIT and every one updated the table with no reload, against a
+~400ms `/listings` render. **§4's own tab addresses made it worse** — a reload used to
+land on Live, where the item would be visible, and now it faithfully keeps the seller on
+the empty Paused tab, so the habit that used to work stopped working.
+
+The results panel now carries the destination: a real `View live page` anchor per resumed
+or published row, and a `Show on Live` / `Show on Paused` header button that moves the
+table to wherever the run sent its rows. `resumeProduct` returns the slug to make this
+possible — a paused row's `storefrontUrl` is `null` in the read model, so the resume is
+the only thing that knows the address it restored. Tabs are deliberately **not** switched
+automatically: resuming 3 of 20 paused listings should not throw away the seller's place
+in the other 17.
 
 ## Lessons
 
@@ -210,6 +231,15 @@ dialog, and the per-variant pause toggle. Each says so in its own copy.
   refusal in `resumeProduct` passed against a mock; running it against real
   Postgres was what proved the query shapes, the CHECK constraints and the
   unique-violation mapping.
-- **A green merge is not a visible change.** The Portal was correct, deployed and
-  verified, and the buyer still saw the paused product — because the surface the
-  buyer actually reads lives in another repository with its own cache.
+- **A Portal state change is not a buyer-visible change.** The buyer-facing surface is a
+  separate deployment with its own untagged 60s cache, and nothing pushes an invalidation
+  across. A pause is real immediately and visible to buyers up to ~90 seconds later; say
+  the second part out loud rather than reporting the first as though it were both.
+- **Report a suspected defect with the observation, not the conclusion.** The apparent
+  "paused item still buyable" here was a propagation delay read as unbounded, and it was
+  written into this vault as an open defect before the owner's own testing withdrew it.
+  The measurements were sound; the inference past them was not.
+- **Finishing a job can break the habit that used to compensate for it.** Giving the tabs
+  addresses was right, and it removed the accidental "reload lands you on Live" that the
+  seller had been relying on to see a resumed listing. A fix that changes where a reload
+  puts someone owes them the thing they were reloading to find.
