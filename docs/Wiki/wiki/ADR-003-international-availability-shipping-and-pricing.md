@@ -365,3 +365,98 @@ This adds no CJ call, background task, package, database migration, or new desti
 the quote work checkout already performs for AU, PH, and FJ. Ecommerce opts in through
 `capabilities.freeStandardShipping`; omission keeps Standard paid, so separate deployments remain
 backward compatible.
+
+## Amendment — 2026-09-07: Fiji sells in FJD (owner decision, Bogs)
+
+§3 above says phase 1 "displays/charges USD" and that an approximate local-currency
+display "must not change the actual charge currency". For the Fiji market, that no
+longer holds. `sals3.com.fj` is a Fijian storefront for Fijian buyers, and the owner's
+decision is that it prices, quotes, and charges in **FJD** — not USD with a Fijian
+number painted over it.
+
+### What this reverses, and what it does not
+
+It reverses the currency half of §3 **for Fiji only**. AU and PH are untouched: they
+remain USD, and this amendment authorizes no second currency for them. §3's
+requirement that a local-currency *display* be clearly labelled also survives, because
+until every step below is delivered, the labelled display is exactly what Fiji has.
+
+It does not reverse §3's conditions on multi-currency. Those were written as the price
+of admission and are now binding rather than hypothetical: **store the rate, the
+provider and source, the effective timestamp, the spread, and the locked order rate.**
+An FJD order that cannot say which rate it was struck at is not acceptable.
+
+### Why this is possible now and was not when §3 was written
+
+§3 was written when the platform had no approved reference-FX provider at all.
+`modules/pricing/reference-fx.ts` returned only the identity rate, and ADR-015's own
+status note recorded that its FX branch was "still not exercised by any live
+non-identity currency pair". A price in any currency but USD could not be produced
+honestly, so USD was not a preference — it was the only truthful answer.
+
+That changed on 2026-09-04, when the owner approved the central-bank source. The
+module now quotes `USD/FJD` against the **Reserve Bank of Fiji**, pinned by name, with
+no aggregator blend and no configured-constant fallback. The input §3 lacked exists.
+
+### The defect this amendment sits on top of
+
+Fiji has had operating expenses (50%) and a full column of category markups (200%) set
+for it in Market Rules since the market was opened, and **not one offer was ever priced
+by them**. `publish.ts` wrote offers for `resolveOfferDestinations(...)[0]`, and because
+`market-rules/page.tsx` removed the only way to create a `seller_market_profiles` row on
+2026-08-20, no seller has one — so that fallback was the only branch that ran, and every
+published product in the catalogue carried an `AU` offer alone.
+
+Measured on SIT on 2026-09-07, same slug, same moment: `sit.sals3.com` showed US$3.36
+and `sit.sals3.com.fj` showed FJ$7.58 — a ratio of 2.256, which is the published rate
+plus its buffer, not a Fiji margin. Fixed the same day: publication now writes an offer
+for every market the seller has priced. That fix is a precondition of this amendment,
+not a part of it — an FJD price is meaningless until a Fiji offer exists to carry it.
+
+### Ordered, and no step may be skipped
+
+Each step is separately verifiable, and a half-applied version of this amendment is
+worse than none: an offer denominated in FJD that is charged in USD would convert twice
+and disclose neither.
+
+1. **A Fiji offer exists, priced by Fiji's rules.** Delivered 2026-09-07. Still
+   denominated in USD.
+2. **The Fiji storefront reads only Fiji's offer.** The storefront read model has no
+   `market_code` filter, so the cheapest offer across all markets prices every card;
+   until it filters, Fiji can be shown a price another market's rules produced. Nothing
+   about FJD is safe before this.
+3. **FJD becomes an authorized selling currency for Fiji.**
+   `modules/market-config/capabilities.ts` lists `authorizedSellingCurrencyCodes:
+   ['USD']` for every destination including `FJ`. The resolver prices through
+   `reference-fx.ts`, which already answers for `FJD`, and must fail closed exactly as
+   it does today when the Reserve Bank rate is unavailable — an offer that cannot be
+   priced honestly stays unpriced.
+4. **Checkout quotes and charges FJD.** `modules/checkout/orders.ts` hard-codes the
+   currency as `z.enum(['USD'])` and `z.literal('USD')`; CJ freight quotes are
+   USD-denominated (§3); and the order snapshot must carry the locked rate named above.
+5. **The payment rail carries FJD.** Stripe lists FJD as a supported presentment
+   currency — owner-confirmed 2026-09-07 against `docs.stripe.com/currencies`. Stripe's
+   own page adds that the presentment list is per account country, so the one thing
+   still to record is that it is enabled for the Sals3 account; that is a dashboard
+   observation, not a design question, and it does not reopen this decision.
+
+   Presentment is not settlement. Stripe converts a charge whose currency differs from
+   the settlement currency of the receiving account, so an FJD charge on a
+   USD-settling account is a conversion with a cost and a rate — which is precisely
+   what §3 requires be stored, and why the locked order rate in step 4 is not optional
+   paperwork.
+
+Step 4 is what turns a Fijian price into a Fijian charge. Until it ships, the storefront
+must keep saying what it says today — that payment is taken in US dollars — because that
+will still be true.
+
+### Verification required
+
+- The Reserve Bank of Fiji rate resolves for `USD/FJD`, and pricing fails closed when it
+  does not.
+- A Fiji offer's stored `pricingDecision` names the rate, its source, and its timestamp.
+- An FJD order records the rate it was locked at.
+- FJD presentment enabled for this account, observed in the Stripe dashboard and
+  recorded here with the date it was checked.
+- The conversion from an FJD charge to the account's settlement currency is stored with
+  its rate and its cost, not inferred afterwards from a payout total.

@@ -451,6 +451,25 @@ References:
 
 ## Active risks and blockers
 
+### Fiji's market rules priced nothing, and ADR-003 now says Fiji sells in FJD - 2026-09-07
+
+**Fiji has had operating expenses (50%) and a full column of category markups (200%) set in Market Rules since the market was opened, and not one offer was ever priced by them.** `publish.ts` wrote offers for `resolveOfferDestinations(...)[0]`, and because `market-rules/page.tsx` removed the only way to create a `seller_market_profiles` row on 2026-08-20, **no seller has one** — so that fallback was not an edge case, it was the only branch that ran. Every published product in the catalogue carries an `AU` offer alone.
+
+Measured on SIT on 2026-09-07, same slug, same moment: `sit.sals3.com` showed **US$3.36** and `sit.sals3.com.fj` showed **FJ$7.58** — a ratio of 2.256, which is the published FX rate plus its buffer, **not a Fiji margin**. The Fiji storefront was Australia's price with a Fijian number painted over it, and it says so itself under its own banner.
+
+Three links were broken, not one: the Fiji storefront sends no market on its Portal reads (`resolveMarket()` feeds the welcome band and the FX display, never `services/storefront/products.ts`); `/api/storefront/products` accepts only `section`, `page` and `limit`; and `modules/catalog/storefront/read-model.ts` says in its own comment that there is **no `market_code` filter**, so *"every published offer is visible and the cheapest one prices the card"*.
+
+**Owner decision 2026-09-07 (Bogs): Fiji prices, quotes and charges in FJD.** ADR-003 §3's "phase 1 displays/charges USD" is reversed for Fiji only; AU and PH are untouched. This became possible on 2026-09-04, when the central-bank reference-FX source was approved — `reference-fx.ts` now quotes `USD/FJD` against the **Reserve Bank of Fiji**, so the input §3 lacked exists. FJD is a supported Stripe presentment currency (owner-confirmed against `docs.stripe.com/currencies`).
+
+**Ordered, and a half-applied version is worse than none** — an offer denominated in FJD that is charged in USD converts twice and discloses neither:
+
+1. **A Fiji offer exists, priced by Fiji's rules.** Portal [#69](https://github.com/anythingsupplies/sals3-portal/pull/69), 2026-09-07. Publication resolves its own destination list rather than the draft's; a market whose rules are missing (`NZ`, `US`, `CA` read "Not set up yet") is skipped on `PRICING_POLICY_REQUIRED` alone rather than refusing the publication. **Still USD-denominated.**
+2. **The Fiji storefront reads only Fiji's offer.** The `market_code` filter, plus the market on the API and on the storefront's own reads. Nothing about FJD is safe before this.
+3. **FJD becomes an authorized selling currency for `FJ`** in `market-config/capabilities.ts`, which lists `['USD']` for every destination today.
+4. **Checkout quotes and charges FJD.** `modules/checkout/orders.ts` hard-codes `z.enum(['USD'])` and `z.literal('USD')`; CJ freight quotes are USD; the order snapshot must carry the locked rate, source, timestamp and spread ADR-003 §3 already requires.
+
+**Already-published products need a backfill before step 2.** `reprice.ts` only ever calls `.update(productOffers)` — it cannot create an offer in a market that has no row — so the 1,817 live products would vanish from a filtered Fiji storefront. Step 2 must not merge before that backfill runs.
+
 ### The paused-listing cache window is closed in code and blocked on two Vercel settings - 2026-09-04
 
 **Supersedes this section's earlier "Closed: the SIT storefront does hide a paused product" entry**, which correctly withdrew a defect claim and then recorded the residue: a pause took up to ~90 seconds to reach a buyer (Portal `unstable_cache(..., revalidate: 30)` plus an untagged storefront `next: { revalidate: 60 }`), and *"nothing in either repository makes it instant."* Seven merged PRs on 2026-09-04 make it instant — see [[sals3-session-2026-09-04-part136-closing-the-window-a-paused-listing-stayed-buyable-in|part 136]]. Product-page reads now carry `storefront-product` and `storefront-product:<slug>`; `POST /api/internal/revalidate` expires them with `revalidateTag(tag, { expire: 0 })`; the Portal posts to every known storefront origin inside `after()`, best-effort with a 3s timeout.
