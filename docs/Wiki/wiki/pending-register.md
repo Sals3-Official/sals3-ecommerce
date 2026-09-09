@@ -76,6 +76,28 @@ being read.
 
 ## Open
 
+### [P1] "The same test" at every stage is not defined
+**Raised:** 2026-09-10, the bible section 7 PR · **Closes when:** a named post-deploy checklist exists for a deployed SIT/UAT/Main host, or the owner confirms the tester's own judgement is the standard
+**Owner:** owner to decide the bar; agent can draft the checklist
+
+Bible section 7 requires the same test at SIT, UAT and Main for Global, FJ and
+AU. `npm run verify` covers the code **before** it deploys; nothing exercises a
+**deployed** host, and the three storefronts share no post-deploy checklist. So
+"tested" currently means whatever the person or agent running it decided. The
+rule's own mitigation is that whoever tests must say what they observed — that
+contains the ambiguity, it does not remove it.
+
+### [P2] Nothing enforces the three-stage gate or its tests
+**Raised:** 2026-09-10, the bible section 7 PR · **Closes when:** a promotion into `pre-prod` or `main` without a recorded test result is refused, or the owner accepts convention
+**Owner:** owner — the only mechanical place to check it is a GitHub Action
+
+`deployment-reached-the-environment.yml` exists on two repositories and is still
+missing on both market storefronts (see the 2026-09-08 amendment), and Actions is
+billing-stalled everywhere except the vault repository. So the gate is a rule
+people follow, not a check that fails — the same shape as the pending rule before
+its `commit-msg` hook.
+
+
 ### [P2] A buyer cannot tell either market storefront where they are shipping, before checkout
 **Raised:** 2026-09-09, `sals3.com.fj` #41/#42 and `sals3.com.au` #33/#34 · **Closes when:** a writer for `sals3_destination` exists again, or the owner confirms the market seed is enough
 **Owner:** owner — it was an owner decision to remove the picker

@@ -18,10 +18,18 @@ Before any codebase edit, refactor, test change, configuration change, or packag
 - `docs/Wiki/wiki/agent-operating-contract.md`
 - `docs/Wiki/wiki/nextjs-component-security-code-rules.md`
 - `docs/Wiki/wiki/project-structure-installation-and-runbook.md`
+- `docs/Wiki/wiki/sals3-management-bible.md`
+- `docs/Wiki/wiki/ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate.md`
 
 `docs/Wiki/wiki/nextjs-component-security-code-rules.md` is the strict source of truth for Next.js component architecture, server-side security checks, validation commands, and completion reporting. Do not mark code work complete when required lint, format, typecheck, build, test, E2E, or high-severity audit checks fail unless the failure is reported as a blocker.
 
 `docs/Wiki/wiki/project-structure-installation-and-runbook.md` is the strict source of truth for repository structure, npm package installation, local run commands, and README update requirements.
+
+`docs/Wiki/wiki/sals3-management-bible.md` carries the non-negotiable boundaries, including
+section 6 (every commit and PR declares what it left undone) and section 7 (notes merge to
+`Sals3-Official`, code to `anythingsupplies`, and every release walks SIT → UAT → Main with the
+same test at each stage, for Global, FJ and AU together). `ADR-019` carries the branch-level
+mechanics of that gate — a promotion merges with a merge commit, never a squash.
 
 Do not deploy, publish, push, or commit unless the owner explicitly asks.
 
