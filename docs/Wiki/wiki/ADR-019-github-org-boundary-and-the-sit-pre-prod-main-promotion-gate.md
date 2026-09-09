@@ -610,3 +610,17 @@ no shared post-deploy checklist. Until one exists, "tested" means whatever the
 person or agent running it decided — which is exactly the ambiguity point 3 above
 tries to contain by demanding they say what they observed. Recorded in
 [[pending-register]] rather than invented here.
+
+### Who runs it — added by the same owner rule
+
+**Whoever opens a pull request and merges it must have run the verification
+themselves.** Not inherited from an earlier run, not assumed from a green tick,
+not left to whoever reviews it later. **If you did not run it, you may not merge
+it.**
+
+This ADR's 2026-09-09 amendment said *"a named agent's local `npm run verify`,
+quoted in the PR body"*, which implies the author runs it and says nothing about
+the person merging. That gap is how "the agent is the CI" decays into nobody
+being the CI: the author assumes the merger will check, the merger assumes the
+author did, and the change lands unverified with both believing it was covered.
+Now stated in [[sals3-management-bible]] section 8.

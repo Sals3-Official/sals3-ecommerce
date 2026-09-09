@@ -78,6 +78,7 @@ The current lifecycle (supplier discovery → automated evidence-based screening
 - **Idempotency and money safety:** checkout and refund require an idempotency key; money is stored as an integer in minor units, never a decimal (section 16.3, 16.4).
 - **Team-size reality:** confirmed team is AJ + Bogs (2 full-stack developers) — build spec section 21.2 puts this at **9 to 14 months to first launch, only with a reduced first release** (section 21.3). Do not plan against a faster timeline without changing the team size first.
 - **Language rule for every user-facing statement in the actual code (confirmed 2026-08-03, "pinakamahalaga" — Bogs's words):** all UI text, button labels, error messages, and instructions must follow **ASD-STE100 Simplified Technical English** (the build spec already mandates this for documents, section 1.4 — this extends it explicitly and permanently to code output) **and must be understandable by an elementary school student.** Treat "would a grade-schooler understand this sentence" as a real, checkable bar for every string that ships, not just a style preference — short sentences, one instruction per sentence, plain active-voice words, no jargon left unexplained.
+- **Nobody is paying for CI, so whoever opens and merges a pull request is the one who ran it (owner rule 2026-09-10):** the GitHub Actions and Vercel bills will not be paid, a red X is usually billing rather than a defect, and a green tick can be a workflow that never ran. Run `npm run verify` yourself and quote the real counts in the PR body; if you did not run it, you may not merge it. Never `--no-verify`. Full rule in section 8 below.
 - **Notes merge to `Sals3-Official`, code merges to `anythingsupplies`, and every release walks SIT → UAT → Main with the same test at each stage (owner rule 2026-09-10):** all three websites — Global, FJ and AU — move together, no stage is skipped, and an untested stage is a failed stage. Either the team or the AI may run the test, and whoever does says what they observed. Full rule in section 7 below.
 - **Every commit and pull request declares what it left undone (owner rule 2026-09-09):** a `Pending` block naming each unfinished item and its urgency (P0-P3), mirrored into [[pending-register]] in the same task. `Pending: none` when there is genuinely nothing, so an omission cannot be mistaken for a clean change. Full rule in section 6 below.
 - **AI-written code must be built and delivered component-by-component (confirmed 2026-08-03):** never write a whole page, feature, or service in one monolithic pass. Build the smallest complete, independently reviewable component first, verify it actually works, then compose the next one on top of it — matching the build spec's own Stage 1 component list (button, input, chip, card, sheet, dialog, tabs, badge, skeleton, toast) and service boundaries (BFF, Catalog, Pricing, Cart, Order, Seller — section 16.1). This is the same "smallest coherent move" discipline as [[autonomous-loop-sop]], applied specifically to how an AI agent should write Sals3 code — and it is a direct structural defense against the invisible-progress failure that killed the prior WooCommerce build (see [[hot]]'s project history). A code change with no isolated, checkable component boundary is a sign the step is too big.
@@ -260,3 +261,76 @@ that gap every promotion was squash-merged for weeks, leaving `pre-prod` and
 be promoted at all.
 
 A rule that has to be discovered is a rule that will be missed.
+
+## 8. Nobody is paying for CI, so whoever ships it is the CI
+
+**Owner rule 2026-09-10 (Bogs). Strict adherence. Binding on every agent and
+every teammate, every time.**
+
+### 8.1 The bills are not being paid
+
+**The GitHub Actions and Vercel bills will not be paid.** That is a decision, not
+an outage waiting to be fixed. Verification stopped being something a platform
+does and became something **a person or an agent does and records by hand.**
+
+What that means in practice, and why the usual instinct is actively wrong here:
+
+- **A red X is usually not a defect.** It is a billing stall or a blocked legacy
+  project. A run that finishes in **3–9 seconds executed zero steps**; a real run
+  takes minutes.
+- **A green tick may prove nothing** — it can be a workflow that never ran.
+- **Both readings have already cost real time**, in both directions: a broken
+  thing nearly merged, and a correct money fix held for hours.
+
+### 8.2 Whoever opens the PR and merges it is the one who runs the CI
+
+**The same person or agent who opens a pull request and merges it must have run
+the verification themselves.** Not inherited from a previous run, not assumed
+from a green tick, not delegated to whoever looks at it later.
+
+This is the accountability half of the rule. Without it, "the AI is the CI"
+decays into nobody being the CI — the author assumes the merger will check, the
+merger assumes the author did, and a change lands unverified with both of them
+believing it was covered.
+
+If you did not run it, **you may not merge it.** Hand it to whoever will.
+
+### 8.3 What running it means, and how to record it
+
+Run `npm run verify` and **quote the real counts in the PR body** — never "it
+passed". A bare assertion is exactly what nobody can audit later, and the counts
+are what reveal a suite that silently stopped running half its tests:
+
+```markdown
+## Verification
+
+`npm run verify` — lint, format:check, typecheck, build clean;
+**4,159 unit tests passed / 4 skipped (373 files)**, **63 e2e passed / 2 skipped**.
+Run locally on <sha>. Actions on this repository is billing-stalled
+(latest run: failure in 3s, zero steps).
+```
+
+State plainly when a check was **not** run and why — that is a blocker, not an
+omission — and name which kind of red a red check is.
+
+**Never pass `--no-verify`.** The Husky pre-commit and pre-push hooks are the
+only automated gate left in the application repositories. If a hook fails, that
+is the finding; report it rather than working around it.
+
+### 8.4 Where the details live
+
+The per-repository table — which repository can still prove what, and which
+signal to trust there — is in
+[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]'s
+*2026-09-09* amendment, and the audit behind it is
+[[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]].
+**Re-derive that table before relying on it** — it is a snapshot of a billing
+state and it has already inverted once.
+
+The `sals3-verify` skill in `.claude/skills/` carries the whole procedure, so an
+agent does not have to reconstruct it from these documents each time.
+
+> [!IMPORTANT] This section and section 7 are one obligation
+> Section 7 requires the same test at SIT, UAT and Main. This section says who
+> runs it and how it is recorded. A promotion with no recorded result has not
+> been tested, and an untested stage has not been passed.
