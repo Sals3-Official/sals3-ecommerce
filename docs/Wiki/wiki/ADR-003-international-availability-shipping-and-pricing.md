@@ -497,3 +497,67 @@ the charge currency, while the ccTLDs display A$ and FJ$. An Australian seeing a
 rich result gets a USD price. Asserting a currency Sals3 does not charge would be
 a fabrication, so it stands — and it resolves itself once step 4 ships. Raised as
 an owner decision in [[sals3-session-2026-09-08-part153-the-canonical-layer-switched-on-across-three-storefronts|part 153]].
+
+## Amendment — 2026-09-09: a market storefront's own country seeds the checkout address form, above geo and below a choice (owner decision, Bogs)
+
+§1 above says: *"Geo-IP is only a default suggestion. The user's selected shipping
+country is the browsing source of truth."* That sentence was read, from 2026-09-04
+until this amendment, as forbidding the checkout address form from being seeded with
+anything but the buyer's own stored choice — which in practice meant seeding it from
+geo-IP, or from a hard-coded fallback when geo said nothing.
+
+Measured on the live sites on 2026-09-09, that reading produced the opposite of what
+§1 protects. `sals3.com.fj/checkout` and `sals3.com.au/checkout` were both serving a
+**Philippine** address form — the seventeen PH regions, PH cities, a `+639` phone
+prefix, and a mandatory postal code the Fiji storefront's own welcome band says is not
+needed — under Fijian and Australian prices respectively. Two paths reached it: geo
+answers `PH` for a buyer in Manila, and a visitor with **no** geo header resolves to
+Global, which carries no checkout country, so the form fell to its own
+`FALLBACK_COUNTRY = 'PH'`. Every visitor from outside the six named countries got it.
+
+### What this amends
+
+**A market storefront's own country (`NEXT_PUBLIC_SALS3_MARKET`) outranks geo-IP when
+seeding the checkout address form.** It is not a guess about the person: opening
+`sals3.com.fj` is itself a buyer action, and a more deliberate one than the IP their
+traffic exits from. §1's purpose is that a **guess** must not masquerade as a
+**choice**; a deployment's identity is neither, and it beats the guess.
+
+### What this explicitly does not amend
+
+**A stored choice still wins.** The `sals3_destination` cookie is written only by
+`setDestinationAction` and by no middleware, precisely so its presence means a person
+picked it. A market must not overrule it, and §1 is unchanged on that point. The first
+implementation of this seed did overrule it for about four hours on 2026-09-09 and was
+corrected the same day; the correction is the reason `resolveDestinationChoice()`
+reports *where* an answer came from rather than only *what* it is.
+
+`resolveDestination()` itself is unchanged, and so are the cart's cannot-ship notice
+and the approximate local price — both still follow the buyer's destination, or Global.
+
+### The resulting precedence
+
+| | Signal | Standing |
+| --- | --- | --- |
+| 1 | A stored choice | §1's browsing source of truth |
+| 2 | The deployment's market | A fact about the storefront |
+| 3 | Geo-IP, then the form's default | A suggestion |
+
+A stored `NZ`, `US`, `CA` or Global cannot be honoured, because checkout takes no
+address for those; it falls to the market rather than to the unrelated `PH` default.
+
+### What it is not
+
+It is a **seed, not a lock**. The country select stays fully editable,
+`CHECKOUT_ALLOWED_COUNTRIES` and the Zod schema are untouched, and the address is
+still validated server-side on submit. Whether a market storefront should *restrict*
+checkout to its own country is a separate decision this amendment does not make.
+
+It also does not restore the `Ship to` picker withdrawn by the 2026-08-28 amendment, so
+a buyer still cannot make a **new** choice before the address form — only a cookie
+predating 2026-08-28 carries one. That gap is registered in [[pending-register]].
+
+Detail, evidence and the failing-test output in
+[[sals3-session-2026-09-09-part161-the-fiji-and-australian-storefronts-were-asking-for-a-philippine-address|part 161]];
+`sals3.com.fj` [#41](https://github.com/anythingsupplies/sals3.com.fj/pull/41)/[#42](https://github.com/anythingsupplies/sals3.com.fj/pull/42),
+`sals3.com.au` [#33](https://github.com/anythingsupplies/sals3.com.au/pull/33)/[#34](https://github.com/anythingsupplies/sals3.com.au/pull/34), all merged to `develop`, none promoted.
