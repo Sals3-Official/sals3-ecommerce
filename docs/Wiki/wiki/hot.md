@@ -473,6 +473,14 @@ References:
 
 ## Active risks and blockers
 
+> [!NOTE] This section is live product risk; open work is next door
+> **This section stays the authority on what is wrong in production**, with the
+> evidence. Work that is merely *unfinished* belongs in [[pending-register]],
+> which Bible section 6 requires every commit and PR to feed. Where an item is
+> both, it lives here in full and the register carries a one-line pointer — never
+> a copy, so there is one source of truth.
+
+
 ### Neither bill is being paid: CI is dead on the application repositories, and the vault's Vercel project is blocked - owner decision 2026-09-09
 
 **Owner decision 2026-09-09 (Bogs): the GitHub Actions and Vercel bills will not be paid.** Verification is now **an agent's job, performed and recorded by hand**. Measured the same day, and the two orgs fail in **opposite directions**:

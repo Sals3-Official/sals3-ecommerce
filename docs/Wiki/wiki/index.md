@@ -43,6 +43,8 @@ related:
 - [[vault-onboarding-prompt-for-agent|Vault Onboarding Prompt]] — copy-paste prompt handing that setup to an AI agent on a new machine.
 - [[sals3-turnover-prompt-template|Turnover Prompt Template]] — exact format for handing this project to the next AI agent session.
 - [[sals3-master-blueprint|Sals3 Master Blueprint]] — v4.0 whole-system architecture, commercial strategy, and transition plan (sample/demonstration status pending Leadership alignment).
+- [[pending-register|Pending Register]] — the one place open work is readable as a list. Bible section 6 requires every commit and PR to declare what it left undone, with a P0-P3 urgency, and to mirror it here in the same task.
+- [[vault-session-note-conventions|Session Note Conventions]] — how a session note is shaped, and why a promotion PR gets no entry.
 - [[vault-governance-and-note-lifecycle|Vault Governance and Note Lifecycle]] — authority order, status vocabulary, and change protocol.
 - [[architecture-decision-template|ADR Template]] — required structure for material design decisions.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products|ADR-001 — Curated CJ Sourcing to My Products]] — approved catalog ownership, curation, seller/offer, architecture, media-rights, and publish-gate decision. Not implemented.

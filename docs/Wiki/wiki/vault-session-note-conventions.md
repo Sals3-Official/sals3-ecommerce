@@ -124,6 +124,9 @@ Per [[../CLAUDE|the agent entry point]] section 8:
   directly; a series may be linked as a series pointing at `hot`'s list.
 - **The canonical document the work touched** — an ADR amendment where a decision
   moved, a rollout-status table where an ordered plan advanced.
+- **[[pending-register]]** — every item the work left undone, with its urgency,
+  in the same task. Required by [[sals3-management-bible]] section 6; `Pending: none`
+  when there is genuinely nothing.
 - **[[sals3-skills]]** — any transferable engineering lesson, in the same task.
   A note's `## Lessons` section is the draft; a skill is the version written for
   someone who was not there.
