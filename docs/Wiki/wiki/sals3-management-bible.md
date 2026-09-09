@@ -161,6 +161,31 @@ own home and duplicating them creates a second source of truth:
   it rather than a copy;
 - a **decision** that changed → an ADR amendment.
 
+### Enforced, not merely expected
+
+`.husky/commit-msg` runs `scripts/check-pending.mjs`, which refuses a commit
+message carrying neither an explicit `Pending: none` nor at least one item tagged
+`[P0]`–`[P3]`. Git's own generated messages — merges, reverts, `fixup!`,
+`squash!` — are skipped, because rejecting those would block ordinary history
+operations over a rule about authored work.
+
+The check is loose about layout and strict about the one thing that matters: a
+**level**. An untagged *"still to do: X"* does not pass, because a level is what
+makes the register sortable and what stops a P0 being worked last.
+
+A commented-out declaration does not count either — `# Pending: none` is a git
+comment and never reaches the message.
+
+The same script validates a PR body before you open it:
+
+```bash
+node scripts/check-pending.mjs --stdin < pr-body.md
+```
+
+This exists because the rule was written on 2026-09-09 with nothing enforcing it,
+and its own register entry said so: *rules that depend on memory decay* — which is
+exactly what happened to [[sals3-skills]], four weeks stale before anyone noticed.
+
 ### Closing
 
 An entry closes when its stated condition is observably met — not when someone
