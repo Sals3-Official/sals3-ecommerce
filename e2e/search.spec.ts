@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import waitForOneOf from './settled';
+
 /**
  * `/search` and the header box that feeds it.
  *
@@ -23,6 +25,24 @@ test.beforeEach(async ({ page }) => {
     );
   });
 });
+
+/**
+ * The five states `SearchResults` can commit to. Waiting for the union of them
+ * before sampling is what stops the skeleton being misread as an empty
+ * catalogue — see `settled.ts` for why a snapshot alone is not enough.
+ */
+async function settleResults(page: Page): Promise<void> {
+  await waitForOneOf(
+    [
+      page.locator('a[href*="/p/"]'),
+      page.getByRole('heading', { name: /search the catalogue/i }),
+      page.getByRole('heading', { name: /search can't run right now/i }),
+      page.getByRole('heading', { name: /with these filters/i }),
+      page.getByRole('heading', { name: /no products match/i }),
+    ],
+    UPSTREAM_TIMEOUT,
+  );
+}
 
 async function hasResults(page: Page): Promise<boolean> {
   return (await page.locator('a[href*="/p/"]').count()) > 0;
@@ -106,6 +126,7 @@ test('filtering keeps the keyword in the URL and in the box', async ({
   page,
 }) => {
   await page.goto('/search?q=a', { timeout: UPSTREAM_TIMEOUT });
+  await settleResults(page);
 
   // Scoped to the sidebar: the footer lists every department too, and an
   // unscoped name matches both.
@@ -142,6 +163,7 @@ test('sorting keeps the keyword', async ({ page }) => {
  */
 test('clearing filters keeps the search', async ({ page }) => {
   await page.goto('/search?q=a&band=u15', { timeout: UPSTREAM_TIMEOUT });
+  await settleResults(page);
 
   const clear = page.getByRole('link', { name: /^clear all$/i });
 
@@ -158,6 +180,7 @@ test('a term nothing can match says so without blaming filters', async ({
   await page.goto('/search?q=zzzznotathinganyonesells', {
     timeout: UPSTREAM_TIMEOUT,
   });
+  await settleResults(page);
 
   test.skip(await hasResults(page), 'catalogue unexpectedly matched');
 

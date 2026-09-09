@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import waitForOneOf from './settled';
+
 /**
  * `/c/[slug]` — the category listing.
  *
@@ -40,10 +42,27 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-/** The four states the results area may legitimately be in. */
+/**
+ * The four states the results area may legitimately be in.
+ *
+ * The wait is not decoration. `count()` and `isVisible()` are snapshots, and
+ * since `loading.tsx` the page answers with a skeleton first — so classifying
+ * without waiting reads "not streamed yet" as the `'empty'` fallthrough below.
+ * See `settled.ts`.
+ */
 async function resultState(
   page: Page,
 ): Promise<'products' | 'empty' | 'filtered-empty' | 'unavailable'> {
+  await waitForOneOf(
+    [
+      page.locator('a[href*="/p/"]'),
+      page.getByText(/can't be loaded right now/i),
+      page.getByText(/no product here matches/i),
+      page.getByText(/nothing published in .* yet/i),
+    ],
+    UPSTREAM_TIMEOUT,
+  );
+
   if ((await page.locator('a[href*="/p/"]').count()) > 0) return 'products';
   if (await page.getByText(/can't be loaded right now/i).isVisible()) {
     return 'unavailable';
