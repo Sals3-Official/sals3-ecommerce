@@ -88,6 +88,40 @@ run on geo alone, and only a cookie predating 2026-08-28 carries a real choice.
 ADR-003 §1 calls the buyer's selection the browsing source of truth and nothing
 can currently produce one. See [[sals3-session-2026-09-09-part161-the-fiji-and-australian-storefronts-were-asking-for-a-philippine-address|part 161]] and ADR-003's `Amendment — 2026-09-09`.
 
+### ~~[P2] The checkout country seed has never been observed on SIT~~ — closed 2026-09-10, `sals3.com.fj` #43
+Observed on `sit.sals3.com.fj` in a signed-in browser: the address form seeded
+**Fiji** and **+679**, with the five Fijian divisions and Western Division's
+towns. The Australian half is **still unobserved** — `sit.sals3.com.au` has no
+catalogue to check out from (see below).
+
+### [P1] No order has reached CJ since 2026-09-03
+**Raised:** 2026-09-10, CJ census · **Closes when:** the cause is known, or a new order is seen arriving
+**Owner:** agent to investigate
+
+51 Sals3 orders exist at CJ; the most recent is `S3-20260903-9C8588EF0C`. A week
+of silence is either correct (nobody ordered) or a broken fulfilment leg, and
+nothing distinguishes them from outside. Related and unproven: the payment→CJ
+leg was **not** exercised on 2026-09-10 — the run stopped at Stripe Link, which
+asks for a verification code an agent must not enter.
+
+### [P1] Sixteen orders already at CJ carry an undeliverable phone number
+**Raised:** 2026-09-10, CJ census · **Closes when:** the owner decides to repair them or accept them
+**Owner:** owner
+
+`sals3.com.fj` #43 and its twins stop **new** bad numbers; they repair nothing
+already sent. 9 orders hold a bare `+639` and 7 hold `+6399271739215`. If any is
+still expected to ship, the courier cannot reach the buyer. See
+[[sals3-session-2026-09-10-part162-sixteen-of-twenty-five-orders-reached-cj-unreachable|part 162]] §1.
+
+### [P2] Four orders are stranded at CJ, two of them real money
+**Raised:** 2026-09-10, CJ census · **Closes when:** each is swept, reconciled, or written off
+**Owner:** owner
+
+`S3-20260828-EF28C4D429` and `S3-20260830-4F919D5020` sit at `CREATED` with
+`paymentDate: null` — a CJ order that will never ship, with nothing sweeping it.
+`S3-20260818-D6134CEAE2` (US$122) and `S3-20260818-8272210D40` are in `TRASH`
+with `isSandbox: 0`. ADR-004's reconciliation is the eventual home for this.
+
 ### [P2] The checkout country seed has never been observed on SIT
 **Raised:** 2026-09-09, the same four PRs · **Closes when:** the address form is opened on `sit.sals3.com.fj` and `sit.sals3.com.au` and shows Fijian and Australian divisions
 **Owner:** agent or owner — one signed-in page load each
