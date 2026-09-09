@@ -76,6 +76,48 @@ being read.
 
 ## Open
 
+### [P2] A buyer cannot tell either market storefront where they are shipping, before checkout
+**Raised:** 2026-09-09, `sals3.com.fj` #41/#42 and `sals3.com.au` #33/#34 · **Closes when:** a writer for `sals3_destination` exists again, or the owner confirms the market seed is enough
+**Owner:** owner — it was an owner decision to remove the picker
+
+The `Ship to` picker was withdrawn on 2026-08-28 and was the cookie's **only**
+writer. The checkout form now seeds from the deployment's market instead of from
+geo, which fixes the visible symptom, but the buyer still has no way to state a
+destination — so the cart's cannot-ship notice and the approximate price still
+run on geo alone, and only a cookie predating 2026-08-28 carries a real choice.
+ADR-003 §1 calls the buyer's selection the browsing source of truth and nothing
+can currently produce one. See [[sals3-session-2026-09-09-part161-the-fiji-and-australian-storefronts-were-asking-for-a-philippine-address|part 161]] and ADR-003's `Amendment — 2026-09-09`.
+
+### [P2] The checkout country seed has never been observed on SIT
+**Raised:** 2026-09-09, the same four PRs · **Closes when:** the address form is opened on `sit.sals3.com.fj` and `sit.sals3.com.au` and shows Fijian and Australian divisions
+**Owner:** agent or owner — one signed-in page load each
+
+All four merged to `develop` and nothing was promoted. Verification is a local
+`npm run verify` plus two guards proved by breaking them; **no one has looked at
+the rendered form on a deployed host.** Checkout sits behind the auth guard, so
+this needs a signed-in session rather than a `curl`.
+
+### [P3] Whether the shared storefront carries the checkout-seed files is unverified
+**Raised:** 2026-09-09 · **Closes when:** `anythingsupplies/sals3-ecommerce` is checked
+**Owner:** agent
+
+There is no local clone of `anythingsupplies/sals3-ecommerce` on the Windows
+machine — `E:\sals3-ecommerce` is the old `Sals3-Official` vault repository. That
+deployment sets no market, so the change is a no-op there and nothing is broken;
+what is unknown is whether it even has `market-checkout-country.ts`, and
+therefore whether the twin-PR convention is owed a port.
+
+### [P3] `louieboi09` cannot see three of the six `anythingsupplies` repositories
+**Raised:** 2026-09-09, while pushing #33 · **Closes when:** the account is added as a collaborator, or the convention is rewritten to name the account that can act
+**Owner:** owner — repository access
+
+A push to `sals3.com.au` failed with `Repository not found` — not a permissions
+error, an invisibility. `sals3.com.au`, `sals3-portal-automation` and
+`sals3-admin-portal` are visible only to the `anythingsupplies` account. This
+also silently no-ops the assignee convention in
+[[team-profile-and-collaboration-preferences]] (*assignee = Bogs*), which
+`gh pr create` accepted and then dropped on #33.
+
 ### [P0] A paid checkout produces no order in production
 **Raised:** carried from [[hot]] · **Closes when:** a real payment produces a Sals3 order and a CJ fulfilment
 **Owner:** owner — credentials only

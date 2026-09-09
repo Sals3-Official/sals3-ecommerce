@@ -1057,3 +1057,20 @@ An alert like this clears itself on the next default-branch push that changes th
 4. **Separate the variables before blaming one.** The commits that failed differed from the ones that succeeded by author **and** by date. Only the date mattered, and the dates were already in the output — this is skill 102's check, which had been written hours earlier and was not applied.
 
 **Where applied:** the per-repository merge requirements in [[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]'s *2026-09-09* amendment, section 3 — read the Actions `verify` on the vault repository and ignore its Vercel check; quote a named agent's local `npm run verify` on every application repository. See [[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci]].
+
+### 104. Before defending a default, go and read what the alternative actually is
+
+**Confirmed:** 2026-09-09, when both market storefronts were found asking every visitor for a Philippine address.
+
+**Incident:** `marketOrDestinationCheckoutCountry` read the deployment's own market and was wired to the free-shipping threshold and the PDP. Its doc comment excluded the checkout address form **on purpose**, citing ADR-003 §1: *"telling a visitor in Berlin that they are shipping to Fiji, and then making the checkout quietly right for a country they never picked, is the failure that rule exists to prevent."*
+
+The argument is correct about what pre-filling costs. It never asks what the visitor in Berlin got **instead** — and the answer was `FALLBACK_COUNTRY = 'PH'`, a constant two files away in `useCheckoutAddress.ts`. So the Fiji storefront served the seventeen Philippine regions, PH cities, a `+639` prefix and a mandatory postal code its own welcome band calls unnecessary, under an FJ$1,274.24 total. The exclusion protected nobody; it only chose a worse default, for **every** visitor outside the six named countries rather than for a rare edge case.
+
+**Lesson:** A comment that argues *against* doing something has to name the thing that happens when it is not done. "We must not pre-fill from X" is only half an argument — the other half is what fills the field when X is refused, and that half is usually in a different file under a name like `FALLBACK` or `DEFAULT`. Two questions before accepting a documented refusal:
+
+1. **What is the actual fallback value, read from the code?** Not "nothing" or "neutral" — an identifier with a value. Neutral is rare; a hard-coded country is common.
+2. **How many users take the refused path?** Here it was two paths converging — geo saying `PH`, and no-geo falling through `GLOBAL` to the same `PH` — which turned an assumed edge case into the default.
+
+The corollary caught the same day: a fix aimed at a *guess* can overshoot into a *choice*. The first version outranked the `sals3_destination` cookie as well as geo, and a cookie written only by `setDestinationAction` means a person picked it. **If a resolver collapses several inputs into one answer, a caller that must rank them cannot** — the repair was to return `{ destination, source }` so `'chosen'` is distinguishable from `'geo'`.
+
+**Where applied:** `checkoutCountrySeed` and `resolveDestinationChoice` in both market storefronts, the `Amendment — 2026-09-09` in [[ADR-003-international-availability-shipping-and-pricing]], and [[sals3-session-2026-09-09-part161-the-fiji-and-australian-storefronts-were-asking-for-a-philippine-address|part 161]].
