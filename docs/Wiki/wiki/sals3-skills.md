@@ -1074,3 +1074,21 @@ The argument is correct about what pre-filling costs. It never asks what the vis
 The corollary caught the same day: a fix aimed at a *guess* can overshoot into a *choice*. The first version outranked the `sals3_destination` cookie as well as geo, and a cookie written only by `setDestinationAction` means a person picked it. **If a resolver collapses several inputs into one answer, a caller that must rank them cannot** — the repair was to return `{ destination, source }` so `'chosen'` is distinguishable from `'geo'`.
 
 **Where applied:** `checkoutCountrySeed` and `resolveDestinationChoice` in both market storefronts, the `Amendment — 2026-09-09` in [[ADR-003-international-availability-shipping-and-pricing]], and [[sals3-session-2026-09-09-part161-the-fiji-and-australian-storefronts-were-asking-for-a-philippine-address|part 161]].
+
+### 105. A validation floor in the same units as a pre-filled value is not a floor
+
+**Confirmed:** 2026-09-10, censusing the live CJ account after the owner asked whether orders actually reach CJ.
+
+**Incident:** `phone: z.string().trim().min(4).max(40)`, plus a `superRefine` requiring the country's prefix. Every prefix in `CHECKOUT_COUNTRY_DETAILS` is **exactly four characters** — `+639`, `+679`, `+614` — and the checkout form pre-fills one. So a buyer who never touched the field submitted `+639`, which starts with the prefix and is four characters, and passed both checks.
+
+CJ stored it. **9 of 25 readable Sals3 orders carry a bare `+639`.** A further **7** carry `+6399271739215`: `+639` already contains the mobile leading `9`, so appending a national number that also starts with `9` sends one digit too many. **16 of 25 orders cannot be delivered on.**
+
+None of this was visible in review, in the test suite, or on the page. It took one API call against what the supplier actually stored.
+
+**Lesson:** Express a length bar against **the part the human supplies**, never against the whole field when part of it was supplied by the application. Three checks whenever a field is seeded:
+
+1. **Subtract the seed.** If the seeded value alone satisfies the rule, the rule is decorative. Here `min(4)` and a 4-character seed is a check that could only pass.
+2. **Look for overlap between the seed and what follows.** A prefix that contains the first digit of the national number invites a doubled digit; the buyer is not wrong to paste their own number.
+3. **Census the live downstream system.** The supplier, the payment processor, the courier — whoever stores the field last. A defect that survives review and tests is usually one that only the receiving system can see.
+
+**Where applied:** `phoneNationalDigits` and `phoneExample` per country, validated after the prefix, in all three storefront repositories. See [[sals3-session-2026-09-10-part162-sixteen-of-twenty-five-orders-reached-cj-unreachable|part 162]].
