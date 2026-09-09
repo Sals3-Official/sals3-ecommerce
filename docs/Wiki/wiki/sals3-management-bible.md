@@ -2,7 +2,7 @@
 tags: [project/sals3, canonical, domain-spec]
 aliases: [Sals3 Management Bible, Sals3 Master Plan, Sals3 Product Bible]
 created: 2026-07-31
-updated: 2026-08-10
+updated: 2026-09-09
 status: canonical
 authority: domain-spec
 owner_approved: false
@@ -78,6 +78,7 @@ The current lifecycle (supplier discovery → automated evidence-based screening
 - **Idempotency and money safety:** checkout and refund require an idempotency key; money is stored as an integer in minor units, never a decimal (section 16.3, 16.4).
 - **Team-size reality:** confirmed team is AJ + Bogs (2 full-stack developers) — build spec section 21.2 puts this at **9 to 14 months to first launch, only with a reduced first release** (section 21.3). Do not plan against a faster timeline without changing the team size first.
 - **Language rule for every user-facing statement in the actual code (confirmed 2026-08-03, "pinakamahalaga" — Bogs's words):** all UI text, button labels, error messages, and instructions must follow **ASD-STE100 Simplified Technical English** (the build spec already mandates this for documents, section 1.4 — this extends it explicitly and permanently to code output) **and must be understandable by an elementary school student.** Treat "would a grade-schooler understand this sentence" as a real, checkable bar for every string that ships, not just a style preference — short sentences, one instruction per sentence, plain active-voice words, no jargon left unexplained.
+- **Every commit and pull request declares what it left undone (owner rule 2026-09-09):** a `Pending` block naming each unfinished item and its urgency (P0-P3), mirrored into [[pending-register]] in the same task. `Pending: none` when there is genuinely nothing, so an omission cannot be mistaken for a clean change. Full rule in section 6 below.
 - **AI-written code must be built and delivered component-by-component (confirmed 2026-08-03):** never write a whole page, feature, or service in one monolithic pass. Build the smallest complete, independently reviewable component first, verify it actually works, then compose the next one on top of it — matching the build spec's own Stage 1 component list (button, input, chip, card, sheet, dialog, tabs, badge, skeleton, toast) and service boundaries (BFF, Catalog, Pricing, Cart, Order, Seller — section 16.1). This is the same "smallest coherent move" discipline as [[autonomous-loop-sop]], applied specifically to how an AI agent should write Sals3 code — and it is a direct structural defense against the invisible-progress failure that killed the prior WooCommerce build (see [[hot]]'s project history). A code change with no isolated, checkable component boundary is a sign the step is too big.
 
   > [!NOTE] Clarification (2026-08-03) — this is not "keep every file short"
@@ -103,3 +104,71 @@ As of 2026-08-06, [[sals3-ux-build-specification]] provides the target model, AP
 - The business/marketing plan (pricing strategy, launch marketing) is explicitly out of this bible's and the build spec's scope — that's [[sals3-master-blueprint]] territory, and even there marked sample.
 
 Update [[hot]] with real state as work happens; do not let this bible imply more implementation progress than exists.
+
+## 6. Every commit and pull request declares what it left undone
+
+**Owner rule 2026-09-09 (Bogs). Binding on every agent, every time.**
+
+Every commit message and every pull request body must carry a **Pending** block
+naming what is still not done and how urgent each item is — and the same items
+must be added to [[pending-register]] **in the same task**.
+
+### Why both places
+
+Declaring a pending item only in the commit or the PR makes it traceable but not
+findable: nobody re-reads three hundred pull requests to reconstruct a backlog.
+Declaring it only in the register loses the link to the work that raised it. So
+the commit or PR is where the claim is made at the moment it is true, and the
+register is where it can be read as a list and worked down.
+
+This exists because a session that produces a lot of documentation also produces
+a lot of *"and this is still owed"* — and those sentences used to live in chat
+scrollback and disappear.
+
+### The block
+
+```markdown
+## Pending
+- **[P1]** <what is not done> — <why it matters>
+- **[P3]** <what is not done> — <why it matters>
+```
+
+**When nothing is pending, write `Pending: none`.** An explicit *none* costs one
+line and separates "there was nothing" from "somebody forgot", which is the whole
+difference between a register you can trust and one you cannot.
+
+### Urgency levels, judged by consequence
+
+| | Meaning | Timing |
+|---|---|---|
+| **P0** | Money or data is wrong **right now** — a buyer charged incorrectly, an order lost, a record being corrupted | Before the next merge |
+| **P1** | A decision is blocked, or a live surface tells someone something untrue | This week |
+| **P2** | A known gap with a workaround that keeps costing time | Scheduled |
+| **P3** | Hygiene and debt; nobody is harmed | When next touching that area |
+
+Where two levels seem to fit, take the higher one and say why. A level argued
+down without evidence is how a P0 becomes a P3.
+
+### What counts as pending
+
+Anything the change deliberately did not finish, and anything found in passing
+and not fixed. Three things that are **not** pending items, because each has its
+own home and duplicating them creates a second source of truth:
+
+- an idea the owner told you to **park** → [[parked-ideas-backlog]];
+- something wrong in **production right now** → [[hot]]'s *Active risks and
+  blockers* carries the evidence, and the register carries a one-line pointer to
+  it rather than a copy;
+- a **decision** that changed → an ADR amendment.
+
+### Closing
+
+An entry closes when its stated condition is observably met — not when someone
+believes it is handled. Strike it through in the register with the date and the
+closing PR, and leave it for a month before deleting.
+
+> [!NOTE] This rule is about honesty, not paperwork
+> The point is that unfinished work stays visible and keeps its urgency after the
+> conversation that produced it has ended. An agent that writes `Pending: none`
+> on a change that plainly left something owed has done something worse than
+> skipping the block, because the register then reads as complete when it is not.

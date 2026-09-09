@@ -156,6 +156,40 @@ when they are true, because each one has misled someone already:
 - a test **failed and passed on retry** — say so and name it. Live-catalogue e2e
   flakes are known here, but a "flake" that reproduces is a finding.
 
+## Step 6 — Declare what you left undone
+
+The bible's section 6 (owner rule 2026-09-09) requires every commit **and** every
+PR to carry a `Pending` block, and the same items to be added to
+`docs/Wiki/wiki/pending-register.md` **in the same task**. Verification and
+pending live together because they answer the two halves of the same question:
+*what did you prove, and what is still owed?*
+
+```markdown
+## Pending
+- **[P1]** <what is not done> — <why it matters>
+- **[P3]** <what is not done> — <why it matters>
+```
+
+| | Meaning | Timing |
+| --- | --- | --- |
+| **P0** | Money or data is wrong **right now** | Before the next merge |
+| **P1** | A decision is blocked, or a live surface says something untrue | This week |
+| **P2** | A known gap with a workaround that keeps costing time | Scheduled |
+| **P3** | Hygiene and debt; nobody is harmed | When next touching that area |
+
+**Write `Pending: none` when there genuinely is nothing.** One line, and it
+separates "there was nothing" from "somebody forgot" — which is the only thing
+that makes the register trustworthy as a list.
+
+Three things are **not** pending items, because each already has a home and
+copying them creates a second source of truth: an idea the owner **parked**
+(`parked-ideas-backlog.md`), something wrong in **production now** (`hot.md`'s
+active risks — reference it from the register, do not copy it), and a **decision**
+that changed (an ADR amendment).
+
+A blocked check from Step 2 is almost always also a pending item. If `verify`
+could not be run, that is both the verification result **and** a P0 or P1 entry.
+
 ## When the check itself is the question
 
 Someone asking *"why is this red?"* or *"did it deploy?"* wants the diagnosis,
