@@ -542,3 +542,71 @@ produces. Owner action; not done under this amendment.
 See [[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]]
 for the audit this amendment rests on, including three wrong generalisations
 made from partial evidence in the course of finding it.
+
+## Amendment — 2026-09-10: the gate is tested at every stage, and the three sites move together
+
+**Owner rule 2026-09-10 (Bogs), strict adherence.** This ADR established *that*
+the three stages exist. It said nothing about **testing** at each one, and
+nothing about the three storefronts moving as a set. Both are now required.
+
+### The flow, in the owner's own framing
+
+```
+SIT  →  test  →  UAT  →  the same test  →  Main  →  test again
+```
+
+**All three websites walk it together** — Global, FJ and AU:
+
+| Site | Repository | SIT | UAT | Main |
+|---|---|---|---|---|
+| **Global** | `sals3-ecommerce` | `sit.sals3.com` | `uat.sals3.com` | `sals3.com` |
+| **FJ** | `sals3.com.fj` | `sit.sals3.com.fj` | `uat.sals3.com.fj` | `sals3.com.fj` |
+| **AU** | `sals3.com.au` | `sit.sals3.com.au` | `uat.sals3.com.au` | `sals3.com.au` |
+
+### These are the stages this ADR already names, under their environment names
+
+`SIT` is `develop`, `UAT` is `pre-prod`, `Main` is `main`. **One gate, not two.**
+The environment names are what the team says out loud; the branch names are what
+git sees. Everything this ADR already requires of the branch flow — including the
+2026-09-09 rule that a promotion merges **with a merge commit, never a squash** —
+applies unchanged.
+
+### What is new
+
+1. **A stage that has not been tested has not been passed.** An absent result is
+   a fail, not a neutral. This closes the case where a promotion was merged
+   because nothing had gone visibly wrong.
+2. **The same test runs at every stage.** UAT does not get a lighter check
+   because SIT was green, and Main does not get a lighter check because UAT was.
+   Each stage is a different deployment with its own configuration and its own
+   environment variables — the 2026-09-09 audit found the two orgs failing in
+   *opposite* directions, and a stage's own history in this repository is full of
+   defects that existed at one stage and not another.
+3. **Either the team or the AI may run the test**, and whoever runs it **says
+   what they observed** — which site, which stage, what was seen. Not "tested".
+   An untraceable pass is the same as no pass, and this ADR's own evidence tables
+   are the standard.
+
+### The rule is now in the bible, and the bible is now required reading
+
+Before today this gate lived only here, and `AGENTS.md` did not require anyone to
+read this ADR. Reaching the rule meant noticing one line in [[hot]], following a
+wikilink, and finding the right amendment — three optional steps. **In that gap
+every promotion was squash-merged for weeks**, leaving `pre-prod` and `main` with
+54 and 55 commits no other branch had, until a one-line fix could not be promoted
+at all (see
+[[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash|part 157]]).
+
+`sals3-management-bible.md` section 7 now carries the rule, and `AGENTS.md`
+requires both the bible and this ADR. A rule that has to be discovered is a rule
+that will be missed.
+
+### Not settled by this amendment
+
+**Which test.** The owner's instruction says *"test"* and *"the same test"* without
+naming a procedure. `npm run verify` covers the code before it deploys; it does
+not exercise a **deployed** SIT, UAT or Main host, and the three storefronts have
+no shared post-deploy checklist. Until one exists, "tested" means whatever the
+person or agent running it decided — which is exactly the ambiguity point 3 above
+tries to contain by demanding they say what they observed. Recorded in
+[[pending-register]] rather than invented here.
