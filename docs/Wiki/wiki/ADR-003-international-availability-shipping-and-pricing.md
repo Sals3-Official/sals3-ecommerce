@@ -460,3 +460,40 @@ will still be true.
   recorded here with the date it was checked.
 - The conversion from an FJD charge to the account's settlement currency is stored with
   its rate and its cost, not inferred afterwards from a payout total.
+
+### Rollout status — recorded 2026-09-08
+
+Steps 1–3 of the ordered list above were delivered on 2026-09-07 and are live.
+**Step 3's currency authorization is wired and switched off, and step 4 is half
+done, so this amendment is NOT yet in force: Fiji still charges USD.**
+
+| Step | State on 2026-09-08 | Evidence |
+|---|---|---|
+| 1. A Fiji offer exists, priced by Fiji's rules | **done** | `sals3-portal` [#69](https://github.com/anythingsupplies/sals3-portal/pull/69) |
+| 1b. Already-published products backfilled | **done, and run** — 5,666 offers written; `NZ`/`US`/`CA` withdrawn as unconfigured | [[sals3-session-2026-09-07-part144-5666-market-offers-and-the-three-markets-withdrawn\|part 144]] |
+| 2. The Fiji storefront reads only Fiji's offer | **done** — `?market=FJ` on five catalogue reads, sent by the storefront, PDP variants scoped | [[sals3-session-2026-09-07-part145-the-fiji-storefront-stops-showing-australias-price\|part 145]] |
+| 3. FJD authorized as a selling currency for `FJ` | **wired, switched OFF** | [[sals3-session-2026-09-07-part146-a-market-settles-in-its-own-currency-wired-and-left-off\|part 146]] |
+| 4. Checkout quotes and charges FJD | **half** — checkout prices from the storefront's market and carries the offer's currency; settlement is still USD | `sals3-portal` [#120](https://github.com/anythingsupplies/sals3-portal/pull/120) |
+| 5. The payment rail carries FJD | **not started** — the dashboard observation is still unrecorded | — |
+
+> [!WARNING] The switch is a one-line change and must not be flipped alone
+> Verified on `anythingsupplies/sals3-portal@main` 2026-09-08:
+> `src/modules/market-config/capabilities.ts` carries
+> `settlementCurrencyCode: 'USD'` on **all six** destinations, and
+> `settlementCurrencyForMarket` falls back to `'USD'`. Flipping `FJ` to `FJD`
+> needs the Fiji storefront to **stop converting a price that is already
+> Fijian** in the same release, or the buyer sees a double-converted number and
+> is charged a third one. The storefront change must not lead.
+
+What step 1–3 delivery did **not** change, and what the storefront must therefore
+keep saying: **payment is taken in US dollars.** That is still true. What did
+change is that the Fijian number a buyer sees is now derived from **Fiji's own
+margin** rather than Australia's — verified live, same product, same moment:
+`sals3.com.au` A$21.96 (200%), `sals3.com.fj` FJ$25.81 (120%).
+
+A consequence worth carrying into ADR-016's territory: `offers.priceCurrency` in
+the storefronts' `Product` JSON-LD is `USD` on all three domains, because that is
+the charge currency, while the ccTLDs display A$ and FJ$. An Australian seeing a
+rich result gets a USD price. Asserting a currency Sals3 does not charge would be
+a fabrication, so it stands — and it resolves itself once step 4 ships. Raised as
+an owner decision in [[sals3-session-2026-09-08-part153-the-canonical-layer-switched-on-across-three-storefronts|part 153]].

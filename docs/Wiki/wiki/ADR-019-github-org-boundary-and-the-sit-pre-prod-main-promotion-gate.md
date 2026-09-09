@@ -301,3 +301,149 @@ Audited directly on 2026-09-04 against:
 - `anythingsupplies/sals3.com.fj` PR #1 and `anythingsupplies/sals3-portal`
   PR #36/#37/#38/#39/#42/#44, the merged-but-undocumented work this ADR's
   companion session notes (parts 129–131) close out.
+
+## Amendment — 2026-09-08: there are six repositories, not four
+
+The *Problem* and *Evidence* sections above name **four** `anythingsupplies`
+repositories, audited 2026-09-04. That count was already stale when written and
+is now wrong by two. A full org enumeration on 2026-09-08 found **six**.
+
+This amendment changes no rule. It corrects the scope the rules apply to, which
+is the part of an audit that decays fastest.
+
+### The two this ADR never named
+
+- **`sals3-portal-automation`** — recorded in [[hot]] and
+  [[sals3-session-2026-09-04-part140-the-automation-repository|part 140]] as
+  "the fifth repository", written the same day as this ADR and never folded back
+  into it. **It is exempt from section 2 by design**: its branches deploy
+  nothing, there is no Vercel project behind them, and an absent deployment
+  status there means nothing at all. Auditing it against the gate produces a
+  false finding.
+- **`sals3.com.au`** — a live production storefront serving **A$ prices**, forked
+  from `sals3-ecommerce` the same way `sals3.com.fj` was, under section 3 of this
+  ADR. Before [[sals3-session-2026-09-07-part148-the-sixth-repository-and-the-promotion-ledger|part 148]]
+  **this vault had never described it.** A vault-wide search returned two
+  incidental hits, both in
+  [[sals3-session-2026-08-28-part82-a-shopfront-per-country-and-a-price-in-local-money|part 82]],
+  where the string appears as a *rejected domain proposal*.
+
+That second one is a section 4 failure — *"a vault entry is part of done"* — at
+the granularity of a whole repository rather than a pull request.
+
+### Evidence — re-audited 2026-09-08
+
+Checked directly against the GitHub API (`gh repo list anythingsupplies`, then
+`.../branches` and `.../contents/.github/workflows` per repository), not against
+README claims:
+
+| Repository | `develop`/`pre-prod`/`main` | Environment-gate workflow | Merged PRs |
+|---|---|---|---|
+| `sals3-portal` | ✅ all three | ✅ `deployment-reached-the-environment.yml` | 165 |
+| `sals3-ecommerce` | ✅ all three | ✅ **now present** — ported by [#15](https://github.com/anythingsupplies/sals3-ecommerce/pull/15) | 32 |
+| `sals3.com.fj` | ✅ **all three** — `pre-prod` created 2026-09-07 for the UAT stage ([#19](https://github.com/anythingsupplies/sals3.com.fj/pull/19)) | ❌ **missing**, despite its README stating the three-stage table verbatim | 34 |
+| `sals3.com.au` | ✅ all three | ❌ **missing** — inherited the gap when it was forked | 10 |
+| `sals3-portal-automation` | ✅ all three | **n/a — exempt by design**, see above | 2 |
+| `sals3-admin-portal` | — **empty**: zero commits, zero branches | — | 0 |
+
+**Two rows moved since 2026-09-04**, both in the right direction:
+`sals3-ecommerce` gained the workflow, and `sals3.com.fj` gained `pre-prod`.
+**What is still owed is one file, twice**:
+`deployment-reached-the-environment.yml` on both market storefronts.
+
+`sals3-admin-portal` is unchanged and still not assessed: whether its work exists
+on `Sals3-Official`'s copy and has simply not been migrated, or was never pushed
+anywhere, was **not verified** in this pass either and must not be assumed.
+
+> [!DANGER] On `sals3-portal` this gate cannot report at all
+> Every workflow in `anythingsupplies/sals3-portal` has been failing in ~4s
+> unstarted since 2026-09-04 on Actions billing, and the owner has decided those
+> bills will not be paid. A ✅ in the table above is **the presence of the file,
+> not evidence it has ever run.** Compliance on that repository is currently
+> established by a hand-read of the Vercel deployment status plus a local
+> `npm run verify` — which is what parts 143–152 each record doing.
+
+### Standing rule added by this amendment
+
+**Re-derive the repository list; do not recall it.** Both the fifth and the sixth
+repository were found by enumerating the org, and the sixth was found while
+auditing the fifth's own ADR. Before relying on any row of the table above, run
+the enumeration again — the same discipline this ADR already asks for its
+branch and workflow claims, applied one level up to the set of repositories
+itself.
+
+Corollary from section 3: **a fork inherits every open defect and adds a place
+the vault has to know about.** Three storefront deployments now exist from one
+codebase, so a storefront defect exists in three places until fixed in three —
+demonstrated by the six pull requests in
+[[sals3-session-2026-09-07-part147-a-market-storefront-offers-its-own-country|part 147]],
+which are three fixes applied twice.
+
+## Amendment — 2026-09-09: promotions merge, they never squash
+
+The *Decision* section above mandates the three stages and says nothing about
+**how** each promotion is merged. Squash was used throughout, and it silently
+destroyed the ancestry the next promotion needed.
+
+By 2026-09-08 `pre-prod` carried **54 commits** and `main` **55** that no other
+branch shared, while `git diff origin/develop origin/pre-prod` was **empty** —
+identical trees, unrelated histories. Git merges on history, so the first
+promotion touching a file changed on both sides had two lineages for it and
+conflicted. Two promotions of a one-line comment fix landed `DIRTY` and were
+closed unmerged (`sals3-portal` [#184](https://github.com/anythingsupplies/sals3-portal/pull/184),
+[#187](https://github.com/anythingsupplies/sals3-portal/pull/187)).
+
+### The rule
+
+> **A promotion merges with a merge commit (`--merge`). Never `--squash`.
+> Feature branches into `develop` may still squash.**
+
+The distinction is about what the branch is for, not about tidiness:
+
+- **A feature branch is disposable.** Squashing it into `develop` summarises work
+  nothing will ever merge from again.
+- **A promotion branch is permanent and merged from repeatedly.** `pre-prod` and
+  `main` are merged into for the life of the project, so each needs a true
+  ancestry link to the branch below it. Squashing there throws away the only
+  thing the next merge needs.
+
+Pre-flight check, one command, exit-code answer:
+
+```bash
+git merge-base --is-ancestor origin/develop origin/pre-prod
+```
+
+Repair, where the drift already exists: merge bottom-up with merge commits
+(`develop` → `pre-prod`, then `pre-prod` → `main`). No content change is
+involved — the trees are already identical — and the point is only to make each
+branch a genuine ancestor of the next (`sals3-portal` #189/#190).
+
+### Audited 2026-09-09 — only one repository had the drift
+
+Checked with `gh api repos/anythingsupplies/<repo>/compare/<base>...<head>`,
+where a status of `ahead` means the base **is** an ancestor of the head:
+
+| Repository | `develop`→`pre-prod` | `pre-prod`→`main` | Tree difference |
+|---|---|---|---|
+| `sals3-portal` | `diverged` (ahead 58, behind 1) | `ahead` 59 | none |
+| `sals3-ecommerce` | **`ahead`** 11 | **`ahead`** 12 | none |
+| `sals3.com.fj` | **`ahead`** 9 | **`ahead`** 6 | **`README.md`, +61/-11** |
+| `sals3.com.au` | **`ahead`** 9 | **`ahead`** 8 | none |
+| `sals3-portal-automation` | `diverged` (ahead 1, behind 8) | `ahead` 1 | none |
+
+**The three storefronts have healthy ancestry on both pairs**, which is the
+opposite of what the obvious inference predicted — consistent with `sals3-portal`
+having by far the most promotions (196 merged PRs against 31–40). The remaining
+`behind` counts on `sals3-portal` and the automation repository are ordinary
+unpromoted `develop` work, not drift.
+
+**One item owed:** `sals3.com.fj`'s `pre-prod` carries a `README.md` its
+`develop` does not — the only tree difference anywhere in the org. A
+documentation change landed on the promotion branch and was never brought back
+down, so the branch that stages releases describes the deployment differently
+from the branch every feature starts from. Back-merge it to `develop` rather than
+letting the next promotion overwrite it.
+
+This amendment supersedes nothing in the *Decision* section; it adds the merge
+mechanics that section assumed. See
+[[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash|part 157]].
