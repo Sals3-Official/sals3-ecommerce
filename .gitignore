@@ -53,3 +53,11 @@ docs/.obsidian/workspace-mobile.json
 # safety net: scripts/typecheck-clean-next.mjs's temp swap dir, in case
 # it's ever left behind after an interrupted run
 .next-typecheck-tmp-*
+
+# Obsidian Local REST API - per-machine secrets, never shared.
+# data.json holds the plaintext API key AND the server's RSA private key.
+docs/.obsidian/plugins/obsidian-local-rest-api/data.json
+
+# The repository root must not be opened as an Obsidian vault - the vault root
+# is docs/. See docs/Wiki/wiki/hot.md, "Repository and vault".
+/.obsidian/
