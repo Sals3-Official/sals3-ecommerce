@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-08-10
+updated: 2026-09-09
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -753,3 +753,263 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** When a labelable element that already carries its own meaningful visible text (a button, not a bare input) needs a `label[for]` association purely so screen readers/`getByLabelText` can find *a* control for a shared section label, add an explicit `aria-label` on that element too - `aria-label` outranks native label-for in the accessible-name priority order, so it wins back a sensible, specific name (e.g. `aria-label="Change category"`) without breaking the `id`/`for` pairing that made the association work in the first place. Don't assume a labelable element's own text content survives once it picks up a `for`-matching `id` - verify with the actual computed accessible name, not just "the button still renders the right words on screen."
 
 **Where applied:** `Sals3CategoryPicker.tsx`'s compact-view "Change" button carries both `id="editor-sals3-category-v1"` (label association) and `aria-label="Change category"` (accessible name). See [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]].
+
+### 76. A limit whose cost grows with its own success fits in testing and fails in production
+
+**Confirmed:** 2026-09-07, the market-offer backfill (`sals3-portal` #91).
+
+**Incident:** The backfill recounted remaining work at the end of every page. `countRemaining` scans every live variant and every offer they carry, so it is O(catalogue) — and it grows as the backfill succeeds. The first page repaired 2,579 offers in under a minute; the next answered `FUNCTION_INVOCATION_TIMEOUT` doing far less work.
+
+**Lesson:** When a bounded operation also computes a whole-population figure, the figure is the cost, not the work. A limit shaped this way passes every test and fails once the work starts landing — the worst shape a limit can have. Move the expensive read to the caller's own before/after check (a separate `GET`) and let the mutating call report only what it wrote.
+
+**Where applied:** `backfill-market-offers.ts` — `POST` returns `remaining: null`; the `GET` is where state is read. See [[sals3-session-2026-09-07-part144-5666-market-offers-and-the-three-markets-withdrawn]].
+
+### 77. Bound a batch by work units, not by scan units, when per-row cost varies by orders of magnitude
+
+**Confirmed:** 2026-09-07, the same backfill (`sals3-portal` #92), after 200-product and 75-product pages both timed out.
+
+**Incident:** One page of **16 products wrote 1,066 offers** — an offer is a `(variant, market)` pair, so a product with twenty variants across five priced markets is a hundred resolver calls on its own.
+
+**Lesson:** A row count is not a budget when work per row varies by two orders of magnitude. Bound on the unit that actually costs (offers written), check the bound *between* rows so a row is never left half-processed, and make the "there is more" flag the page lookahead **OR** the budget — a lookahead alone reports `false` on a page cut short by the budget, ending the caller's loop with the job half done and nothing saying so. Where redoing a row is free (insert-only), have the cursor name the last **finished** row: it costs one repeat and cannot skip, whereas naming the last row *read* cannot repeat and can skip permanently.
+
+**Where applied:** `backfill-market-offers.ts` stops after 400 offers, checked between products. See [[sals3-session-2026-09-07-part144-5666-market-offers-and-the-three-markets-withdrawn]].
+
+### 78. A Vercel Sensitive environment variable is write-only, so a route whose only trigger holds one becomes unreachable when that trigger dies
+
+**Confirmed:** 2026-09-07, `sals3-portal` #86 and #123.
+
+**Incident:** `CRON_SECRET` guards every break-glass route. It is a Vercel **Sensitive** variable — replaceable, never readable, with no *Reveal Value* in the dashboard. The GitHub Actions workflow that held it has been dying in ~4s unstarted since 2026-09-04 (billing; owner decision not to pay). A verified dispatch: `started 08:12:24 → updated 08:12:30`, job `failure — 0 steps`. With no way to read the secret and no way to run the workflow, **there was no remaining way to authenticate any privileged operation in the system.**
+
+**Lesson:** Know the two doors that remain before you need them. **Vercel Cron** never needs the secret — Vercel injects the `Authorization` header itself — so it is the only unattended caller left. A **signed-in seller session** through `authorizeEditorApiRequest` is the other, and unlike the deployment-wide secrets it carries a tenant, so it must be scoped to that seller's own rows or it becomes a way to write into another tenant's catalogue. Do not rotate a secret the owner configured just to work around a dead CI.
+
+**Where applied:** `api/cron/*` in `vercel.json`; the session path on `backfill-market-offers`. See [[sals3-session-2026-09-07-part149-notify-every-market-storefront-and-two-jobs-onto-vercel-cron]] and [[sals3-session-2026-09-07-part144-5666-market-offers-and-the-three-markets-withdrawn]].
+
+### 79. A cursorless self-advancing scan must select rows that are *still missing*, not rows that are *eligible*
+
+**Confirmed:** 2026-09-08, `sals3-portal` #168.
+
+**Incident:** The market-offer repair selected products that were *published* rather than products still *missing* an offer. A caller that cannot hold state between calls therefore re-read the same first page forever — **and answered `ok: true` having repaired nothing.** That made the repair unreachable by every trigger left once Actions died and the only cursor-carrying caller was a person clicking a button, at roughly two pages a round trip: after 23 pages it had covered 22% of the catalogue.
+
+**Lesson:** If a repair must run unattended, its predicate has to shrink as the repair succeeds. Select on `not exists (<the thing being written>)` so the scan runs dry on its own. Key that predicate on the identity column only, never on a status column: a row that exists in any state is not missing, and treating a paused one as absent sends the writer at a key the partial unique index already holds.
+
+**Where applied:** the scan in `backfill-market-offers.ts`. See [[sals3-session-2026-09-08-part154-the-apex-prices-from-its-own-global-offer]].
+
+### 80. `inArray` with one bind per row hits Postgres's 65,535 bind-parameter ceiling — compute the aggregate in the database
+
+**Confirmed:** 2026-09-08, `sals3-portal` #173. The same ceiling behind the 2026-09-07 production outage.
+
+**Incident:** The backfill's status read loaded every live variant, then passed every one of those ids to `inArray`. This catalogue is well past 65,535, so the endpoint answered `500 status-check-failed` on production. **It failed fast**, which is exactly what made it look like anything other than the size of its own query.
+
+**Lesson:** Any query built by handing a table's worth of ids back to the database will hit this, and it presents as a server error rather than a size error. Rewrite it as one aggregate computed in SQL with no per-row binds; keep an id list only where it is genuinely bounded to a single page.
+
+**Where applied:** the recount in `backfill-market-offers.ts`; `marketsByVariant` stays, bounded to one page's variants. See [[sals3-session-2026-09-08-part154-the-apex-prices-from-its-own-global-offer]].
+
+### 81. A progress count and the repair it measures must share one predicate, or the number is fiction
+
+**Confirmed:** 2026-09-08, `sals3-portal` #173 and #180.
+
+**Incident:** The expected grid counted every *authorized* destination, while publication and the repair both (correctly) skip markets with no operating expenses configured. So the count kept `NZ`, `US` and `CA` as permanently missing and **could never reach zero**. Observed on production: `192,862 → 204,554 → 205,037` **while 1,709 offers were being created.** Another PR then gated itself on `truncated: false` instead, and that gate held a money fix back for hours.
+
+**Lesson:** A progress number that rises as the work succeeds is worse than no number, because other work gets sequenced behind it. Derive the count from the **same** predicate the scan uses — one definition read by the scan, the recount and the writer. Then "remaining" reaches zero exactly when the scan runs dry. A scan that selects work the writer then refuses is also a row on the first page forever, so the shared definition is what lets a cursorless caller terminate at all.
+
+**Where applied:** `owedPredicate` / `expectedBySeller` in `backfill-market-offers.ts`. See [[sals3-session-2026-09-08-part154-the-apex-prices-from-its-own-global-offer]].
+
+### 82. Tell a 401 from the application handler apart from a 401 from Vercel Deployment Protection
+
+**Confirmed:** 2026-09-07, `sals3-portal` #115 and #135. The confusion had already cost an afternoon on 2026-09-04.
+
+**Incident:** A cross-deployment push answered 401. Two completely different causes look identical in a log: Vercel's Deployment Protection answering **in front of** the route, or the route's own handler rejecting the credential.
+
+**Lesson:** The response body distinguishes them. `{"error":"Unauthorized"}` in the app's own JSON shape means **the request reached code** and only wants the matching secret. Vercel's protection wall returns its own HTML/redirect and means the request never arrived — which needs a *Protection Bypass for Automation* secret, not a credential fix. Probe with `curl` and read the body before diagnosing, every time.
+
+**Where applied:** the pre-change check tables in both PRs. See [[sals3-session-2026-09-07-part149-notify-every-market-storefront-and-two-jobs-onto-vercel-cron]].
+
+### 83. An optional prop is a defect that cannot fail a test — make it required on the wrapper, not on the leaf
+
+**Confirmed:** 2026-09-07, `sals3.com.fj` #23 and `sals3.com.au` #6.
+
+**Incident:** `RelatedProducts` rendered `<ProductGrid>` **without** the FX `indicative` prop, so `displayPrice` fell back to `formatMoney` — the charge currency. A product page priced the item in FJ$ and every card in the rail beneath it in US$. It was the only one of **four** `ProductGrid` call sites missing it, and because the prop is optional on `ProductGrid` and `ProductCard`, **nothing failed**: not typecheck, not 1,341 unit tests, not 63 E2E.
+
+**Lesson:** Optionality is the bug. Make the prop **required on the composing component**, so a caller with no context must pass `null` and say so — while leaving it optional on the leaf components, which have call sites that legitimately have none. That converts an invisible omission into a compile error at exactly the layer that can decide.
+
+**Where applied:** `indicative` is required on `RelatedProducts` in both market storefronts. See [[sals3-session-2026-09-07-part147-a-market-storefront-offers-its-own-country]].
+
+### 84. A join that cannot multiply rows today can multiply them tomorrow — comment the cardinality or lose it
+
+**Confirmed:** 2026-09-07, `sals3-portal` #129.
+
+**Incident:** `loadPublishedVariants` joins `product_offers` with no market filter. Every other join in that query carries a comment explaining why it cannot multiply rows — `products` is a foreign key, `provider_variant_references.variant_id` has a unique index — but `product_offers` never did, **because until per-market offers existed a variant had exactly one and the assumption was accidentally true.** When three markets' offers appeared, the PDP returned every option row three times: a buyer's cart line read `White · White · White · XXL · XXL · XXL`, confirmed from the live payload.
+
+**Lesson:** An un-commented join is an undocumented cardinality assumption. When a schema gains a dimension (per-market, per-locale, per-version), grep every join against that table — a scoping helper added the same day was simply missed here. And note the second bug that always rides along: a fold building an object from "the first row it sees" silently starts picking a winner by `ORDER BY` once the cardinality changes.
+
+**Where applied:** `publishedScope` now narrows the variant query too. See [[sals3-session-2026-09-07-part145-the-fiji-storefront-stops-showing-australias-price]].
+
+### 85. A constant ratio between two figures on one page is a skipped conversion, not a second price
+
+**Confirmed:** 2026-09-07, found twice in one day at two different layers (`sals3.com.fj` #18 and #23).
+
+**Incident:** `sit.sals3.com` showed US$3.36 and `sit.sals3.com.fj` FJ$7.58 for the same slug at the same moment — a ratio of **2.256**, the published RBF rate plus its 1.5% buffer. Hours later the related-products rail showed six products at exactly **2.256×** the grid above it. Both were one price rendered through two code paths, not two prices.
+
+**Lesson:** Divide the two numbers before reading either code path. A constant ratio equal to a known FX rate (or rate × buffer) identifies the defect as a missing or duplicated conversion in seconds; an inconsistent ratio means two genuinely different values and a different investigation. `2853 × 2.2227 × 1.015 = 6436` → `FJ$64.36`, to the cent, was the whole diagnosis.
+
+**Where applied:** the diagnosis tables in both PRs. See [[sals3-session-2026-09-07-part145-the-fiji-storefront-stops-showing-australias-price]] and [[sals3-session-2026-09-07-part147-a-market-storefront-offers-its-own-country]].
+
+### 86. Refuse to compare two amounts in different currencies — the comparison never errors and is never right
+
+**Confirmed:** 2026-09-07, `sals3-portal` #120.
+
+**Incident:** The global "cheapest offer" tiebreak subtracted one offer's minor units from another's. With one settlement currency that is correct; the moment a second currency exists, subtracting an FJD minor unit from a USD one **sorts confidently and means nothing** — the "cheapest" becomes whichever currency is weakest.
+
+**Lesson:** Any `Money` comparison over a set that could span currencies must assert the currencies match and throw when they do not. There is no safe silent behaviour: converting needs a rate the comparison has no business fetching, and comparing raw minor units is a wrong answer with no error attached. Same discipline as skill 74 — assert loudly rather than let a nonsense value flow three layers on.
+
+**Where applied:** the global tiebreak in `checkout/freight-quotes.ts`. See [[sals3-session-2026-09-07-part146-a-market-settles-in-its-own-currency-wired-and-left-off]].
+
+### 87. Mojibake in a `===` key matches nothing silently — ban the ordered byte pair, not non-ASCII
+
+**Confirmed:** 2026-09-07, `sals3-portal` #111.
+
+**Incident:** One taxonomy seed row carried a leaf name ending in **U+00C2 followed by U+00B7** — the signature of UTF-8 bytes decoded as Latin-1. `matchSnapshotEntry` compares with `===`, so the row matched nothing, every candidate under that leaf kept resolving to a `CJ-<uuid>` mirror, and a reviewed decision never activated. The failure surfaced as **one `not_in_snapshot` line inside a 429-line report.**
+
+**Lesson:** Guard with a test that rejects U+00C2/U+00C3/U+00E2 followed by a byte in U+0080–U+00BF — the exact ordered pair double-encoding produces, which does not occur in real text. Do **not** ban non-ASCII; legitimate accents must stay legal. Mutation-test the guard: reintroduce the bad value and confirm that one test goes red and names it. And prove the dataset is otherwise sound rather than auditing only the failure — 428 exact agreements against the source snapshot is what licensed the single edit.
+
+**Where applied:** `seed-category-mappings.test.ts`. See [[sals3-session-2026-09-07-part150-four-taxonomy-seed-corrections-two-of-them-self-inflicted]].
+
+### 88. A raw control byte in a source file makes every byte-oriented tool classify it as binary
+
+**Confirmed:** 2026-09-07, `sals3-portal` #114.
+
+**Incident:** `shareKey` in `leaf-census.ts` joined two values with a NUL — the right delimiter, since it cannot occur in a CJ category name — but written as a **literal control byte** in the source rather than as an escape. Result: `grep -rn "shareKey" src/` answers `Binary file … matches`. No line, no number. The function was unfindable by the ordinary way of finding things, and during an unrelated importer scan the file came back as a binary match and was nearly skipped.
+
+**Lesson:** Keep the delimiter, write it as an escape. Assert that the escape produces the identical one-character string rather than assuming it. A file `grep` will not read is a file the next reader cannot audit.
+
+**Where applied:** `leaf-census.ts`. See [[sals3-session-2026-09-07-part150-four-taxonomy-seed-corrections-two-of-them-self-inflicted]].
+
+### 89. A CJ leaf's identity is its snapshot entry, not the name its candidate rows carry
+
+**Confirmed:** 2026-09-07, `sals3-portal` #156 then #157 — the third time this class of error has been recorded.
+
+**Incident:** A census of production's screened pile found two apparently undecided supplier leaves, one of them the largest in the whole pile (6,591 candidates), and both were added to the seed table. **Neither could ever apply.** The seeder resolves a leaf by `(cjL1, cjName)` against `discovery_cycles.category_snapshot`; the census labels a leaf by the name its **candidate rows** carry, and for the same `provider_category_id` those differ — `nameVariants` counts up to five names for one category. `Men's Clothing || Blazers` was really `Suits & Blazer`, already in the table **four lines above** where the new entry went.
+
+**Lesson:** A CJ category has no single name. Identity is the snapshot entry; every other spelling is a label. Before adding a mapping from a census, resolve the candidate's `provider_category_id` to its `snapshotName` and check for that. And run the seeder against production and read what it answers — the run said `not_in_snapshot` immediately, where a careful reading of the census had said the opposite. Compare with skill's siblings: part 126 mapped a leaf by name and filed a mouthwash under Storage & Organization; part 129's census sampling bug hid 50 points of coverage.
+
+**Where applied:** both entries removed in #157. See [[sals3-session-2026-09-07-part150-four-taxonomy-seed-corrections-two-of-them-self-inflicted]].
+
+### 90. Absence from a derived list can be load-bearing — pin it with tests and say why in the code
+
+**Confirmed:** 2026-09-07, `sals3-portal` #152, opening Global (`XG`) as an offer destination.
+
+**Incident:** `listPricingScopeDestinations()` is *derived* from the capability list. Naming `XG` there would have made `isPricingScopeDestination` true and `isGlobalPricingDestination` false — so `scopeCondition` would stop reading the Global policy rows and start demanding an `XG`-scoped store default that will never exist. Publication would quietly stop writing Global offers and the Global reprice scope would quietly stop covering the ones already written. **Nothing would error. The prices would simply stop moving.**
+
+**Lesson:** When a value is deliberately kept out of a list that other predicates are derived from, that absence is a design decision with no syntax. Write tests that assert the value is **not** in the list and explain the consequence, and admit it explicitly wherever it genuinely is allowed (`isGlobalOfferMarket`) rather than letting an authorization filter drop it in silence. Five test cases were the whole guard here.
+
+**Where applied:** `pricing-scope-destinations.ts` / `offer-destinations.ts`. See [[sals3-session-2026-09-07-part152-global-becomes-a-real-offer-destination]].
+
+### 91. Ship a pricing or policy change inert behind unset configuration — do not flip the switch in the PR that builds it
+
+**Confirmed:** 2026-09-07, `sals3-portal` #152 and #117.
+
+**Incident:** Two changes with production money behind them landed the same day and changed nothing on merge. `XG` was gated on the `market_code IS NULL` store default, so until the owner set Global's operating expenses **no offer was written and the shared storefront still priced from `min()`**. `settlementCurrencyForMarket` wired every writer to one per-market currency and left all six at `USD`.
+
+**Lesson:** Fail-closed on an unset configuration row is what lets a pricing change be reviewed, promoted through the full gate and observed in production before it moves a single price — and it makes the switch an owner action with a date rather than a merge. State the ordering in the PR body when later steps must not be reversed (#152's step 4 before step 3 would have emptied the apex catalogue), and pair a currency flip with the display change in one release so a buyer never sees a double-converted number.
+
+**Where applied:** `filterToSetUpDestinations` gating `XG`; `capabilities.ts` settlement currencies. See [[sals3-session-2026-09-07-part152-global-becomes-a-real-offer-destination]] and [[sals3-session-2026-09-07-part146-a-market-settles-in-its-own-currency-wired-and-left-off]].
+
+### 92. Squash-merging a long-lived promotion branch destroys the ancestry the next merge needs
+
+**Confirmed:** 2026-09-08, `sals3-portal` #184/#187 (both closed `DIRTY`), repaired by #189/#190, ruled by #191.
+
+**Incident:** Every `develop → pre-prod → main` promotion had been squash-merged. A squash writes a *new* commit carrying the diff, so `pre-prod` accumulated **54 commits** and `main` **55** that no other branch shared, while `git diff origin/develop origin/pre-prod` was **empty** — identical trees, unrelated histories. The first promotion touching a file changed on both sides had two lineages for it and conflicted. A one-line comment fix could not be promoted, twice.
+
+**Lesson:** Squash where the branch is disposable (feature → `develop`); **merge** where the branch is merged from again (`develop` → `pre-prod` → `main`). Repair by merging with a merge commit bottom-up — no content change, the trees are already identical, and the point is only to make each branch a genuine ancestor of the next. Pre-flight with `git merge-base --is-ancestor origin/develop origin/pre-prod`, and check every repository rather than assuming: only `sals3-portal` had the drift, and the same audit found a `README.md` living on `sals3.com.fj`'s `pre-prod` and not on its `develop`.
+
+**Where applied:** `sals3-portal`'s README, under *Promotion*. See [[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash]].
+
+### 93. `router.refresh()` on a visibility-gated interval is the cheap live update in the App Router
+
+**Confirmed:** 2026-09-08, `sals3-portal` #194.
+
+**Incident:** Moving the Product Catalogue to one server render made it never change on its own, so a seller adding items in one tab had to reload the other to see the counts move. Owner: *"dapat realtime nakikita ito."*
+
+**Lesson:** `router.refresh()` re-runs the Server Components for the current URL and **keeps client state** — a checkbox selection survives, an open row menu survives, and URL-held filters were never at risk — so a plain interval is enough and no push infrastructure is needed for a periodic question ("how many now?"). Three properties make it safe: stop the timer while `document` is hidden (a tab left open over a weekend is ~50,000 needless queries), refresh **once on return** so the first thing seen is current, and suppress the catch-up unless the last refresh is at least one interval old so tab-flicking is not two requests. Disclose the behaviour and the interval on screen.
+
+**Where applied:** `CatalogueLiveRefresh.tsx`. See [[sals3-session-2026-09-08-part155-the-catalogue-is-one-page-and-the-address-is-the-query]].
+
+### 94. A custom `next/image` loader that passes local paths through leaves `/public` unoptimised *and* unchecked
+
+**Confirmed:** 2026-09-08, `sals3.com.au` #21, #20 and #24.
+
+**Incident:** `cj-image-loader.ts` returns a non-CJ address untouched, so `/home-promos/*` and `/categories/*` are never resized, never rewritten and **never noticed when missing**. Lint, prettier, tsc, the build, 1,427 unit tests and 80 E2E all passed on a tree with six banner files deleted. The neighbouring suites assert routes, alt text, id uniqueness and path prefixes — one even carries the comment *"a stray Fiji reference here would be a 404 on the most prominent image on the home page"* while asserting nothing about whether the file exists.
+
+**Lesson:** Add a test that walks every hard-coded `public` path in the source and asserts a file is behind it — nothing else in the pipeline will. And because these bytes ship unoptimised on the first screen, size them by hand: 21 category tiles went 65 KB → **32 KB**, and seven typeset banners replaced **5.5 MB** of PNG with **451 KB** of WebP.
+
+**Where applied:** `src/lib/public-image-assets.test.ts`. See [[sals3-session-2026-09-08-part159-the-australian-storefront-gets-a-horizon-of-its-own]].
+
+### 95. "Not cut off" and "not touching the edge" are different questions — and a full-width detector measures the photograph, not the type
+
+**Confirmed:** 2026-09-08, `sals3.com.au` #24, #27 and the #30 revert.
+
+**Incident:** Sources are 2752×1536 (1.792) in a frame of 1734×662 (2.619), so a centred fit discards **32% of the height**. The first pass checked whether the crop *cut* anything, found it did not, and stopped — leaving headlines 0–13px from the top edge. The correction then re-cropped all seven banners, and the owner had named **one**. The detector that justified the other six ran across the full width and was reading the **photograph** reaching the edge, not the type.
+
+**Lesson:** Ask both questions when fitting one aspect ratio into another. Automatic type-block detection fails in opposite directions and both failures are silent — edges-only misses a solid button (a pill has almost no internal edges) and cuts the call to action; edges-plus-button catches the photograph and returns a block taller than the window. A hand-checked offset table is the honest answer. And when undoing an over-correction, restore the **committed blobs byte-for-byte**: the same crop window through `extract`-then-`resize` rather than a single `resize(fit: cover)` produces different bytes.
+
+**Where applied:** `home-promo-slides.ts` and the seven `au-*.webp` banners. See [[sals3-session-2026-09-08-part159-the-australian-storefront-gets-a-horizon-of-its-own]].
+
+### 96. A rule saved is not a rule applied when applying it is a separate optional button
+
+**Confirmed:** 2026-09-09, `sals3-portal` #197, after a Fiji reprice moved **26,425** live prices, none of which was a bug.
+
+**Incident:** The Fiji margin was changed one morning. Every live Fiji offer still carried the price from before it, because the only thing between the rule and the price was a button nobody had pressed — Global's had been pressed, Fiji's had not. The storefront charged the old number all day, with no error anywhere and both halves working correctly.
+
+**Lesson:** Where a stored rule decides a stored value, saving the rule must start the application, scoped to exactly what changed (a CSV import reprices only the destinations whose rows it actually moved). The follow-on cannot throw — the save has already landed — so every failure mode gets its own sentence naming the manual way to finish. Reuse the loop that already terminates rather than writing a second one, and run it from the surface that can page for minutes rather than from the action that saved the row.
+
+**Where applied:** `reprice-after-save.ts`, wired into all three save paths. See [[sals3-session-2026-09-08-part156-a-saved-margin-is-an-applied-margin]].
+
+### 97. A fallback-shaped change has no ordering constraint against the backfill that fills its preferred branch
+
+**Confirmed:** 2026-09-08, `sals3-portal` #167, which carried a self-imposed "do not merge" gate that was wrong **twice**.
+
+**Incident:** The apex read change was held first for `missingMarketOffers: 0` (a number that could never arrive — see skill 81) and then for the backfill reporting `truncated: false`. But the card aggregate **prefers** the Global offer and **falls back** to the bare `min`: a product with a Global offer is priced correctly, and one without behaves exactly as production already did. The change was never worse than the current state for any product at any point, and holding it extended a measured **27% per-unit** undercharge on every newly published product.
+
+**Lesson:** Before copying an ordering gate from a similar-looking PR, ask whether the change is a **filter** or a **preference**. A filter that hides rows without the new data genuinely must wait for the backfill; a `coalesce`-shaped preference degrades to the old behaviour per row and must not. The gate here was inherited from the shape of the market filter that preceded it, not derived from this change's own dependency.
+
+**Where applied:** the card price aggregate in `storefront/read-model.ts`. See [[sals3-session-2026-09-08-part154-the-apex-prices-from-its-own-global-offer]].
+
+### 98. A stale row and a missing row look identical from the storefront — reprice before diagnosing
+
+**Confirmed:** 2026-09-08, `sals3-portal` #180 then the #183 comment correction.
+
+**Incident:** A lipstick priced at Global's 205% on the Fiji storefront was diagnosed as *"an XG offer and no FJ one"*, and a scan predicate was widened on the strength of it. It had an `FJ` row all along, carrying a price from before that morning's margin change. With the widened scan live it selected nothing, and the reprice then moved 26,425 Fiji prices including that one.
+
+**Lesson:** A price matching another market's is not evidence that the row is missing — a stale row wears the same number. Run the reprice first and re-read; only then reason about missing rows. And when the code change turns out to be right for a different reason than the comment claims, **correct the comment**: a wrong diagnosis left standing in the source misleads the next reader more than no comment at all.
+
+**Where applied:** the scan comment in `backfill-market-offers.ts`. See [[sals3-session-2026-09-08-part154-the-apex-prices-from-its-own-global-offer]] and [[sals3-session-2026-09-08-part156-a-saved-margin-is-an-applied-margin]].
+
+### 99. An `sr-only` slide title means every visible word must be inside the image file
+
+**Confirmed:** 2026-09-08, `sals3.com.au` #24.
+
+**Incident:** A prompt sheet for seven hero banners said *"Text in image: None. The carousel prints the headline itself."* `PromoCarousel` renders each slide's `title` as **`sr-only`** — it prints nothing visible. Seven banners came back as good photographs saying nothing at all.
+
+**Lesson:** Check how the component actually renders the caption before briefing artwork, and put the finding on the brief. Where words must live in the image, **typeset them in a layout tool** rather than asking an image generator for lettering — the same reason a generator cannot draw a logo. Then verify at the delivered aspect ratio, because a headline that survives the source does not necessarily survive an `object-cover` crop.
+
+**Where applied:** the seven `au-*.webp` banners. See [[sals3-session-2026-09-08-part159-the-australian-storefront-gets-a-horizon-of-its-own]].
+
+### 100. Test an icon by rendering it at its true size and naming it with the label covered
+
+**Confirmed:** 2026-09-08, `sals3.com.au` #20.
+
+**Incident:** Category tiles render at **56px on a phone, 72px from `md` up**. The installed set was a flat-lay of three to five objects per tile — each object about twenty pixels across. Rendered at true size with the labels covered, **eight of 21** were nameable. The rest were grey mush, and nothing in the test suite or a design review at desktop scale would have said so.
+
+**Lesson:** Judge an icon at its rendered size, not in the asset browser. The eight that worked shared one property, and it becomes the rule: **one object per tile, big, centred, sitting low.** Measure the clipping shape too rather than assuming a safe area — an arch mask over a 72px plate leaves 0px of visible width at the top row and does not reach full width until row 30.
+
+**Where applied:** the 21 tiles in `public/categories/`. See [[sals3-session-2026-09-08-part159-the-australian-storefront-gets-a-horizon-of-its-own]].
+
+### 101. A `useTransition`'s `isPending` is not guaranteed to settle in the same render as the value it gates
+
+**Confirmed:** 2026-09-01, the checkout remove-line race (`sals3-ecommerce`).
+
+**Incident:** A quote fetch could commit its own state — making a test's wait-helper see exactly what it was watching for — **one or more renders before `isPending` itself flipped to `false`**. A button disabled by that same flag was therefore still genuinely disabled at the moment of the very next click, on a fraction of runs. React silently drops a click dispatched at a disabled element, however the DOM event was raised, so the test failed with no error and no clue. Raising the timeout made the flake **harder** to see rather than easier: a longer wait does not change the odds of hitting the race.
+
+**Lesson:** Never wait on a transition's committed *value* as a proxy for the transition being over — the two settle independently. Wait on a rendered signal tied to the same `isPending` (the spinner, the disabled attribute, an explicit `data-` flag), so the thing being waited on is the thing that gates the next interaction. And treat a flake that a longer timeout does not fix as evidence of a race rather than of slowness — the sibling case is [[sals3-session-2026-08-30-part108-a-disabled-button-clicked-anyway]], a flaky test that turned out to be clicking a disabled button for an unrelated reason.
+
+**Where applied:** the checkout cart line's remove-and-requote flow and its e2e wait helper. Recorded in [[hot]] under the 2026-09-01 entries; this skill is the home the note's *"See …"* pointer had been missing.
