@@ -362,6 +362,11 @@ anywhere, was **not verified** in this pass either and must not be assumed.
 > not evidence it has ever run.** Compliance on that repository is currently
 > established by a hand-read of the Vercel deployment status plus a local
 > `npm run verify` — which is what parts 143–152 each record doing.
+>
+> **Corrected 2026-09-09: the Vercel half of that sentence was already false
+> when it was written.** See the *2026-09-09* amendment below — Vercel's status
+> on this vault repository has read `Account is blocked.` since 2026-09-07, and
+> the per-repository regime that replaces it is in that amendment's section 3.
 
 ### Standing rule added by this amendment
 
@@ -447,3 +452,93 @@ letting the next promotion overwrite it.
 This amendment supersedes nothing in the *Decision* section; it adds the merge
 mechanics that section assumed. See
 [[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash|part 157]].
+
+## Amendment — 2026-09-09: the bills will not be paid, so an agent is the CI
+
+> [!DANGER] Supersedes the Vercel sentence in the 2026-09-08 amendment
+> That amendment's DANGER callout said compliance on `sals3-portal` is
+> *"established by a hand-read of the Vercel deployment status plus a local
+> `npm run verify`"*. **The Vercel half of that was already false when it was
+> written.** See §2 — and the corrected regime in §3.
+
+**Owner decision 2026-09-09 (Bogs): the GitHub Actions and Vercel bills will not
+be paid.** Verification stops being something a platform does and becomes
+something **an agent does and records by hand.** This amendment writes down what
+each repository can and cannot still prove about itself, and what a merge
+therefore requires.
+
+### 1. Measured 2026-09-09, not recalled
+
+Each repository's most recent Actions run timed `run_started_at → updated_at`,
+and the Vercel commit status read from the default branch:
+
+| Repository | GitHub Actions | Vercel |
+|---|---|---|
+| `Sals3-Official/sals3-ecommerce` **(vault)** | **success, 223 s — a real run** | **`Account is blocked.`** |
+| `Sals3-Official/sals3-portal` | failure, **9 s** — stall | success (last 2026-09-02) |
+| `anythingsupplies/sals3-portal` | failure, **3 s** | **success, 2026-09-09** |
+| `anythingsupplies/sals3-ecommerce` | failure, **4 s** | success, 2026-09-08 |
+| `anythingsupplies/sals3.com.fj` | failure, **4 s** | success, 2026-09-08 |
+| `anythingsupplies/sals3.com.au` | failure, **3 s** | success, 2026-09-08 |
+| `anythingsupplies/sals3-portal-automation` | no runs | n/a — deploys nothing |
+
+**The two orgs fail in opposite directions.** The vault repository has working CI
+and blocked deployments; every application repository has dead CI and working
+deployments. A run finishing in 3–9 seconds executed **zero steps** — that is the
+billing stall, and duration is the only thing separating it from a real failure.
+
+**The live product is unaffected**: `sals3.com`, `sals3.com.au`, `sals3.com.fj`
+and `sals3-portal-prod.vercel.app` all answered **HTTP 200** on 2026-09-09.
+
+### 2. The blocked Vercel project is the legacy one, and it is only the vault's
+
+The block is scoped to the Vercel project still attached to
+`Sals3-Official/sals3-ecommerce` — the repository that stopped being the code
+home at the 2026-09-03 migration and now hosts this vault. Its boundary is
+exact: `fc8da70` (2026-09-07) is the last success; `0efa075` (2026-09-08) is the
+first `Account is blocked.` **Nine commits** carry a blocked or absent status,
+all vault-only content.
+
+**Commit authorship is not a factor here**, and the table proves it: both
+`louieboi09` and `anythingsupplies` commits succeed before the boundary and fail
+after it. Do not diagnose this as ADR-019's *"commit authored under the wrong
+identity"* fault — that one reports `Deployment was blocked`, a different
+sentence with a different cause.
+
+The practical cost is not a lost deployment. It is that **every vault pull
+request now carries a permanent red check**, which is the condition under which
+reviewers stop reading checks at all.
+
+### 3. What a merge requires, per repository
+
+| Repository | Required before merge |
+|---|---|
+| `Sals3-Official/sals3-ecommerce` | the Actions `verify` run **is** trustworthy — read it. **Ignore the Vercel check**: it is the legacy project and cannot go green |
+| every `anythingsupplies` application repository | a named agent's local `npm run verify`, **quoted in the PR body**, plus a read of the Vercel commit status, which does still work there |
+| `sals3-portal-automation` | local test run only; it deploys nothing |
+
+**A red check is no longer evidence of a problem, and a green check is no longer
+evidence of safety.** Both need a per-repository reading, which is why this table
+is here rather than in anyone's memory.
+
+### 4. The two standing obligations this puts on the agent
+
+1. **Run `npm run verify` locally and quote its real output** — the actual
+   counts, never "it passed". Parts 143–159 already do this; it is now required
+   rather than conventional. Where a check could not be run, say so as a blocker,
+   per `AGENTS.md`.
+2. **Re-derive the table in §1 before relying on it.** It is a snapshot of a
+   billing state that changes the day someone pays, and it has already inverted
+   once. Same discipline this ADR already asks for its branch and workflow
+   claims, and for the repository list itself.
+
+### 5. Owed
+
+**Detach or delete the Vercel project on `Sals3-Official/sals3-ecommerce`.** It
+deploys a repository that no longer holds the application, and removing it ends
+the permanent red check on every vault PR — worth more than the signal it
+produces. Owner action; not done under this amendment.
+
+See [[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]]
+for the audit this amendment rests on, including three wrong generalisations
+made from partial evidence in the course of finding it.

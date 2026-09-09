@@ -1038,3 +1038,22 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 An alert like this clears itself on the next default-branch push that changes the manifest, so a docs-only stretch leaves it sitting there looking urgent. **Dismissing it is a visible change to shared repository security state — confirm before doing it, never unilaterally** (the same call the 2026-08-17 note made).
 
 **Where applied:** verified rather than dismissed on 2026-09-09; the alert was left open for Bogs to decide. The audit also turned up something worth more than the alert: **`anythingsupplies/sals3-ecommerce` — the repository the app actually deploys from — has Dependabot alerts disabled entirely** (`403: Dependabot alerts are disabled for this repository`), so the vault repository is being scanned and the production code repository is not.
+
+### 103. Under partial billing a check's colour means nothing — read its duration, its message, and which repository it is on
+
+**Confirmed:** 2026-09-09, auditing all seven Sals3 repositories after the owner decided neither the GitHub Actions nor the Vercel bill would be paid.
+
+**Incident:** Three separate wrong reads in one session, all from treating a red X as self-explanatory.
+
+- **A stall is not a failure.** `run_started_at → updated_at` of **3–9 seconds** means the job executed **zero steps** — the Actions billing stall. The vault repository's run in the same audit took **223 seconds** and was real. Identical red X, opposite meanings, and only the duration separates them.
+- **`Account is blocked.` is not `Deployment was blocked`.** The first is a Vercel account-level block affecting every commit on that project; the second is ADR-019's unverifiable-commit-author fault. Reading the colour and reaching for the ADR produced a wrong diagnosis, six needlessly re-authored commits and a force-push.
+- **One repository is not the platform.** That single blocked project became "the whole platform cannot deploy", said out loud. Six of the seven deploy fine and all four production hosts answered `HTTP 200` the same day.
+
+**Lesson:** When billing is partial, CI and deployment signals stop being uniform and have to be interpreted per repository. Four checks before believing any of them:
+
+1. **Time the run.** `run_started_at → updated_at`. Seconds means unstarted; minutes means it ran.
+2. **Read the status `description`, not the state.** `gh api repos/<r>/commits/<sha>/status` returns the sentence. Two different faults wear the same red.
+3. **Enumerate every repository before describing the set** — the same rule ADR-019 already carries for its repository list, and the same one [[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash|part 157]] had to apply to branch divergence the day before.
+4. **Separate the variables before blaming one.** The commits that failed differed from the ones that succeeded by author **and** by date. Only the date mattered, and the dates were already in the output — this is skill 102's check, which had been written hours earlier and was not applied.
+
+**Where applied:** the per-repository merge requirements in [[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]'s *2026-09-09* amendment, section 3 — read the Actions `verify` on the vault repository and ignore its Vercel check; quote a named agent's local `npm run verify` on every application repository. See [[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci]].
