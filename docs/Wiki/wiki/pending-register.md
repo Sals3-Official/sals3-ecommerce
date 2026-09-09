@@ -170,14 +170,23 @@ argued wrong is how a P0 gets worked last.** The two worth checking first are th
 Stripe entry marked **P0** and the Sponsored-label entry marked **P1** — both
 carry a consequence claim that only the owner can confirm.
 
-### [P2] Nothing enforces the pending rule
-**Raised:** 2026-09-09, the PR that created this register · **Closes when:** a commit with no `Pending` block is rejected, or the owner decides convention is enough
-**Owner:** agent, on owner's go-ahead
+### ~~[P2] Nothing enforces the pending rule~~ — CLOSED 2026-09-09
+**Closed by:** `.husky/commit-msg` + `scripts/check-pending.mjs`, same day it was raised
+**Was:** agent, on owner's go-ahead
 
 A Husky `commit-msg` hook could reject a message with no `Pending` block, the way
 branch naming is currently conventional rather than checked. **Until then the
 rule depends on memory, and rules that depend on memory decay** — which is
 exactly what happened to [[sals3-skills]], four weeks stale before anyone noticed.
+
+### [P3] The hook guards commits; a PR body is still on trust
+**Raised:** 2026-09-09 · **Closes when:** a PR opened without a `Pending` block is caught automatically, or the owner accepts the gap
+**Owner:** owner — the only place to check it is a GitHub Action, and Actions is what is not being paid for
+
+`scripts/check-pending.mjs --stdin` can validate a body before opening the PR,
+but nothing forces anyone to run it. On this repository Actions does still run,
+so a check is technically possible — it would just spend the minutes the rest of
+this regime exists to avoid.
 
 ### [P3] Three entries here are carried from `hot.md` rather than re-verified
 **Raised:** 2026-09-09 · **Closes when:** each has been checked against production and dated

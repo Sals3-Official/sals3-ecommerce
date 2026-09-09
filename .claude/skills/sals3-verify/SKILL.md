@@ -187,6 +187,15 @@ copying them creates a second source of truth: an idea the owner **parked**
 active risks — reference it from the register, do not copy it), and a **decision**
 that changed (an ADR amendment).
 
+**The commit hook enforces this.** `.husky/commit-msg` rejects a message with
+neither `Pending: none` nor a `[P0]`–`[P3]` item, so a forgotten block fails at
+commit time rather than being noticed months later. Merge and revert messages are
+skipped. Validate a PR body the same way before opening it:
+
+```bash
+node scripts/check-pending.mjs --stdin < pr-body.md
+```
+
 A blocked check from Step 2 is almost always also a pending item. If `verify`
 could not be run, that is both the verification result **and** a P0 or P1 entry.
 
