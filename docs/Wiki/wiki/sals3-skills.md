@@ -1013,3 +1013,28 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 **Lesson:** Never wait on a transition's committed *value* as a proxy for the transition being over — the two settle independently. Wait on a rendered signal tied to the same `isPending` (the spinner, the disabled attribute, an explicit `data-` flag), so the thing being waited on is the thing that gates the next interaction. And treat a flake that a longer timeout does not fix as evidence of a race rather than of slowness — the sibling case is [[sals3-session-2026-08-30-part108-a-disabled-button-clicked-anyway]], a flaky test that turned out to be clicking a disabled button for an unrelated reason.
 
 **Where applied:** the checkout cart line's remove-and-requote flow and its e2e wait helper. Recorded in [[hot]] under the 2026-09-01 entries; this skill is the home the note's *"See …"* pointer had been missing.
+
+### 102. Date a Dependabot alert against the fix before believing it — an advisory is matched to a stored snapshot, not to the branch as it stands
+
+**Confirmed:** 2026-09-09, `Sals3-Official/sals3-ecommerce` alert 1. The second repository to raise the **same** advisory while already patched — [[sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]] found it on `sals3-portal` on 2026-08-17 and correctly called it *"already patched, likely a stale scan"*, without being able to prove the mechanism.
+
+**Incident:** `GHSA-2v37-7h3g-55p8` / `CVE-2026-67213` — `nanoid`'s `customAlphabet`/`customRandom` loop indefinitely when called with `size: 0`. Vulnerable `< 3.3.18` and `>= 4.0.0, < 5.1.6`; first patched `3.3.18`. Reported as **high, runtime**, on a push to the default branch. The timing settles it:
+
+| Date | `develop` lockfile |
+| --- | --- |
+| 2026-08-13 | `nanoid@3.3.17` — vulnerable, but no advisory existed yet |
+| **2026-08-16** | **`nanoid@3.3.18`** — patched |
+| **2026-08-17** | alert opened, **one day after the fix was already on the default branch** |
+
+`updated_at` equals `created_at` and `fixed_at` is `null`, so Dependabot has never re-evaluated it. It matched a newly published advisory against a **stored dependency-graph snapshot** taken before the bump — the branch was never in the state the alert describes.
+
+**Lesson:** A Dependabot alert is a claim about a snapshot, not a reading of the branch. Four checks, in this order, and the first is the one that was missing before:
+
+1. **Compare `created_at` against when the fix landed.** `git rev-list -1 --before=<alert date> origin/<default branch>`, then read that commit's lockfile. A fix that predates the alert proves a stale scan rather than suggesting one.
+2. **Read the version from the lockfile, not from `node_modules/`** — and check every `node_modules/**/nanoid` path, since a nested copy can be older than the deduped top-level one.
+3. **Direct or transitive?** Here it is transitive through `postcss`, which arrives with both `next` and `@tailwindcss/postcss`; `package.json` names it nowhere. `scope: runtime` means "in the production dependency tree", **not** "runs in the request path" — postcss is build-time.
+4. **Does any source file import it?** `grep -rn "<pkg>" src/` returned nothing.
+
+An alert like this clears itself on the next default-branch push that changes the manifest, so a docs-only stretch leaves it sitting there looking urgent. **Dismissing it is a visible change to shared repository security state — confirm before doing it, never unilaterally** (the same call the 2026-08-17 note made).
+
+**Where applied:** verified rather than dismissed on 2026-09-09; the alert was left open for Bogs to decide. The audit also turned up something worth more than the alert: **`anythingsupplies/sals3-ecommerce` — the repository the app actually deploys from — has Dependabot alerts disabled entirely** (`403: Dependabot alerts are disabled for this repository`), so the vault repository is being scanned and the production code repository is not.
