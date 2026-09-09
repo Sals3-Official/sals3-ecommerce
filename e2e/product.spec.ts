@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import waitForOneOf from './settled';
+
 /**
  * The PDP is server-rendered, and its data comes from `sals3-portal`, which
  * proxies a supplier API capped at one request per second. Under the parallel
@@ -16,6 +18,13 @@ test('clicking a product on the home page reaches either a live PDP or honest no
   await page.goto('/');
 
   const firstProductLink = page.locator('a[href*="/p/"]').first();
+
+  // The feed streams, so `count()` below would read the skeleton as an empty
+  // catalogue and assert the wrong branch. See `settled.ts`.
+  await waitForOneOf(
+    [firstProductLink, page.getByText(/no products are listed yet/i)],
+    UPSTREAM_NAVIGATION_TIMEOUT,
+  );
 
   /*
    * An empty catalogue is a legitimate third state, not a failure. The feed now
