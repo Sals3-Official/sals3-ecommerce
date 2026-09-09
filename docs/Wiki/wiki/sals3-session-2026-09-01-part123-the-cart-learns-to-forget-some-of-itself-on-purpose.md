@@ -19,7 +19,7 @@ related:
   - "[[nextjs-component-security-code-rules]]"
   - "[[agent-operating-contract]]"
   - "[[sals3-session-2026-09-01-part121-free-shipping-gets-a-dollar-figure-and-a-country]]"
-  - "[[usetransition-ispending-lags-committed-state]]"
+  - "[[sals3-skills]] skill 101"
 ---
 
 # Part 123 — the cart learns to forget some of itself, on purpose
@@ -75,7 +75,7 @@ report it. The fix waits on the delivery step's own "Go to payment" /
 "Preparing payment…" label — an existing idiom in the file for a real
 synchronization point tied to that same `isPending` — instead of waiting on
 the transition's committed *value*, which can render first. See
-[[usetransition-ispending-lags-committed-state]].
+[[sals3-skills]] skill 101.
 
 ## Per-line selection (#226)
 
@@ -208,7 +208,7 @@ separate, larger change.
   can still be genuinely disabled on the render immediately after the value
   a test is watching has already changed — waiting on a rendered label tied
   to the same `isPending` is the fix, not a longer timeout. See
-  [[usetransition-ispending-lags-committed-state]].
+  [[sals3-skills]] skill 101.
 - **A feature that changes selection but not what gets charged is worse than
   no feature.** Per-line selection required three separate call sites
   (checkout quoting, cart cleanup, repricing) to all read the same subset —
