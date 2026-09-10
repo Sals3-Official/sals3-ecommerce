@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-09-09
+updated: 2026-09-10
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -26,6 +26,11 @@ related:
   - "[[sals3-session-2026-08-06-part10-pr21-pr22-reconciliation-and-cj-bugfixes]]"
   - "[[sals3-session-2026-08-06-part13-seller-center-first-build]]"
   - "[[cj-candidate-to-sals3-product-draft-implementation-spec]]"
+  - "[[sals3-session-2026-09-09-part163-customers-replaces-inventory-in-the-seller-center]]"
+  - "[[sals3-session-2026-09-09-part164-a-buyer-can-cancel-and-the-hold-moved-into-cjs-imported-tab]]"
+  - "[[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery]]"
+  - "[[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build]]"
+  - "[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -1092,3 +1097,352 @@ None of this was visible in review, in the test suite, or on the page. It took o
 3. **Census the live downstream system.** The supplier, the payment processor, the courier — whoever stores the field last. A defect that survives review and tests is usually one that only the receiving system can see.
 
 **Where applied:** `phoneNationalDigits` and `phoneExample` per country, validated after the prefix, in all three storefront repositories. See [[sals3-session-2026-09-10-part162-sixteen-of-twenty-five-orders-reached-cj-unreachable|part 162]].
+
+### 106. An ORM that shortens an identifier can bind it to the wrong table inside a correlated subquery — assert the generated SQL, not the result
+
+**Confirmed:** 2026-09-09, when every `Total order amount` on the portal's new `/customers` list read **$0.00 on SIT** while the profile — the same computation in a different query shape — was correct.
+
+**Incident:** Drizzle renders `${customers.id}` **unqualified** in a single-table select, because in that context it is unambiguous. Nested inside a **correlated subquery** joined against `sals3_orders`, the bare `"id"` then bound to `sals3_orders.id`. Each subquery correlated a row against itself and summed nothing.
+
+No error. No warning. A **plausible zero** — the one wrong answer that looks like a real business fact ("this customer has spent nothing yet"), which is why it reached SIT and not review.
+
+The repair is `${customers}.id`, forcing the table qualifier. What makes it stick is `src/modules/customers/aggregates.test.ts`, which **renders the list query shape and refuses an unqualified outer reference**.
+
+**Lesson:** A query builder's shortening rules are **context-sensitive**, and the context it evaluates is the fragment, not the statement the fragment ends up in. Three checks whenever a builder expression crosses into a subquery:
+
+1. **Qualify the outer reference explicitly.** `${table}.column`, not `${table.column}`, wherever the expression will be nested. The verbose form costs nothing and is context-free.
+2. **Test the SQL, not the rows.** A result-level test passes against the wrong table whenever both tables have the column. Render the query and assert on its text.
+3. **Distrust a zero more than an error.** An exception names its own line; a wrong aggregate is indistinguishable from a true one. Any figure summed through a correlated subquery deserves one hand-checked row.
+
+**Where applied:** `src/modules/customers/read-model.ts` and `aggregates.test.ts` in `sals3-portal`. See [[sals3-session-2026-09-09-part163-customers-replaces-inventory-in-the-seller-center|part 163]].
+
+### 107. Renaming a route means walking every registry that names it — the proxy is the one nobody is looking at
+
+**Confirmed:** 2026-09-09, one day after `/customers` replaced `/inventory` in the Seller Center.
+
+**Incident:** `proxy.ts` still listed `/inventory` in `PROTECTED_PREFIXES` and in its matcher. `requirePermission` was enforced server-side throughout, so this was never an exposure — but the **edge redirect-to-login was gone**: an unauthenticated visitor reached the route and got the server's refusal instead of a login page.
+
+The route rename touched the router, the navigation entry, the permission family and the mock data. The proxy is the file furthest from any of them and the only one whose failure is silent.
+
+**Lesson:** A route name is duplicated into registries that do not import each other. Before calling a rename done, grep the **old** name across the repository and account for every hit — and know the standing list:
+
+1. **The router / file path** — obvious, and the only one the compiler helps with.
+2. **Navigation and breadcrumbs** — visible, so they get fixed.
+3. **The permission family** — `inventory:*` → `customer:*`, including whichever roles grant it.
+4. **The edge proxy or middleware** — `PROTECTED_PREFIXES` and the matcher. **This one fails open and says nothing.**
+5. **E2E specs and fixtures**, which will pass against a route that no longer exists if they only assert a redirect.
+
+The general form: **grep the string you are deleting, not the symbol you are renaming.** A rename tool follows imports; a route name is a string in five files that import nothing from each other.
+
+**Where applied:** `proxy.ts` in `sals3-portal` (#204). See [[sals3-session-2026-09-09-part163-customers-replaces-inventory-in-the-seller-center|part 163]].
+
+### 108. Let a reporting write fail open, so the DDL and the deploy do not have to be simultaneous
+
+**Confirmed:** 2026-09-08, shipping four new customer tables to an environment where nobody has a psql prompt.
+
+**Incident:** `/customers` needed a link row per order. The obvious design — a `customer_id` column on `sals3_orders`, written inside `acceptCheckoutOrder`'s transaction — makes **checkout depend on a reporting table**. A deploy landing before the DDL would then fail *payments*.
+
+What shipped instead: the link runs **after the transaction commits**, in `modules/customers/identity.ts#attachOrderSafely`, and it **logs and skips when the tables are absent**.
+
+The cost of a deploy arriving ahead of the migration is therefore **unlinked orders and nothing else** — no failed checkout, no rolled-back payment — repaired afterwards by a backfill that loops until `remaining: false`.
+
+**Lesson:** Separate **the transaction that must not fail** from **the write that would merely be nice**. Three properties to build in when a reporting or analytics write hangs off a business transaction:
+
+1. **Write after commit, never inside.** The business fact is durable before the derived one is attempted.
+2. **Treat a missing table as a skip, not an error** — with a log line, so the gap is countable.
+3. **Ship a backfill in the same change**, idempotent and resumable. Without one, "fail open" just means "lose data quietly".
+
+The companion pattern is the **break-glass migration route**: `POST /api/internal/cancellations/migrate-cancellations`, `CRON_SECRET`-gated, plus a dispatchable workflow. It is now the house convention for applying DDL to an environment with no database console, and it reports each table's presence rather than assuming success.
+
+**Where applied:** `modules/customers/identity.ts`, `drizzle/0038`, `drizzle/0039`, `drizzle/0040` and their migrate routes in `sals3-portal`. See [[sals3-session-2026-09-09-part163-customers-replaces-inventory-in-the-seller-center|part 163]] and [[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]].
+
+### 109. Emoji is not a rendering guarantee — ship the asset when the glyph carries the meaning
+
+**Confirmed:** 2026-09-09, within twenty minutes of shipping country flags to the Customers list.
+
+**Incident:** The flag was built from the Unicode **regional-indicator pair** for the country code — the standard, dependency-free approach. **Windows Chrome renders it as two capital letters.** The owner's own machine showed `PH` where the design showed 🇵🇭, so the change that was meant to replace a bare code displayed a bare code.
+
+The repair: the six approved buyer destinations ship as **static SVGs** under `public/flags/` (MIT, from `country-flag-icons`, licence file included, **no runtime dependency**), with a letter badge beside the written name as the fallback for anything else.
+
+**Lesson:** An emoji is a **font question**, and the font belongs to the reader's operating system. Regional-indicator flags are the sharpest case — Windows ships no flag glyphs at all — but the rule is general: if a glyph *is* the information rather than decoration beside it, do not delegate it to the platform.
+
+Two checks before using a glyph as data:
+
+1. **Name the target platform and look.** "It renders on my Mac" is not coverage; the owner reviews on Windows.
+2. **Keep the written value beside the glyph regardless.** `🇵🇭 Philippines` degrades to `Philippines`; a lone flag degrades to nothing. Here the written name also had to match `lib/cj/country-names.ts`, so the spelling agrees with what the fulfilment worker types on CJ.
+
+The same session produced its structural sibling: the profile tab strip's **one-pixel link overhang** grew a scrollbar with arrows on Windows and none elsewhere. **Overflow is platform-dependent; clip the axis you are not using.**
+
+**Where applied:** `CountryLabel.tsx`, `public/flags/`, `CustomerProfileTabs.tsx` in `sals3-portal` (#209, #210, #213). See [[sals3-session-2026-09-09-part163-customers-replaces-inventory-in-the-seller-center|part 163]].
+
+### 110. A hold that hides the work is worse than a hold that shows it — split the job so the waiting state is visible to whoever will act on it
+
+**Confirmed:** 2026-09-09, when the owner replaced the cancellation hold's implementation within hours of it shipping (ADR-020, Option B).
+
+**Incident:** v4.1 gave a buyer an hour to cancel by **delaying the whole fulfilment message**: `FULFILL_ORDER` queued with `delaySeconds = hold × 60`. Correct, and it means that for the entire window **the order does not exist at CJ**. Nobody at the supplier can see it; if the queue loses the message the order is silently never placed, and the buyer — who has paid — gets no signal at all.
+
+The replacement splits the job. `FULFILL_ORDER` gained an optional `phase`: **`CREATE`** runs `createOrderV3` **immediately**, so the order sits visibly in **CJ's Imported tab** as `CREATED` and unpaid, and queues **`COMPLETE`** with the hold as its delay; `COMPLETE` confirms, builds the parent order and pays.
+
+A cancel inside the window now deletes a **real CJ order a human can see**, and the paying half wakes, re-reads the parcel and skips.
+
+**Lesson:** When a delay exists to keep an option open, ask **where the pending work is visible during the wait**. A delayed message is invisible everywhere except the queue's own console. Two questions for any hold, sleep or debounce that guards an external side effect:
+
+1. **Can a person see that this is pending, in the system that will finally act?** If the answer is only "in our queue", the wait is unobservable to everyone who matters.
+2. **Can the job be split into an observable half and a committing half?** Creating early and paying late costs one extra state and buys visibility, an earlier failure signal, and a cheaper cancel — deleting an unpaid order rather than opening a dispute.
+
+Re-read the guarded state **before each half**, not once. Two halves means two gaps.
+
+**Where applied:** `modules/orders/fulfillment-worker.ts` and `modules/checkout/orders.ts` in `sals3-portal` (#218), per [[ADR-020-order-cancellation-hold-in-cj-imported-and-dispute-path]]. See [[sals3-session-2026-09-09-part164-a-buyer-can-cancel-and-the-hold-moved-into-cjs-imported-tab|part 164]].
+
+### 111. Make a new queue-message field optional, and let absent mean the old behaviour
+
+**Confirmed:** 2026-09-09, changing the shape of `FULFILL_ORDER` on a live SIT queue with messages already in flight.
+
+**Incident:** Splitting fulfilment into `CREATE` and `COMPLETE` changes what a message means. Messages queued minutes earlier carry no `phase` — and a consumer that requires the field would either crash on them or, worse, drop them.
+
+`phase` is **optional**, and **absent means run both halves**, which is precisely v4.1's behaviour. Nothing had to be drained, no maintenance window was needed, and the two versions of the consumer coexisted safely for as long as the old messages took to clear.
+
+**Lesson:** A queue is a **schema boundary between two versions of your own code**, and the producer and consumer are never deployed at the same instant. Three rules for changing a message shape:
+
+1. **Add fields, never repurpose them**, and make every added field optional.
+2. **Define absent as the previous behaviour**, explicitly and in a comment. "Undefined means legacy" is a contract; leaving it implicit is a coincidence.
+3. **Deploy the consumer before the producer.** The consumer must understand the new field before anything emits it.
+
+The same rule in the database is **nullable columns**: `drizzle/0040_order_cancellation_review.sql` adds four, so every existing row stays valid with no backfill and the deploy and the DDL need not be simultaneous — the sibling of skill 108.
+
+**Where applied:** `FULFILL_ORDER`'s `phase` in `sals3-portal` (#218); `drizzle/0040` (#224). See [[sals3-session-2026-09-09-part164-a-buyer-can-cancel-and-the-hold-moved-into-cjs-imported-tab|part 164]].
+
+### 112. Use the domain id as the idempotency key, so a retry loop is safe by construction
+
+**Confirmed:** 2026-09-09, building the cancellation settle loop that runs at :15 and :45 forever.
+
+**Incident:** Refunds are issued over Stripe's REST API by a cron that retries **everything still `PENDING`**, every half hour, indefinitely. A refund that succeeded at Stripe but whose local write failed would be re-issued on the next pass — paying the buyer twice.
+
+The Stripe call uses **the cancellation id as its idempotency key**. A retry of an already-refunded cancellation is a **no-op at Stripe**, returning the original refund. Safety comes from the key, not from the ordering of the local writes.
+
+**Lesson:** Whenever an external effect is driven by a retry loop, the key that makes it idempotent should be **the identifier of the thing being done**, not a generated one. A random key per attempt makes each retry a new request — the exact failure the mechanism exists to prevent.
+
+Three properties to hold together:
+
+1. **The key is the domain id.** Stable across processes, restarts and redeploys, because it is stored.
+2. **Local state advances only on the external system's confirmation.** `payment_status` becomes `REFUNDED` when Stripe confirms, never when the request is made — the gap between the two is exactly where a refund can fail.
+3. **An unconfigured dependency degrades, it does not lose.** With `STRIPE_SECRET_KEY` unset, refunds stay `PENDING` and the loop keeps retrying: visible and recoverable rather than silently dropped.
+
+The same reasoning names `businessDisputeId` with the cancellation id on the CJ side, which is what makes CJ's eventual answer matchable back to a row.
+
+**Where applied:** `modules/cancellations/stripe-refunds.ts`, `settle.ts` and `cj-cancel.ts` in `sals3-portal` (#217). See [[sals3-session-2026-09-09-part164-a-buyer-can-cancel-and-the-hold-moved-into-cjs-imported-tab|part 164]].
+
+### 113. When a diagnosis has been guessed more than twice, the missing thing is a log line — status, body and origin, not `error.message`
+
+**Confirmed:** 2026-09-09, after **four wrong diagnoses in one day** of why two SIT storefronts could not read the portal.
+
+**Incident:** The failure logged `Storefront products API request failed.` — true, and useless. It cannot separate three completely different faults with three different owners:
+
+1. the portal answering **401** — the portal is alive and correctly refusing;
+2. **Vercel Deployment Protection** answering **302** before the portal's code runs — an infrastructure setting;
+3. **no portal URL for this environment** — the read dials `localhost` and never leaves the machine.
+
+The fix logs the **HTTP status**, the **safe error body** and the **portal origin**. The status separates the first two; **no status at all** is the third; the origin settles it on sight. No behaviour change, one line — and it was the highest-value diff of the day.
+
+**Lesson:** A repeated wrong guess is not a knowledge problem, it is an **instrumentation** problem, and the cost of the missing line is paid over and over. When the same question is asked twice, stop answering it and make the system answer it.
+
+The three fields that resolve most integration failures:
+
+1. **The status code** — separates *refused* from *intercepted* from *never sent*.
+2. **The response body**, already passed through the redactor (`safeErrorMessageFrom`). An HTML login page where JSON was expected is itself the diagnosis.
+3. **The origin actually dialled** — which distinguishes a misconfiguration from a fault, and is the field people forget because they believe they know it.
+
+Neither the token nor any credential is in these: the token is a header, and the body is stripped before it is logged. **Say so in the commit**, because the reason this line is usually missing is a vague worry about leaking secrets.
+
+The same day's sibling, on a different surface: a freight diagnostic attached CJ's raw body **only when a quote failed unnamed**, so the named refusals — the ones asserting a specific and wrong cause — carried no evidence. **Attach the evidence on every failure path.**
+
+**Where applied:** `src/app/page.tsx` in `sals3.com.au` (#47); `modules/checkout/diagnose-freight-quote.ts` in `sals3-portal` (#222). See [[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery|part 165]] and [[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]].
+
+### 114. A code comment records a past belief, not a present fact — derive a public claim from the rendering code
+
+**Confirmed:** 2026-09-10, after `/llms.txt` had told AI crawlers on all three production storefronts for two days that Sals3 does not publish a delivery estimate.
+
+**Incident:** The false sentence was written from `site.ts`'s own comment:
+
+> *"no delivery estimate exists, because Sals3 has neither a rate table nor a carrier integration (ADR-003)"*
+
+**True when written on 2026-08-13.** It stopped being true when freight quoting shipped, and nobody updates a comment that is not in the diff. Meanwhile checkout renders an estimate in two places:
+
+- `CheckoutShippingTierCard.tsx:86` → `` `Estimated ${formatArrivalWindow(option.arrivalTime)} days` ``
+- `CheckoutReceiptDelivery.tsx:85` → `` `Arrives in ${shipment.arrivalTime} days` ``
+
+**Lesson:** A comment is a **timestamped opinion with no expiry and no test**. It is a fine explanation of *why* code is shaped a certain way and a terrible source for *what the product does*. Before writing any externally visible claim — `llms.txt`, JSON-LD, marketing copy, terms:
+
+1. **Find the code that renders the thing** and quote it, with file and line, in the pull request. A claim you cannot cite to a render is a claim you are guessing.
+2. **Prefer a check that fails over prose that drifts.** The same pull request made `OrganizationSchema.test.tsx` assert that the legal name, ABN, ACN and locality **still appear in `/legal/terms`** — so if the terms change, the schema *fails* instead of quietly becoming false.
+3. **Rewrite the misleading comment in place as a warning, rather than deleting it.** Deleting removes the evidence of how the mistake happened; the next reader needs to know the line cannot be trusted.
+
+The governing distinction on these surfaces: **structure published facts, never publish structured guesses.** The ABN is safe because it is already in prose on `/legal/terms` and resolves on the Australian Business Register — checkable *outside* the site. `sameAs` stays empty for exactly the same reason: no social account or Wikidata item exists, and a plausible handle would be fabrication.
+
+**Where applied:** `src/lib/seo/llms-document.ts`, `site.ts`, `organization-entity.ts` and `OrganizationSchema.test.tsx` in all three storefronts (ecommerce #41, fj #46, au #38). See [[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery|part 165]].
+
+### 115. A test that asserts a falsehood defends it — when correcting a claim, hunt the test that pinned the old one
+
+**Confirmed:** 2026-09-10, finding `toMatch(/does not publish a delivery estimate/i)` in the suite that was supposed to protect `/llms.txt`.
+
+**Incident:** The false delivery claim survived review not because the tests missed it but because **a test asserted it**. Anyone who noticed the sentence and fixed it would have watched a test go red and concluded they were the one who was wrong.
+
+A suite that encodes a mistake converts every future correction into an apparent regression.
+
+**Lesson:** Tests inherit the author's beliefs. When you correct a claim, an assumption or a constant, **the second thing to change is always the test that agreed with it** — and the search for it is part of the fix, not a follow-up.
+
+Three moves when overturning something asserted:
+
+1. **Grep the wrong string across the test tree before writing the fix.** If a test asserts it, that test is where the belief actually lived.
+2. **Replace the assertion with one pinning the observable behaviour** — what checkout renders — and **add a negative assertion** so the old sentence cannot come back.
+3. **Prove the new guard by making it fail.** The fabricated-catalogue guard from the same session was proved by *putting the fixtures back* and watching the page test fail. A guard nobody has seen fail is a guard nobody has tested.
+
+The sharpest instance of the same disease is in skill 118: a unit test that called a route handler with `{ id: 0 }` because that was the assumed signature, while Next passes `Promise<string>`. **Code and test were wrong in the same direction and agreed with each other.**
+
+**Where applied:** `src/app/llms.txt/route.test.ts`, `src/app/page.test.tsx` in the three storefronts (ecommerce #40, #41). See [[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery|part 165]].
+
+### 116. Configuring away your *use* of a framework route does not unmount it — curl the route, do not reason about the config
+
+**Confirmed:** 2026-09-10, checking whether a critical Next.js advisory applied to the storefronts.
+
+**Incident:** `next@16.3.0` sits inside the advisory range `16.0.0 – 16.3.2`, which includes an **unauthenticated RCE in the Image Optimization API** ([GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)).
+
+The storefronts run `loader: 'custom'`, so resizing happens on CJ's CDN rather than Vercel's optimizer. The assumption — reasonable, and wrong — was that a custom loader takes `/_next/image` out of service.
+
+Measured: **`/_next/image?url=…` answered `200` on all three production storefronts.** The vulnerable handler was mounted and reachable by anyone, whether or not Sals3's own markup ever pointed at it.
+
+**Lesson:** A framework mounts its built-in routes because the framework is installed, not because your code calls them. Configuration usually changes **who your application asks**; it rarely **removes the handler**. When an advisory names a built-in route:
+
+1. **`curl` the route on every production host** before deciding it does not apply. One request settles what an hour of reasoning cannot.
+2. **State applicability per advisory, with the reason.** The Windows-hosted RCE in the same bulletin genuinely did not apply — Vercel serves Linux — and saying so separately is what makes the *applicable* one credible.
+3. **Separate "critical" from "reachable in production".** `js-yaml` in the same audit reaches the tree only through `@eslint/eslintrc`: lint-time, not production exposure. `npm audit` does not draw that line for you.
+
+Bump discipline from the same change: **16.3.4 is a patch inside the same minor** — no migration — and `eslint-config-next` moves with it. Use `npm audit fix` (semver-compatible), **never `--force`**, and confirm the audit goes from exit 1 to exit 0 rather than reading the summary.
+
+And rule out the bump as the cause of anything else nearby: four lint warnings in `src/app/page.tsx` were **verified identical on `develop` with 16.3.0**, by installing both versions and comparing output. A version bump is the loudest change in a diff and attracts blame; one install stops the blame moving.
+
+**Where applied:** `package.json` / `package-lock.json` in all three storefronts and the portal (ecommerce #47, fj #52, au #44, portal #219). See [[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build|part 166]].
+
+### 117. Setting an environment variable can switch on a dormant code path — and a route that enumerates a remote catalogue must never gate a build
+
+**Confirmed:** 2026-09-10, when a production deploy of `sals3.com` failed outright and took four unrelated commits down with it, including a live correction that therefore stayed wrong.
+
+**Incident:**
+
+```
+Failed to build /sitemap.xml (attempt 1 of 3) because it took more than 60 seconds.
+... attempt 2 ... attempt 3 ...
+Export encountered an error on /sitemap.xml/route, exiting the build.
+```
+
+`/sitemap.xml` was **prerendered**. Vercel caps a single route's prerender at **60 seconds** with three retries before failing the whole export. Enumerating the catalogue does not fit: 5,233 products at the Portal's ceiling of 30 per page is **~175 reads**.
+
+It had never surfaced because **`NEXT_PUBLIC_SITE_URL` was unset** on that project, so `sitemap()` returned `[]` before reading anything — zero Portal reads, a one-minute build. **Setting that variable to fix the canonical layer switched the path on for the first time.** The two market storefronts always had it and had been building *inside* the cap by a margin nobody had measured.
+
+**Lesson:** Two rules, and they are separable.
+
+**On the variable:** an environment variable is often an **undocumented feature flag**. Before setting one, grep it and read every early-return it guards — the code beyond the guard has never run in that environment and has no operational history there. "It works on the other two" is evidence only if you know their margin, and here nobody did.
+
+**On the route:** a route that must reach thousands of **remote** records has no business gating a deploy. `dynamic = 'force-dynamic'` moves it to request time, bounded by the function timeout, with a day-long cache so **one crawler pays rather than every reader**. The check that it actually left the prerender is the build output: **`ƒ /sitemap.xml` rather than `○`**.
+
+And when a limit is sized from a number: **measure the number in production, and correct the stale one in the same pass.** `PAGE_CONCURRENCY = 6` came from "~2,900 products, therefore ~97 reads" — from a comparison document and from SIT. Production had **5,233**. Every stale `~2,900` and `~97` in the comments was corrected alongside, because those figures are what would mis-size the next change too.
+
+**Where applied:** `src/app/sitemap.ts`, `src/lib/seo/sitemap-paths.ts` in all three storefronts (ecommerce #44, fj #49, au #41). See [[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build|part 166]].
+
+### 118. A test that builds its input the way you assumed, rather than the way the framework calls you, agrees with the bug
+
+**Confirmed:** 2026-09-10, when every chunk of the new segmented product sitemap served empty in a dev server while its unit tests passed.
+
+**Incident:** The chunk route shipped as `{ id }: { id: number }`. **It type-checked. It built. The unit tests passed.** And it served **every chunk empty**, because Next passes `id` as a **`Promise<string>`** — so the offset arithmetic ran on a Promise and produced `NaN`.
+
+The tests called it with `{ id: 0 }`. They encoded **the author's assumption about the signature** rather than **the framework's contract**, so the code and the test were wrong in the same direction and confirmed each other. A dev server and one `curl` found it in seconds.
+
+**Lesson:** A unit test only checks a function against **the caller you imagined**. When the real caller is a framework, the signature is part of the contract you are being tested on, and getting it wrong is invisible from inside the test file.
+
+1. **Construct the input the way the framework does** — `Promise.resolve('0')`, not `0`. If you are unsure, read the framework's own types or docs rather than the shape that type-checks.
+2. **Hit the real route once before believing the suite.** A dev server and `curl` cover the integration seam that no unit test spans. Every failure of this class in this codebase was found in seconds that way.
+3. **Handle the malformed input explicitly** — a bad id answers empty rather than `NaN`.
+
+Two more defects from the same rewrite, both worth the same reflex:
+
+- **The final chunk over-read its range.** With 45 pages of catalogue, chunk 2 requested pages 41–**60**: fifteen wasted reads on every generation. It clamped to a constant ceiling but not to the **real total**. Bound a range by the value you measured, not by the maximum you allowed.
+- **`generateSitemaps()` on the root takes `/sitemap.xml` away** — Next serves `/sitemap/0.xml` and synthesises no index. Losing an already-advertised, probably-submitted URL turns a working Search Console submission into an error. **Check what a framework helper removes, not only what it adds.**
+
+**Where applied:** `src/app/catalogue/sitemap.ts` and its tests in all three storefronts (ecommerce #51, fj #56, au #48). See [[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build|part 166]].
+
+### 119. Filter a lint output to read it, never to decide — and a mock that simplifies a signature throws away the arguments
+
+**Confirmed:** 2026-09-10, during review of the sitemap chunking that had silently dropped a cache tag.
+
+**Incident:** The rewrite dropped `STOREFRONT_PRODUCT_TAG` from the chunk's `unstable_cache` call. It carried over a *"no `tags`"* note that had been true **before** the repository gained `POST /api/internal/revalidate` — and it now has it, with the Portal always sending the shared tag. So a publish, pause or resume **used to expire the sitemap and now silently did not**: a new product would wait out the **day-long fallback** before any crawler could see it.
+
+No lint error. No type error. No test failure. Two near-misses:
+
+- **ESLint *did* warn that the import was now unused** — and the warning was **filtered out of view** while excluding unrelated noise from another file. The signal was produced and discarded by the reader.
+- **The unit tests could not see it at all**, because the spec mocks `unstable_cache` as `<T>(fn: T) => fn`. That is the *right* mock for asserting what a chunk returns, and it **throws the cache options away** — so the options were the one part of the module nothing looked at.
+
+**Lesson:** Two habits, both about signals you have already paid for.
+
+1. **Filtering lint output is a reading aid, not a decision procedure.** `| grep -v` to find your file is fine; concluding "clean" from a filtered run is not. Re-run unfiltered before believing a zero — the warning you excluded is selected by *irrelevance to what you were looking at*, which is exactly where a regression hides.
+2. **Know what your mock discards.** A pass-through mock of a wrapper deletes the wrapper's configuration from the test's field of view. When those arguments carry behaviour — cache tags, revalidate windows, retry policy — **assert the arguments themselves**: record what the wrapper was constructed with and pin it.
+
+`sitemap-paths.test.ts` now records the arguments `unstable_cache` is built with and asserts the tag and the revalidate window — and it was **verified to fail when the tag is removed**, which is the only way to know a guard guards anything.
+
+**Where applied:** `src/lib/seo/sitemap-paths.ts` and `sitemap-paths.test.ts` in all three storefronts (ecommerce #51). See [[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build|part 166]].
+
+### 120. Do not ask whether the app sends the header — ask which callers do not go through the thing that sends it
+
+**Confirmed:** 2026-09-10, when the first real buyer cancellation on a SIT order never reached the portal.
+
+**Incident:** **Vercel Deployment Protection guards every pre-production portal deployment.** It answered the cancel `POST` itself — `401`, a `_vercel_sso_nonce` cookie, **no `reason` field** — before the portal's route ran. The storefront could not parse the shape and the buyer read *"Something went wrong on our side."*
+
+Every **read** carries `getProtectionBypassHeaders()`. **This POST was the one portal call that did not** — because the reads go through a shared client and this write was hand-rolled.
+
+And it was not alone: the **three review POSTs** in `src/services/storefront/reviews.ts` have the identical omission, found while fixing this one.
+
+**Lesson:** A cross-cutting concern is only as wide as the code path that applies it, and the honest audit question inverts the usual one:
+
+1. **Not "do we send X?" but "enumerate the callers that bypass the shared client".** Grep for the raw `fetch`/`POST` rather than for the header — absence does not grep.
+2. **Expect writes to be the gap.** Reads get a client because they are numerous and repetitive; a single write gets written by hand, and it is the one that carries a side effect.
+3. **Pin the header in a test at the call site** (`orders.cancel-bypass.test.ts`), so a future rewrite cannot drop it silently — the same reflex as skill 119.
+
+The environment-specific tell is worth memorising: a **`401` with a `_vercel_sso_nonce` cookie and none of your own error fields** is the platform answering, not your application. Reading it as an application auth failure sends you into the wrong codebase entirely.
+
+**Where applied:** `src/services/storefront/orders.ts` and `orders.cancel-bypass.test.ts` in all three storefronts (ecommerce #54, fj #59, au #52). See [[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]].
+
+### 121. A supplier's empty answer is not the supplier's refusal — give `[]` its own branch and its own sentence
+
+**Confirmed:** 2026-09-10 from 21:45 UTC, when CJ's freight calculation answered every package with `code 200, data: []`.
+
+**Incident:** Two products that had **shipped to PH the week before** were refused at checkout with *"no courier covers that route"* — a claim about the product and the address, and it was neither. CJ answered an empty list for **four destinations** during a supplier outage; **CJ's own web calculator showed no methods either**, which is what proved where the fault was.
+
+The portal had one branch for "no usable options", so an outage and an unservable route produced the same sentence. The buyer was told the route is impossible when the truth was *we cannot ask right now*.
+
+An empty list now has its own refusal — *"we can't get a delivery quote … right now … try again in a few minutes"* — while rows CJ returns **with `error` / `errorEn`** keep the undeliverable sentence, because that is CJ genuinely saying the route is not served. A warning names the case in logs.
+
+**Lesson:** Three states, never two, whenever you consume an upstream list: **it said no**, **it said nothing**, **we could not ask**. Collapsing them produces a confident lie in one direction or the other — the identical shape as the storefront's *"No products are listed yet"* versus *"We could not load products just now"* the day before.
+
+1. **Branch on the empty collection separately from the error**, and write the copy for it. A `200` with no rows is not a success and not a failure; it is an absence.
+2. **Check the upstream's own interface before blaming your filtering.** CJ's web calculator settled in one minute a question that logs alone would have left open.
+3. **Attach the raw upstream body on every failure path**, not only the unnamed one — the named refusals are exactly where a specific and wrong cause is being asserted. That was the sibling fix, one pull request earlier.
+
+**Where applied:** `modules/checkout/freight-quotes.ts` and `diagnose-freight-quote.ts` in `sals3-portal` (#222, #223). See [[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]].
+
+### 122. A review gate needs a timeout, and the page may offer optimistically only if the write checks live
+
+**Confirmed:** 2026-09-10, building SOP v4.2's staff review gate after the owner's rule that nobody is refunded ahead of CJ.
+
+**Incident:** Once CJ has been paid, a buyer may no longer cancel — only **request**. The request lands in a **Cancellation requests** lane and waits for a person to press *"Ask CJ to cancel"* or *"Decline"*.
+
+A gate with no clock is a place requests go to be forgotten, and the person waiting has paid. So the request **auto-escalates to CJ after `SALS3_CANCELLATION_REVIEW_HOURS` (12)**: the worst case becomes a delay, not silence.
+
+The second half is the surface. The buyer payload reads a paid parcel as Pending **on a page view**, so *"Request cancellation"* is offered — and **the POST reads CJ live** and refuses with **409 `processing`** once packing has started.
+
+**Lesson:** Two rules that belong together.
+
+1. **Every human gate needs an automatic outcome on a timer.** Name the variable, give it a default, and decide which way it fails — here, toward asking the supplier, because the buyer's money is already gone. And close the loophole in the same change: **Sals3's own cancellation of a paid order is a request too**, born allowed because the person doing it *is* the review. Staff must not get a faster path to a buyer's money than the buyer has.
+2. **A page is a snapshot; the write is the decision.** The state can change between render and click. Offering optimistically and checking live at the moment of action is correct — provided **the refusal has written copy**, mapped end to end. A `409` the storefront cannot phrase is a worse experience than never offering the button.
+
+The corollary the same change enforces: **when the money rule changes, the copy is part of the change**, in every repository that renders a promise. Checkout, receipt, order page, request notice and the declined sentence were all rewritten alongside, because the previous wording had become a promise Sals3 could not keep.
+
+**Where applied:** `modules/cancellations/service.ts`, `settle.ts`, `stage.ts`, `buyer-payload.ts`, `notify.ts` in `sals3-portal` (#224); `lib/orders/cancellation-copy.ts` in the three storefronts (ecommerce #55, fj #60, au #53). See [[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]] and [[ADR-021-order-cancellation-24-hour-hold-review-gate-and-no-refund-ahead-of-cj]].
