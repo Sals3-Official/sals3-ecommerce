@@ -307,8 +307,24 @@ curl -s https://sals3.com/catalogue/sitemap/0.xml | grep -c '<loc>'     # expect
 time curl -s -o /dev/null https://sals3.com/sitemap.xml                 # expect < 1s
 ```
 
-**Whether anyone ran these is not recorded.** They are carried into the pending
-register rather than assumed.
+> [!IMPORTANT] Run 2026-09-10, while writing this note — all three pass
+> The checks above were not recorded as having been run, so they were run here,
+> against production, and **the live product path is now proven**:
+>
+> | Host | `robots.txt` `Sitemap:` lines | `/sitemap.xml` |
+> | --- | --- | --- |
+> | `sals3.com` | **18** | `200` in **0.78s**, 20 URLs, zero products |
+> | `sals3.com.fj` | **18** | `200` in **0.97s**, 20 URLs |
+> | `sals3.com.au` | **18** | `200` in **0.84s**, 20 URLs |
+>
+> `https://sals3.com/catalogue/sitemap/0.xml` → `200` in **0.64s with 600 `<loc>`
+> entries**. So the offset arithmetic is right against a real catalogue, the
+> root sitemap stayed instant, and the eighteen `Sitemap:` lines robots.txt must
+> carry are all present. Two of the pending items below close on this evidence.
+>
+> It also settles the register's *`NEXT_PUBLIC_SITE_URL` is unset on the apex*
+> entry the other way: the variable **is** set, which is exactly what activated
+> the path that failed the build in §2.
 
 ## Lessons
 
@@ -339,9 +355,9 @@ Registered as skills 116, 117, 118 and 119 in [[sals3-skills]].
 
 ## Pending
 
-- **The three post-deploy `curl` checks were never recorded as run.** A chunk
-  returning real products end to end is still unproven in production. Registered
-  in [[pending-register]].
+- ~~**The three post-deploy `curl` checks were never recorded as run.**~~ **Run
+  2026-09-10 and all three pass** — see the callout in §5. A chunk returning real
+  products end to end is proven in production.
 - **A prod-scoped storefront token does not exist for the agent**, which is what
   blocked the end-to-end proof.
 - **The Portal's page ceiling of 30 is the shape of the whole problem.** ~324
