@@ -584,6 +584,40 @@ vault** and **v3, v4 and v5 cannot be diffed**, which is the question anyone
 reading ADR-020 against ADR-021 will actually have. Only v3 has an
 `.inspect.ndjson` beside it, and that file is untracked.
 
+### [P1] `outputs/` may hold documents worth keeping, and nobody has read them
+
+**Raised:** 2026-09-10, the scratch-directory `.gitignore` PR · **Closes when:** the loose documents are read and either moved to `docs/Raw/` or deleted
+**Owner:** owner to judge what is worth keeping
+
+346 MB across ~8,000 files is now ignored rather than lost — but **ignoring is
+not archiving**. Among the build scratch are documents that read like real work:
+*Marketplace Seller Portal Architecture — Fable 5 Counter-Review*, its Sals3
+revision, and two handoff prompts. If any of that is a decision or a review the
+vault should carry, it is currently invisible to every agent, because the vault
+only reads `docs/`.
+
+### [P2] Eight Fiji storefront assets are untracked in the vault repository
+
+**Raised:** 2026-09-10, the scratch-directory `.gitignore` PR · **Closes when:** it is confirmed `anythingsupplies/sals3.com.fj` already carries them, or they are committed there
+**Owner:** agent
+
+`public/home-promos/fiji-*.png` (8 files) and `public/categories/fj/` sit
+untracked here. They are **storefront assets belonging to
+`anythingsupplies/sals3.com.fj`**, not vault content, and were deliberately left
+alone — this repository is the vault, and [[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate|ADR-019]]
+puts code in the other org. **Whether the fork already has them is unverified**,
+so they may be the only copy of artwork [[sals3-session-2026-09-04-part138-fiji-gets-more-than-a-welcome-band|part 138]] describes.
+
+### [P3] Only one deck has an extracted text file, and it is untracked
+
+**Raised:** 2026-09-10, the scratch-directory `.gitignore` PR · **Closes when:** extractions exist and are tracked for every deck in `docs/Raw/`, or the approach is dropped
+**Owner:** agent
+
+`sals3_cancellation_sop_2026-09-03_v3.pptx.inspect.ndjson` is the only extracted
+text beside any deck, and it is not in git. Five decks are tracked and none of
+them is searchable or diffable from the vault. **Either track the extractions for
+all of them or for none** — one is the state that teaches nobody anything.
+
 
 ## Closed
 
