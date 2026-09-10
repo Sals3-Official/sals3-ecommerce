@@ -7,7 +7,7 @@ aliases:
     "What Is Still Pending",
   ]
 created: 2026-09-09
-updated: 2026-09-10
+updated: 2026-09-11
 status: canonical
 authority: open-work-register
 owner_approved: true
@@ -75,6 +75,71 @@ being read.
 ---
 
 ## Open
+
+### [P1] The 2026-09-11 AU order-page hang is bounded, not diagnosed
+**Raised:** 2026-09-11, the portal-read-deadline PRs (`sals3.com.au`, `sals3.com.fj`, `sals3-ecommerce`) · **Closes when:** the incident is reproduced with a signed-in buyer on `sit.sals3.com.au` and the pending upstream call is named from the `sals3-com-au` function logs, or a different cause is proved
+**Owner:** blocked on a signed-in SIT buyer and Vercel log access (AJ)
+
+Every buyer order-scoped page on `sit.sals3.com.au` — four `/orders/{number}`
+pages and one `/cancel` — rendered the `/orders` loading skeleton indefinitely
+with `document.readyState === 'complete'`, while the same order numbers answered
+in seconds on `sit.sals3.com` and `sit.sals3.com.fj` and the AU orders **list**
+page was fine. The deadline shipped in these PRs turns a hung Portal read into
+the route's error page, which removes the endless skeleton **whatever** the
+cause — but it is not evidence of the cause.
+
+Two facts make an AU-only *code* fault impossible, so the answer is
+environmental: the order render path is byte-identical between the AU and FJ
+repositories (`git diff fj/develop origin/develop -- src/app/orders
+src/lib/orders src/components/orders src/services/storefront/orders.ts` is
+empty), and all three storefronts deployed successfully within eleven minutes of
+each other on 2026-09-09. Vercel showed **no matching request rows** for those
+paths, which points at something answering before the function runs rather than
+at the function hanging inside it — Vercel Deployment Protection sits in front of
+all three SIT hosts (each answers `302` to `vercel.com/sso-api` for an
+unauthenticated read, measured 2026-09-11), and its per-domain cookie expiring
+mid-session would fit "worked earlier, then stuck" exactly. Unproven either way.
+
+### [P1] The AU and FJ Vercel projects' Portal variables have never been compared
+**Raised:** 2026-09-11, the portal-read-deadline PRs · **Closes when:** `SALS3_PORTAL_URL` and `SALS3_PORTAL_PROTECTION_BYPASS` are read off the `sals3-com-au` and `sals3-com-fj` Preview/`develop` scopes and either matched or the difference recorded
+**Owner:** owner/AJ — Vercel dashboard, not a code change
+
+The same code and the same Portal serve both markets, so a configuration
+difference is the first place an AU-only fault could live. No agent in this
+session had Vercel access, and neither repository's `.env.local` carries SIT
+values, so this was **not** checked. It is step 3 of the reported task and
+remains undone. Related: the still-open *`SALS3_PORTAL_PROTECTION_BYPASS` is
+unset on the SIT storefront projects* entry below, and `sals3.com.au`'s own
+2026-09-10 "rebuild SIT against the corrected portal bypass secret" commit,
+which suggests AU's value moved recently and the others' may not have.
+
+### [P2] The Portal read deadline is set against an assumed platform limit
+**Raised:** 2026-09-11, the portal-read-deadline PRs · **Closes when:** the deployed function `maxDuration` is read off Vercel and `DEFAULT_STOREFRONT_TIMEOUT_MS` is confirmed to sit below it
+**Owner:** agent, once someone with Vercel access reports the number
+
+`DEFAULT_STOREFRONT_TIMEOUT_MS` is 8000 ms, chosen to fire before the platform
+kills the function — which is the only thing that makes a deadline useful. None
+of the three repositories exports a `maxDuration` or carries a `vercel.json`, so
+the real ceiling is whatever the plan defaults to and nobody has read it. **If it
+is under eight seconds the deadline never fires and the endless skeleton
+returns unchanged.** `SALS3_PORTAL_TIMEOUT_MS` exists so this is an environment
+edit rather than a release.
+
+The same PRs give the four writes — checkout freight quotes, checkout intents,
+order acceptance, order cancellation — `CHECKOUT_PORTAL_TIMEOUT_MS` (25s)
+instead, because they wait on the Portal waiting on CJ. **Nobody has timed a
+real CJ-backed freight quote**; 25s is chosen to sit safely above one, not to be
+tight, and tightening it wants numbers.
+
+### [P3] `/orders/[orderNumber]` borrows the list page's loading skeleton
+**Raised:** 2026-09-11, the portal-read-deadline PRs · **Closes when:** the detail segment has its own `loading.tsx`, or the shared one is reworded to fit both
+**Owner:** agent
+
+There is no `loading.tsx` under `src/app/orders/[orderNumber]`, so the segment
+falls back to `/orders`'s, and a stuck **order detail** page says *"Loading your
+orders…"* and looks exactly like a stuck **list** page. That cost time in the
+2026-09-11 report, where the list was described as working and the detail as
+broken while both were showing the same component. Cosmetic; nobody is harmed.
 
 ### [P1] "The same test" at every stage is not defined
 **Raised:** 2026-09-10, the bible section 7 PR · **Closes when:** a named post-deploy checklist exists for a deployed SIT/UAT/Main host, or the owner confirms the tester's own judgement is the standard
