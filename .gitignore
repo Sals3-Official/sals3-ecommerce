@@ -61,3 +61,14 @@ docs/.obsidian/plugins/obsidian-local-rest-api/data.json
 # The repository root must not be opened as an Obsidian vault - the vault root
 # is docs/. See docs/Wiki/wiki/hot.md, "Repository and vault".
 /.obsidian/
+
+# Agent scratch: deck builders, docx/pdf renders, image-edit inputs and their
+# outputs. 346 MB and ~8,000 files as of 2026-09-10, none of it vault content.
+# Left untracked they are one `git add -A` away from landing in the vault
+# repository. Source documents that are worth keeping go to docs/Raw/ instead.
+/output/
+/outputs/
+/tmp/
+/deliverables/
+/image-edit-inputs/
+/.codex-image-assets/
