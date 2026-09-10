@@ -7,7 +7,7 @@ aliases:
     "What Is Still Pending",
   ]
 created: 2026-09-09
-updated: 2026-09-09
+updated: 2026-09-10
 status: canonical
 authority: open-work-register
 owner_approved: true
@@ -265,14 +265,6 @@ off. **This is disclosed rather than hidden** — the storefront says payment is
 taken in US dollars — which is what keeps it P2. Per-step ledger in
 [[ADR-003-international-availability-shipping-and-pricing]].
 
-### [P2] `NEXT_PUBLIC_SITE_URL` is unset on the apex, so `sals3.com` serves no canonical and no sitemap
-**Raised:** 2026-09-09, PR #240 · **Closes when:** the variable is set on Production, typed **Config and never Secret**, and the project redeployed
-**Owner:** owner — Vercel environment
-
-A Secret `NEXT_PUBLIC_*` never reaches the build and evaluates to empty. Until
-this is set, the whole SEO layer shipped in `sals3-ecommerce` #33 is inert on the
-flagship domain. See [[sals3-session-2026-09-08-part153-the-canonical-layer-switched-on-across-three-storefronts|part 153]].
-
 ### [P2] Both market storefronts are missing the promotion-gate workflow
 **Raised:** 2026-09-09, PR #240 · **Closes when:** `deployment-reached-the-environment.yml` exists on `sals3.com.fj` and `sals3.com.au`
 **Owner:** agent
@@ -315,7 +307,318 @@ that proves it.
 Any process reasoning about schema version from `__drizzle_migrations` will be
 wrong about this table. Full evidence in [[hot]].
 
+
+### [P0] SOP v4.2's review columns may not exist on SIT
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #224) · **Closes when:** `POST /api/internal/cancellations/migrate-cancellations` is run on SIT and reports `0040` applied
+**Owner:** agent to run, `CRON_SECRET` needed
+
+`drizzle/0040_order_cancellation_review.sql` adds four nullable columns that the
+staff review gate writes to. #224 listed *"running the migrate route on SIT after
+this deploys"* as undone and **nothing records it as having been run**. Until it
+has, a buyer's cancellation request past the hold window has nowhere to be
+stored, on the one environment where cancellation is live. P0 because it sits
+directly on the money path. See
+[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]] §5.
+
+### [P1] Three review POSTs are missing the portal protection-bypass headers
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #54) · **Closes when:** `getProtectionBypassHeaders()` is on all three calls in each storefront, pinned by a test like `orders.cancel-bypass.test.ts`
+**Owner:** agent
+
+The cancel POST failed on SIT because it was the one portal call not carrying the
+bypass headers — Vercel Deployment Protection answered `401` before the route
+ran, and the buyer read *"Something went wrong on our side."* **The three POSTs
+in `src/services/storefront/reviews.ts` have the identical omission**, found
+while fixing the first, in each of the three storefront repositories. Nine calls.
+A buyer submitting a review on any pre-production environment hits the same
+failure. See
+[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]] §1.
+
+### [P1] `SALS3_PORTAL_PROTECTION_BYPASS` is unset on the SIT storefront projects
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #40) · **Closes when:** the variable is set on the SIT storefront projects and a SIT home page shows real products
+**Owner:** owner — Vercel dashboard action, not a code change
+
+`sals3-portal-sit` and `-uat` answer **302** to a server-to-server read: Vercel
+Deployment Protection intercepts before the portal's own code runs, so the
+storefront gets a login page where it expected JSON. Since #40 the SIT
+storefronts show the honest *"could not load products"* state rather than the
+fabricated catalogue they used to — **which is correct behaviour, not a fix**.
+Nothing can be reviewed on SIT until the bypass is set. See
+[[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery|part 165]] §1.
+
+### [P1] Nothing tells a buyer their cancellation happened, in any repository
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #217, `sals3-ecommerce` #55) · **Closes when:** a cancellation email exists, or the owner confirms the order page is the whole notification
+**Owner:** owner to decide; agent to build
+
+**No order email exists in either repository** — not for the request, not for the
+approval, not for the refund. The order page is the only surface, so a buyer who
+requests a cancellation and closes the tab learns nothing until they return.
+Under SOP v4.2 a request can now wait **up to 12 hours** for a person before it
+auto-escalates, which is a long silence to ask someone to sit through. See
+[[sals3-session-2026-09-09-part164-a-buyer-can-cancel-and-the-hold-moved-into-cjs-imported-tab|part 164]] §9.
+
+### [P1] The whole cancellation feature is SIT-only and has never been promoted
+
+**Raised:** 2026-09-10, parts 163–167 audit · **Closes when:** the owner approves promotion, or the work is recorded as deliberately parked at SIT
+**Owner:** owner
+
+`sals3-portal` #218 says so in its own words — *"Not to be promoted to pre-prod
+or main without the owner"* — and all nine SOP v4.2 changes carry **SIT only**.
+That is the right default for a change to when money leaves the CJ wallet. It
+also means a buyer on production **still cannot cancel anything**, and the
+storefront copy promising a 24-hour window is only true on SIT. Whichever way it
+goes, the state should be a decision rather than a drift. See
+[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]].
+
+### [P1] `sameAs` is empty, and it is the largest remaining AEO gap
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #41) · **Closes when:** at least one authoritative external profile exists and is linked from the storefront
+**Owner:** owner — business work, not code
+
+`sameAs` is the field an answer engine most wants: it ties the `Organization`
+entity to Wikidata, a Knowledge Graph id or a social profile. **Sals3 has none** —
+no social account is linked from any storefront and no Wikidata item exists. The
+ABN and ACN now ground the entity against an external registry, which is the
+strongest signal available without one, but resolution stays weaker than it
+needs to be. **Inventing a plausible handle is the fabrication this surface is
+governed against**, so this cannot be closed in code. See
+[[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery|part 165]] §4.
+
+### [P1] Nothing checks that a lesson's "Where applied" file still exists
+
+**Raised:** 2026-09-10, the skills 106–122 PR · **Closes when:** a link check runs over the register, or the owner accepts the drift
+**Owner:** agent
+
+The register now names files across **four repositories** in 122 entries. A
+rename in any of them makes the reference stale **silently**, and a lesson that
+points at a file nobody can find is a lesson nobody applies. Part 163's skill 107
+is about exactly this failure mode on route names; the register has the same
+shape and no check.
+
+### [P2] `notify.ts` is optional, so a cancellation request may raise no ops signal
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #224) · **Closes when:** Resend or Slack is configured on the portal, or an in-app signal replaces them
+**Owner:** owner — credentials
+
+SOP v4.2 routes a buyer's request into a **Cancellation requests** lane and
+notifies ops through `modules/cancellations/notify.ts` — **Resend and Slack, both
+optional**. Unconfigured, the lane still fills and the 12-hour auto-escalation
+still fires, so nothing is lost. But nobody is *told*, which means the review gate
+degrades to a timer and the human judgement it exists for never happens.
+
+### [P2] The cause of CJ's empty freight list is unknown
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #222, #223) · **Closes when:** the cause is identified, or a retry policy is decided
+**Owner:** agent to investigate; owner to decide on retry
+
+On 2026-09-10 from 21:45 UTC CJ answered every package with `code 200, data: []`
+for **four destinations**, including products that had shipped the week before;
+CJ's own web calculator showed no methods either. #223 gave the empty list its
+own honest refusal, so buyers are no longer told *"no courier covers that
+route"* during an outage — **the symptom is handled, the cause is not**, and
+nothing decides whether the storefront should retry a quote automatically.
+
+### [P2] `sals3-portal.vercel.app` answers 402 `DEPLOYMENT_DISABLED`
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #40) · **Closes when:** the project is re-enabled, or it is confirmed dead and removed from every storefront's configuration
+**Owner:** owner — billing
+
+A portal deployment is disabled for non-payment. `sals3-portal-prod.vercel.app`
+is alive and correctly answers `401` to an unauthenticated read, so this is a
+stale project rather than an outage — but any environment still pointing at the
+402 host reads it as a portal failure and shows the unavailable state. Which host
+each environment actually dials is not written down anywhere.
+
+### [P2] The Contacts tab and `% refunded` are shapes waiting on the Item Problem SOP
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #200) · **Closes when:** the Item Problem SOP is approved and its intake exists
+**Owner:** owner — the SOP is an owner decision
+
+`/customers`' Contacts tab is a **named placeholder**, and `% refunded` reads
+`payment_status = 'REFUNDED'` because that is the only refund fact stored — **it
+cannot distinguish a full refund from a partial one**. `modules/customers/metrics.ts`
+takes claims, refunds and contacts as inputs when they arrive, so the shape is
+reserved rather than invented. The cancellation work has begun writing real
+refund rows, which is what will make the column mean more. See
+[[sals3-session-2026-09-09-part163-customers-replaces-inventory-in-the-seller-center|part 163]] §9.
+
+### [P2] Per-parcel cancellation does not exist, and two states need a person
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #217) · **Closes when:** the owner rules on per-parcel scope, and `FAILED` / `CJ_UNPAID` have a written handling procedure
+**Owner:** owner for scope; agent for the procedure
+
+Cancellation is **whole-order only** — a buyer with a two-parcel order cannot
+drop one. Separately, `FAILED` refunds and `CJ_UNPAID` tidy-ups are resolved by a
+person; both are visible on the parcel page, which is the minimum bar, but no
+written procedure says who looks or how often.
+
+### [P2] `robots.txt` is now the only discovery path for ~9,700 product URLs
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #51) · **Closes when:** something monitors that the per-chunk `Sitemap:` lines are present and correct
+**Owner:** agent
+
+The chunked sitemap is discovered through **one `Sitemap:` line per chunk** in
+`robots.txt` — deliberately, because `generateSitemaps()` on the root would have
+taken the already-submitted `/sitemap.xml` away. Verified live on 2026-09-10:
+**18 lines on all three production storefronts.** But `robots.ts` derives those
+lines from the Portal's page count, so a failed Portal read at generation time
+silently shortens the list, and **a missing line makes ~600 product URLs
+unreachable** to a crawler that only reads robots.txt. Nothing watches it.
+
+### [P2] The skills register is 122 entries in one file with no grouping
+
+**Raised:** 2026-09-10, the skills 106–122 PR · **Closes when:** the register is indexed by theme, or split
+**Owner:** agent
+
+~1,450 lines in number order. Finding the relevant lesson before starting work
+depends on already remembering it exists — which is the opposite of what the
+register is for. Seventeen entries were added in one pass and several restate
+neighbours from a different angle.
+
+### [P3] The Customers read model is correct and unbenchmarked
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #200) · **Closes when:** the list is measured against a production-sized customer count
+**Owner:** agent
+
+Every figure on `/customers` is computed on read through **correlated
+subqueries** — deliberately, because a cached counter drifts invisibly. It is
+paged and the row count is small today. Nobody has measured it against anything
+larger than SIT, and the place to fix it when it stops being affordable is a
+materialised read model, **not** a hand-maintained counter.
+
+### [P3] `public/flags/` covers six countries and fails quietly on a seventh
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-portal` #210) · **Closes when:** the fallback is made visible, or the set is completed for every destination the platform accepts
+**Owner:** agent
+
+The six approved buyer destinations ship as static SVGs because Windows Chrome
+renders Unicode regional-indicator flags as plain letters. Anything else falls
+back to a **letter badge** — correct, and indistinguishable from the bug the SVGs
+were added to fix. Adding a seventh destination without its SVG regresses the
+display with no error anywhere.
+
+### [P3] `sharp` and `js-yaml` were cleared by `npm audit fix`, not by a decision
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #47) · **Closes when:** the resolved versions are read off the lockfile and recorded
+**Owner:** agent
+
+The `next@16.3.4` bump ran `npm audit fix` (semver-compatible, **not**
+`--force`), which also cleared `sharp` ([GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c))
+and `js-yaml` ([GHSA-2883-xcg3-v3hh](https://github.com/advisories/GHSA-2883-xcg3-v3hh)).
+`npm audit --audit-level=high` goes from exit 1 to exit 0, which is the outcome —
+but **which versions landed was never read back**, in four repositories.
+`js-yaml` reaches the tree only through `@eslint/eslintrc`, so it was lint-time
+rather than production exposure.
+
+### [P3] The Portal's 30-per-page ceiling is the shape of the sitemap problem
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #44, #51) · **Closes when:** a larger page size is costed, or the ceiling is confirmed as correct
+**Owner:** agent
+
+9,718 products at 30 per page is **~324 Portal reads** for one catalogue pass —
+which is what failed a production build against the 60-second prerender cap and
+then forced the chunked split. Chunking divides that work across parallel crawler
+requests; it does not reduce it. **A larger page size would remove the need
+entirely** and has never been costed.
+
+### [P3] No scan enforces the no-fabricated-data rule
+
+**Raised:** 2026-09-10, parts 163–167 audit (`sals3-ecommerce` #40) · **Closes when:** a lint rule or test refuses a fixture import from a runtime path
+**Owner:** agent
+
+`nextjs-component-security-code-rules` forbids presenting placeholder data as
+Sals3's own catalogue, and it was violated in production code for weeks —
+invented product names at invented US$ prices on an A$ storefront, rendered
+exactly like the real shop. The rule existed; nothing checked it. **Nothing
+checks it now either**, so the next convenience fallback can become a production
+behaviour the same way.
+
+### [P3] Skills 106–122 were written from pull request bodies, not diffs
+
+**Raised:** 2026-09-10, the skills 106–122 PR · **Closes when:** the seventeen entries are read against the merged diffs
+**Owner:** agent
+
+Fifty pull requests were reconstructed from their descriptions. Where a PR
+described intent rather than the merged result — or where review changed
+something after the body was written — the lesson inherits that gap. The same
+caveat applies to parts 163–167 themselves.
+
+### [P1] Twenty entries were added in one pass and none has been worked
+
+**Raised:** 2026-09-10, the pending-register and hot.md PR · **Closes when:** the P0 and the three P1s from the parts 163–167 audit are closed or re-levelled with evidence
+**Owner:** owner to prioritise; agent to work
+
+The register went from 26 open entries to 46 in a single audit. **This file's own
+closing rule warns about exactly this** — *"a register that only ever grows stops
+being read"* — and a backlog nobody reads is indistinguishable from no backlog.
+The four highest are the `0040` migrate route, the nine review POSTs, the SIT
+protection bypass and the missing cancellation email.
+
+### [P2] The three sitemap checks were run by hand, and nothing re-runs them
+
+**Raised:** 2026-09-10, the pending-register and hot.md PR · **Closes when:** the checks run on a schedule, or their absence is accepted
+**Owner:** agent
+
+`robots.txt` line count, `/sitemap.xml` timing and a chunk's `<loc>` count were
+measured from one machine on 2026-09-10 and are recorded in
+[[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build|part 166]] §5.
+They passed on all three production hosts. **They are a snapshot** — `robots.ts`
+derives its `Sitemap:` lines from the Portal's page count, so a failed read at
+generation time silently shortens the list, and the claim goes stale without
+notice. The natural home is a Vercel Cron check on the vault repository, which is
+the one place Actions still runs.
+
+### [P3] The four source decks are committed as binaries with no extracted text
+
+**Raised:** 2026-09-10, the pending-register and hot.md PR · **Closes when:** a text or NDJSON extraction sits beside each deck, as `v3` already has
+**Owner:** agent
+
+`sals3_cancellation_sop_2026-09-03_v3.pptx`, `…09-09_v4.pptx`,
+`sals3_customer_profile_framework_2026-09-09.pptx` and
+`sals3_item_problem_return_refund_sop_2026-08-31.pptx` are now in git, so they can no
+longer be lost with one machine. **Their content is not searchable from the
+vault** and **v3, v4 and v5 cannot be diffed**, which is the question anyone
+reading ADR-020 against ADR-021 will actually have. Only v3 has an
+`.inspect.ndjson` beside it, and that file is untracked.
+
+
 ## Closed
 
-*Nothing yet. Closed entries are struck through here with their closing date and
-PR, and removed after a month.*
+*Struck through with the closing date and PR, and removed after a month.*
+
+### ~~[P2] `NEXT_PUBLIC_SITE_URL` is unset on the apex, so `sals3.com` serves no canonical and no sitemap~~
+
+**Closed:** 2026-09-10, verified live during the parts 163-167 audit — not by a PR.
+
+The variable was set on Production at some point before 2026-09-09, and
+**setting it is what activated the sitemap path that then failed a production
+build** against Vercel's 60-second prerender cap — see
+[[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build|part 166]] §2.
+Measured on 2026-09-10, all three production storefronts:
+
+| Host | `robots.txt` `Sitemap:` lines | `/sitemap.xml` |
+| --- | --- | --- |
+| `sals3.com` | **18** | `200` in **0.78s**, 20 URLs |
+| `sals3.com.fj` | **18** | `200` in **0.97s**, 20 URLs |
+| `sals3.com.au` | **18** | `200` in **0.84s**, 20 URLs |
+
+`https://sals3.com/catalogue/sitemap/0.xml` answered `200` in **0.64s with 600
+`<loc>` entries**, which also closes part 166's *"a chunk returning real
+products end to end is unverified"* — the three post-deploy checks its author
+wrote out were run here and all three pass.
+
+<details><summary>The entry as it stood</summary>
+
+### [P2] `NEXT_PUBLIC_SITE_URL` is unset on the apex, so `sals3.com` serves no canonical and no sitemap
+**Raised:** 2026-09-09, PR #240 · **Closes when:** the variable is set on Production, typed **Config and never Secret**, and the project redeployed
+**Owner:** owner — Vercel environment
+
+A Secret `NEXT_PUBLIC_*` never reaches the build and evaluates to empty. Until
+this is set, the whole SEO layer shipped in `sals3-ecommerce` #33 is inert on the
+flagship domain. See [[sals3-session-2026-09-08-part153-the-canonical-layer-switched-on-across-three-storefronts|part 153]].
+
+</details>
+
