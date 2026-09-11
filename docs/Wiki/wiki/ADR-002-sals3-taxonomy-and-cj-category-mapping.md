@@ -2,7 +2,7 @@
 tags: [sals3, adr, catalog, taxonomy, cj-dropshipping, mapping]
 aliases: [ADR-002, Sals3 Taxonomy v0, CJ Category Mapping]
 created: 2026-08-06
-updated: 2026-08-21
+updated: 2026-09-11
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -12,9 +12,15 @@ related:
   - "[[universal-category-variation-taxonomy-reference]]"
   - "[[sals3-cj-dropshipping-integration-plan]]"
   - "[[sals3-session-2026-08-14-part40-aj-category-mirror-and-draft-evidence-work]]"
+  - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
+  - "[[pending-register]]"
+  - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
 ---
 
 # ADR-002 - Sals3 Taxonomy v0 and CJ category mapping
+
+> [!DANGER] Read the 2026-09-11 amendment first
+> Three statements in *§"Not built, and blocking"* and the 2026-08-21 amendment are **false** as of 2026-09-11: the authorization gate no longer denies every role, the governance operations now have a Server Action and route handlers, and **379 mapping rules are approved**. The amendment at the foot of this note says exactly what changed and what did not.
 
 > [!IMPORTANT] Adopted for pilot; not yet production-validated
 > The workbook is the approved starting direction for Sals3 Taxonomy v0. Adoption does not claim that every row, attribute preset, license/provenance question, or CJ mapping is production-ready.
@@ -328,3 +334,194 @@ Unchanged from §"Decision": **not one CJ→Sals3 mapping rule is approved**, no
 governance in the Admin Portal. That remains the blocker for any mapping surface.
 
 **Frontmatter `updated`** moved to 2026-08-21. `status` stays `approved`.
+
+
+## Amendment — 2026-09-11: the mapping authority moved into the Portal, and 379 rules are approved
+
+> [!DANGER] Three statements in this note are now false
+> All three were true when written and were made stale by the owner's
+> 2026-08-15 decision and the four mapping passes that followed. Read them here
+> before relying on anything in *§"Not built, and blocking"* or the 2026-08-21
+> amendment's closing section:
+>
+> 1. *"the authorization gate is an allow list that is currently empty: it
+>    denies every role, including `admin`"* — **false.**
+>    `catalog.category_mapping.manage` is in `PORTAL_PERMISSIONS` and is granted
+>    to `admin`, `seller_manager` and `seller_staff`.
+> 2. *"The governance operations are therefore server-only application
+>    functions with no Server Action, no route handler, and no UI"* — **false.**
+>    There is a Server Action, two route handlers and a picker in the editor.
+> 3. *"not one CJ→Sals3 mapping rule is approved"* — **false.**
+>    **379 mappings and 50 deliberately disabled mixed buckets** are approved in
+>    `sals3-portal`, decided across four reviewed tiers.
+>
+> What has **not** changed: no branch has earned `pilot_validated`, publication
+> still refuses a `CJ-<uuid>` mirror category, no fuzzy method exists, nothing
+> consumes the remap findings, and the provenance/license review is still not
+> recorded. §5.
+
+> [!NOTE] Provenance
+> Written 2026-09-11. Every claim below was read from
+> `anythingsupplies/sals3-portal` at `origin/develop`, by file:
+> `src/lib/auth/permissions.ts`, `src/modules/catalog/taxonomy/authorization.ts`,
+> `src/modules/catalog/taxonomy/governance.ts`,
+> `src/modules/catalog/taxonomy/seed-category-mappings.ts`,
+> `src/lib/db/schema/category-mapping.ts`,
+> `src/app/(portal)/listings/category-mapping-actions.ts`,
+> `src/app/api/internal/catalog/taxonomy/seed-category-mappings/route.ts`,
+> `src/app/api/cron/seed-category-mappings/route.ts` and `vercel.json`.
+> The tier and census figures are the seeder file's own measured numbers,
+> carried through [[sals3-session-2026-09-03-part126-a-cj-leafs-name-is-not-its-contents-twice|part 126]],
+> [[sals3-session-2026-09-04-part129-coverage-jumps-from-19-to-69-percent-once-the-census-stopped-being-the-alphabet|part 129]]
+> and [[sals3-session-2026-09-04-part134-the-last-306-supplier-leaves-and-the-seed-that-has-not-run|part 134]].
+> **No production database was queried and no endpoint was called** — where this
+> amendment cannot prove a live figure, it says so rather than estimating one.
+
+### 1. Claim by claim
+
+| This note says | Where | Measured 2026-09-11 |
+| --- | --- | --- |
+| the authorization gate "denies every role, including `admin`" | §*Not built, and blocking* | `authorizeCategoryGovernance()` delegates to `can(role, 'catalog.category_mapping.manage')`; **three roles hold it** — `admin`, `seller_manager`, `seller_staff` |
+| "no Server Action, no route handler, and no UI" | §*Not built, and blocking* | `listings/category-mapping-actions.ts` (Server Action), `api/internal/products/[id]/category/route.ts` and two seed routes, plus the picker in the editor's Basic Information grid |
+| "Not one rule is seeded" | §*Not built, and blocking* | **379 mappings + 50 disabled mixed buckets** committed in `seed-category-mappings.ts` |
+| "not one CJ→Sals3 mapping rule is approved … no portal role — `admin` included — carries the authority to approve a mapping, because ADR-014 puts category governance in the Admin Portal" | 2026-08-21 amendment | both halves superseded — see §2 |
+| "Migration `0014_red_swordsman` is generated and NOT applied" | §*Not built, and blocking* | historical. That name is no longer in the migration ledger, the repository is at `0040`, and `provider_category_mappings` is live with exactly the indexes §*What exists* describes |
+| `sals3_categories.taxonomy_status` is `ADOPTED` for all rows; no branch `pilot_validated` | §*Not built, and blocking* | **unchanged** as far as the code shows — the two later statuses appear only in a schema comment; the `PILOT_VALIDATED`/`PRODUCTION_READY` enum in `pricing-policy.ts` is a different concept |
+| "No remap worker … Nothing consumes them" | §*Not built, and blocking* | **unchanged**, and now deliberate: `candidates/candidate-detail.ts` carries a comment stating `category_remap_review_findings` *"is not read here"* |
+
+### 2. Why the authority moved
+
+Not decided here, and not re-litigated here. The owner reversed ADR-014's
+assignment on **2026-08-15, twice in one day** — first moving the decision into
+the Portal's product editor while keeping the platform-wide effect, then
+dropping the platform-wide effect entirely. Full account, with the code comment
+that is the only record of the second reversal, in
+[[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014]]'s
+2026-09-11 amendment.
+
+The consequence for **this** ADR is narrow and specific: §*Not built, and
+blocking* named ADR-014 as the reason the gate was empty. That reason no longer
+holds, the gate was filled, and this note never said so.
+
+### 3. Two different decisions share one permission name — do not read them as one
+
+This is the distinction a reader of §3 most needs, and the permission name
+actively obscures it.
+
+| | A product's Sals3 category | A CJ-leaf → Sals3 mapping rule |
+| --- | --- | --- |
+| What §3 of this ADR is about | no | **yes** |
+| Who decides | the seller, on their own product | a reviewed decision, platform-wide |
+| Scope | one product | every candidate under that supplier leaf |
+| Where | `decideProductSals3Category`, editor picker | `provider_category_mappings`, propose → approve |
+| Gate | `catalog.category_mapping.manage` | **the same permission name**, but the write is the seeder's, not a session's |
+| Risk if wrong | the seller's own listing sells worse | every product in the leaf is misfiled |
+
+`authorization.ts` is explicit that the granted permission is the **first**
+column: *"one seller's pick changes only the one product they had open, never
+another product or another seller's."* `catalogue_reviewer` and `viewer` are
+denied **because their sessions are not scoped to one seller's own product** —
+a tenant-scoping argument, not a platform-authority one.
+
+So the permission's name is inherited from a capability it no longer gates.
+Nothing in this amendment asks for a rename; it asks that the two not be read
+as one, which §3 of this ADR otherwise invites.
+
+### 4. The 379 rules, and the gap between reviewed and live
+
+The platform-wide half of §3 is built — as **reviewed decisions written in
+TypeScript**, not as a screen. `src/modules/catalog/taxonomy/seed-category-mappings.ts`
+is 3,540 lines, each mapping carrying its reason beside it, decided against a
+measured census of **432,654 screened candidates across 473 supplier leaves**:
+
+| pass | PR | leaves | candidates | reviewed coverage |
+| --- | --- | --- | --- | --- |
+| first tier | [#38](https://github.com/anythingsupplies/sals3-portal/pull/38) | 22 | 106,068 | 18.7% → 43.2% |
+| second tier | [#44](https://github.com/anythingsupplies/sals3-portal/pull/44) | 63 | 111,208 | 43.3% → 69.0% |
+| third tier | [#49](https://github.com/anythingsupplies/sals3-portal/pull/49) | 47 | 40,076 | 69.0% → **78.2%** |
+| fourth tier | [#59](https://github.com/anythingsupplies/sals3-portal/pull/59) | 259 | 41,619 | closes the review |
+
+It honours this ADR's own design rather than working around it: the seeder calls
+`proposeCategoryMapping` → `reviewCategoryMappingDecision`, so the compare-and-set
+version, the partial unique index on one `ACTIVE` row, supersession, the
+`category_remap_review_findings` row and the audit events all fire exactly as
+§*What exists* specifies. External ids are matched against the discovery cycle's
+own category snapshot — never guessed, never a fresh CJ call, refused outright
+when absent or ambiguous, which keeps §*Rules this implementation enforces*
+intact. **50 leaves are deliberately `disabled` rather than mapped**, because
+their contents visibly disagree: `Tools Storage` holds a stationery case, a
+hair-curler bag, a drumstick case and a golf bag, and not one thing that stores
+a tool. A disabled bucket is this ADR's `UNMAPPED` answer being chosen on
+purpose.
+
+**Two things about it belong in the record.**
+
+**The actor is a string constant.** `const SEED_ACTOR = 'taxonomy-mapping-seed'`,
+used as **both** `actorId` on the proposal and `reviewedBy` on the approval —
+proposer and approver are the same value, and neither is a person. This ADR's
+§3 field list asks for *actor*; it gets one, and it is a seeder. Whether that
+stays the mechanism is an owner decision, open in [[pending-register]].
+
+**Reviewed is not live, and the blocker's stated cause has expired.**
+[[sals3-session-2026-09-04-part134-the-last-306-supplier-leaves-and-the-seed-that-has-not-run|Part 134]]
+verified from the Actions API that the last production seed ran
+**2026-09-03T21:37Z**, returning
+`{"ok":true,"seeded":44,"superseded":3,"disabled":2,"alreadyActive":102}` — the
+**third** tier. The fourth merged the next day and no run followed, because the
+dispatch needed GitHub Actions and Actions is billing-dead.
+
+That reason stopped being true on **2026-09-07**: `seed-category-mappings` is
+now a **Vercel Cron job, hourly at :17**, present in `vercel.json` on `main`
+([[sals3-session-2026-09-07-part149-notify-every-market-storefront-and-two-jobs-onto-vercel-cron|part 149]]).
+Vercel injects `Authorization: Bearer $CRON_SECRET` itself, so the operation is
+reachable again without the secret being readable.
+
+[[pending-register]] already names that path. [[hot]] does not — its entry still
+reads *"one dispatch is owed, and it is blocked on billing"*, naming only the
+dead Actions workflow. Corrected there by this amendment's own pull request. The
+distinction that matters is not availability but **schedule**: the job is not
+merely reachable, it is **scheduled hourly on `main`**, which makes "one
+dispatch is owed" the wrong shape of statement entirely.
+
+> [!WARNING] Quote 78.2% as reviewed, not as live — this amendment does not close that gap
+> Whether the hourly cron has run in production, and what it returned, was
+> **not measured here**: the only ways to find out are to call a writing
+> endpoint or read the production database, and neither is something this
+> amendment should do on its own authority. The honest statement is that the
+> **mechanism** is no longer blocked, and the **outcome** is unverified.
+> Part 134's rule still governs the number you quote: *committing governance
+> data and seeding governance data are two separate successes.*
+
+### 5. What this amendment leaves standing, unchanged
+
+- **No fuzzy method.** The method enum is still `EXTERNAL_ID_RULE` or
+  `REVIEWED_PATH_RULE`; all four tiers used the latter.
+- **`AMBIGUOUS` and `UNMAPPED` remain correct answers**, and 50 disabled buckets
+  are that rule being applied deliberately.
+- **Publication still refuses a `CJ-<uuid>` mirror category outright** — the
+  2026-08-20 amendment is untouched, and it is why the mapping work mattered:
+  with zero reviewed mappings, every quick publish stopped for a human pick.
+- **Corrections version forward and never rewrite.**
+- **No branch is `pilot_validated` or `production_ready`.** §4's pilot
+  validation is still owed.
+- **Nothing consumes the remap findings.**
+- **The provenance/license review under §*Verification required* is still not
+  recorded.**
+
+`status` stays `approved`. `owner_approved` stays `true`. The note is still
+**not renamed** for the reason its 2026-08-21 amendment gives: renaming breaks
+every `[[ADR-002-...]]` link in the vault.
+
+### 6. What this amendment does not do
+
+- **It does not rename the permission.** `catalog.category_mapping.manage` gates
+  per-product tagging and reads as though it gates mapping rules. Noted in §3 so
+  a reader is not misled; a rename is a code change with its own review.
+- **It does not judge `SEED_ACTOR`.** With no Admin Portal deployed and no
+  employee identity in `sals3-portal`, there was no other path, and the
+  decisions themselves are reasoned line by line in git. Open for the owner in
+  [[pending-register]].
+- **It does not claim a live coverage figure.** See the warning in §4.
+- **It does not revive the Admin Portal path.** That is
+  [[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014]]'s
+  question, answered in its own 2026-09-11 amendment.

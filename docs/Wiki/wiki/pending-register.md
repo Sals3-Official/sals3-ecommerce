@@ -177,9 +177,16 @@ mechanism is written down rather than hidden. It is here so the trade-off is a
 decision on the record instead of a default. See ADR-014 §3 of the 2026-09-11
 amendment.
 
-### [P3] ADR-002 states that no portal role can approve a mapping; three roles now can
-**Raised:** 2026-09-11, the ADR-014 amendment PR · **Closes when:** ADR-002 carries its own dated amendment
-**Owner:** agent
+### ~~[P3] ADR-002 states that no portal role can approve a mapping; three roles now can~~ — CLOSED 2026-09-11, the ADR-002 amendment PR
+**Raised:** 2026-09-11, the ADR-014 amendment PR · **Closed by:** [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002]]'s 2026-09-11 amendment
+**Owner:** was agent
+
+> [!NOTE] It was three false statements, not one
+> The amendment also corrects *"no Server Action, no route handler, and no UI"*
+> and *"Not one rule is seeded"* — **379 mappings and 50 disabled mixed buckets**
+> are approved. And it separates the two decisions the permission name conflates:
+> a seller tagging **their own product**, and a platform-wide **CJ-leaf mapping
+> rule**. §3 of the amendment.
 
 ADR-002's 2026-08-21 amendment says *"no portal role — `admin` included —
 carries the authority to approve a mapping, because ADR-014 puts category
@@ -194,6 +201,25 @@ stale. ADR-002 is its own decision record, so it gets its own amendment rather
 than being corrected from ADR-014 — noted there in §5 of the 2026-09-11
 amendment, which is why this is P3 and not P2: the misleading sentence is
 already flagged in the note a reader arrives from.
+
+### [P3] `catalog.category_mapping.manage` gates per-product tagging and reads as though it gates mapping rules
+**Raised:** 2026-09-11, the ADR-002 amendment PR · **Closes when:** the permission is renamed, or a comment at the grant site says what it does not gate
+**Owner:** agent — a code change in `sals3-portal`, not a vault edit
+
+Two different decisions share this one name, and the gap between them is the
+whole of [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002]] §3:
+
+- **what it actually gates** — a seller tagging **their own product**'s Sals3
+  category. `decideProductSals3Category` changes only the product the seller had
+  open. Granted to `admin`, `seller_manager`, `seller_staff`;
+- **what the name suggests** — approving a **CJ-leaf → Sals3 mapping rule**,
+  which reclassifies every candidate under that supplier leaf. Those 379 rules
+  are written by the seeder, never by a session holding this permission.
+
+`authorization.ts` explains the distinction correctly in its own doc comment, so
+anyone reading the module is safe. Anyone reading `permissions.ts`, a role
+table, or an audit row is not. Nothing is broken; a future reader granting this
+permission to a new role may believe they are granting platform authority.
 
 ### [P3] The BOGS Dashboard second brain is not under version control
 **Raised:** 2026-09-11, the repository-register PR · **Closes when:** `E:\Bogs 2nd brain` has a remote, or the owner accepts the risk knowingly
@@ -473,13 +499,29 @@ request now fails a check that cannot pass, and **that is how reviewers learn to
 stop reading checks** — which costs more than the signal is worth. See
 [[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]].
 
-### [P2] The fourth tier of supplier-leaf mappings has never been seeded to production
-**Raised:** carried from [[hot]] · **Closes when:** one `taxonomy-seed-category-mappings` dispatch runs against production
-**Owner:** blocked on Actions billing — or run through the Vercel Cron path added in `sals3-portal` #123
+### [P2] The fourth tier of supplier-leaf mappings has never been *observed* to reach production
+**Raised:** carried from [[hot]] · **Re-scoped:** 2026-09-11, the ADR-002 amendment PR · **Closes when:** one run's result object is read and quoted, from the cron or a dispatch
+**Owner:** agent — no longer blocked; it needs a measurement, not a dispatch
 
 **78.2% is the reviewed figure, not the live one.** Also owed: the `#111`
-mojibake fix, which needs the same dispatch. See
+mojibake fix, which needed the same dispatch. See
 [[sals3-session-2026-09-07-part150-four-taxonomy-seed-corrections-two-of-them-self-inflicted|part 150]].
+
+> [!IMPORTANT] Re-scoped 2026-09-11 — the blocker's stated cause expired four days after it was written
+> This entry and [[hot]]'s both say a dispatch is *owed* and *blocked on Actions
+> billing*. Measured at `anythingsupplies/sals3-portal` `origin/main`:
+> `seed-category-mappings` has been a **Vercel Cron job scheduled hourly at
+> :17** in `vercel.json` since 2026-09-07
+> ([[sals3-session-2026-09-07-part149-notify-every-market-storefront-and-two-jobs-onto-vercel-cron|part 149]]).
+> Vercel injects the `Authorization: Bearer $CRON_SECRET` header itself, so the
+> operation never needed the dead workflow again.
+>
+> Nothing is owed. What is missing is **evidence of the outcome**: whether the
+> cron has run in production and what it returned was not measured, because the
+> only ways to find out are to call a writing endpoint or read the production
+> database. Until a run's result object is quoted, part 134's rule governs the
+> number — *committing governance data and seeding governance data are two
+> separate successes* — and **78.2% stays the reviewed figure**.
 
 ### [P2] Fiji shows FJD and charges USD
 **Raised:** 2026-09-09, PR #240 · **Closes when:** `capabilities.ts` sets `FJ` to `FJD` **and** the storefront stops converting an already-Fijian price, in one release
