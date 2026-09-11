@@ -37,7 +37,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 - [[vault-governance-and-note-lifecycle]] — authority, status, idea, and change rules.
 - [[architecture-decision-template]] — ADR template.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — approved curated CJ sourcing, catalog ownership, architecture, seller/offer, content, media-rights, and publish-gate decision; not implemented.
-- [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — approved Taxonomy v0 pilot adoption, CJ mapping, provenance, and production-validation decision. **Amended 2026-08-14**: the reference taxonomy is now Google's product taxonomy (5,595 categories), not the original Shopee-derived workbook — see the note's own amendment section.
+- [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — approved Taxonomy v0 pilot adoption, CJ mapping, provenance, and production-validation decision. **Amended 2026-08-14**: the reference taxonomy is now Google's product taxonomy (5,595 categories), not the original Shopee-derived workbook — see the note's own amendment section. **Amended 2026-09-11**: three of its statements measured false — the authorization gate no longer denies every role, the governance operations have a Server Action and route handlers, and **379 mapping rules plus 50 disabled mixed buckets are approved**; the amendment also names the six things that have not changed.
 - [[ADR-003-international-availability-shipping-and-pricing]] — approved market enablement, destination freight, currency, pricing, and international SEO decision.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment]] — approved direct CJ order, wallet, webhook, tracking, and reconciliation decision.
 - [[ADR-005-payment-settlement-refunds-and-cod]] — approved payment/refund state separation and phase-1 COD exclusion.
@@ -53,7 +53,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (129 entries as of 2026-09-11; re-derive the count with `grep -c` rather than trusting it).
+- [[sals3-skills]] — consolidated engineering lessons (130 entries as of 2026-09-11; re-derive the count with `grep -c` rather than trusting it).
 - [[sals3-repository-register]] — the measured inventory of all **eleven** repositories across `anythingsupplies`, `Sals3-Official` and `louieboi09`: purpose, default branch, promotion-gate state, visibility, how many vault notes cite each, and the local clone/worktree map. Register a new repository here in the same task it is created.
 
 ## Business and product

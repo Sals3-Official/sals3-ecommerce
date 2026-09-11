@@ -60,7 +60,7 @@ related:
 - [[vault-governance-and-note-lifecycle|Vault Governance and Note Lifecycle]] — authority order, status vocabulary, and change protocol.
 - [[architecture-decision-template|ADR Template]] — required structure for material design decisions.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products|ADR-001 — Curated CJ Sourcing to My Products]] — approved catalog ownership, curation, seller/offer, architecture, media-rights, and publish-gate decision. Not implemented.
-- [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002 — Taxonomy v0 and CJ Mapping]] — approved pilot adoption and validation rules for the source workbook and real CJ category/attribute mappings.
+- [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002 — Taxonomy v0 and CJ Mapping]] — approved pilot adoption and validation rules for the source workbook and real CJ category/attribute mappings. **Amended 2026-09-11**: three of its statements measured false — the authorization gate no longer denies every role, the governance operations have a Server Action and route handlers, and **379 mapping rules plus 50 disabled mixed buckets are approved**; the amendment also names the six things that have not changed.
 - [[ADR-003-international-availability-shipping-and-pricing|ADR-003 — International Shipping and Pricing]] — approved country enablement, exact destination quotes, USD phase 1, contribution pricing, and international SEO rules.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment|ADR-004 — CJ Ordering and Fulfillment]] — approved direct, idempotent CJ order, wallet, webhook, tracking, and reconciliation design.
 - [[ADR-009-server-verified-email-password-authentication|ADR-009 — Server-verified Email/Password Auth]] — approved server-side credential verification, blocked unverified sign-in, and one indistinguishable credential failure.
@@ -76,7 +76,7 @@ related:
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
-- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (**129 entries as of 2026-09-11**; the count in this line has been stale before, so re-derive it with `grep -c` rather than trusting it).
+- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (**130 entries as of 2026-09-11**; the count in this line has been stale before, so re-derive it with `grep -c` rather than trusting it).
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel|2026-08-05 Landing Page API Carousel Turnover Prompt]] — copy-paste handoff prompt for the next agent after that session.

@@ -34,6 +34,7 @@ related:
   - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
   - "[[sals3-repository-register]]"
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
+  - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -1579,3 +1580,24 @@ The actor on all 379 is `const SEED_ACTOR = 'taxonomy-mapping-seed'`, used as **
 The reflex worth keeping: when an ADR reserves a capability for a system that does not exist yet, **the capability is usually happening somewhere anyway** — the reservation just moved it out of the place you would look.
 
 **Where applied:** `src/modules/catalog/taxonomy/authorization.ts`, `seed-category-mappings.ts` and `src/app/api/internal/catalog/taxonomy/seed-category-mappings/route.ts` in `sals3-portal`. See [[ADR-014-admin-portal-platform-governance-and-global-controls]]'s 2026-09-11 amendment §3, and [[pending-register]]'s two entries on it.
+
+### 130. A blocker's stated cause expires on its own schedule — re-derive the cause, not just the status
+
+**Confirmed:** 2026-09-11, amending ADR-002 and finding that the thing blocking the fourth mapping tier had stopped blocking it four days after the entry was written.
+
+**Incident:** [[hot]] has carried, since 2026-09-04: *"One `taxonomy-seed-category-mappings.yml` dispatch with `environment: production` is owed, and it is **blocked on billing**."* True as written — GitHub Actions had stopped starting, and `CRON_SECRET` is a Vercel Sensitive Environment Variable, write-only by design, so no person could run the dispatch by hand either.
+
+On 2026-09-07 that stopped being true. `seed-category-mappings` became a **Vercel Cron job scheduled hourly at :17**, committed in `vercel.json` on `main` — Vercel injects `Authorization: Bearer $CRON_SECRET` into the request itself, so the caller never needs to know the secret. **Nothing was owed any more, and the entry still said a dispatch was.**
+
+`pending-register` had picked up the cron path; `hot` had not. The status (*coverage is not live*) may well still be right. The **cause** was four days stale, and the cause is what decides who is unblocked and what the next action is: *"dispatch a workflow"* and *"read a run's result"* are different tasks with different owners.
+
+**Lesson:** An open item carries two claims that rot at different speeds — *this is not done* and *this is why*. Auditing the first and inheriting the second is how a register accumulates work nobody is actually blocked on.
+
+1. **Re-derive the cause when you touch the entry**, not just the status. Here it was one `git show origin/main:vercel.json`.
+2. **Watch for the general fix that closes a specific blocker without mentioning it.** The cron was added to survive the billing outage across the board (part 149); it silently unblocked a mapping seed nobody was thinking about at the time. A workaround built for a category of problem rarely lists its beneficiaries.
+3. **Re-scope rather than close.** The fourth tier still is not *observed* in production — so the entry survives with a different owner (`agent`, needing a measurement) and a different closing condition (*quote a run's result object*), instead of being closed as fixed or left as blocked.
+4. **Say what you did not measure.** Whether the cron has run was not checked here, because the only ways to check are to call a writing endpoint or read the production database. Naming the unmeasured thing is what keeps the re-scope honest.
+
+The reflex: **"blocked on X" is a dated claim about X, not a property of the item.** Check X.
+
+**Where applied:** [[ADR-002-sals3-taxonomy-and-cj-category-mapping]]'s 2026-09-11 amendment §4; the re-scoped entry in [[pending-register]] and the correction callout in [[hot]].
