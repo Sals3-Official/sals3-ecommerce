@@ -183,70 +183,211 @@ someone happened to install in, and nothing else. This project uses worktrees
 constantly — [[sals3-repository-register]] §6 lists sixteen of them — so the
 uninstalled worktree is the common case, not the edge one.
 
-### [P1] The 2026-09-11 AU order-page hang is bounded, not diagnosed
-**Raised:** 2026-09-11, the portal-read-deadline PRs (`sals3.com.au`, `sals3.com.fj`, `sals3-ecommerce`) · **Closes when:** the incident is reproduced with a signed-in buyer on `sit.sals3.com.au` and the pending upstream call is named from the `sals3-com-au` function logs, or a different cause is proved
-**Owner:** blocked on a signed-in SIT buyer and Vercel log access (AJ)
+### ~~[P1] The 2026-09-11 AU order-page hang is bounded, not diagnosed~~ — closed 2026-09-11, diagnosed
 
-Every buyer order-scoped page on `sit.sals3.com.au` — four `/orders/{number}`
-pages and one `/cancel` — rendered the `/orders` loading skeleton indefinitely
-with `document.readyState === 'complete'`, while the same order numbers answered
-in seconds on `sit.sals3.com` and `sit.sals3.com.fj` and the AU orders **list**
-page was fine. The deadline shipped in these PRs turns a hung Portal read into
-the route's error page, which removes the endless skeleton **whatever** the
-cause — but it is not evidence of the cause.
+**Closed by:** the investigation recorded in the entry below. Kept for one month
+per this register's own protocol, because **the reasoning in it was wrong** and
+the correction is worth reading next to it.
 
-Two facts make an AU-only *code* fault impossible, so the answer is
-environmental: the order render path is byte-identical between the AU and FJ
-repositories (`git diff fj/develop origin/develop -- src/app/orders
-src/lib/orders src/components/orders src/services/storefront/orders.ts` is
-empty), and all three storefronts deployed successfully within eleven minutes of
-each other on 2026-09-09. Vercel showed **no matching request rows** for those
-paths, which points at something answering before the function runs rather than
-at the function hanging inside it — Vercel Deployment Protection sits in front of
-all three SIT hosts (each answers `302` to `vercel.com/sso-api` for an
-unauthenticated read, measured 2026-09-11), and its per-domain cookie expiring
-mid-session would fit "worked earlier, then stuck" exactly. Unproven either way.
+It inferred, from "Vercel showed no matching request rows", that something was
+answering before the function ran, and floated the SSO gate as the likely cause.
+Both halves were mistaken. The rows existed the whole time — the Logs view
+defaults to **Production**, and SIT is **Preview** (195 rows against 219K). Once
+filtered, every reported path answered `200`, and
+`/orders/S3-20260819-FB0EE6973B` at 00:06:04 shows **481ms execution, 411ms
+Portal read, response finished in 767ms**. The server was never involved.
 
-### [P1] The AU and FJ Vercel projects' Portal variables have never been compared
-**Raised:** 2026-09-11, the portal-read-deadline PRs · **Closes when:** `SALS3_PORTAL_URL` and `SALS3_PORTAL_PROTECTION_BYPASS` are read off the `sals3-com-au` and `sals3-com-fj` Preview/`develop` scopes and either matched or the difference recorded
-**Owner:** owner/AJ — Vercel dashboard, not a code change
+The lesson generalises: *an absent log row is a claim about a filter before it
+is a claim about the world.*
 
-The same code and the same Portal serve both markets, so a configuration
-difference is the first place an AU-only fault could live. No agent in this
-session had Vercel access, and neither repository's `.env.local` carries SIT
-values, so this was **not** checked. It is step 3 of the reported task and
-remains undone. Related: the still-open *`SALS3_PORTAL_PROTECTION_BYPASS` is
-unset on the SIT storefront projects* entry below, and `sals3.com.au`'s own
-2026-09-10 "rebuild SIT against the corrected portal bypass secret" commit,
-which suggests AU's value moved recently and the others' may not have.
+### ~~[P1] The AU and FJ Vercel projects' Portal variables have never been compared~~ — closed 2026-09-11, compared and identical
 
-### [P2] The Portal read deadline is set against an assumed platform limit
-**Raised:** 2026-09-11, the portal-read-deadline PRs · **Closes when:** the deployed function `maxDuration` is read off Vercel and `DEFAULT_STOREFRONT_TIMEOUT_MS` is confirmed to sit below it
-**Owner:** agent, once someone with Vercel access reports the number
+**Closed by:** a direct read of both projects' Preview/`develop` scopes.
 
-`DEFAULT_STOREFRONT_TIMEOUT_MS` is 8000 ms, chosen to fire before the platform
-kills the function — which is the only thing that makes a deadline useful. None
-of the three repositories exports a `maxDuration` or carries a `vercel.json`, so
-the real ceiling is whatever the plan defaults to and nobody has read it. **If it
-is under eight seconds the deadline never fires and the endless skeleton
-returns unchanged.** `SALS3_PORTAL_TIMEOUT_MS` exists so this is an environment
-edit rather than a release.
+| | `sals3-com-au` | `sals3-com-fj` |
+| --- | --- | --- |
+| `SALS3_PORTAL_URL` | `https://sals3-portal-sit.vercel.app` | **the same** |
+| `SALS3_PORTAL_PROTECTION_BYPASS` | set, updated 2d ago | set, updated 2d ago |
+| Function region / Fluid compute | `iad1` / enabled | `iad1` / enabled |
+| Deployment Protection | Standard, no exceptions | the same |
+| Skew Protection | Enabled | Enabled |
 
-The same PRs give the four writes — checkout freight quotes, checkout intents,
-order acceptance, order cancellation — `CHECKOUT_PORTAL_TIMEOUT_MS` (25s)
-instead, because they wait on the Portal waiting on CJ. **Nobody has timed a
-real CJ-backed freight quote**; 25s is chosen to sit safely above one, not to be
-tight, and tightening it wants numbers.
+**No difference anywhere.** This closes the configuration theory of the AU-only
+fault: the markets are configured identically, and AU was simply the tab left
+open across a deployment.
 
-### [P3] `/orders/[orderNumber]` borrows the list page's loading skeleton
-**Raised:** 2026-09-11, the portal-read-deadline PRs · **Closes when:** the detail segment has its own `loading.tsx`, or the shared one is reworded to fit both
+### ~~[P2] The Portal read deadline is set against an assumed platform limit~~ — closed 2026-09-11, measured
+
+**Closed by:** the function limit read straight off a live invocation —
+*Execution Duration / Maximum: **481ms / 5m***. The ceiling is **five minutes**,
+so `DEFAULT_STOREFRONT_TIMEOUT_MS` at 8000 ms fires with a wide margin and the
+"if it is under eight seconds the deadline never fires" risk does not exist.
+
+Worth keeping in view: before that deadline shipped, a hung read could hold a
+function for **five minutes**. That is what the change is worth, and it remains
+unrelated to the 2026-09-11 incident.
+
+### ~~[P3] `/orders/[orderNumber]` borrows the list page's loading skeleton~~ — closed 2026-09-11, merged and deployed
+
+**Closed by** [`sals3-ecommerce`#61](https://github.com/anythingsupplies/sals3-ecommerce/pull/61) (`772e8b9`),
+[`sals3.com.au`#55](https://github.com/anythingsupplies/sals3.com.au/pull/55) (`2e0c9a5`) and
+[`sals3.com.fj`#62](https://github.com/anythingsupplies/sals3.com.fj/pull/62) (`f02df23`),
+all three green on SIT. Each of `/orders/[orderNumber]` and
+`/orders/[orderNumber]/cancel` now has its own `loading.tsx`, its own skeleton
+shaped like its own page, and its own sentence.
+
+Not cosmetic after all, which is why the level stayed rather than dropping: a
+stuck **order** page announcing *"Loading your orders…"* is what made a broken
+detail page and a healthy list page read as one fault, and that is most of why
+the first diagnosis went to the wrong layer entirely.
+
+### [P2] Every storefront page is uncached, and origin transfer is billed uncompressed
+**Raised:** 2026-09-11, while tracing the Vercel bill · **Closes when:** the storefront shell can be cached, or the owner accepts the cost as the price of the destination logic
+**Owner:** owner/AJ — AJ built this surface and should decide
+
+`SiteHeader` renders `GuestUtilityBar`, which calls `resolveDestination`, which
+reads `cookies()` and `headers()`. `SiteHeader` is on **every page**, so every
+page of all three storefronts renders per request. Measured on production, three
+consecutive hits on one product page: `X-Vercel-Cache: MISS` every time,
+`Cache-Control: private, no-cache, no-store`.
+
+Origin transfer is billed on what leaves the function, **before** edge
+compression:
+
+| | bytes |
+| --- | --- |
+| product page, gzipped (what the browser gets) | 51,238 |
+| product page, plain (**what is billed**) | 323,216 |
+| of which RSC flight data | 193,243 (59%) |
+
+189 GB ÷ 316 KB ≈ **627,000 page renders**, which is consistent with 5.36M
+function invocations. `robots.txt` is `Allow: /` for everyone — GPTBot,
+PerplexityBot, ClaudeBot and OAI-SearchBot named explicitly — advertising
+~5,200 product URLs per site across three sites, none of them cacheable.
+
+**Cost:** Fast Origin Transfer **$45.06**, plus Fluid Active CPU $10.88 and
+Provisioned Memory $10.74 that follow from the same per-request rendering.
+Separately, Observability Events are **$34.71** for 28.93M events, which is a
+setting rather than traffic.
+
+**Care required:** `resolveDestination` is the code behind the checkout-country
+incidents (part 161's choice › market › geo precedence and the ADR-003
+amendment). Anything that moves it off the render path has to preserve that
+precedence exactly.
+
+### ~~[P3] The e2e SEO specs compared against a hardcoded port~~ — closed 2026-09-11, fixed in all three
+
+**Closed by** [`sals3.com.au`#58](https://github.com/anythingsupplies/sals3.com.au/pull/58),
+[`sals3.com.fj`#65](https://github.com/anythingsupplies/sals3.com.fj/pull/65),
+[`sals3-ecommerce`#67](https://github.com/anythingsupplies/sals3-ecommerce/pull/67).
+
+`playwright.config.ts` builds its `baseURL` from `PLAYWRIGHT_HOST` and `PORT`
+and hands that string to the dev server as `NEXT_PUBLIC_SITE_URL`, so the
+canonical a page renders **is** the config's origin. `e2e/seo.spec.ts` compared
+it against a fallback hardcoded to `http://127.0.0.1:3000`, which agreed only
+while nobody overrode the port. Both now read the same two variables.
+
+**Kept here because of how it was found, not what it was.** Running the suite on
+a non-default port to dodge a port conflict that did not exist produced five
+failures, and those failures were read as evidence that `pre-prod` was broken.
+Three theories were built on that reading - a broken base, a missing environment
+variable, orphaned processes - before the assertion was read closely enough to
+see that the *expectation* was stale and the rendered canonical was right. Hours
+went into it. Written by AJ in `7b1405b` on 2026-09-08; the misreading was the
+agent's.
+
+**[P3] still open:** only `seo.spec.ts` hardcoded an origin. The rest of the
+suite uses Playwright's `baseURL`. Nothing else was audited for the pattern.
+
+### [P1] The AU order-page hang is recovered from, not cured
+**Raised:** 2026-09-11, the stalled-navigation PRs ([`sals3-ecommerce`#61](https://github.com/anythingsupplies/sals3-ecommerce/pull/61), [`sals3.com.au`#55](https://github.com/anythingsupplies/sals3.com.au/pull/55), [`sals3.com.fj`#62](https://github.com/anythingsupplies/sals3.com.fj/pull/62)) · **Closes when:** a pinned deployment either keeps serving its tabs, or stops being pinned — a Vercel configuration decision, not a code change
+**Owner:** owner/AJ — Vercel Skew Protection settings
+
+**What was captured live on `sit.sals3.com.au`** while a page was stuck — the
+observations, which are solid; the attribution below them, which is not:
+
+```text
+GET /orders?_rsc=U5Jq6qAThNnFslX9   503
+GET /cart?_rsc=ncYrEHpaAt3hTajE     503
+GET /.well-known/vercel/jwe         503   (the skew-protection token endpoint)
+GET /sell?_rsc=KsDTiBny6MvXk6iC     pending, never settled
+```
+
+The App Router recovers from an RSC response it can **reject** — it falls back
+to a full page load. It cannot recover from one that **never settles**: the
+segment stays pending, the nearest loading boundary stays on screen, and
+`document.readyState` reads `'complete'` throughout because a soft navigation
+never reloads the document. And because none of it reaches a function, it leaves
+**no server log row** — the observation that misdirected the first diagnosis.
+
+The PRs above add a watchdog that reloads the tab once after 15s. **That is
+recovery, not a cure**: the buyer still sees a 15-second wait and a reload.
+
+**Why the deployment stopped answering is not established.** Skew Protection is
+the obvious candidate — the page's assets were pinned to a different deployment
+than the origin was serving, and `/.well-known/vercel/jwe` is its own token
+endpoint. But a reproduction attempt **argues against it**: requests pinned to an
+older deployment, and to a bogus one, all returned `200`, because `?dpl=` is
+ignored for document and RSC requests and old deployments keep serving. Spend
+Management pausing is ruled out (*Pause Projects: Off*). Vercel's automatic
+**System Mitigations** and a transient platform fault are not.
+
+### [P1] The `x-vercel-error` on those 503s was never captured
+**Raised:** 2026-09-11, the stalled-navigation PRs · **Closes when:** the header is read during a live occurrence and the 503 is attributed
+**Owner:** whoever is at the keyboard when it next happens
+
+The 503s recovered before the response header could be read, so **the cause of
+the 503 itself is unattributed** — a paused deployment, no response from the
+function, and a resource limit all present the same way at this distance. Given
+this org's billing history a resource limit is not a remote possibility, and
+guessing between them is exactly what this register exists to prevent.
+
+Next time a page sticks, run this in the console **while it is stuck**:
+
+```js
+fetch('/.well-known/vercel/jwe').then((r) =>
+  console.log(r.status, r.headers.get('x-vercel-error')),
+);
+```
+
+### [P2] The 15-second stall threshold is measured against SIT, not production
+**Raised:** 2026-09-11, the stalled-navigation PRs · **Closes when:** a real production `/orders/[orderNumber]` render is timed and the threshold is confirmed or moved
+**Owner:** agent, once a production timing exists
+
+15s was chosen as ~3.4x the slowest render observed **on SIT** — 4.4s end to end
+on a cold function with a 2.48s Portal read, against ~700ms warm. Production
+carries more traffic and a warmer function, so the real margin is probably
+wider, but nobody has measured it. **A threshold set too low reloads readers off
+pages that were about to arrive**, which is a worse failure than the one it is
+guarding, so this should be checked before the change is promoted past SIT.
+
+### [P2] Only `/orders` carries the stalled-navigation watchdog
+**Raised:** 2026-09-11, the stalled-navigation PRs · **Closes when:** every loading boundary mounts it, or a deliberate decision records why not
 **Owner:** agent
 
-There is no `loading.tsx` under `src/app/orders/[orderNumber]`, so the segment
-falls back to `/orders`'s, and a stuck **order detail** page says *"Loading your
-orders…"* and looks exactly like a stuck **list** page. That cost time in the
-2026-09-11 report, where the list was described as working and the detail as
-broken while both were showing the same component. Cosmetic; nobody is harmed.
+`StalledRouteReload` is mounted in the three loading boundaries under `/orders`
+because that is where the incident was seen. **The exposure is not specific to
+those routes** — any segment with a loading boundary can be left pending by the
+same pinned-deployment failure. Widening it is a deliberate follow-up rather
+than an oversight, and it wants the production timing above first.
+
+### [P2] The active `gh` account reverts to `louieboi09` and blocks pushes to `sals3.com.au`
+**Raised:** 2026-09-11, the stalled-navigation PRs · **Closes when:** the account stops reverting, or `louieboi09` is granted read access to the three repositories it cannot see
+**Owner:** owner — GitHub account/org membership
+
+Observed twice in one session: `gh auth switch --user anythingsupplies` succeeds,
+and some time later `gh auth status` reports `louieboi09` active again. It is not
+cosmetic — `louieboi09` gets a **404 on `anythingsupplies/sals3.com.au`**, so a
+push fails with `remote: Repository not found`, which reads like a wrong URL
+rather than a wrong identity. It cost one failed push and one repeated
+verification run here.
+
+This is the operational face of the standing *`louieboi09` cannot see three of
+the six `anythingsupplies` repositories* entry below. **Check `gh auth status`
+immediately before any push to `anythingsupplies`**, per
+[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]] §1,
+which already requires exactly that and is easy to read as ceremony until it
+bites.
 
 ### [P1] "The same test" at every stage is not defined
 **Raised:** 2026-09-10, the bible section 7 PR · **Closes when:** a named post-deploy checklist exists for a deployed SIT/UAT/Main host, or the owner confirms the tester's own judgement is the standard
