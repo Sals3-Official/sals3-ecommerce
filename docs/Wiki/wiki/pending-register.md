@@ -450,9 +450,33 @@ those routes** — any segment with a loading boundary can be left pending by th
 same pinned-deployment failure. Widening it is a deliberate follow-up rather
 than an oversight, and it wants the production timing above first.
 
-### [P2] The active `gh` account reverts to `louieboi09` and blocks pushes to `sals3.com.au`
+### [P2] Two credential stores, two accounts: `gh` and `git` disagree about who is pushing
 **Raised:** 2026-09-11, the stalled-navigation PRs · **Closes when:** the account stops reverting, or `louieboi09` is granted read access to the three repositories it cannot see
 **Owner:** owner — GitHub account/org membership
+
+**Seen from both sides in one day.** In the morning `gh` had reverted to
+`louieboi09` and a push to `anythingsupplies/sals3.com.au` failed with
+`Repository not found`. In the evening `gh` was correctly on `louieboi09` and a
+push to `Sals3-Official/sals3-ecommerce` **still** failed — `Permission …
+denied to anythingsupplies` — because `git` does not use `gh`'s account at
+all. Its `credential.helper` is Windows Credential Manager (`manager`), which
+holds one cached token for `github.com` regardless of what `gh auth switch`
+says. So `gh auth status` can read correctly and the push can still go out as
+the other account.
+
+The workaround that landed this branch: force the push through `gh`'s own
+helper for that one command —
+
+```bash
+git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin <branch>
+```
+
+The real fix is one of: make `gh auth git-credential` the repository's
+`credential.helper` in the two vault checkouts (`E:\wt-vault-133`,
+`E:\sals3-ecommerce`) so `git` follows `gh`; or stop switching accounts on one
+machine at all. ADR-019 §1 already requires checking both `gh auth status` and
+`git config user.email` before a push; **it should also name the credential
+helper**, because that is the third thing that can disagree.
 
 Observed twice in one session: `gh auth switch --user anythingsupplies` succeeds,
 and some time later `gh auth status` reports `louieboi09` active again. It is not
