@@ -6,7 +6,7 @@ aliases:
   - SIT Pre-prod Main Promotion Gate
   - Country Repo Fork Rule
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-11
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -17,6 +17,8 @@ related:
   - "[[project-structure-installation-and-runbook]]"
   - "[[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]"
   - "[[vault-session-note-conventions]]"
+  - "[[sals3-repository-register]]"
+  - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
   - "[[hot]]"
   - "[[index]]"
   - "[[sals3-session-2026-09-04-part129-coverage-jumps-from-19-to-69-percent-once-the-census-stopped-being-the-alphabet]]"
@@ -624,3 +626,76 @@ the person merging. That gap is how "the agent is the CI" decays into nobody
 being the CI: the author assumes the merger will check, the merger assumes the
 author did, and the change lands unverified with both believing it was covered.
 Now stated in [[sals3-management-bible]] section 8.
+
+
+## Amendment — 2026-09-11: there are eleven repositories, and the Admin Portal is in the wrong org
+
+> [!IMPORTANT] Supersedes both earlier counts in this ADR
+> The Problem section says *"four repositories under `anythingsupplies`"*. The
+> 2026-09-08 amendment corrected that to **six**. Both counted `anythingsupplies`
+> alone. The full set across both organisations and the personal namespace is
+> **eleven**, measured 2026-09-11 under **both** accounts — see
+> [[sals3-repository-register]], which is from this date the single home for the
+> inventory. Do not re-derive a count in prose here again.
+
+### Why every count so far has been short
+
+Each audit ran a repository listing under **one account**, and neither account
+can see the whole project: `louieboi09` gets `404` on three `anythingsupplies`
+repositories, and `anythingsupplies` belongs to no organisation and cannot see
+the personal namespace. Section 1 of this ADR requires two accounts by design;
+what it did not say is that **an audit must therefore use both.** It does now.
+
+### The finding that changes this ADR's own factual basis
+
+Section 1 lists `sals3-admin-portal` among the repositories where application
+code is *"written, reviewed, opened as a PR, and merged"* under
+`anythingsupplies`. Measured 2026-09-11:
+
+| Claim in this ADR | Measured |
+| --- | --- |
+| `anythingsupplies/sals3-admin-portal` is where the Admin Portal is worked | **empty repository** — `409 Git Repository is empty.`, `size: 0`, zero branches, zero commits since it was created 2026-09-01 |
+| `Sals3-Official` hosts *"exactly one purpose … this vault"* | it also hosts **the entire Admin Portal application** — `Sals3-Official/sals3-admin-portal`, three merged PRs, employee auth over its own `sals3_admin` database, and a trigger-enforced append-only audit trail |
+| every app repository runs `develop → pre-prod → main` | the Admin Portal has **no `pre-prod`, no `main`, no `.github/workflows` directory at all**, and zero Actions runs ever |
+
+So the 2026-08-31 migration ([[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out|part 133]])
+moved the portal and the storefront and **did not move the Admin Portal**, and
+this ADR was written four days later describing an arrangement that has never
+existed. The one repository holding the platform-wide control plane is the one
+repository this gate has never applied to.
+
+**This amendment does not move it.** Moving an application between organisations
+is a migration with its own PR-numbering, sync-script and identity consequences,
+all of which part 133 documents the hard way. It is raised in
+[[pending-register]] for the owner to schedule.
+
+### Visibility is now part of this boundary
+
+Three repositories are **public**: `Sals3-Official/sals3-ecommerce` (this
+vault), `Sals3-Official/sals3-portal`, and `Sals3-Official/sals3-admin-portal`
+(auth and audit code). All six `anythingsupplies` repositories are private.
+
+A credential-pattern scan of `docs/Wiki/` finds nothing — **this is not a
+leaked-secret finding.** What is world-readable is commercial and operational
+intelligence. Recorded here because section 1 defines what each organisation is
+*for* and had never said anything about who can read it. Raised as **[P1]** in
+[[pending-register]]; **no agent changes a repository's visibility** — the
+effect is not reversible, and it is the owner's call.
+
+### Added to section 4's definition of "done"
+
+A vault entry is already part of done. Two additions, from
+[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]]:
+
+1. **Creating a repository is not done until it has a row in
+   [[sals3-repository-register]]** — owner, purpose, default branch, gate state,
+   visibility, and whether it deploys.
+2. **A decision that reverses an approved ADR needs a home even when the code is
+   discarded.** `Sals3-Official/sals3-admin-portal`
+   [#4](https://github.com/Sals3-Official/sals3-admin-portal/pull/4) — 52,135
+   lines, opened and closed unmerged in nine minutes on 2026-08-15 — traded
+   ADR-014's platform-wide curated category mapping for a per-seller choice in
+   the portal's editor. The replacement shipped and is documented; the trade was
+   recorded only in a closed pull request's comment thread. A closed PR is
+   invisible to every backfill audit this vault runs, because they all read
+   merged history.

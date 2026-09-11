@@ -2,7 +2,7 @@
 tags: [moc, index, second-brain, sals3]
 aliases: [Sals3 Vault Index, Map of Content, Vault Home]
 created: 2026-07-31
-updated: 2026-09-04
+updated: 2026-09-11
 status: canonical
 authority: navigation
 owner_approved: true
@@ -10,6 +10,7 @@ related:
   - "[[hot]]"
   - "[[sals3-master-blueprint]]"
   - "[[vault-catalog]]"
+  - "[[sals3-repository-register]]"
   - "[[nextjs-component-security-code-rules]]"
   - "[[project-structure-installation-and-runbook]]"
 ---
@@ -30,7 +31,9 @@ related:
 - [[ADR-020-order-cancellation-hold-in-cj-imported-and-dispute-path|ADR-020 — Order Cancellation: Hold in CJ Imported, Dispute Path]] — approved 2026-09-10 (SOP v4.1): a paid order is CREATED at CJ at once and the paying half waits a 60-minute hold, so a buyer cancels at zero wallet cost; paid-but-unshipped orders cancel through a CJ dispute (Pending refunds the buyer at once, Processing waits for CJ), late supply at day 7 refunds regardless. Built on SIT only; not promoted.
 - [[ADR-021-order-cancellation-24-hour-hold-review-gate-and-no-refund-ahead-of-cj|ADR-021 — Order Cancellation: 24-Hour Hold, Review Gate, No Refund Ahead of CJ]] — approved 2026-09-10 (SOP v4.2, deck v5): the hold in CJ Imported is 24 hours (SIT 7 minutes); past it, while CJ is Pending, the buyer may only request and the request waits in the portal's Cancellation requests lane for a person (auto-asks CJ after 12 hours); nothing is refunded before CJ refunds Sals3; once CJ is Processing there is no cancellation. Supersedes ADR-020 §1 and §3. Built on SIT only.
 
+- [[sals3-repository-register|Repository Register]] — **the answer to "how many repositories are there", measured rather than recalled: eleven**, across `anythingsupplies` (six, private), `Sals3-Official` (three, **public**, one of them this vault) and `louieboi09` (two). Carries per-repository purpose, gate compliance, visibility, how much of each this vault has ever described, and the local clone/worktree map. Register a new repository here in the same task it is created.
 - [[sals3-session-2026-09-07-part148-the-sixth-repository-and-the-promotion-ledger|The Sixth Repository and the Promotion Ledger]] — the `anythingsupplies` org has **six** repositories, not the four ADR-019 names: `sals3.com.au` is a live production storefront this vault had never described. Carries the re-audited gate table, the four environment records for Fiji and Australia UAT/production, and the standing convention that a **promotion pull request gets no session entry of its own**.
+- [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|The Eleven Repositories, and the Admin Portal Nobody Audited]] — every earlier count enumerated **one org under one account**, so the Admin Portal — a real Next.js application with employee auth and a trigger-enforced append-only audit trail — was missing from all of them, in a **public** repository in the vault-only org, with no CI and no promotion gate. Also recovers `sals3-admin-portal` PR #4: 52,135 lines closed nine minutes after opening, carrying an unrecorded reversal of part of ADR-014.
 - [[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash|Promote with a Merge Commit, Never a Squash]] — the merge mechanics ADR-019 assumed and never stated. Squashing every promotion left `pre-prod` and `main` with byte-identical trees and 54/55 unshared commits, until a one-line fix could not be promoted at all.
 - [[sals3-session-2026-09-10-part162-sixteen-of-twenty-five-orders-reached-cj-unreachable|Sixteen of Twenty-Five Orders Reached CJ Unreachable]] — a census of the live CJ account. Orders do reach CJ; what arrives is the problem. The phone validation floor was set to exactly the length of the prefix the form pre-fills, so two-thirds of orders carry a number no courier can use. Also corrects part 161's own regression against a locked country field.
 - [[sals3-session-2026-09-09-part161-the-fiji-and-australian-storefronts-were-asking-for-a-philippine-address|The Fiji and Australian Storefronts Were Asking for a Philippine Address]] — both market storefronts seeded the checkout address form from geo-IP, so every visitor outside the six named countries got Philippine regions, PH cities and a `+639` prefix under Fijian and Australian prices. Establishes the checkout seed's precedence — a stored buyer choice, then the deployment's own market, then geo — and carries ADR-003's `Amendment — 2026-09-09`.
@@ -73,7 +76,7 @@ related:
 - [[hot|Current State Cache]] — verified code, data, tests, and next actions.
 - [[vault-catalog|Vault Catalog]] — classification and discovery map for every Markdown note.
 - [[ai-context-and-wiki-architecture|Second Brain Architecture]] — context-loading and ingestion design.
-- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (42 entries as of 2026-08-06).
+- [[sals3-skills|Engineering and Domain Lessons]] — consolidated lessons from real incidents (**128 entries as of 2026-09-11**; the count in this line has been stale before, so re-derive it with `grep -c` rather than trusting it).
 - [[parked-ideas-backlog|Parked Ideas]] — ideas that must not be built without explicit approval.
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel|2026-08-05 Landing Page API and Carousel Session]] — verified session note for DummyJSON landing-page services, pagination, Embla carousel, tests, and lessons.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel|2026-08-05 Landing Page API Carousel Turnover Prompt]] — copy-paste handoff prompt for the next agent after that session.

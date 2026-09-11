@@ -2,11 +2,11 @@
 tags: [moc, catalog, second-brain, governance]
 aliases: [Sals3 Vault Catalog, Note Catalog]
 created: 2026-07-31
-updated: 2026-08-17
+updated: 2026-09-11
 status: canonical
 authority: navigation
 owner_approved: true
-related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
+related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repository-register]]"]
 ---
 
 # Sals3 Vault Catalog
@@ -53,7 +53,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (42 entries as of 2026-08-06).
+- [[sals3-skills]] — consolidated engineering lessons (128 entries as of 2026-09-11; re-derive the count with `grep -c` rather than trusting it).
+- [[sals3-repository-register]] — the measured inventory of all **eleven** repositories across `anythingsupplies`, `Sals3-Official` and `louieboi09`: purpose, default branch, promotion-gate state, visibility, how many vault notes cite each, and the local clone/worktree map. Register a new repository here in the same task it is created.
 
 ## Business and product
 
@@ -134,6 +135,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]"]
 - `Raw/` — UI mockup images (`sals3_*_ui.jpg`, `sals3_*_white.jpg`), the presentation deck (`sals3_presentation_deck_master.pdf` / `.pptx`), the build spec source PDF (`sals3_ux_build_specification_2026-08-01.pdf`), the category taxonomy workbook (`universal_category_variation_taxonomy.xlsx` — see [[universal-category-variation-taxonomy-reference]] for its 2026-08-14 replacement), the marketing banner pitch PDF (`sals3_marketing_banner_pitch_2026-08-05.pdf`, see [[sals3-marketing-banner-integration-proposal]]), the GEO/AEO/SEO strategy PDF (`sals3_geo_aeo_seo_strategy_2026-08-05.pdf`, see [[sals3-geo-aeo-seo-strategy-proposal]]), and the Global Seller Center UX Blueprint v2 PDF (`sals3_global_seller_center_ux_blueprint_v2_2026-08-06.pdf`, see [[sals3-global-seller-center-ux-blueprint-proposal]]). Not linkable as Obsidian notes; referenced here for discovery.
 
 ## Session notes
+
+- [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]] — the repository audit that took the union across both accounts and found eleven, not seven: the Admin Portal is a real application in a public `Sals3-Official` repository with no CI and no promotion gate, and `sals3-admin-portal` PR #4 (52,135 lines, closed unmerged in nine minutes) carries an unrecorded reversal of part of ADR-014.
 
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — verified 2026-08-05 landing-page API, pagination, carousel, test, and lesson session note.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel]] — copy-paste turnover prompt for the next agent after the landing-page API and carousel work.
