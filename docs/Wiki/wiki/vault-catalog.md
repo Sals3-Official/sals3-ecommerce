@@ -20,7 +20,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 
 ## Constitutional and navigation notes
 
-- [[ADR-014-admin-portal-platform-governance-and-global-controls]] — approved future Admin Portal boundary for global markets, seller-account governance, global marketing, provider controls, versioned publication, and audited high-impact actions; not implemented.
+- [[ADR-014-admin-portal-platform-governance-and-global-controls]] — approved future Admin Portal boundary for global markets, seller-account governance, global marketing, provider controls, versioned publication, and audited high-impact actions; not implemented. **Amended 2026-09-11**: a seventh domain, catalogue category governance, was built in `sals3-admin-portal` PR #4 and withdrawn nine minutes later by two owner reversals in one day — per-product tagging is now tenant-owned, and the platform-wide CJ-leaf mapping is live in `sals3-portal` under the string-constant actor `taxonomy-mapping-seed` behind a `CRON_SECRET` endpoint.
 - [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]] — approved layered multi-seller pricing: tenant-owned Seller Portal margins/PICs/product overrides/merchant FX adjustments, with Admin Portal limited to platform FX inputs, fees, capabilities, and guardrails; not implemented.
 - [[ADR-016-google-merchant-center-product-feed-compliance]] — approved schema constraint requiring the future Product/Offer/Media/Promotion build to carry Merchant Center attributes (GTIN/MPN/brand, Google Product Category, micros-safe price, real promotion entity) from its first migration, targeting the Merchant API only; not implemented.
 - [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery]] — proposed Sals3-owned returns/refunds architecture for the CJ-only, no-local-warehouse Phase 1: returnless-first guardrails, separate buyer remedy and CJ recovery states, PH filing-based redress clock, AU major/minor remedy structure, delivered-not-received investigation, and legal/accounting launch blockers.
@@ -37,7 +37,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 - [[vault-governance-and-note-lifecycle]] — authority, status, idea, and change rules.
 - [[architecture-decision-template]] — ADR template.
 - [[ADR-001-seller-center-cj-sourcing-to-my-products]] — approved curated CJ sourcing, catalog ownership, architecture, seller/offer, content, media-rights, and publish-gate decision; not implemented.
-- [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — approved Taxonomy v0 pilot adoption, CJ mapping, provenance, and production-validation decision. **Amended 2026-08-14**: the reference taxonomy is now Google's product taxonomy (5,595 categories), not the original Shopee-derived workbook — see the note's own amendment section.
+- [[ADR-002-sals3-taxonomy-and-cj-category-mapping]] — approved Taxonomy v0 pilot adoption, CJ mapping, provenance, and production-validation decision. **Amended 2026-08-14**: the reference taxonomy is now Google's product taxonomy (5,595 categories), not the original Shopee-derived workbook — see the note's own amendment section. **Amended 2026-09-11**: three of its statements measured false — the authorization gate no longer denies every role, the governance operations have a Server Action and route handlers, and **379 mapping rules plus 50 disabled mixed buckets are approved**; the amendment also names the six things that have not changed.
 - [[ADR-003-international-availability-shipping-and-pricing]] — approved market enablement, destination freight, currency, pricing, and international SEO decision.
 - [[ADR-004-cj-ordering-tracking-and-fulfillment]] — approved direct CJ order, wallet, webhook, tracking, and reconciliation decision.
 - [[ADR-005-payment-settlement-refunds-and-cod]] — approved payment/refund state separation and phase-1 COD exclusion.
@@ -53,7 +53,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 - [[hot]] — verified current implementation state.
 - [[ai-context-and-wiki-architecture]] — second-brain context architecture.
 - [[parked-ideas-backlog]] — deferred work.
-- [[sals3-skills]] — consolidated engineering lessons (128 entries as of 2026-09-11; re-derive the count with `grep -c` rather than trusting it).
+- [[sals3-skills]] — consolidated engineering lessons (130 entries as of 2026-09-11; re-derive the count with `grep -c` rather than trusting it).
 - [[sals3-repository-register]] — the measured inventory of all **eleven** repositories across `anythingsupplies`, `Sals3-Official` and `louieboi09`: purpose, default branch, promotion-gate state, visibility, how many vault notes cite each, and the local clone/worktree map. Register a new repository here in the same task it is created.
 
 ## Business and product

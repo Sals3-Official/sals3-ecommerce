@@ -32,6 +32,8 @@ related:
   - "[[sals3-session-2026-08-14-part39-admin-portal-employee-auth-and-shell-fork]]"
   - "[[sals3-session-2026-08-14-part40-admin-portal-append-only-audit-trail]]"
   - "[[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux]]"
+  - "[[sals3-session-2026-09-03-part126-a-cj-leafs-name-is-not-its-contents-twice]]"
+  - "[[sals3-session-2026-09-04-part134-the-last-306-supplier-leaves-and-the-seed-that-has-not-run]]"
 ---
 
 # Part 169 — eleven repositories, and the Admin Portal nobody audited
@@ -204,6 +206,34 @@ was a closed pull request's comment thread in a repository no audit reads.**
 
 ADR-014 is still `approved` and still describes curated platform governance.
 Nothing in the vault says a part of it was traded away on 2026-08-15.
+
+> [!IMPORTANT] Corrected same day — the table above is incomplete, and the
+> amendment it asked for now exists
+> Written before `sals3-portal`'s own code was read. Two things it gets wrong,
+> both corrected in
+> [[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014]]'s
+> 2026-09-11 amendment rather than by editing the table, per §6 of
+> [[vault-session-note-conventions]]:
+>
+> 1. **There were two reversals on 2026-08-15, not one.** The closing comment
+>    records only the first — move the screen into the editor, *keep* the
+>    platform-wide CJ-keyed effect. The second, the same day, **dropped the
+>    platform-wide effect entirely**, and is recorded only in
+>    `src/modules/catalog/taxonomy/authorization.ts`. That second reversal is
+>    the actual decision, and its reasoning — a mistagged product sells worse
+>    for the seller who tagged it and harms nobody else — is sound.
+> 2. **"Reversible platform-wide: no" became false three weeks later.** From
+>    2026-09-02 the platform-wide CJ-leaf mapping was rebuilt in `sals3-portal`
+>    as **379 reviewed mappings and 50 disabled mixed buckets** written in
+>    TypeScript, walking a real propose → approve-and-activate flow with
+>    supersession and audit events (parts 126, 129, 134). The capability was
+>    routed around, not abandoned — its actor is the string constant
+>    `taxonomy-mapping-seed`, serving as **both** proposer and approver, and its
+>    authorisation is a `CRON_SECRET` bearer token.
+>
+> The finding this section was right about stands: **the decision's only record
+> was a closed pull request's comment thread**, and ADR-014 had said nothing
+> about it for four weeks. It says so now.
 
 ## 4. Three public repositories, and one of them is this vault
 
