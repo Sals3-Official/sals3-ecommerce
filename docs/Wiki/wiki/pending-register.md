@@ -17,6 +17,7 @@ related:
   - "[[parked-ideas-backlog]]"
   - "[[vault-session-note-conventions]]"
   - "[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]"
+  - "[[sals3-repository-register]]"
 ---
 
 # Pending Register
@@ -75,6 +76,112 @@ being read.
 ---
 
 ## Open
+
+### [P1] Three `Sals3-Official` repositories are public, including this vault
+**Raised:** 2026-09-11, the repository-register PR · **Closes when:** Bogs or AJ decides each one's visibility and the decision is recorded in [[sals3-repository-register]] §5
+**Owner:** owner (Bogs/AJ) — visibility is outward-facing and irreversible in effect
+
+`Sals3-Official/sals3-ecommerce` (which holds **this entire vault**),
+`Sals3-Official/sals3-portal`, and `Sals3-Official/sals3-admin-portal` (which
+holds the Admin Portal's authentication and audit implementation) are all
+**public**. All six `anythingsupplies` repositories are private.
+
+**This is not a leaked-secret finding.** A pattern scan across `docs/Wiki/`
+returns no `sk_live_`, `whsec_`, `AIza`, `gh[po]_`, `postgres://` or JWT. What
+is world-readable is commercial and operational intelligence: the margin and FX
+policy, supplier cost reasoning, CJ account behaviour, the environment topology,
+and the Stripe webhook and Firebase project identifiers quoted in
+[[sals3-session-2026-09-07-part148-the-sixth-repository-and-the-promotion-ledger|part 148]] §3.
+
+[[sals3-session-2026-08-11-part32-admin-portal-control-tower-direction|Part 32]]
+recorded `sals3-admin-portal` as public on 2026-08-11 when it held a 22-byte
+README — accurate then. The application landed two days later and nobody
+re-read the setting. **No agent should flip this**; anything already cloned or
+indexed stays cloned and indexed. See
+[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §4
+and skill 127.
+
+### [P1] The Admin Portal is in the vault-only org and has never had a promotion gate
+**Raised:** 2026-09-11, the repository-register PR · **Closes when:** the application is migrated to `anythingsupplies/sals3-admin-portal` with `develop`/`pre-prod`/`main` and the gate workflow, or ADR-019 is amended to exempt it deliberately
+**Owner:** owner (Bogs) — a repository migration, with the PR-numbering and identity consequences part 133 documents
+
+[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate|ADR-019]]
+§1 names `sals3-admin-portal` as an `anythingsupplies` repository where code is
+worked and merged. `anythingsupplies/sals3-admin-portal` is **empty** — `409
+Git Repository is empty.`, `size: 0`, zero commits since 2026-09-01. The
+application is in `Sals3-Official/sals3-admin-portal`: three merged PRs,
+employee auth over its own `sals3_admin` database, and an append-only audit
+trail enforced by Postgres triggers.
+
+It is the **only** application repository with no `pre-prod`, no `main`, no
+`.github/workflows` directory and zero Actions runs — so the promotion
+discipline every other repository is held to has never applied to the one
+holding the platform-wide control plane. The 2026-08-31 migration
+([[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out|part 133]])
+moved the portal and the storefront and left this one behind. See
+[[sals3-repository-register]] §4 and skill 124.
+
+### [P2] ADR-014's category governance was traded away and the ADR still reads as current
+**Raised:** 2026-09-11, the repository-register PR · **Closes when:** ADR-014 carries a dated amendment recording the 2026-08-15 decision and what it costs, or the control-plane path is reinstated
+**Owner:** agent to draft the amendment; owner to confirm the decision stands
+
+`Sals3-Official/sals3-admin-portal`
+[#4](https://github.com/Sals3-Official/sals3-admin-portal/pull/4) — **+52,135 /
+−25 across 24 files** — was opened 2026-08-15T13:10Z and closed **nine minutes
+later, unmerged**, because the owner decided the category-mapping picker should
+live in `sals3-portal`'s product editor instead. The replacement shipped and is
+documented ([[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux|part 48]],
+portal PR #91). The **trade** is not: category authority moved from one employee
+deciding once, platform-wide, on an audited and supersedable row, to each seller
+deciding per product with no platform-wide reversal.
+
+[[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014]] is
+still `approved` and still describes curated platform governance. Branch
+`feat/category-governance-schema` at `f700c57` survives on the remote and in
+`E:\sals3-admin-portal` — nothing is lost, only undescribed. See
+[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §3.3
+and skill 126.
+
+### [P3] The BOGS Dashboard second brain is not under version control
+**Raised:** 2026-09-11, the repository-register PR · **Closes when:** `E:\Bogs 2nd brain` has a remote, or the owner accepts the risk knowingly
+**Owner:** owner (Bogs) — a different project's vault, recorded here only because it is the one place that is backed up
+
+`E:\Bogs 2nd brain\Wiki` holds the BOGS Dashboard second brain — roughly 100
+notes including its own `CLAUDE.md`, blueprint, inventory bible and session
+record — and **`git rev-parse` reports it is not a repository at all.** No
+remote, no history, no backup. `louieboi09/bogs-dashboard` holds that project's
+*code*, not its vault.
+
+This is the failure mode the Sals3 vault escaped in August by moving into
+`Sals3-Official/sals3-ecommerce`. Noted here rather than there because a note
+written into an unbacked vault about that vault being unbacked is not a record.
+Also worth knowing: `anythingsupplies/sals3-portal-automation` is cloned
+**inside** that folder, at `E:\Bogs 2nd brain\sals3-portal-automation`. See
+[[sals3-repository-register]] §2 and §6.
+
+### [P2] Every Husky hook silently does nothing in a worktree where `npm install` has not run
+**Raised:** 2026-09-11, the repository-register PR · **Closes when:** a missing `.husky/_` is made loud — a tracked shim, a `prepare` that runs per worktree, or a documented first step in the runbook
+**Owner:** agent
+
+`core.hooksPath` is `.husky/_` and lives in the **shared** repository config, so
+every worktree inherits the pointer. `.husky/_` itself is **generated by husky
+on `npm install` and is not tracked** — `git ls-files .husky` returns only
+`commit-msg`, `pre-commit` and `pre-push`. In a freshly created worktree the
+directory does not exist, and git's behaviour when `core.hooksPath` points at a
+missing directory is to run **no hooks at all**, with no warning and exit 0.
+
+Measured: `.husky/_` is present in `E:\sals3-ecommerce` and `E:\wt-vault-133`
+(both have `node_modules`) and absent in a worktree created minutes earlier.
+The commit that raised this entry passed `commit-msg` **because the hook never
+ran**; the check was then run by hand
+(`node scripts/check-pending.mjs`, exit 0) and passed on its merits.
+
+So the gate PR #248 added to enforce the bible's pending rule, and the
+branch-protection guards in `pre-commit`/`pre-push` that refuse a direct commit
+to `develop` or `main`, are all **opt-in by accident**: they protect the clone
+someone happened to install in, and nothing else. This project uses worktrees
+constantly — [[sals3-repository-register]] §6 lists sixteen of them — so the
+uninstalled worktree is the common case, not the edge one.
 
 ### [P1] The 2026-09-11 AU order-page hang is bounded, not diagnosed
 **Raised:** 2026-09-11, the portal-read-deadline PRs (`sals3.com.au`, `sals3.com.fj`, `sals3-ecommerce`) · **Closes when:** the incident is reproduced with a signed-in buyer on `sit.sals3.com.au` and the pending upstream call is named from the `sals3-com-au` function logs, or a different cause is proved

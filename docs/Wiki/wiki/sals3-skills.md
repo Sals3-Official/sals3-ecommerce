@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-09-10
+updated: 2026-09-11
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -31,6 +31,8 @@ related:
   - "[[sals3-session-2026-09-09-part165-the-storefront-was-inventing-a-catalogue-and-llms-txt-was-lying-about-delivery]]"
   - "[[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build]]"
   - "[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing]]"
+  - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
+  - "[[sals3-repository-register]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -1021,7 +1023,7 @@ Add a new numbered skill in the same task the underlying incident is fixed or th
 
 ### 102. Date a Dependabot alert against the fix before believing it — an advisory is matched to a stored snapshot, not to the branch as it stands
 
-**Confirmed:** 2026-09-09, `Sals3-Official/sals3-ecommerce` alert 1. The second repository to raise the **same** advisory while already patched — [[sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]] found it on `sals3-portal` on 2026-08-17 and correctly called it *"already patched, likely a stale scan"*, without being able to prove the mechanism.
+**Confirmed:** 2026-09-09, `Sals3-Official/sals3-ecommerce` alert 1. The second repository to raise the **same** advisory while already patched — [[../../journal/sals3-session-2026-08-17-specification-dropdown-and-category-resync-fix]] found it on `sals3-portal` on 2026-08-17 and correctly called it *"already patched, likely a stale scan"*, without being able to prove the mechanism.
 
 **Incident:** `GHSA-2v37-7h3g-55p8` / `CVE-2026-67213` — `nanoid`'s `customAlphabet`/`customRandom` loop indefinitely when called with `size: 0`. Vulnerable `< 3.3.18` and `>= 4.0.0, < 5.1.6`; first patched `3.3.18`. Reported as **high, runtime**, on a push to the default branch. The timing settles it:
 
@@ -1446,3 +1448,110 @@ The second half is the surface. The buyer payload reads a paid parcel as Pending
 The corollary the same change enforces: **when the money rule changes, the copy is part of the change**, in every repository that renders a promise. Checkout, receipt, order page, request notice and the declined sentence were all rewritten alongside, because the previous wording had become a promise Sals3 could not keep.
 
 **Where applied:** `modules/cancellations/service.ts`, `settle.ts`, `stage.ts`, `buyer-payload.ts`, `notify.ts` in `sals3-portal` (#224); `lib/orders/cancellation-copy.ts` in the three storefronts (ecommerce #55, fj #60, au #53). See [[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing|part 167]] and [[ADR-021-order-cancellation-24-hour-hold-review-gate-and-no-refund-ahead-of-cj]].
+
+
+### 123. An enumeration is only as wide as the credential that ran it — take the union across every account
+
+**Confirmed:** 2026-09-11, answering "which repositories have no vault entry" and finding that nobody knew how many repositories there were.
+
+**Incident:** Four audits counted this project's repositories and produced **four different answers** — ADR-019 said four, [[sals3-session-2026-09-04-part140-the-automation-repository|part 140]] said five, [[sals3-session-2026-09-07-part148-the-sixth-repository-and-the-promotion-ledger|part 148]] said six and called it a full enumeration, [[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]] said seven. The real number is **eleven**.
+
+Every one of them was correct about the set it looked at. Every one of them ran `gh repo list` under **one account**, and this project has two: `louieboi09` gets `404` on three `anythingsupplies` repositories, and `anythingsupplies` belongs to no organisation and cannot see the personal namespace at all. Part 148 enumerated `anythingsupplies` exhaustively and still missed `Sals3-Official`'s three, one of which holds a live application.
+
+**Lesson:** A repository listing is a **view of what one token can see**, never an inventory. Three rules:
+
+1. **Run it under every account** (`gh auth switch`), and include each account's own namespace as well as its organisations — `gh api user/repos` and `gh api user/orgs`, not just `gh repo list <org>`.
+2. **A `404` is a permission answer, not a "does not exist" answer.** Distinguish them explicitly; the three repositories `louieboi09` cannot see are exactly the ones an audit under that account will silently omit.
+3. **Write the union into one register with a measurement date**, so the next audit re-derives rather than re-counts. Part 148 wrote *"the count of repositories is a fact worth re-deriving rather than remembering"* — and was then remembered rather than re-derived, twice. A rule stated in a session note does not enforce itself.
+
+**Where applied:** [[sals3-repository-register]] is the register, §7 is the rule. See [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §1.
+
+### 124. "The repository is empty" answers a question about a name — the next question is where the thing actually is
+
+**Confirmed:** 2026-09-11, when the Admin Portal was found to be missing from every repository audit this vault has done.
+
+**Incident:** `anythingsupplies/sals3-admin-portal` answers `409 Git Repository is empty.`, `size: 0`, zero branches, zero commits since 2026-09-01. Part 148's table recorded exactly that — *"none — empty"* — and moved on. Part 160 dropped it from its audit entirely.
+
+Nobody asked the follow-up. The Admin Portal **exists**: three merged PRs of employee authentication over its own PostgreSQL database, `scrypt` hashing, opaque database-backed sessions, and an append-only audit trail enforced by Postgres triggers — all of it in `Sals3-Official/sals3-admin-portal`, the org ADR-019 designates vault-only, in a **public** repository, with no CI, no `pre-prod`, no `main` and no `.github/workflows` directory at all.
+
+So the one repository holding the platform-wide control plane is the one repository the promotion gate has never applied to, and the vault's own model of the project had quietly dropped it.
+
+**Lesson:** An empty repository is a **claim about a name**, and it is nearly always a reserved name or a half-finished migration — both of which mean the real thing is somewhere the enumeration is not looking.
+
+1. **When an expected repository is empty, go find the non-empty one.** Search the other org, the personal namespace, and the local clones on disk before writing "empty" in a table.
+2. **A name that appears in an ADR and holds no commits is a broken ADR**, not a tidy placeholder. ADR-019 lists `sals3-admin-portal` among the repositories where code is worked and merged; nothing has ever been merged there.
+3. **Grep the vault for the repository, not only for the org.** `Sals3-Official/sals3-admin-portal` had six citations, all from a four-day window in August and none since — which reads as coverage in a grep count and as abandonment once you look at the dates.
+
+**Where applied:** [[sals3-repository-register]] §4. See [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §3.
+
+### 125. A clone's directory name is not its remote — check `git remote get-url` before any push in a two-org project
+
+**Confirmed:** 2026-09-11, while mapping every `.git` on `E:\` for the repository register.
+
+**Incident:** `E:\sals3-ecommerce` is **the vault clone** — its `origin` is `Sals3-Official/sals3-ecommerce`. The storefront that actually deploys is `E:\sals3-ecom-shared`, on `anythingsupplies/sals3-ecommerce`. Two clones of the same *name* in two orgs with opposite purposes, and the shorter, more obvious path is the one that must never receive code.
+
+`E:\sals3-fj` and `E:\sals3-com-fj` are likewise two independent clones of `anythingsupplies/sals3.com.fj` sitting on different branches — so `git worktree list` in one shows nothing about the other. And `E:\wt-admin-seed` is a git repository with **no `origin` at all**.
+
+ADR-019 §1's rule — *a code change never touches `Sals3-Official`* — is one `git push` from the wrong working directory away from being broken, and the working directory's name actively suggests the wrong one.
+
+**Lesson:** In a project split across two organisations, **the directory name is a nickname and the remote is the identity.**
+
+1. **`git remote get-url origin` before the first push in any session**, not the folder name and not memory.
+2. **Two clones of one repository cannot see each other's worktrees.** `git worktree list` is scoped to the clone it runs in, so it is not an answer to "what do I have checked out".
+3. **A repository with no `origin` is unbacked.** Find them deliberately — a filesystem walk for `.git` plus `git remote -v` — rather than discovering one after losing it.
+
+**Where applied:** [[sals3-repository-register]] §6 carries the full clone and worktree map for this machine.
+
+### 126. A decision that reverses an approved ADR needs a vault home even when the code is thrown away
+
+**Confirmed:** 2026-09-11, finding a 52,135-line pull request that was opened and closed nine minutes later in August and never mentioned in this vault.
+
+**Incident:** `Sals3-Official/sals3-admin-portal` [#4](https://github.com/Sals3-Official/sals3-admin-portal/pull/4) built ADR-014 Stage 1: a `category_mapping_decisions` table versioned by supersession with a partial unique index enforcing one `ACTIVE` row per `(provider, external_category_id)`, two audited actions, and a frozen 5,595-row copy of Taxonomy v1 behind a search-first picker. It was closed unmerged with one comment — the owner had decided the picker should live in `sals3-portal`'s product editor instead, where products are actually added.
+
+The **outcome** is well documented: [[sals3-session-2026-08-15-part48-taxonomy-v1-production-rollout-and-category-picker-ux|part 48]] covers the portal-side picker shipping the same day. What went unrecorded is that the same decision moved category authority from **one employee deciding once, platform-wide, on an audited and supersedable row** to **each seller deciding per product, with no platform-wide reversal**. ADR-014 has read as fully current for four weeks while a piece of it was traded away.
+
+**Lesson:** Discarding the branch is often right. **Discarding the reasoning is never right.**
+
+1. **"We built it the other way instead" is an architecture decision**, and it belongs where ADRs are read — an amendment on the ADR it changes, not a comment on a closed pull request in a repository nobody audits.
+2. **Write down what the alternative bought and what it cost**, in a table if the axes are comparable. The reader four weeks later needs to know whether to revive the branch, not just that it was closed.
+3. **A closed PR is not a record.** It is invisible to every grep that looks at merged history, which is what every backfill audit in this vault does.
+
+**Where applied:** [[sals3-repository-register]] §4 and [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §3.3; raised in [[pending-register]] as the ADR-014 amendment still owed.
+
+### 127. A repository setting is a fact with a shelf life — re-read visibility when the contents change class
+
+**Confirmed:** 2026-09-11, measuring visibility across all eleven repositories.
+
+**Incident:** Three repositories are **public**: `Sals3-Official/sals3-ecommerce` (which holds this entire vault), `Sals3-Official/sals3-portal`, and `Sals3-Official/sals3-admin-portal` (which holds the Admin Portal's authentication and audit implementation). All six `anythingsupplies` repositories are private.
+
+The only note that has ever recorded a repository's visibility is [[sals3-session-2026-08-11-part32-admin-portal-control-tower-direction|part 32]], which correctly noted on 2026-08-11 that `sals3-admin-portal` was public **when it held a 22-byte README**. The application landed two days later. Nobody re-read the setting.
+
+A credential-pattern scan of the vault returns nothing — no `sk_live_`, `whsec_`, `AIza`, `gh[po]_`, `postgres://`, no JWT — so this is **not** a leaked-secret finding and must not be escalated as one. What is world-readable is commercial and operational intelligence: margin and FX policy, supplier cost reasoning, CJ account behaviour, the environment topology, and the Stripe webhook and Firebase project identifiers quoted in part 148 §3.
+
+**Lesson:** This is the same shape as part 148's *README that states a rule the repository does not enforce*, applied to a **setting** instead of a file: a configuration fact recorded once, while the thing it configures changes class underneath it.
+
+1. **Record visibility in the register, with the date it was measured** — not in a session note where it ages invisibly.
+2. **Re-read it at the moment contents change class**: a README becoming an application, a fixture becoming a real credential path, a scratch repository receiving the vault.
+3. **Do not flip it yourself.** Visibility is outward-facing and irreversible in effect — anything already cloned or indexed stays cloned and indexed. Lay out the evidence and let the owner decide; this one is [P1] in [[pending-register]].
+4. **State plainly what was and was not found.** "No credential pattern matched; the exposure is commercial" is a more useful and more honest finding than an unqualified security alarm.
+
+**Where applied:** [[sals3-repository-register]] §5. See [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §4.
+
+### 128. A hook whose `core.hooksPath` directory is missing runs nothing, silently — and in a worktree-heavy repo that is the common case
+
+**Confirmed:** 2026-09-11, committing the repository register from a worktree created minutes earlier.
+
+**Incident:** This repository sets `core.hooksPath = .husky/_`. That config lives in the **shared** repository config, so every worktree inherits the pointer — but `.husky/_` is **generated by husky on `npm install` and is not tracked**: `git ls-files .husky` returns only `commit-msg`, `pre-commit` and `pre-push`. In a fresh worktree the directory does not exist, and **git runs no hooks at all, with no warning and exit 0.**
+
+The commit passed `commit-msg` because the hook never executed. The `pre-commit` and `pre-push` guards that refuse a direct commit to `develop` or `main` did not execute either. Measured: `.husky/_` present in `E:\sals3-ecommerce` and `E:\wt-vault-133`, both of which have `node_modules`; absent in the new worktree.
+
+The check was then run by hand — `node scripts/check-pending.mjs <msgfile>`, exit 0 — and passed on its merits. **The message was compliant; the enforcement was not there.**
+
+**Lesson:** This is the same failure this vault keeps finding in other clothes — a rule that is written down, believed to be enforced, and enforced by something that is not running. Compare part 148's README stating a three-stage table in a repository with no gate workflow, and part 160's Actions runs finishing in 3–9 seconds without executing a step.
+
+1. **A silent no-op is the worst failure mode a gate can have.** A hook that errors is fixed in a minute; a hook that does not exist looks exactly like a hook that passed.
+2. **In a repository that uses worktrees, an uninstalled worktree is the common case, not the edge case** — [[sals3-repository-register]] §6 lists sixteen. Anything that depends on `node_modules` protects the one clone someone installed in.
+3. **When you cannot run the gate, run its script directly and quote the exit code.** `node scripts/check-pending.mjs <file>` is the whole check; there is no reason to assert compliance instead of measuring it.
+4. **Verify the hook fired at all before crediting it.** The tell here was a commit that returned instantly when `pre-commit` runs a full `npm run verify` — a gate that costs minutes and took none did not run.
+
+**Where applied:** raised as [P2] in [[pending-register]]; the hook and its script are `.husky/commit-msg` and `scripts/check-pending.mjs` in `Sals3-Official/sals3-ecommerce`. See [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §6.
