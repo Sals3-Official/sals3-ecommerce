@@ -18,7 +18,7 @@ aliases:
   ]
 created: 2026-09-11
 updated: 2026-09-11
-status: implemented
+status: superseded-in-part
 authority: session-record
 owner_approved: false
 implementation_status: merged
@@ -32,6 +32,29 @@ related:
 ---
 
 # Part 168 — a Portal read that never answered, and a skeleton that never stopped
+
+> [!DANGER] Corrected later the same day — the title is wrong and so is the diagnosis
+> **No Portal read ever failed to answer.** Every reported path logged `200`,
+> and `/orders/S3-20260819-FB0EE6973B` at 00:06:04 shows **481ms execution,
+> 411ms Portal read, response finished in 767ms**.
+>
+> What failed is the **RSC navigation requests**: they `503`'d or never settled,
+> so the App Router could neither render nor fail, and the nearest loading
+> boundary stayed on screen. The *"no matching request rows"* this note rests on
+> was the Logs view defaulting to **Production** while SIT is **Preview**.
+>
+> **Why those requests failed is still not established** — Skew Protection is the
+> leading candidate but a reproduction attempt argues against it. See [[hot]].
+>
+> The deadline this note describes is real and merged, and is **unrelated to the
+> incident** — hardening only. The corrected account is in [[hot]]'s *Active
+> risks and blockers*, and the open items are in [[pending-register]]. The
+> recovery work is `sals3-ecommerce`#61, `sals3.com.au`#55, `sals3.com.fj`#62.
+>
+> Kept rather than rewritten: a session record is a record of what was believed
+> at the time, and this one's wrong turn — treating an absent log row as
+> evidence about the world rather than about a filter — is the most transferable
+> thing in it.
 
 > [!IMPORTANT] What shipped, and what did not
 > **Shipped:** every Portal call from all three storefronts now carries a
