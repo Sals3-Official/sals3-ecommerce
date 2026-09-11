@@ -33,6 +33,7 @@ related:
   - "[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing]]"
   - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
   - "[[sals3-repository-register]]"
+  - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
 ---
 
 # Sals3 — Engineering and Domain Lessons
@@ -1555,3 +1556,26 @@ The check was then run by hand — `node scripts/check-pending.mjs <msgfile>`, e
 4. **Verify the hook fired at all before crediting it.** The tell here was a commit that returned instantly when `pre-commit` runs a full `npm run verify` — a gate that costs minutes and took none did not run.
 
 **Where applied:** raised as [P2] in [[pending-register]]; the hook and its script are `.husky/commit-msg` and `scripts/check-pending.mjs` in `Sals3-Official/sals3-ecommerce`. See [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §6.
+
+### 129. A gate that denies every role does not mean the capability is not happening — find the other door
+
+**Confirmed:** 2026-09-11, writing ADR-014's amendment and discovering that the capability it reserves for a control plane is live in the tenant application.
+
+**Incident:** [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002]] says platform-wide category governance belongs in the Admin Portal, and `sals3-portal`'s `authorizeCategoryGovernance()` denied **every** role including `admin` from 2026-08-14. Read together, those two facts say the capability does not exist outside `sals3-admin-portal`.
+
+Both were true and the conclusion was wrong. Measured at `origin/develop` on 2026-09-11:
+
+- The gate no longer denies anything platform-wide — it now authorises a **seller tagging their own product**, and `catalog.category_mapping.manage` is granted to `admin`, `seller_manager` and `seller_staff`. The owner reversed the assignment on 2026-08-15 **twice in one day**, and the only record of the second reversal is a doc comment in `taxonomy/authorization.ts`.
+- The platform-wide capability came back three weeks later through a **completely different door**: `seed-category-mappings.ts`, 3,540 lines carrying **379 mappings and 50 disabled buckets**, walking the real propose → approve-and-activate flow with supersession and audit events — executed by a `CRON_SECRET` bearer endpoint whose own comment says *"this writes governance rows, not tenant data, so the editor session auth is the wrong shape for it."*
+
+The actor on all 379 is `const SEED_ACTOR = 'taxonomy-mapping-seed'`, used as **both** `actorId` on the proposal and `reviewedBy` on the approval. Proposer and approver are the same string, and neither is a person.
+
+**Lesson:** An authorization check answers *"can this session do it through this path"*, never *"does this happen."* Three habits:
+
+1. **Grep for the effect, not the permission.** The question is not "who holds `catalog.category_mapping.manage`" but "what writes `category_mapping_decisions`". The second grep finds the seeder; the first never does.
+2. **Break-glass endpoints are where capabilities live while the real surface is unbuilt**, and they are legitimate — reviewed decisions in git, idempotent, environment by environment. But they authorise with a **shared secret**, so they answer to whoever holds it rather than to an identity. Enumerate them (`CRON_SECRET`, `DISCOVERY_CONTROL_SECRET`, `SALS3_STOREFRONT_API_TOKEN`) before claiming a capability is not reachable — this is the same inverted audit question as skill 120.
+3. **A self-approving actor is the finding, not the seeder.** When one constant is both proposer and approver, the two-step flow is shape without separation. Say so plainly and let the owner decide; with no control plane deployed there was no other path, and the decisions themselves are reasoned line by line.
+
+The reflex worth keeping: when an ADR reserves a capability for a system that does not exist yet, **the capability is usually happening somewhere anyway** — the reservation just moved it out of the place you would look.
+
+**Where applied:** `src/modules/catalog/taxonomy/authorization.ts`, `seed-category-mappings.ts` and `src/app/api/internal/catalog/taxonomy/seed-category-mappings/route.ts` in `sals3-portal`. See [[ADR-014-admin-portal-platform-governance-and-global-controls]]'s 2026-09-11 amendment §3, and [[pending-register]]'s two entries on it.

@@ -2,7 +2,7 @@
 tags: [sals3, adr, admin-portal, governance, platform-controls, audit]
 aliases: [Sals3 Admin Portal, Platform Control Plane, Global Platform Governance]
 created: 2026-08-10
-updated: 2026-08-11
+updated: 2026-09-11
 status: approved
 authority: architecture-decision
 owner_approved: true
@@ -16,6 +16,10 @@ related:
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-010-catalog-decision-governance-and-shadow-enforcement]]"
   - "[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]"
+  - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
+  - "[[sals3-repository-register]]"
+  - "[[pending-register]]"
+  - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
 ---
 
 # ADR-014 — Admin Portal platform governance and global controls
@@ -25,7 +29,7 @@ related:
 `approved`
 
 > [!IMPORTANT] Approved direction; not implemented
-> Bogs approved the future product boundary and the name **Admin Portal** on 2026-08-10. This ADR does not authorize implementation now. Current work remains focused on correcting `sals3-portal`; the Admin Portal starts only through a separately approved implementation slice.
+> Bogs approved the future product boundary and the name **Admin Portal** on 2026-08-10. This ADR does not authorize implementation now. **Read the 2026-09-11 amendment at the foot of this note before using the capability-domain list**: a seventh domain (catalogue category governance) was built, withdrawn, and redistributed on 2026-08-15, and its platform-wide half is live in `sals3-portal` under a string-constant actor. Current work remains focused on correcting `sals3-portal`; the Admin Portal starts only through a separately approved implementation slice.
 
 ## Problem
 
@@ -180,3 +184,178 @@ The Admin Portal does not directly trust or mutate browser state in the Seller P
 ## Supersession
 
 None. This ADR names and bounds the future Admin Portal. It does not supersede ADR-003, ADR-006, ADR-007, or ADR-010; their market, tenancy, immutable-history, and decision-governance rules remain controlling.
+
+
+## Amendment — 2026-09-11: category governance left this ADR on 2026-08-15, and the platform-wide half came back somewhere else
+
+> [!IMPORTANT] This ADR has read as fully current since 2026-08-11
+> `status: approved`, `implementation_status: not-started`. Both are still
+> broadly right — five of the six capability domains remain unbuilt. But a
+> **seventh** domain was built, closed, and redistributed in a single day four
+> weeks ago, and this note has said nothing about it. Raised by
+> [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]]
+> §3.3; the decision itself was recorded only in a closed pull request's comment
+> thread.
+
+> [!NOTE] Provenance
+> Written 2026-09-11 from `Sals3-Official/sals3-admin-portal`
+> [#4](https://github.com/Sals3-Official/sals3-admin-portal/pull/4)'s own body,
+> commit and closing comment; from `git show` against branch
+> `feat/category-governance-schema` at `f700c57`; and — for what shipped instead
+> — from `anythingsupplies/sals3-portal` at `origin/develop`, read directly:
+> `src/modules/catalog/taxonomy/authorization.ts`,
+> `src/lib/auth/permissions.ts`,
+> `src/modules/catalog/taxonomy/seed-category-mappings.ts`, and
+> `src/app/api/internal/catalog/taxonomy/seed-category-mappings/route.ts`.
+> The figures in §3 are the seeder file's own measured census, not estimates.
+
+### 1. Category mapping was never one of this ADR's six domains — it was proposed as a seventh, and built
+
+This ADR's *Initial capability domains* lists six: market governance,
+seller-account governance, global marketing, supplier/provider governance,
+policy publication, and commercial pricing. **Catalogue category governance is
+not among them.** It arrived by inheritance instead:
+[[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002]] repeatedly defers the
+authority here — *"No authorization boundary for category governance exists.
+ADR-014 places platform-wide category governance in the Admin Portal"* — and
+`sals3-portal`'s own gate denied **every** role, `admin` included, from
+2026-08-14 on exactly that basis.
+
+`sals3-admin-portal` [#4](https://github.com/Sals3-Official/sals3-admin-portal/pull/4),
+titled *"ADR-014 Stage 1"*, built it as the **seventh** nav group — its own test
+changed the assertion from *exactly six ADR-014 domains* to seven. What the
+branch carries, read from `f700c57`:
+
+- `category_mapping_decisions` — `provider`, `external_category_id`,
+  `observed_category_name`, `sals3_category_code`, `sals3_category_path`,
+  `status`, `supersedes_id`, `decided_by_employee_id`, `reason`, `decided_at`;
+- **versioned by supersession** — a revision inserts a new row and marks the old
+  one `SUPERSEDED`, never overwritten — with a **partial unique index**
+  enforcing at most one `ACTIVE` row per `(provider, external_category_id)`;
+- `decided_by_employee_id` `ON DELETE RESTRICT`, matching the audit trail's rule;
+- two audited actions, `CATEGORY_MAPPING_DECIDED` and
+  `CATEGORY_MAPPING_SUPERSEDED`;
+- a frozen 5,595-row copy of Taxonomy v1, duplicated rather than read across
+  because Gate 0 forbids this application from touching `sals3-portal`'s
+  database;
+- server-side re-derivation of the category path from the submitted code, so a
+  client-supplied path is never trusted.
+
+That is this ADR's *Authority and enforcement boundary* diagram implemented
+literally. It was opened 2026-08-15T13:10Z and **closed unmerged nine minutes
+later**.
+
+### 2. The owner reversed the assignment twice in one day, and the second reversal is the one that matters
+
+The closing comment records only the first reversal:
+
+> Closing — the owner decided the category-mapping picker should live directly
+> in `sals3-portal`'s product editor instead (where products are actually
+> added/modified), not as a separate admin-portal screen. Not merging this.
+
+The second is recorded nowhere in this vault, and only in a code comment —
+`sals3-portal`'s `src/modules/catalog/taxonomy/authorization.ts`, quoted in full
+because it is the most precise account of the decision that exists:
+
+> The owner reversed that assignment on 2026-08-15, **twice over**: first to
+> move the decision into this application's product editor **while keeping the
+> platform-wide, CJ-category-keyed effect**; then, **the same day, to drop the
+> platform-wide effect entirely.** Tagging a product's Sals3 category is each
+> seller's own business call about their own catalogue, on their own risk — a
+> mistagged product simply sells worse under the wrong category.
+
+The distinction between those two reversals is the whole decision. Moving a
+screen is a placement change; dropping the platform-wide effect is a change of
+**what kind of thing a category decision is** — from a platform classification
+governed centrally, to a seller's own commercial judgement about their own
+listing.
+
+**The reasoning is sound and this amendment does not dispute it.** A wrong
+category costs the seller who chose it, in their own sales, and nobody else.
+That is a materially different risk profile from the one this ADR's *Strongest
+objection* section was written against, and it is exactly the test that section
+asks for: is there a real downstream system that needs governing, or is this
+premature enterprise infrastructure?
+
+**What follows from it, and is now true in production:**
+`catalog.category_mapping.manage` exists in `sals3-portal`'s
+`PORTAL_PERMISSIONS` and is granted to `admin`, `seller_manager` **and**
+`seller_staff` — every role already holding `product:edit`.
+`decideProductSals3Category` changes only the one product the seller had open.
+`catalogue_reviewer` and `viewer` are denied, for the stated reason that
+**their sessions are not scoped to one seller's own product**, which is the
+tenant-scoping argument, not a platform-authority one.
+
+### 3. The platform-wide half came back three weeks later, in the tenant application, authorised by a shared secret
+
+This is the part no note has stated, and it is why the amendment is worth
+writing rather than a one-line status change.
+
+From 2026-09-02 the platform-wide CJ-leaf → Sals3-category mapping was rebuilt
+in `sals3-portal` — not as a screen, as **reviewed decisions written in
+TypeScript**. `src/modules/catalog/taxonomy/seed-category-mappings.ts` is 3,540
+lines carrying **379 mappings and 50 deliberately disabled mixed buckets**,
+each with its reason beside it, decided across four tiers against a measured
+census of **432,654 screened candidates over 473 supplier leaves** (parts 126,
+129, 134).
+
+It is genuinely governed. The seeder calls `proposeCategoryMapping` and
+`reviewCategoryMappingDecision` — *"walks the real governance flow end to end
+(propose → approve-and-activate), so versioning, supersede handling,
+remap-review summaries and audit events all fire the same as a human-driven
+mapping decision would."* Idempotent, matched against the discovery cycle's own
+category snapshot, refused outright when a category id is absent or ambiguous.
+
+Two properties of it belong in this ADR, because they are precisely what the
+*Authority and enforcement boundary* was drawn to prevent:
+
+1. **The actor is a string constant.** `const SEED_ACTOR =
+   'taxonomy-mapping-seed'`, used as **both** `actorId` on the proposal **and**
+   `reviewedBy` on the approval. Proposer and approver are the same value, and
+   neither is a person. Every one of the 379 platform-wide decisions carries it
+   in its audit row.
+2. **The authorisation is `CRON_SECRET`.** The endpoint's own comment says why,
+   and says it honestly: *"this writes governance rows, not tenant data, so the
+   editor session auth is the wrong shape for it."* Correct — and the shape it
+   actually needs is the employee identity this ADR specifies, which does not
+   exist outside `sals3-admin-portal`.
+
+So the platform-wide capability was not abandoned. It was **routed around**:
+real decisions, real supersession, real audit rows, reached through a bearer
+token and a code review rather than through an authenticated employee with a
+permission. The decisions are good; the boundary is the thing that is missing.
+
+### 4. What this amendment changes
+
+| | Before | After this amendment |
+| --- | --- | --- |
+| Capability domains | six, catalogue governance unnamed | six, plus a **seventh that was built and withdrawn** — recorded here, not re-opened |
+| Per-product category | implied to belong to the control plane via ADR-002 | **tenant-owned, by owner decision 2026-08-15.** Out of this ADR's scope. A seller's own risk |
+| Platform-wide CJ-leaf mapping | control-plane authority, unbuilt | **built and live in `sals3-portal`**, governed by propose → approve with supersession and audit, **actor `taxonomy-mapping-seed`, authorised by `CRON_SECRET`** |
+| This ADR's `implementation_status` | `not-started` | **unchanged, and now narrower**: none of the six named domains has an implementation. The seventh's history is recorded, not claimed |
+
+`status` stays `approved`. `owner_approved` stays `true` — the 2026-08-15
+decision is the owner's own, twice stated, and this amendment records it rather
+than revising it.
+
+### 5. What this amendment deliberately does not do
+
+- **It does not re-open the decision.** Per-product category tagging is the
+  seller's call; that is settled and the reasoning holds.
+- **It does not reinstate the closed branch.**
+  `feat/category-governance-schema` at `f700c57` survives on the remote and in
+  `E:\sals3-admin-portal`. It is a reference for whatever eventually carries an
+  employee-identity mapping decision, not work to resume.
+- **It does not decide whether `SEED_ACTOR` is acceptable.** Writing 379
+  platform-wide decisions under a string constant, through a shared secret, was
+  the only path available with no Admin Portal deployment and no employee
+  identity in `sals3-portal` — and the decisions themselves are reviewed and
+  reasoned. Whether that stays the mechanism is an owner call, raised in
+  [[pending-register]].
+- **It does not correct [[ADR-002-sals3-taxonomy-and-cj-category-mapping|ADR-002]].**
+  ADR-002's 2026-08-21 amendment still states that *"no portal role — `admin`
+  included — carries the authority to approve a mapping, because ADR-014 puts
+  category governance in the Admin Portal."* Measured 2026-09-11, that is
+  **false**: `catalog.category_mapping.manage` exists and three roles hold it.
+  ADR-002 is its own decision record and gets its own dated amendment; the
+  staleness is raised in [[pending-register]] rather than fixed from here.

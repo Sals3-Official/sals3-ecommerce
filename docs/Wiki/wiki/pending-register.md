@@ -121,9 +121,17 @@ holding the platform-wide control plane. The 2026-08-31 migration
 moved the portal and the storefront and left this one behind. See
 [[sals3-repository-register]] §4 and skill 124.
 
-### [P2] ADR-014's category governance was traded away and the ADR still reads as current
-**Raised:** 2026-09-11, the repository-register PR · **Closes when:** ADR-014 carries a dated amendment recording the 2026-08-15 decision and what it costs, or the control-plane path is reinstated
-**Owner:** agent to draft the amendment; owner to confirm the decision stands
+### ~~[P2] ADR-014's category governance was traded away and the ADR still reads as current~~ — CLOSED 2026-09-11, the ADR-014 amendment PR
+**Raised:** 2026-09-11, the repository-register PR · **Closed by:** [[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014]]'s 2026-09-11 amendment
+**Owner:** was agent to draft; the owner's 2026-08-15 decision is recorded, not revised
+
+> [!NOTE] What the amendment found that this entry did not
+> Reading `sals3-portal`'s own code turned up **two** reversals on 2026-08-15,
+> not one — the second dropped the platform-wide effect entirely and is
+> recorded only in `taxonomy/authorization.ts` — and the platform-wide half
+> **came back** three weeks later in the tenant application. This entry's
+> sentence *"each seller deciding per product with no platform-wide reversal"*
+> was therefore incomplete; see the two entries that replace it below.
 
 `Sals3-Official/sals3-admin-portal`
 [#4](https://github.com/Sals3-Official/sals3-admin-portal/pull/4) — **+52,135 /
@@ -141,6 +149,51 @@ still `approved` and still describes curated platform governance. Branch
 `E:\sals3-admin-portal` — nothing is lost, only undescribed. See
 [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited|part 169]] §3.3
 and skill 126.
+
+### [P2] 379 platform-wide category decisions carry a string constant as both proposer and approver
+**Raised:** 2026-09-11, the ADR-014 amendment PR · **Closes when:** the owner accepts `SEED_ACTOR` as the standing mechanism, or an employee identity signs a mapping decision
+**Owner:** owner (Bogs) — this is an authority decision, not a refactor
+
+`src/modules/catalog/taxonomy/seed-category-mappings.ts` in `sals3-portal`
+carries **379 reviewed mappings and 50 disabled mixed buckets**, decided across
+four tiers against a census of 432,654 candidates (parts 126, 129, 134). They
+are genuinely governed — the seeder walks `proposeCategoryMapping` →
+`reviewCategoryMappingDecision`, so versioning, supersession and audit events
+all fire.
+
+What they carry is `const SEED_ACTOR = 'taxonomy-mapping-seed'`, used as **both**
+`actorId` on the proposal **and** `reviewedBy` on the approval. Proposer and
+approver are the same string and neither is a person. The endpoint that runs
+them is a `CRON_SECRET` bearer, and its own comment is honest about why: *"this
+writes governance rows, not tenant data, so the editor session auth is the wrong
+shape for it."* Correct — and the shape it needs is
+[[ADR-014-admin-portal-platform-governance-and-global-controls|ADR-014]]'s
+employee identity, which exists only in `sals3-admin-portal` and is not
+deployed anywhere.
+
+**This is not a request to change it.** With no Admin Portal deployment there
+was no other path, the decisions are reviewed and reasoned in git, and the
+mechanism is written down rather than hidden. It is here so the trade-off is a
+decision on the record instead of a default. See ADR-014 §3 of the 2026-09-11
+amendment.
+
+### [P3] ADR-002 states that no portal role can approve a mapping; three roles now can
+**Raised:** 2026-09-11, the ADR-014 amendment PR · **Closes when:** ADR-002 carries its own dated amendment
+**Owner:** agent
+
+ADR-002's 2026-08-21 amendment says *"no portal role — `admin` included —
+carries the authority to approve a mapping, because ADR-014 puts category
+governance in the Admin Portal."* Measured against `sals3-portal` at
+`origin/develop` on 2026-09-11, that is **false**:
+`catalog.category_mapping.manage` is in `PORTAL_PERMISSIONS` and is granted to
+`admin`, `seller_manager` and `seller_staff`, and `authorizeCategoryGovernance`
+delegates straight to it.
+
+The statement was true when written and the owner's 2026-08-15 decision made it
+stale. ADR-002 is its own decision record, so it gets its own amendment rather
+than being corrected from ADR-014 — noted there in §5 of the 2026-09-11
+amendment, which is why this is P3 and not P2: the misleading sentence is
+already flagged in the note a reader arrives from.
 
 ### [P3] The BOGS Dashboard second brain is not under version control
 **Raised:** 2026-09-11, the repository-register PR · **Closes when:** `E:\Bogs 2nd brain` has a remote, or the owner accepts the risk knowingly
