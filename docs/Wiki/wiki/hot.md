@@ -516,6 +516,97 @@ References:
 > a copy, so there is one source of truth.
 
 
+### Nothing can upload an image in any environment — measured 2026-09-12: the R2 credentials are injected blank, production included
+
+> [!WARNING] This entry corrects a scope stated earlier the same day
+> The first reading of this was *"the five R2 variables do not reach the
+> **preview** runtime; R2 works on `main`"*. That was wrong, and the correction
+> is the useful part — see *Why the earlier reading was wrong* below.
+
+Every image upload in the Seller Center refuses with `STORAGE_NOT_CONFIGURED`,
+in **all three environments**. `readR2Config()` in `src/lib/storage/r2-client.ts`
+is all-or-nothing across five variables, and every upload path goes through it —
+seller product photos, description images, buyer review photos, and the shop
+logo. One dead config, every upload.
+
+Measured from the running deployments, not from the dashboard:
+
+```
+production   (main,     54edd33c)   r2Configured: false   keyPrefix: "main"
+SIT          (develop,  3b38308f)   r2Configured: false   keyPrefix: "sit"
+```
+
+and on both, the distinction that matters:
+
+```
+defined: { CLOUDFLARE_R2_ENDPOINT: true,  BUCKET: true,  PUBLIC_BASE_URL: true }
+present: { CLOUDFLARE_R2_ENDPOINT: false, BUCKET: false, PUBLIC_BASE_URL: false }
+```
+
+`defined` is `process.env[name] !== undefined`; `present` additionally requires
+a non-blank value. **The variables are injected and empty.** Vercel's own
+deployment record (`GET /api/v13/deployments/<id>`) lists all six R2 names plus
+`CRON_SECRET` as attached to the very deployment that cannot read five of them.
+
+**This is not a platform fault.** Four explanations were proposed and each died
+against a measurement — the *sensitive* variable type (`CRON_SECRET` and the
+branch-scoped `CLOUDFLARE_R2_KEY_PREFIX` are both sensitive and both readable), a
+stale deployment (the one answering was minutes old), the team's *Separate
+Production Secret Values* policy (off), and wrong scoping (Vercel's API gives the
+five and `CRON_SECRET` byte-identical `type`/`target`/`gitBranch`). What is left
+is the values themselves: saved blank.
+
+#### Why the earlier reading was wrong
+
+The owner had observed that the live storefront's photos all load, and that was
+taken as evidence the production write path was healthy. It is not evidence of
+that. `product_media_sources` and `seller_profiles.logo_url` store the **full
+public URL**, and the browser fetches it straight from the R2 public domain —
+**reading needs no credentials; only writing does.** Every image uploaded before
+the values went blank keeps rendering perfectly, indefinitely, with the write
+path dead. See skill 133.
+
+#### What is owed, and by whom
+
+Nobody on the agent side can fix this: the five are `type: sensitive`, so Vercel
+will not return their values (`decrypt=true` refuses), and the real values live
+in Cloudflare, to which neither the owner nor this session has access. **It needs
+whoever holds the Cloudflare account** — see [[aj-onboarding-turnover]].
+
+The fix is to delete and recreate each of the five in
+`sals3-portal` → Environment Variables with a non-blank value and both
+Production and Preview ticked, then redeploy each branch — an environment change
+does not reach a deployment that is already built.
+
+If the R2 API token secret was never recorded, a **new** token works and does not
+invalidate the old one: Cloudflare → R2 → Manage R2 API Tokens, **Object Read &
+Write** (delete is required — replacing a logo deletes the object it replaces),
+scoped to the one bucket.
+
+#### How to confirm the fix in one call
+
+```
+POST /api/internal/storage/r2-preflight
+```
+
+Writes one small object under the deployment's own `keyPrefix` and deletes it,
+so it exercises credentials, endpoint, bucket, write **and** delete. Returns
+`wrote`, `deleted`, the exact `objectKey`, and on failure the SDK's error *name*
+(`AccessDenied`, `NoSuchBucket`, `InvalidAccessKeyId`) — never its message, which
+carries the endpoint and bucket. Authorised by `CRON_SECRET` or a signed-in
+session holding `seller_profile:manage`.
+
+`keyPrefix` is already correct per environment (`main` / `uat` / `sit`), measured
+on 2026-09-12 — so when the credentials land, SIT will write under `sit/` and
+cannot touch production's namespace. That was worth checking **before** the
+credentials, not after: the three environments share one bucket, and an empty
+prefix is not "unset" but the shared root where production's own objects live.
+
+#### Not measured
+
+When the values went blank, and whether they ever held anything. Both would need
+either Vercel's audit log or the Cloudflare side.
+
 ### Every buyer order page on the AU SIT storefront hung - diagnosed 2026-09-11: a pinned deployment, not a slow read
 
 > [!WARNING] This entry replaces one written earlier the same day
