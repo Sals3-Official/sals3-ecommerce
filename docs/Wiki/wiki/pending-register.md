@@ -126,16 +126,37 @@ promotion. SIT was the only stage where the feature was exercised by a person.
 Clearing `auth_two_factors` for the account on the `pre-prod` branch and
 re-enrolling is the fix; it needs the Neon SQL editor pointed at that branch.
 
-### [P3] SIT and UAT still carry the retired six-character seller ids
-**Raised:** 2026-09-12 · **Closes when:** `POST /api/internal/sellers/remint-public-seller-ids` reports `oldShapeAfter: 0` on `develop` and `pre-prod`
-**Owner:** agent
+### [P3] UAT still carries the retired six-character seller ids; production and SIT have converged
+**Raised:** 2026-09-12 · **Re-scoped:** 2026-09-12, same day · **Closes when:** `POST /api/internal/sellers/remint-public-seller-ids` reports `converged: 0, alreadyDerived: N` on `pre-prod`
+**Owner:** agent, once UAT can be signed into — see the [P2] above
 
-The format changed to `S3-TENY-JR6K` and production's four accounts were
-re-minted. The other two environments were not, so an id read off SIT has a
-different shape from one read off production. Nothing breaks —
-`isPublicSellerId` checks shape and the old shape simply fails it — but the
-environments disagree, which is exactly the confusion the format change was
-meant to end.
+**What changed since this was raised.** The first re-mint drew ids at random, and
+that was wrong in a way the original SQL backfill was not: the backfill derived
+each id from `md5(sa."id"::text)`, so the same account presented the same id in
+every copy of the database. SIT and pre-prod are Neon branches of production;
+they hold the same rows with the same keys. Three random re-mints would have
+given one shop three ids — and did, briefly: `S3-1JZE-2PAF` on production,
+`S3-Y6V5-90CX` on SIT, `S3-TENYJR` on pre-prod. Owner caught it the same day.
+
+Ids are now **derived** (`derivePublicSellerId`, `sals3-portal` #267/#268/#269):
+a function of the account's UUID, identical in every environment, and immune to
+a branch refresh because they were never stored state. The re-mint became a
+convergence run — safe anywhere, any number of times.
+
+| Environment | Before | After convergence |
+| --- | --- | --- |
+| SIT | `S3-Y6V5-90CX` | `S3-JR85-V4E8` · 4 converged · second run `converged: 0` |
+| production | `S3-1JZE-2PAF` | `S3-JR85-V4E8` · 4 converged · second run `converged: 0` · all pages 200 |
+| pre-prod | `S3-TENYJR` | **blocked** — no session, no `CRON_SECRET` |
+
+The proof that the derivation is right is that production and SIT land on the
+**same** value — and they did: `S3-JR85-V4E8` on both, measured on 2026-09-12
+from the deployed pages. UAT will too, the moment it can be reached.
+
+**Not measured:** whether any of the four accounts' ids had been shown to
+anyone other than the owner before the derived values landed. The owner's own
+had not. The other three were minted by the migration hours earlier and no
+other user had rendered the profile page.
 
 ### [P1] Three `Sals3-Official` repositories are public, including this vault
 **Raised:** 2026-09-11, the repository-register PR · **Closes when:** Bogs or AJ decides each one's visibility and the decision is recorded in [[sals3-repository-register]] §5
