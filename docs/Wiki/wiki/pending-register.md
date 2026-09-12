@@ -77,6 +77,66 @@ being read.
 
 ## Open
 
+### [P1] No image can be uploaded in any environment — the five R2 credentials are injected blank, production included
+**Raised:** 2026-09-12 · **Closes when:** `POST /api/internal/storage/r2-preflight` answers `wrote: true, deleted: true` on `main`, and again on `develop`
+**Owner:** owner — Cloudflare, then Vercel environment
+
+Full evidence in [[hot]] under *Nothing can upload an image in any environment*;
+this is the one-line pointer, not a copy. `readR2Config()` is all-or-nothing
+across five variables and every upload path goes through it, so seller product
+photos, description images, buyer review photos and the shop logo are all dead
+together.
+
+**The scope was widened on the day it was raised.** The first reading was
+*"preview cannot see the variables; R2 works on `main`"* — production is blank
+too. Photos still render because the stored row carries the full public URL and
+reading needs no credentials. See skill 133.
+
+Nobody on this side can fix it: the five are `type: sensitive`, so Vercel will
+not return their values, and the real values live in Cloudflare, to which
+neither the owner nor the agent has access. See [[aj-onboarding-turnover]].
+
+### [P2] A lost authenticator is a permanent lockout — the portal issues backup codes it will never accept
+**Raised:** 2026-09-12 · **Closes when:** `/two-factor` offers a backup-code path and `authClient.twoFactor.verifyBackupCode` is wired to it
+**Owner:** AJ — owner assigned it on 2026-09-12
+
+`sals3-portal` generates ten backup codes at 2FA setup and tells the seller to
+save them (`SetupTotpForm.tsx`, `setup-2fa/page.tsx`). Nothing anywhere accepts
+one. `/two-factor` validates `/^[0-9]{6}$/` and calls only
+`authClient.twoFactor.verifyTotp`; `verifyBackupCode` exists in Better Auth and
+is never called.
+
+So the portal promises a recovery path it does not implement. A seller who
+changes phone or loses the authenticator app cannot get in, and nobody can let
+them in without a direct write to `auth_two_factors`. This is live on
+production.
+
+### [P2] UAT cannot be signed into — its 2FA enrollment belongs to a different Neon branch
+**Raised:** 2026-09-12 · **Closes when:** a sign-in to `sals3-portal-uat.vercel.app` reaches `/overview`
+**Owner:** owner — Neon, `pre-prod` branch
+
+Password succeeds and the TOTP code is refused. The secret lives in
+`auth_two_factors` **per database**, and UAT is its own Neon branch, so the
+authenticator app holds a secret from a different copy. Nothing to do with any
+deployed code — Better Auth answers `{"ok":true}` and returns a correct `null`
+session on UAT.
+
+Consequence worth stating: **UAT verified nothing** for the seller-profile
+promotion. SIT was the only stage where the feature was exercised by a person.
+Clearing `auth_two_factors` for the account on the `pre-prod` branch and
+re-enrolling is the fix; it needs the Neon SQL editor pointed at that branch.
+
+### [P3] SIT and UAT still carry the retired six-character seller ids
+**Raised:** 2026-09-12 · **Closes when:** `POST /api/internal/sellers/remint-public-seller-ids` reports `oldShapeAfter: 0` on `develop` and `pre-prod`
+**Owner:** agent
+
+The format changed to `S3-TENY-JR6K` and production's four accounts were
+re-minted. The other two environments were not, so an id read off SIT has a
+different shape from one read off production. Nothing breaks —
+`isPublicSellerId` checks shape and the old shape simply fails it — but the
+environments disagree, which is exactly the confusion the format change was
+meant to end.
+
 ### [P1] Three `Sals3-Official` repositories are public, including this vault
 **Raised:** 2026-09-11, the repository-register PR · **Closes when:** Bogs or AJ decides each one's visibility and the decision is recorded in [[sals3-repository-register]] §5
 **Owner:** owner (Bogs/AJ) — visibility is outward-facing and irreversible in effect

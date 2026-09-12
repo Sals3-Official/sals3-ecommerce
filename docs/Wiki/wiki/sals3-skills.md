@@ -1601,3 +1601,123 @@ On 2026-09-07 that stopped being true. `seed-category-mappings` became a **Verce
 The reflex: **"blocked on X" is a dated claim about X, not a property of the item.** Check X.
 
 **Where applied:** [[ADR-002-sals3-taxonomy-and-cj-category-mapping]]'s 2026-09-11 amendment §4; the re-scoped entry in [[pending-register]] and the correction callout in [[hot]].
+
+
+### 131. Reverting a merge leaves its commits in the history — re-merging that branch delivers nothing, silently
+
+**Confirmed:** 2026-09-12, promoting the seller profile to production and watching a clean merge land zero files.
+
+**Incident:** `pre-prod` → `main` was merged as PR #241. GitHub reported it merged. `main` moved. Then:
+
+```
+$ git diff --name-status 74774b7 origin/main
+(empty)
+$ git ls-tree -r --name-only origin/main | grep -c migrate-seller-profile
+0
+```
+
+**A merge commit, no error, and not one file.** #241 had been merged once before and reverted by #245 — and `git revert` on a merge undoes the *tree* while leaving the *commits* reachable. Re-merging the same branch therefore has nothing to apply: git has already seen every commit on it.
+
+This was two steps from an incident of a different shape. The next action was to call `POST /api/internal/sellers/migrate-seller-profile` on production — an endpoint that was not there. It would have answered 404, been read as "the migration tooling is broken", and sent the session hunting a deployment problem that did not exist.
+
+The fix is not `git revert` of the revert, which would restore the whole of the reverted content including the parts deliberately left behind. It is to **cut a branch from the target and write the files onto it**:
+
+```
+git checkout -b promote/x origin/main
+git checkout origin/develop -- <paths>
+```
+
+A branch whose commits git has never seen always applies.
+
+**Lesson:** "Merged" is a statement about commits, not about files.
+
+1. **Verify the files, never the word.** After every merge to a protected branch, one command — `git diff --stat <before> origin/<branch>`, or `git ls-tree` for a path you expect. It costs a second and it is the only thing that distinguishes a real promotion from this one.
+2. **Assume this whenever the target has ever reverted the source.** In a three-stage gate with revert-on-incident as the standard recovery, that is not an edge case — it is the normal state of `main` after any rollback.
+3. **Applying files beats merging branches once the histories have diverged through a revert.** It is also the only way to promote *part* of a branch, which is the common case when several people share `develop`.
+
+**Where applied:** `sals3-portal` PRs #241 (the silent no-op), #259, #261 and #262 (files applied onto branches cut from the target). See skill 73 for the neighbouring trap — a merged PR orphaning uncommitted work.
+
+### 132. An environment variable can be attached to a deployment and still be blank — `defined` and `present` are different questions with different owners
+
+**Confirmed:** 2026-09-12, after four hypotheses for a dead image upload died against measurement.
+
+**Incident:** SIT refused every logo upload with `STORAGE_NOT_CONFIGURED` while the Vercel dashboard showed all five `CLOUDFLARE_R2_*` variables scoped to "Production and Preview". Four explanations were proposed, and each was killed by a number:
+
+| Hypothesis | How it died |
+| --- | --- |
+| Sensitive variables do not reach a preview runtime | `CRON_SECRET` and a branch-scoped `CLOUDFLARE_R2_KEY_PREFIX` are both `sensitive` and both read fine there |
+| The deployment predates the variables | The deployment answering was minutes old |
+| The "Separate Production Secret Values" policy is on | It is off — read from the team settings toggle, `checked: false` |
+| The five are scoped wrong | Vercel's own API gives them and `CRON_SECRET` byte-identical configuration: `type: sensitive`, `target: ["production","preview"]`, `gitBranch: null` |
+
+And the one that reframed the whole problem: `GET /api/v13/deployments/<id>` lists **all six** as attached to the deployment that cannot read five of them.
+
+The report said `present: false`, where `present` means *set and not blank*. That single boolean cannot tell **"the platform never injected it"** from **"the platform injected an empty string"** — and those have different owners. The first is an escalation to the platform; the second is a value somebody saved blank. Adding `defined` (`process.env[name] !== undefined`) answered it in one deploy:
+
+```
+defined: { all five: true }
+present: { all five: false }
+```
+
+Injected, and empty. Not a platform problem at all.
+
+**Lesson:** When a diagnostic says "missing", ask which kind of missing.
+
+1. **Report absence and emptiness separately** wherever a config check gates a feature. Two booleans, no values, and the fix's owner falls out of the pair.
+2. **Read the runtime, never the dashboard.** The module exists because "the dashboard lists them" had already been believed once. A dashboard describes intent; `process.env` describes fact.
+3. **A control variable is worth carrying forever.** `cronSecretPresent` has no business in an R2 report except as the thing that refutes "preview cannot see variables" on the spot, every time someone proposes it again.
+4. **Kill hypotheses with numbers, and write down which died.** The four above live in the module's own comment so nobody re-runs them.
+
+**Where applied:** `src/modules/storage/r2-storage-status.ts` in `sals3-portal`, and the `hot` entry *Nothing can upload an image in any environment*.
+
+### 133. Images still rendering is not evidence that uploads work — reading a public URL needs no credentials
+
+**Confirmed:** 2026-09-12, one hour after telling the owner that R2 was healthy in production.
+
+**Incident:** The owner had observed, weeks earlier, that the live storefront's photos all loaded — *"okay naman ata ang r2 sa main"*. That was taken as evidence the write path was healthy in production, and the R2 problem was scoped to preview environments only. The turnover note drafted for the platform owner said exactly that.
+
+Then the preflight — an endpoint that writes one tiny object and deletes it — was run against production:
+
+```
+r2Configured: false
+present: { ENDPOINT: false, BUCKET: false, PUBLIC_BASE_URL: false }
+vercelEnv: production    keyPrefix: "main"
+```
+
+**Production was blank too.** The photos load because `product_media_sources` and `seller_profiles.logo_url` store the **full public URL**, and the browser fetches it straight from the R2 public domain. Reading needs no key; only writing does. Every previously uploaded image keeps rendering perfectly for years after the credentials go dead.
+
+The real scope was never "logo upload on preview". It is **every image upload in every environment** — product photos, description images, buyer review photos — because they all pass through one `readR2Config()`.
+
+**Lesson:** A read path and a write path share a bucket and nothing else.
+
+1. **Prove a write with a write.** A round-trip preflight — put, then delete — is a few lines, and it is the only thing that exercises credentials, endpoint, bucket, and the delete permission a replace depends on.
+2. **Treat "it looks fine" as a report about the read path.** It is genuine evidence, of something else.
+3. **When an observation and an instrument disagree, believe the instrument and correct the record immediately.** The correction here inverted the blast radius of an open blocker; sitting on it for a day would have sent the wrong turnover note to the one person who can fix it.
+4. **Presence is not permission, and one permission is not another.** A token that can write but not delete passes every write test and orphans an object on every replace — which is why the preflight deletes.
+
+**Where applied:** `src/modules/storage/r2-preflight.ts` and `src/app/api/internal/storage/r2-preflight/route.ts` in `sals3-portal`.
+
+### 134. When two readings of an identifier are both legal and nothing in the string decides, refuse — do not guess
+
+**Confirmed:** 2026-09-12, by a test written for a format change, minutes before that change shipped.
+
+**Incident:** The seller-facing id changed from `S3-TENYJR` (six Crockford characters) to `S3-TENY-JR6K` — two groups of four, every group carrying at least one digit so that no group can spell a word. `normalisePublicSellerId` strips punctuation and repairs what a person types, and it accepted a bare body as a convenience.
+
+That is where it broke. `S` and `3` are themselves legal body characters, so after stripping, `S3TENYJR` — the **retired** format with its prefix — is exactly eight characters and indistinguishable from a bare eight-character body beginning `S3`. The function guessed "bare body":
+
+```
+normalisePublicSellerId('S3-TENYJR')  →  'S3-S3TE-NYJR'
+```
+
+A different, perfectly well-formed id. A support agent typing an old id off an email would have been handed another account's shape — a lookup that lands somewhere wrong rather than nowhere. No error, no warning.
+
+The fix was to make the prefix **required** and refuse the bare body outright. That looks less helpful and is the only safe reading: a convenience that resolves an ambiguity by guessing is a convenience that is wrong some of the time, silently.
+
+**Lesson:** Leniency in a parser is a decision about what to do when you do not know.
+
+1. **Enumerate the readings before adding a shortcut.** "Accept it without the prefix" sounds free until you notice the prefix characters are in the alphabet.
+2. **Refusing is a real answer.** `null` sends the caller back to the person holding the id; a wrong-but-valid result does not.
+3. **Test the retired format explicitly** whenever a format changes. `refuses the retired six-character shape` is the assertion that caught this, and it exists only because the old shape was written into the table of refusals rather than deleted along with the old format.
+4. **A format change is free exactly once** — before any value has reached a person. "Who already has one" is the question to answer first, and its answer decides whether a re-mint is housekeeping or a broken promise.
+
+**Where applied:** `src/modules/sellers/public-seller-id.ts`, its test, and `src/modules/sellers/remint-public-seller-ids.ts` in `sals3-portal`.
