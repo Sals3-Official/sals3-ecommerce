@@ -76,7 +76,7 @@ renders as plain text.
 
 ## 2. Cloudflare R2 replaces Vercel Blob for seller photo uploads
 
-[[sals3-portal-seller-photo-upload-manager]] shipped 2026-08-17 on Vercel
+[[ADR-011-product-media-source-selection-and-supplier-original-preservation|sals3-portal-seller-photo-upload-manager]] shipped 2026-08-17 on Vercel
 Blob. The owner decided the same day the feature needs durable object
 storage and asked for Cloudflare R2 instead — this session did the swap
 before the Blob-backed version had accumulated any real production uploads

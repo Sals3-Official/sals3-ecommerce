@@ -79,36 +79,6 @@ being read.
 
 ## Open
 
-### [P3] Four session notes cite notes that were never written
-**Raised:** 2026-09-14 · **Closes when:** each is written, or the citing sentence carries a dated callout saying it never was
-**Owner:** agent — when next working in the area each one describes
-
-A vault-wide link audit (3,453 wikilinks, code spans excluded) found fourteen
-broken references. Ten were repaired in the same task: three repointed to
-[[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out|part 133]],
-which is where the migration is actually described; five were dangling
-`related:` entries in frontmatter and were removed; and
-[[aj-onboarding-turnover]] was written, having been cited by [[hot]] and this
-register since 2026-09-12.
-
-Four remain, each **in prose** inside a historical session note:
-
-| Cited note | Cited from |
-| --- | --- |
-| `portal-shared-worktree-multi-agent` | part 49's predecessor, 2026-08-17 |
-| `shopee-orders-ia-and-cj-statuses` | part 37, 2026-08-13 |
-| `sals3-portal-seller-photo-upload-manager` | part 49, 2026-08-17 |
-| `array-agg-distinct-biases-the-sample` | part 129, 2026-09-04 |
-
-They are left in place deliberately.
-[[vault-session-note-conventions]] §6 forbids rewriting a historical narrative
-to match a later state, and each sentence is a true record of what its author
-intended to write. The honest repair is to write the note or to mark the
-sentence, not to silently retarget it.
-
-**Not a defect in the four notes.** It is four pieces of work whose lesson was
-never given a home — the same failure [[sals3-skills]] exists to prevent.
-
 ### [P3] Ten stashes, the oldest from August, five of them holding vault notes
 **Raised:** 2026-09-14 · **Closes when:** each is applied, exported, or dropped deliberately
 **Owner:** agent for the vault ones, owner for the rest — several hold application work
@@ -910,16 +880,43 @@ releases describes the deployment differently from the branch every feature
 starts from. See [[sals3-session-2026-09-08-part157-promote-with-a-merge-commit-never-a-squash|part 157]].
 
 ### [P3] Ten lesson notes are referenced and were never written
-**Raised:** 2026-09-09, PR #241 · **Closes when:** each target exists, or the reference is repointed at the skill that holds it
+**Raised:** 2026-09-09, PR #241 · **Worked:** 2026-09-14 · **Closes when:** each target exists, or the reference is repointed at the note or skill that holds it
 **Owner:** agent
 
-`array-agg-distinct-biases-the-sample`, `category-routing-and-breadcrumb`,
+Original ten: `array-agg-distinct-biases-the-sample`,
+`category-routing-and-breadcrumb`, `cj-wallet-currency-and-au-funding-fx-gap`,
+`drizzle-wraps-pg-error-codes`, `portal-repo-migrated-to-anythingsupplies`,
+`portal-shared-worktree-multi-agent`, `sals3-portal-seller-photo-upload-manager`,
+`sals3-portal-strict-reference-rule`, `shopee-orders-ia-and-cj-statuses`,
+`taxonomy-v1-is-google-taxonomy`. Two of the original twelve were closed before
+this — skill 101 absorbed one, and [[vault-session-note-conventions]] was written
+for the other.
+
+**2026-09-14 — four resolved, one was never owed, five remain.**
+
+| | Reference | Resolution |
+| --- | --- | --- |
+| ✅ | `portal-repo-migrated-to-anythingsupplies` | repointed to [[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out\|part 133]], which describes the migration |
+| ✅ | `sals3-portal-seller-photo-upload-manager` | repointed to [[ADR-011-product-media-source-selection-and-supplier-original-preservation\|ADR-011]], which covers seller upload and the Vercel Blob → R2 swap |
+| ✅ | `shopee-orders-ia-and-cj-statuses` | repointed to [[sals3-portal-orders-parcel-workspace-design]] — the design note the citing sentence already names |
+| ✅ | `array-agg-distinct-biases-the-sample` | **written**, from part 129's own account |
+| ⚠️ | `portal-shared-worktree-multi-agent` | **never owed.** The citing sentence says it outright: *"in memory — not a vault page, but the persisted operating note this session followed."* It is a deliberate reference to agent memory, and listing it here was a counting error |
+
+The three repoints use an **alias**, so the visible words are byte-identical to
+what their authors wrote and only the link target changed. That is the whole of
+what [[vault-session-note-conventions]] §6 permits without a dated callout, and
+it is why no session narrative was edited.
+
+**Five still unwritten** — `category-routing-and-breadcrumb`,
 `cj-wallet-currency-and-au-funding-fx-gap`, `drizzle-wraps-pg-error-codes`,
-`portal-repo-migrated-to-anythingsupplies`, `portal-shared-worktree-multi-agent`,
-`sals3-portal-seller-photo-upload-manager`, `sals3-portal-strict-reference-rule`,
-`shopee-orders-ia-and-cj-statuses`, `taxonomy-v1-is-google-taxonomy`. Two of the
-original twelve were closed this way already — skill 101 absorbed one, and
-[[vault-session-note-conventions]] was written for the other.
+`sals3-portal-strict-reference-rule`, `taxonomy-v1-is-google-taxonomy`.
+
+> [!NOTE] Their dangling `related:` pointers were removed on 2026-09-14
+> These five appeared only as `related:` entries in frontmatter, and they were
+> **deleted** rather than written or repointed — a third option this entry's
+> *Closes when* does not offer. The names survive here, so the intent is not
+> lost, but the in-context reminder is gone. Restoring them is one revert if
+> that was the wrong call.
 
 ### [P3] The `nanoid` Dependabot alert is stale and still open
 **Raised:** 2026-09-09, PR #241 · **Closes when:** dismissed, or auto-closed by the next push touching `package-lock.json`

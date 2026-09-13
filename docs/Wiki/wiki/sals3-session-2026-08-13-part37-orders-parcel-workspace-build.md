@@ -122,7 +122,7 @@ threshold applies.
 ## Competitive research
 
 Two live seller accounts were walked and recorded in
-[[shopee-orders-ia-and-cj-statuses]]-adjacent detail inside the design note:
+[[sals3-portal-orders-parcel-workspace-design|shopee-orders-ia-and-cj-statuses]]-adjacent detail inside the design note:
 
 - **Shopee** — chips are lane-specific, the counted unit switches per lane,
   status is never a bare pill, at most two actions per row, and a blocked
