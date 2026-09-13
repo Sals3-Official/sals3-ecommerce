@@ -48,6 +48,8 @@ related:
 - [[../CLAUDE|Agent Entry Point]] — mandatory reading gate for every agent.
 - [[agent-operating-contract|Agent Operating Contract]] — anti-yesman reasoning, evidence, challenge, and verification rules.
 - [[nextjs-component-security-code-rules|Next.js Component Architecture and Security]] — mandatory code-change gate for every Sals3 code edit, refactor, test change, configuration change, and package change.
+- [[universal-writing-directive-plain-english-asd-ste100|Universal Writing Directive]] — ASD-STE100 plain English for an average Filipino reader; binding on every surface an agent writes.
+- [[aj-onboarding-turnover|AJ Onboarding Turnover]] — what is blocked on an account nobody here holds, and which owner decision is waiting.
 - [[project-structure-installation-and-runbook|Project Structure, Installation, and Runbook]] — canonical project layout, npm package installation rules, local run commands, verification commands, and README update rule.
 - [[team-profile-and-collaboration-preferences|Team Profile and Collaboration Preferences]] — who's on the team (AJ and Bogs, shared vault) and how they want an agent to work with them.
 - [[autonomous-loop-sop|The Loop Method]] — default act-observe-adjust operating discipline for any problem.

@@ -26,6 +26,8 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 - [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery]] — proposed Sals3-owned returns/refunds architecture for the CJ-only, no-local-warehouse Phase 1: returnless-first guardrails, separate buyer remedy and CJ recovery states, PH filing-based redress clock, AU major/minor remedy structure, delivered-not-received investigation, and legal/accounting launch blockers.
 
 - [[agent-operating-contract]] — anti-yesman and verification rules.
+- [[universal-writing-directive-plain-english-asd-ste100]] — ASD-STE100 plain English, binding on every surface an agent writes.
+- [[aj-onboarding-turnover]] — index of what needs an external account holder.
 - [[nextjs-component-security-code-rules]] — mandatory Next.js component architecture, security, and verification gate for all Sals3 codebase edits.
 - [[project-structure-installation-and-runbook]] — canonical repository structure, package installation rules, run commands, verification commands, and README update rule.
 - [[team-profile-and-collaboration-preferences]] — who's on the team (AJ and Bogs, shared vault) and how they want an agent to work with them.
