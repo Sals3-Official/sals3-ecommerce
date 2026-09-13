@@ -28,6 +28,7 @@ related:
   - "[[ADR-011-product-media-source-selection-and-supplier-original-preservation]]"
   - "[[sals3-session-2026-08-24-part72-aj-storefront-search-across-both-repositories]]"
   - "[[sals3-session-2026-08-25-part71-the-variant-photo-that-vanished-and-the-wire-that-could-not-carry-it]]"
+  - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
 ---
 
 # Part 73 — Image specs, a mirror leak, and a test that assumed its upstream

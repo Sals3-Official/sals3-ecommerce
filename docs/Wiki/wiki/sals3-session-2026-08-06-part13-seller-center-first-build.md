@@ -11,6 +11,7 @@ related:
   - "[[sals3-global-seller-center-ux-blueprint-proposal]]"
   - "[[ADR-001-seller-center-cj-sourcing-to-my-products]]"
   - "[[sals3-portal-code-review-2026-08-06]]"
+  - "[[agent-operating-contract]]"
 ---
 
 # Session — Seller Center, first build (2026-08-06)
