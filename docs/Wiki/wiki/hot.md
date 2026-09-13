@@ -173,6 +173,7 @@ related:
   - "[[sals3-session-2026-08-21-part63-order-snapshot-durable-media-and-the-insert-that-names-every-column]]"
   - "[[sals3-session-2026-08-21-part64-the-sticky-panel-the-spec-asked-for-and-the-owner-did-not-want]]"
   - "[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins]]"
+  - "[[aj-onboarding-turnover]]"
 ---
 
 # Sals3 - Current State Cache

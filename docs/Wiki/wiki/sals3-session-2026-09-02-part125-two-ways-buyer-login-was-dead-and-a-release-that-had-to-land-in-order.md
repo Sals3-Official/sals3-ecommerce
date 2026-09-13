@@ -21,7 +21,7 @@ owner_approved: true
 implementation_status: merged
 related:
   - "[[hot]]"
-  - "[[portal-repo-migrated-to-anythingsupplies]]"
+  - "[[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out]]"
   - "[[agent-operating-contract]]"
   - "[[ADR-005-payment-settlement-refunds-and-cod]]"
 ---
@@ -36,7 +36,7 @@ no DDL in any of them. First real production work on both repos after the
 
 > [!NOTE] Provenance
 > Written after the fact from each pull request's own record, and from
-> [[portal-repo-migrated-to-anythingsupplies]]'s account of the migration
+> [[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out|part 133]]'s account of the migration
 > itself.
 
 ## `sals3.com` was showing "Live products unavailable" for a reason that was not DNS or caching (#2/#3)

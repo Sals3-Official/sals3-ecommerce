@@ -19,7 +19,6 @@ related:
   - "[[hot]]"
   - "[[nextjs-component-security-code-rules]]"
   - "[[agent-operating-contract]]"
-  - "[[drizzle-wraps-pg-error-codes]]"
 ---
 
 # Part 114 — a delivery score, photos, a report button, and the idempotency bug they found

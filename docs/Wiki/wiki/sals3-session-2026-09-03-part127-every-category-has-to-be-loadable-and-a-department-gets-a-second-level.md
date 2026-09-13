@@ -21,7 +21,6 @@ owner_approved: true
 implementation_status: merged
 related:
   - "[[hot]]"
-  - "[[category-routing-and-breadcrumb]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
 ---
 
