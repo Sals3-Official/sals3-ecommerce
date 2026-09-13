@@ -907,16 +907,33 @@ what their authors wrote and only the link target changed. That is the whole of
 what [[vault-session-note-conventions]] §6 permits without a dated callout, and
 it is why no session narrative was edited.
 
-**Five still unwritten** — `category-routing-and-breadcrumb`,
-`cj-wallet-currency-and-au-funding-fx-gap`, `drizzle-wraps-pg-error-codes`,
-`sals3-portal-strict-reference-rule`, `taxonomy-v1-is-google-taxonomy`.
+**2026-09-14, second pass — nine of ten are closed.** Three more were repointed
+at the note that already held them, and one was written:
 
-> [!NOTE] Their dangling `related:` pointers were removed on 2026-09-14
-> These five appeared only as `related:` entries in frontmatter, and they were
-> **deleted** rather than written or repointed — a third option this entry's
-> *Closes when* does not offer. The names survive here, so the intent is not
-> lost, but the in-context reminder is gone. Restoring them is one revert if
-> that was the wrong call.
+| | Reference | Resolution |
+| --- | --- | --- |
+| ✅ | `sals3-portal-strict-reference-rule` | repointed to [[agent-operating-contract]] §10, *"`sals3-portal` is the strict reference whenever work touches it"* — **confirmed 2026-08-06 by Bogs**, the same day as the citing note |
+| ✅ | `taxonomy-v1-is-google-taxonomy` | repointed to [[ADR-002-sals3-taxonomy-and-cj-category-mapping\|ADR-002]], whose 2026-08-14 amendment documents the v0 → v1 switch in full — 5,595 rows, Google Product Taxonomy, `CAT-GGL-` prefix |
+| ✅ | `category-routing-and-breadcrumb` | repointed to [[sals3-session-2026-08-30-part112-every-breadcrumb-level-becomes-a-link\|part 112]], which holds the `/c/[category]` route and the `<slug>-<id>` key |
+| ✅ | `drizzle-wraps-pg-error-codes` | **written**, from parts 41, 55 and 114 — the same defect found three times |
+
+None of these needed a new note except the last: writing the other three would
+have put a second home under a decision that already had one, which
+[[sals3-management-bible]] section 6 forbids. Their `related:` pointers, removed
+earlier the same day, are **restored** — now aimed at a target that resolves.
+
+**One remains: `cj-wallet-currency-and-au-funding-fx-gap`**, cited from
+[[sals3-session-2026-08-28-part94-the-storefront-buffers-on-the-sellers-own-rate\|part 94]].
+
+> [!NOTE] Deliberately not written on 2026-09-14
+> **The vault does not contain the incident.** [[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments\|ADR-015]]
+> owns the **Funding buffer** — renamed from "FX adjustment" by `166d0ec` — and
+> part 94 covers how the storefront applies it. Neither describes a **CJ wallet
+> currency** gap on **AU funding**, which is what the reference names, and
+> ADR-015 §292 explicitly says the funding buffer's FX scoping is *"a different
+> instrument"*. Repointing there would merge two things the ADR separates, and
+> writing the note from the name alone would be inventing an incident. It stays
+> open until whoever knows what it was says so.
 
 ### [P3] The `nanoid` Dependabot alert is stale and still open
 **Raised:** 2026-09-09, PR #241 · **Closes when:** dismissed, or auto-closed by the next push touching `package-lock.json`

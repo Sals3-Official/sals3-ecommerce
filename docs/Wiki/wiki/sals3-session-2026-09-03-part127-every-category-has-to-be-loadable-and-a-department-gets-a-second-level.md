@@ -22,6 +22,7 @@ implementation_status: merged
 related:
   - "[[hot]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
+  - "[[sals3-session-2026-08-30-part112-every-breadcrumb-level-becomes-a-link]]"
 ---
 
 # Part 127 — every category has to be loadable, and a department gets a second level
