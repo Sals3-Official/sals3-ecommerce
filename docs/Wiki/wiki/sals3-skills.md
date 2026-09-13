@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-09-11
+updated: 2026-09-14
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -32,6 +32,7 @@ related:
   - "[[sals3-session-2026-09-10-part166-a-critical-rce-and-the-sitemap-that-failed-a-production-build]]"
   - "[[sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing]]"
   - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
+  - "[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins]]"
   - "[[sals3-repository-register]]"
   - "[[ADR-014-admin-portal-platform-governance-and-global-controls]]"
   - "[[ADR-002-sals3-taxonomy-and-cj-category-mapping]]"
@@ -1721,3 +1722,143 @@ The fix was to make the prefix **required** and refuse the bare body outright. T
 4. **A format change is free exactly once** — before any value has reached a person. "Who already has one" is the question to answer first, and its answer decides whether a re-mint is housekeeping or a broken promise.
 
 **Where applied:** `src/modules/sellers/public-seller-id.ts`, its test, and `src/modules/sellers/remint-public-seller-ids.ts` in `sals3-portal`.
+
+### 135. A directory ignored on one branch and tracked on another empties itself on checkout — and the files left behind name the cause
+
+**Confirmed:** 2026-09-14, by `git reflog --date=iso` after a vault appeared empty.
+
+**Incident:** An Obsidian vault at `E:\sals3-ecommerce\docs` opened with one folder and an empty graph. 297 notes were gone. Nothing was in `.trash`, and `git log -- docs/` returned nothing at all, which read like proof the folder had never held anything.
+
+It had. The directory sits in a clone with **two remotes** — `origin` is the vault repository, `newco` is the storefront — and `docs/` is ignored on the storefront lineage, added 2026-08-31 by `aa9c9e0`, *"chore: initial import from Sals3-Official (vault excluded)"*. That exclusion is deliberate and right. **But ignoring a path does not untrack what is already tracked**: on the vault's `docs/*` branches the notes were tracked, committed and pushed, and on the storefront's branches they are not tracked at all.
+
+So the deletion was an ordinary checkout — one that crossed between the two lineages:
+
+```
+2026-09-10 09:43:48  chore/ignore-agent-scratch-directories(docs=297) -> develop(docs=0)
+```
+
+Git removed 297 files from the working tree because the destination branch does not track them. It was not a sync failure, a crash, or a deletion by any tool.
+
+**The one surviving file identified the cause before the reflog confirmed it.** `Raw/*.ndjson` was untracked *and* ignored, so no checkout has any opinion about it. A directory left holding exactly its untracked-and-ignored files, and nothing else, has been emptied by a branch switch.
+
+**Lesson:** `.gitignore` decides what git *starts* tracking, never what it already tracks — and the difference only becomes visible at a checkout.
+
+1. **Read the survivors first.** What remains after a mystery deletion is a filter, and the filter names the mechanism. Untracked-and-ignored survivors mean checkout; an empty directory means something else entirely.
+2. **`git log -- <path>` returning nothing means the current branch never tracked that path.** It is not evidence that nothing ever did. Ask `git ls-tree -r --name-only <other-branch> -- <path>` before concluding anything is lost.
+3. **Never reason about a repository from one branch's view of a path.** Ignored, untracked and no history are all true *here* and can all be false one branch away.
+4. **An ignore pattern written for scratch output will take everything else under that path with it.** Scope the pattern to what is actually scratch, or accept that the directory is now branch-dependent.
+
+**Where applied:** `anythingsupplies/sals3-ecommerce` `.gitignore` line 51, reached through the two-remote clone at `E:\sals3-ecommerce`; diagnosis in [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §2. The arrangement that made it possible is skill 139.
+
+### 136. When git, the trash and the filesystem all have nothing to say, the tool's own state file is the evidence
+
+**Confirmed:** 2026-09-14, while establishing whether an empty vault had ever held anything.
+
+**Incident:** Every normal source was silent. No git history for the path on that branch, an empty `.trash`, no recycle-bin entries, and a folder timestamp that only recorded the moment Obsidian recreated its config directory. On that evidence the honest answer was *"this folder may always have been empty"* — and it would have been wrong.
+
+`docs/.obsidian/workspace.json` settled it. Obsidian writes `lastOpenFiles` for its own convenience — a list of recently opened notes — and it held eighteen real paths, the newest naming a part-167 note:
+
+```
+Wiki/wiki/vault-catalog.md
+Wiki/wiki/sals3-session-2026-09-10-part167-sop-v42-and-the-morning-cj-quoted-nothing.md
+```
+
+That file survived precisely because it is gitignored as per-person UI state — the same property that made it worthless to version control made it the only witness.
+
+**Lesson:** Applications keep records for themselves, and those records outlive the thing they describe.
+
+1. **Enumerate the tool's own state before concluding absence.** Editor recent-file lists, shell history, `.idea`/`.vscode` workspace files, lock files, caches, log files — each is a timestamped claim about what existed.
+2. **"No evidence it existed" and "evidence it did not exist" are different findings.** Say which one you have, because the owner's next action differs completely.
+3. **Ask a user who says it was there to be right.** They usually are; the search has not reached the right artefact yet.
+4. **What version control deliberately excludes is often what survives a version-control accident.** The exclusion and the survival have the same cause.
+
+**Where applied:** [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §1.
+
+### 137. A workspace that opens at the wrong root loads none of its plugins, and says nothing about it
+
+**Confirmed:** 2026-09-14, by comparing `obsidian.json` against where the plugins actually live.
+
+**Incident:** The vault root is `E:\sals3-vault\docs`. The owner opened `E:\sals3-vault` — the repository root, one directory up. The notes appeared, nested under a `docs/` folder, and everything looked correct.
+
+Nothing was correct. Plugin configuration is **per vault root**, and the plugins live in `docs/.obsidian`. Opening the parent created a fresh empty `.obsidian` alongside it, so:
+
+- **`obsidian-git` was not running** — every note written would have stayed uncommitted, with no error and no indication. The failure mode of a backup tool that is not running is silence.
+- **the Local REST API was not running**, so the MCP integration had no server to reach, for a reason that looked nothing like the wrong-root cause.
+
+The repository's own `.gitignore` already carried the rule, at lines 61–63: *"The repository root must not be opened as an Obsidian vault — the vault root is `docs/`."* The guidance existed. Nothing enforced it, and the root `.obsidian/` is itself ignored, so `git status` stayed clean throughout.
+
+**Lesson:** Content rendering correctly is not evidence that the workspace opened correctly.
+
+1. **Verify the root by its configuration, not by its contents.** The check is *are the plugins/extensions I expect actually loaded* — not *can I see my files*.
+2. **A tool configured one directory away is a tool that is off.** Per-root config directories (`.obsidian`, `.vscode`, `.idea`) fail this way whenever a repository nests its workspace inside itself.
+3. **A rule written in a comment is documentation, not a guard.** If the correct root matters, the failure has to be observable — an absent plugin listed at startup, a check in the repository, something.
+4. **Silent no-ops are the expensive class.** An auto-commit tool that is not running loses work at exactly the rate you trust it.
+
+**Where applied:** `E:\sals3-vault\docs` as the vault root; rule already at `.gitignore` lines 61–63 of `Sals3-Official/sals3-ecommerce`.
+
+### 138. Two faults on one path produce one error message — and fixing either alone looks like the fix did not work
+
+**Confirmed:** 2026-09-14, restoring the Obsidian MCP server after a full session of connection failures.
+
+**Incident:** Every call failed identically: `connection refused`, later `CONNECT_TIMEOUT`. One symptom, and it had two unrelated causes stacked behind it.
+
+**Fault one — nothing was listening.** `netstat -ano` showed no process on 27123 or 27124. The only vault with the REST API plugin installed was closed, so the server did not exist.
+
+**Fault two — the configured key was stale.** Two config files, two transports, both carrying a key the plugin does not accept:
+
+```
+~/.claude.json              -> 703db7dd…fc75f4   (https, port 27124)
+claude_desktop_config.json  -> 703db7dd…fc75f4   (http,  port 27123)
+plugin data.json            -> c7c9b7a7…4838fbf4
+```
+
+Start the server without fixing the key and every call returns `401`. Fix the key without starting the server and every call still returns `connection refused`. Either fix, tested alone, reads as *"that was not it"* — and the natural next move is to revert the change that was actually correct.
+
+**Lesson:** One error message is not one fault, and a fix that changes nothing visible has not been disproved.
+
+1. **Enumerate the whole path before changing anything.** Process listening? Port bound? Credential matching? Transport right? Each is separately checkable and cheap.
+2. **Keep a correct change even when the symptom persists.** Revert it only once something else explains the symptom, or two real fixes get undone one at a time.
+3. **Verify end to end with the credential the server actually holds**, read from its own config rather than from yours — `curl` against the live endpoint, not the absence of an error in a client.
+4. **A config duplicated across two files drifts.** Both copies here were stale in the same way, which is luck; next time one is updated and the other is not, and the symptom depends on which client you used.
+
+**Where applied:** `~/.claude.json` and `%APPDATA%\Claude\claude_desktop_config.json`, `obsidian` MCP entries; verified by `curl` against `127.0.0.1:27123` and `:27124`.
+
+### 139. One working directory with two remotes is two projects — a checkout between them looks like data loss, and a push between them crosses an org boundary
+
+**Confirmed:** 2026-09-14, while establishing why a vault directory emptied; the second finding was not the one being looked for.
+
+**Incident:** `E:\sals3-ecommerce` reads as one clone and is two:
+
+```
+origin  https://github.com/Sals3-Official/sals3-ecommerce.git   (the vault)
+newco   https://github.com/anythingsupplies/sals3-ecommerce.git (the storefront)
+```
+
+Two unrelated histories, both reachable from one working directory, their branches interleaved in a single `git branch` listing with nothing in the names to say which project a branch belongs to.
+
+**The first consequence is cosmetic and alarming.** Checking out a storefront branch deletes the vault's 297 notes from the working tree, because the storefront's initial import deliberately excluded them. Nothing is lost — it is a checkout doing its job across two projects — but it presents as a vanished vault.
+
+**The second consequence is the real one.** Local `develop` descends from the storefront's import commit, so it is the storefront's develop. Its configured upstream is the **vault** repository:
+
+```
+$ git rev-parse --abbrev-ref develop@{upstream}
+origin/develop                    # Sals3-Official — the public vault repo
+
+develop vs newco/develop  (storefront):  0 behind in kind, merely stale
+develop vs origin/develop (vault):       93 local commits absent upstream,
+                                        584 upstream commits absent locally
+```
+
+A bare `git push` on that branch offers **93 storefront commits to a public repository reserved for the vault**. No flags, no warning, no confusion required — the wrong remote is already the default on the branch a checkout is most likely to be sitting on. A bare `git pull` merges 584 vault commits the other way.
+
+The project's own register had warned that *"a push from the wrong one is an ADR-019 breach in a single command"* — reasoning about two **separate** clones that are easy to mix up. The arrangement that actually exists is worse than the one it warned about, because it needs no mistake of identity at all.
+
+**Lesson:** A remote is not a detail of a clone; a second remote makes the clone ambiguous, and the ambiguity is resolved silently by whatever the branch's upstream happens to say.
+
+1. **`git remote -v` before trusting any conclusion about "the repo".** History, ignore rules and tracked paths are all per-lineage, and two lineages in one directory make every unqualified statement about the repository wrong half the time.
+2. **Audit `branch.<name>.remote` for every long-lived branch, not just the current one.** The dangerous branch is the one nobody looks at, already pointed somewhere it should not push.
+3. **Prefer one clone per remote.** Worktrees separate concurrent *work*; they do not separate *projects*. A second remote in the same directory buys nothing that a second clone does not, and costs a class of mistake that has no error message.
+4. **Where a boundary is a policy, make it observable.** A comment in a register is documentation; a pre-push hook, a protected branch, or simply not having the remote configured is enforcement.
+5. **Look for the second defect while the first is still open.** This one was found only because the vault question forced a remote-by-remote reading of a clone nobody had reason to re-examine.
+
+**Where applied:** `E:\sals3-ecommerce`; raised as **[P1]** in [[pending-register]], evidence in [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §2 and §5. Not changed by an agent — re-pointing an upstream changes where a colleague's next push lands.

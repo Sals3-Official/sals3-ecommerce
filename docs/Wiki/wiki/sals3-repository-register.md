@@ -11,7 +11,7 @@ aliases:
   - The Eleven Repositories
   - Sals3 Repository Inventory
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-14
 status: current-state
 authority: implementation-state
 owner_approved: false
@@ -28,6 +28,7 @@ related:
   - "[[sals3-session-2026-09-07-part148-the-sixth-repository-and-the-promotion-ledger]]"
   - "[[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci]]"
   - "[[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]]"
+  - "[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins]]"
 ---
 
 # Sals3 Repository Register
@@ -263,6 +264,27 @@ Three things a reader should not have to rediscover the hard way:
   `E:\sals3-ecom-shared` on `anythingsupplies`. The names invite exactly the
   wrong assumption, and a push from the wrong one is an ADR-019 breach in a
   single command.
+
+  > [!WARNING] Corrected 2026-09-14 — it is **both** clones, in one directory
+  > This bullet reads as though each clone belongs to one repository and the
+  > risk is mixing them up. Re-measured, `E:\sals3-ecommerce` has **two
+  > remotes**: `origin` → `Sals3-Official/sals3-ecommerce` **and** `newco` →
+  > `anythingsupplies/sals3-ecommerce`. Both histories are checked out from the
+  > same working directory, and its current branch
+  > (`feat/one-free-delivery-element`) tracks `newco`.
+  >
+  > Two consequences this section did not anticipate. **Checking out a storefront
+  > branch deletes the vault from the working tree** — 297 notes on 2026-09-10,
+  > which is what part 171 was opened to explain. And **local `develop` is the
+  > storefront's develop with its upstream set to `origin/develop`**, so the
+  > "breach in a single command" needs no confusion between clones: the wrong
+  > remote is already the default on that branch. 93 storefront commits are one
+  > bare `git push` from the public vault repository.
+  >
+  > Nothing has been pushed — `aa9c9e0` is absent from `origin/develop`. Raised
+  > as **[P1]** in [[pending-register]]; evidence in
+  > [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]]
+  > §2 and §5; skill 139. **Not changed by an agent.**
 - **`E:\sals3-fj` and `E:\sals3-com-fj` are two independent clones of the same
   repository**, sitting on different branches. Two clones cannot see each
   other's worktrees, so `git worktree list` in one is not the full picture of
