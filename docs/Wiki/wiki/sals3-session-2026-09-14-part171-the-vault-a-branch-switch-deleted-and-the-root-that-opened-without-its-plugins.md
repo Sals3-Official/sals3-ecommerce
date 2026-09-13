@@ -15,7 +15,7 @@ created: 2026-09-14
 updated: 2026-09-14
 status: implemented
 authority: session-record
-implementation_status: local-only
+implementation_status: merged
 related:
   - "[[hot]]"
   - "[[index]]"
@@ -43,6 +43,27 @@ related:
 > [[vault-session-note-conventions]] leaves open at the end — *where does a note
 > about work with no PR to cite go* — and it goes here, with the commit range
 > and the file paths standing in for PR numbers.
+
+> [!WARNING] Corrected later the same day, 2026-09-14
+> **The provenance note above is wrong.** It was written before any of this
+> reached a pull request, and it stopped being true within the hour. Six pull
+> requests carried this session, and the work is merged, not local-only. The
+> frontmatter is corrected; the paragraph above is left standing because it
+> records what was believed when it was written.
+>
+> | PR | What it carried |
+> | --- | --- |
+> | [#262](https://github.com/Sals3-Official/sals3-ecommerce/pull/262) | this note, skills 135-139, the REST API plugin, the widened ignore rule |
+> | [#263](https://github.com/Sals3-Official/sals3-ecommerce/pull/263) | [[aj-onboarding-turnover]], and a vault-wide link audit |
+> | [#264](https://github.com/Sals3-Official/sals3-ecommerce/pull/264) | four worktrees retired, and the register's primary-clone row corrected |
+> | [#265](https://github.com/Sals3-Official/sals3-ecommerce/pull/265) | the prose references closed, and a duplicate register entry folded back |
+> | [#266](https://github.com/Sals3-Official/sals3-ecommerce/pull/266) | nine of ten unwritten lesson notes closed, the tenth refused |
+> | [#267](https://github.com/Sals3-Official/sals3-ecommerce/pull/267) | contract sections 11 and 12, and bible section 8.4 |
+>
+> **None of #262 through #266 ran `npm run verify`.** That is the finding
+> [[sals3-management-bible]] section 8 already forbade, and it is why the rule now
+> appears in [[agent-operating-contract]] as section 11. #267 ran it, and
+> `format:check` caught two files on the first pass.
 
 > [!IMPORTANT] Why this is part 171 and not part 170
 > The branch `docs/part170-promotion-and-r2` exists, is merged, and produced
