@@ -7,7 +7,7 @@ aliases:
     "What Is Still Pending",
   ]
 created: 2026-09-09
-updated: 2026-09-11
+updated: 2026-09-14
 status: canonical
 authority: open-work-register
 owner_approved: true
@@ -18,6 +18,7 @@ related:
   - "[[vault-session-note-conventions]]"
   - "[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]"
   - "[[sals3-repository-register]]"
+  - "[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins]]"
 ---
 
 # Pending Register
@@ -76,6 +77,69 @@ being read.
 ---
 
 ## Open
+
+### [P1] One clone holds both organisations, and `develop`'s upstream points at the public vault repository
+**Raised:** 2026-09-14 · **Closes when:** `git rev-parse --abbrev-ref develop@{upstream}` in `E:\sals3-ecommerce` names a `newco` branch, or the storefront work is moved to a clone of its own
+**Owner:** owner (Bogs/AJ) — changing a remote changes where a colleague's next push lands
+
+`E:\sals3-ecommerce` has **two remotes**: `origin` → `Sals3-Official/sals3-ecommerce`
+(the vault, **public**) and `newco` → `anythingsupplies/sals3-ecommerce` (the
+storefront, private). Local `develop` descends from the storefront's import
+commit `aa9c9e0` — it is the storefront's develop — and its configured upstream
+is `origin/develop`.
+
+```
+develop vs newco/develop  (storefront) : same project, merely stale
+develop vs origin/develop (the vault)  : 93 local commits absent upstream,
+                                         584 upstream commits absent locally
+```
+
+A bare `git push` on that branch offers **93 storefront commits to the public
+repository ADR-019 §1 reserves for this vault**. No flags and no confusion
+required — the wrong remote is already the branch default. `git pull` merges 584
+vault commits the other way.
+
+**Nothing has been pushed.** `aa9c9e0` is absent from `origin/develop`, so the
+boundary is intact today. [[sals3-repository-register]] §6 warned about this as
+*two separate clones easy to confuse*; the real arrangement is one clone where
+the wrong remote needs no confusion at all. Evidence in
+[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §5;
+skill 139. **Left for the owner — no agent should re-point it.**
+
+### [P2] Nothing enforces the vault root, and opening one directory too high silently stops every commit
+**Raised:** 2026-09-14 · **Closes when:** opening the repository root as a vault is either impossible or visibly refused, rather than merely discouraged in a comment
+**Owner:** agent — a check in the vault repository would do it
+
+The vault root is `docs/`. Opening `E:\sals3-vault` instead of
+`E:\sals3-vault\docs` shows all the notes, nested one level down, and looks
+correct — while loading **no plugins at all**, because plugin configuration is
+per vault root and lives in `docs/.obsidian`.
+
+The consequence is silent: **`obsidian-git` is not running, so nothing written
+is committed**, and the root `.obsidian/` is itself gitignored so `git status`
+stays clean. It happened on 2026-09-14 and was caught only by reading
+`obsidian.json` directly.
+
+`.gitignore` lines 61–63 already state the rule — *"The repository root must not
+be opened as an Obsidian vault"* — which makes this a documented rule with no
+enforcement behind it. See
+[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §6
+and skill 137.
+
+### [P3] Two vaults claim the same Local REST API ports, so only whichever opens first has an MCP server
+**Raised:** 2026-09-14 · **Closes when:** the two vaults are on different ports, or only one carries the plugin
+**Owner:** agent — when next touching either vault's plugin settings
+
+`E:\sals3-vault\docs` and `E:\Bogs 2nd brain` both have
+`obsidian-local-rest-api` installed on `27124` (and `27123` insecure). They
+cannot both be open: the second to start silently fails to bind, and the MCP
+server then reaches whichever vault won — which may not be the one being asked
+about.
+
+Both also currently share one API key and certificate, copied from
+`Bogs 2nd brain` on 2026-09-14 so the MCP config needed only one key. That is
+convenient and is the reason the collision is invisible: a request authenticates
+against either vault equally well.
 
 ### [P1] No image can be uploaded in any environment — the five R2 credentials are injected blank, production included
 **Raised:** 2026-09-12 · **Closes when:** `POST /api/internal/storage/r2-preflight` answers `wrote: true, deleted: true` on `main`, and again on `develop`
