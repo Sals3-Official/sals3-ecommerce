@@ -8,7 +8,7 @@ aliases:
   - Sals3 Agent Operating Contract
   - Anti-Yesman Rule
 created: 2026-07-31
-updated: 2026-08-12
+updated: 2026-09-14
 status: canonical
 authority: constitutional
 owner_approved: true
@@ -16,6 +16,10 @@ related:
   - "[[sals3-master-blueprint]]"
   - "[[vault-governance-and-note-lifecycle]]"
   - "[[ADR-013-cj-product-evidence-truth-and-lean-catalog-controls]]"
+  - "[[sals3-management-bible]]"
+  - "[[universal-writing-directive-plain-english-asd-ste100]]"
+  - "[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]"
+  - "[[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci]]"
 ---
 
 # Sals3 Agent Operating Contract
@@ -158,3 +162,75 @@ This is a durable project decision, not a temporary optimization. The detailed p
 > When the topic is `github.com/Sals3-Official/sals3-portal` (the storefront/backend API repo, local clone `E:\sals3-portal`) — its own build, or any `sals3-ecommerce` code that calls it (see [[hot]]'s `src/services/products.ts` entries) — treat that repository's **actual, current code, schemas, and API contracts** as the bible reference for how to build against it. Read the real repo before assuming its shape; do not infer or invent a `sals3-portal` contract from memory, an older session note, or how a similar platform typically works.
 >
 > This is **on top of, not instead of**, every other rule already in force — this contract, [[nextjs-component-security-code-rules]], [[project-structure-installation-and-runbook]], and [[team-profile-and-collaboration-preferences]] all still apply in full. Strict adherence to `sals3-portal` narrows *which facts count as ground truth* about that backend; it does not relax the security, verification, branch, or review rules that already govern every change.
+
+## 11. Nobody is paying for CI, so whoever opens and merges a pull request is the one who ran it (owner rule 2026-09-10, Bogs)
+
+> [!IMPORTANT] Strict adherence rule. Check this before you open or merge anything.
+> The full rule is [[sals3-management-bible]] section 8. It is binding, not advisory.
+
+**The GitHub Actions and Vercel bills will not be paid.** That is a decision, not
+an outage waiting to be fixed. Verification is no longer something a platform
+does. It is something you do and record by hand.
+
+**The same person or agent who opens a pull request and merges it must have run
+the verification.** Not inherited from an earlier run. Not assumed from a green
+tick. Not left to whoever reads it later. If you did not run it, you do not merge
+it. Hand it to whoever will.
+
+Run `npm run verify`. Quote the real counts in the pull request body. Never write
+"it passed". A bare assertion is what nobody can audit later. The counts are what
+reveal a suite that quietly stopped running half its tests.
+
+Say plainly when a check did not run, and why. That is a blocker, not an
+omission.
+
+**Never pass `--no-verify`.** The Husky hooks are the only automated gate left in
+the application repositories. A failing hook is the finding. Report it.
+
+Read the signals backwards here. A red X is usually a billing stall, not a
+defect. A run that finished in 3 to 9 seconds executed zero steps. A green tick
+can be a workflow that never ran. Bible section 8.4 names a third red: a machine
+that ran out of sockets.
+
+**There is no documentation-only exemption.** The rule binds every agent and
+every teammate, every time. The repository that holds this vault also holds an
+application.
+
+This section is a pointer, not a second home. Bible section 8 holds the recording
+format and the per-repository table of which signal to trust where. The audit
+behind it is
+[[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]].
+The `sals3-verify` skill in `.claude/skills/` carries the procedure.
+
+> [!NOTE] Added to this contract 2026-09-14, after it was broken five times in one session
+> The rule is the owner's, dated 2026-09-10. It has been in [[sals3-management-bible]] section 8 since then. It was not in this contract, and this contract is what an agent reads first. On 2026-09-14 an agent opened and merged five vault pull requests, #262 to #266, without running `npm run verify` and without quoting any counts. It read the bible only afterwards. Transcribed here so the next agent meets the rule before the merge button, not after. The wording of this section has not been owner-reviewed. The rule it carries has. See [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]].
+
+## 12. Write in plain English an average Filipino reader understands (owner rule 2026-09-14, Bogs)
+
+> [!IMPORTANT] Strict adherence rule, on every surface an agent writes
+> Product copy, UI strings, emails, notifications, reports, pull request bodies, vault notes, chat replies. All of it. The full rule is [[universal-writing-directive-plain-english-asd-ste100]]. It is binding, not advisory.
+
+Follow **ASD-STE100**, Simplified Technical English. One idea per sentence. Keep
+sentences under 20 words. Use active voice. Use simple verbs: buy, check, send,
+start. Do not stack four or five nouns together.
+
+Write for an average Filipino online buyer. Use the everyday English of
+Philippine offices and customer service. Banned words include _delve, plethora,
+quintessential, bolster, foster, nuanced, imperative_. Skip Western idioms like
+_"touch base"_. Stay warm and polite without corporate fluff like _"Please be
+advised that"_.
+
+Five habits are banned outright. Explaining the obvious. Sentences that read like
+raw SQL or code. Defensive phrasing such as _"Nobody has reviewed this yet"_.
+Chains of em-dashes. Throat-clearing openers.
+
+Three checks before anything ships. Can a high school graduate in the Philippines
+read it without stopping? Is every sentence under 20 words with one idea? Did you
+cut the warm-up and the obvious?
+
+**This does not relax section 1 or section 5.** Plain language and evidence work
+together. Quote the measured number, name the file, and say which reading is a
+guess. Cut filler, never the number that makes a claim checkable.
+
+**Owner words stay exactly as spoken**, in the language used. Legal, safety, and
+money copy keeps the precision it needs.

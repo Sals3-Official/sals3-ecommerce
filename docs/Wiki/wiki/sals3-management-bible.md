@@ -317,7 +317,61 @@ omission — and name which kind of red a red check is.
 only automated gate left in the application repositories. If a hook fails, that
 is the finding; report it rather than working around it.
 
-### 8.4 Where the details live
+### 8.4 Running `verify` and then committing runs the whole e2e suite twice
+
+**Measured 2026-09-14.** `npm run verify` ends with `test:e2e`. **Both Husky
+hooks run the whole of `npm run verify` again**: `.husky/pre-commit` runs
+`npx lint-staged` then `npm run verify`, and `.husky/pre-push` runs
+`npm run verify` a second time.
+
+So one change costs **two** full Playwright runs if you let the hooks do the
+work, and **three** if you also run `verify` by hand first. Back to back on one
+machine, inside a few minutes.
+
+Windows runs out of socket buffer space. The measured state right after the
+first run was **756 sockets in `TIME_WAIT`** and **31 node processes still
+alive**.
+
+The second run then fails like this:
+
+```
+Error: page.goto: net::ERR_NO_BUFFER_SPACE at http://127.0.0.1:3000/checkout
+  1 failed  [chromium] e2e\cart.spec.ts:111  /checkout cannot be reached directly while signed out
+  2 skipped
+  62 passed
+```
+
+It reads as a broken route guard. It is not. The change under test was markdown
+only, and the same suite had passed **63 passed / 2 skipped** twenty minutes
+earlier.
+
+**This is a third kind of red.** Section 8.1 names two: a billing stall and a
+real defect. Add the machine that ran out of sockets.
+
+How to tell them apart:
+
+| Red | What it looks like |
+| --- | --- |
+| Billing stall | The run finishes in 3 to 9 seconds and executed zero steps |
+| Real defect | An assertion about content fails, and it relates to what you changed |
+| Out of sockets | `ERR_NO_BUFFER_SPACE` or a connection error, in a test unrelated to your change, right after another full run on the same machine |
+
+What to do when you hit it:
+
+- **Let the machine settle, then retry.** `TIME_WAIT` entries clear on their own
+  in a few minutes.
+- **Do not run `verify` by hand before committing.** The pre-commit hook already
+  runs the whole of it. Read the hook's output for your counts. That is you
+  running it, which is what section 8.2 asks for.
+- **Expect the push to run it again.** `pre-push` repeats the full suite, so the
+  third run is the one most likely to hit this.
+- **Never pass `--no-verify`.** A red you can explain is still a red you have to
+  clear. Explaining it is not the same as passing it.
+
+Say which red it was in the pull request body. A reader cannot tell a flake from
+a defect months later, and an unexplained retry looks like a bypass.
+
+### 8.5 Where the details live
 
 The per-repository table — which repository can still prove what, and which
 signal to trust there — is in
