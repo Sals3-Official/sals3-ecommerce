@@ -18,6 +18,7 @@ related:
   - "[[vault-session-note-conventions]]"
   - "[[ADR-019-github-org-boundary-and-the-sit-pre-prod-main-promotion-gate]]"
   - "[[sals3-repository-register]]"
+  - "[[aj-onboarding-turnover]]"
   - "[[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins]]"
 ---
 
@@ -77,6 +78,56 @@ being read.
 ---
 
 ## Open
+
+### [P3] Four session notes cite notes that were never written
+**Raised:** 2026-09-14 · **Closes when:** each is written, or the citing sentence carries a dated callout saying it never was
+**Owner:** agent — when next working in the area each one describes
+
+A vault-wide link audit (3,453 wikilinks, code spans excluded) found fourteen
+broken references. Ten were repaired in the same task: three repointed to
+[[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out|part 133]],
+which is where the migration is actually described; five were dangling
+`related:` entries in frontmatter and were removed; and
+[[aj-onboarding-turnover]] was written, having been cited by [[hot]] and this
+register since 2026-09-12.
+
+Four remain, each **in prose** inside a historical session note:
+
+| Cited note | Cited from |
+| --- | --- |
+| `portal-shared-worktree-multi-agent` | part 49's predecessor, 2026-08-17 |
+| `shopee-orders-ia-and-cj-statuses` | part 37, 2026-08-13 |
+| `sals3-portal-seller-photo-upload-manager` | part 49, 2026-08-17 |
+| `array-agg-distinct-biases-the-sample` | part 129, 2026-09-04 |
+
+They are left in place deliberately.
+[[vault-session-note-conventions]] §6 forbids rewriting a historical narrative
+to match a later state, and each sentence is a true record of what its author
+intended to write. The honest repair is to write the note or to mark the
+sentence, not to silently retarget it.
+
+**Not a defect in the four notes.** It is four pieces of work whose lesson was
+never given a home — the same failure [[sals3-skills]] exists to prevent.
+
+### [P3] Ten stashes, the oldest from August, five of them holding vault notes
+**Raised:** 2026-09-14 · **Closes when:** each is applied, exported, or dropped deliberately
+**Owner:** agent for the vault ones, owner for the rest — several hold application work
+
+`git stash list` in the `Sals3-Official/sals3-ecommerce` clone carries ten
+entries spanning 2026-08-05 to 2026-09-10. Five touch `docs/Wiki/` notes.
+
+**Nothing is lost.** Verified 2026-09-14: every file any stash touches exists in
+the vault today, and no note lives only in a stash. Several carry their own
+disclaimer — *"docs identical to merged PR #194"*, *"kept here only for
+recovery"* — so they read as superseded rather than pending.
+
+What they are is unreviewed debt. A stash has no branch, no upstream and no
+expiry, and `git stash list` is not a place anyone reads; the entries here have
+survived every audit so far precisely because nothing points at them.
+
+They are **not dropped in this task** because several hold storefront and portal
+work outside the vault's scope, and dropping a stash is not reversible in any way
+a future reader would find.
 
 ### [P1] One clone holds both organisations, and `develop`'s upstream points at the public vault repository
 **Raised:** 2026-09-14 · **Closes when:** `git rev-parse --abbrev-ref develop@{upstream}` in `E:\sals3-ecommerce` names a `newco` branch, or the storefront work is moved to a clone of its own

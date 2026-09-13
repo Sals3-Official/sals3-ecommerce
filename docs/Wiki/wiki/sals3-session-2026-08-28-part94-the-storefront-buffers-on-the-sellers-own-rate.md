@@ -23,7 +23,6 @@ related:
   - "[[ADR-015-commercial-pricing-governance-category-product-and-fx-adjustments]]"
   - "[[sals3-session-2026-08-28-part82-a-shopfront-per-country-and-a-price-in-local-money]]"
   - "[[sals3-session-2026-08-28-part92-one-rule-in-two-units-and-the-first-repricing-path]]"
-  - "[[cj-wallet-currency-and-au-funding-fx-gap]]"
 ---
 
 # Part 94 — the storefront buffers on the seller's own rate

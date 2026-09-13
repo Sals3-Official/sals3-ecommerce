@@ -20,7 +20,7 @@ owner_approved: true
 implementation_status: merged
 related:
   - "[[hot]]"
-  - "[[portal-repo-migrated-to-anythingsupplies]]"
+  - "[[sals3-session-2026-09-03-part133-the-migration-to-anythingsupplies-and-the-sync-that-keeps-the-vault-out]]"
 ---
 
 # Part 128 — small reported defects, each given one home
