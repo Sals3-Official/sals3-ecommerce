@@ -252,7 +252,7 @@ concurrent piece of work**, named for the work rather than for the branch.
 | `anythingsupplies/sals3.com.fj` | `E:\sals3-com-fj`, and a **second clone** at `E:\sals3-fj` | `sals3-com-fj-cancel` |
 | `anythingsupplies/sals3.com.au` | `E:\sals3-com-au` | `sals3-com-au-cancel` |
 | `anythingsupplies/sals3-portal-automation` | `E:\Bogs 2nd brain\sals3-portal-automation` | — |
-| `Sals3-Official/sals3-ecommerce` **(this vault)** | `E:\sals3-ecommerce` | `sals3-vault`, `sals3-vault-cancel`, `wt-vault-133`, `wt-vault-169`, `wt-ecom-sync`, `wt-ecom-drop`, `sals3-ecommerce-cancel`, `sals3-ecommerce-rules`, `sals3-ecommerce-wt-freeship-progress`, plus one under `.claude\worktrees\` |
+| `Sals3-Official/sals3-ecommerce` **(this vault)** | `E:\sals3-vault` — see the 2026-09-14 note below | `sals3-vault`, `wt-ecom-sync`, `wt-ecom-drop`, `sals3-ecommerce-cancel`, `sals3-ecommerce-rules`, `sals3-ecommerce-wt-freeship-progress` |
 | `Sals3-Official/sals3-admin-portal` | `E:\sals3-admin-portal` | `wt-admin-old` |
 | `louieboi09/sals3-2nd-brain` | `E:\SALS3 2nd brain` | — |
 | `louieboi09/bogs-dashboard` | `E:\Documents\BOGS_Dashboard - Antigravity` | — |
@@ -291,6 +291,27 @@ Three things a reader should not have to rediscover the hard way:
   what is checked out.
 - **`E:\wt-admin-seed` is a git repository with no `origin`.** Whatever is in it
   is backed by no remote.
+
+> [!NOTE] Re-measured 2026-09-14 — four worktrees retired, and the primary clone row corrected
+> The row above said the vault's primary clone is `E:\sals3-ecommerce`. That is
+> where its `origin` is configured, and it is **not where the vault is**: that
+> working tree sits on storefront branches, so `docs/` there is empty. The vault
+> is worked in `E:\sals3-vault`. See
+> [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §2.
+>
+> Four worktrees in the earlier list no longer exist. `wt-vault-169` was already
+> gone before this measurement. `wt-vault-133`, `sals3-vault-cancel` and the one
+> under `.claude\worktrees\` were removed on 2026-09-14 after each was verified
+> **fully merged into `develop` with nothing uncommitted** — their branches
+> remain on `origin`, so `git worktree add` recreates any of them.
+>
+> **Two of the remaining worktrees also carry the vault**: `sals3-ecommerce-rules`
+> (205 notes) and `sals3-ecommerce-wt-freeship-progress` (210 notes), both on
+> application branches that still track `docs/`. Both are merged and clean, and
+> both are left in place — they are somebody's working directories, not vault
+> copies kept on purpose. **A count of "how many copies of the vault are on this
+> machine" must walk `docs/Wiki/`, not the worktree names**, which is how the
+> first pass of this cleanup missed them.
 
 ## 7. The rule this register exists to enforce
 
