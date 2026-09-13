@@ -165,47 +165,45 @@ This is a durable project decision, not a temporary optimization. The detailed p
 
 ## 11. Nobody is paying for CI, so whoever opens and merges a pull request is the one who ran it (owner rule 2026-09-10, Bogs)
 
-> [!IMPORTANT] Strict adherence rule — check this before opening or merging anything
-> **The GitHub Actions and Vercel bills will not be paid.** That is a decision, not an outage waiting to be fixed. Verification is no longer something a platform does; it is something **you do and record by hand**.
->
-> **The same person or agent who opens a pull request and merges it must have run the verification themselves** — not inherited from an earlier run, not assumed from a green tick, not left to whoever reads it later. **If you did not run it, you may not merge it.** Hand it to whoever will.
+> [!IMPORTANT] Strict adherence rule. Check this before you open or merge anything.
+> The full rule is [[sals3-management-bible]] section 8. It is binding, not advisory.
 
-Run `npm run verify` and **quote the real counts in the pull request body**.
-Never "it passed" — a bare assertion is exactly what nobody can audit later, and
-the counts are what reveal a suite that silently stopped running half its tests.
-State plainly when a check was **not** run and why; that is a blocker, not an
-omission. **Never pass `--no-verify`** — the Husky hooks are the only automated
-gate left in the application repositories, and a failing hook is the finding.
+**The GitHub Actions and Vercel bills will not be paid.** That is a decision, not
+an outage waiting to be fixed. Verification is no longer something a platform
+does. It is something you do and record by hand.
 
-Read both signals the opposite way to the usual instinct here. **A red X is
-usually not a defect** — it is a billing stall, and a run that finished in 3–9
-seconds executed zero steps. **A green tick may prove nothing**, because a
-workflow that never ran cannot fail. Both readings have already cost real time,
-in both directions.
+**The same person or agent who opens a pull request and merges it must have run
+the verification.** Not inherited from an earlier run. Not assumed from a green
+tick. Not left to whoever reads it later. If you did not run it, you do not merge
+it. Hand it to whoever will.
 
-**There is no exemption for a documentation-only or vault-only change.** The rule
-is written as binding on every agent and every teammate, every time, and the
-repository holding this vault also holds an application.
+Run `npm run verify`. Quote the real counts in the pull request body. Never write
+"it passed". A bare assertion is what nobody can audit later. The counts are what
+reveal a suite that quietly stopped running half its tests.
 
-This section is a pointer, not a second home. The full rule — what running it
-means, the recording format, and the per-repository table of which signal to
-trust where — is [[sals3-management-bible]] section 8, which section 7 binds to
-the three-stage promotion gate: *a promotion with no recorded result has not been
-tested.* The audit behind it is
-[[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]],
-and the `sals3-verify` skill in `.claude/skills/` carries the procedure so it
-does not have to be reconstructed each time.
+Say plainly when a check did not run, and why. That is a blocker, not an
+omission.
+
+**Never pass `--no-verify`.** The Husky hooks are the only automated gate left in
+the application repositories. A failing hook is the finding. Report it.
+
+Read the signals backwards here. A red X is usually a billing stall, not a
+defect. A run that finished in 3 to 9 seconds executed zero steps. A green tick
+can be a workflow that never ran. Bible section 8.4 names a third red: a machine
+that ran out of sockets.
+
+**There is no documentation-only exemption.** The rule binds every agent and
+every teammate, every time. The repository that holds this vault also holds an
+application.
+
+This section is a pointer, not a second home. Bible section 8 holds the recording
+format and the per-repository table of which signal to trust where. The audit
+behind it is
+[[sals3-session-2026-09-09-part160-nobody-is-paying-so-the-agent-is-the-ci|part 160]].
+The `sals3-verify` skill in `.claude/skills/` carries the procedure.
 
 > [!NOTE] Added to this contract 2026-09-14, after it was broken five times in one session
-> The rule is the owner's, dated 2026-09-10, and has been in
-> [[sals3-management-bible]] section 8 since. It was **not** in this contract —
-> and this contract is what an agent reads first. On 2026-09-14 an agent opened
-> and merged five vault pull requests (#262–#266) without running `npm run
-> verify` and without quoting any counts, having read the bible only afterwards.
-> Transcribed here so the next agent meets the rule before the merge button
-> rather than after. The wording of this section has not been owner-reviewed;
-> the rule it carries has. See
-> [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]].
+> The rule is the owner's, dated 2026-09-10. It has been in [[sals3-management-bible]] section 8 since then. It was not in this contract, and this contract is what an agent reads first. On 2026-09-14 an agent opened and merged five vault pull requests, #262 to #266, without running `npm run verify` and without quoting any counts. It read the bible only afterwards. Transcribed here so the next agent meets the rule before the merge button, not after. The wording of this section has not been owner-reviewed. The rule it carries has. See [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]].
 
 ## 12. Write in plain English an average Filipino reader understands (owner rule 2026-09-14, Bogs)
 
