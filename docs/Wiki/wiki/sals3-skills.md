@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-09-14
+updated: 2026-09-18
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -1862,3 +1862,91 @@ The project's own register had warned that *"a push from the wrong one is an ADR
 5. **Look for the second defect while the first is still open.** This one was found only because the vault question forced a remote-by-remote reading of a clone nobody had reason to re-examine.
 
 **Where applied:** `E:\sals3-ecommerce`; raised as **[P1]** in [[pending-register]], evidence in [[sals3-session-2026-09-14-part171-the-vault-a-branch-switch-deleted-and-the-root-that-opened-without-its-plugins|part 171]] §2 and §5. Not changed by an agent — re-pointing an upstream changes where a colleague's next push lands.
+
+### 140. A repository migration gives every bare PR number a second meaning — and the wrong one resolves cleanly
+
+**Confirmed:** 2026-09-18, auditing `sals3-portal-automation`'s `AGENTS.md` against both GitHub organisations.
+
+**Incident:** The Portal migrated from `Sals3-Official` to `anythingsupplies` on 2026-09-02 and the new repository started again at `#1`. By 2026-09-18 it held **470 merged pull requests** — past the retired repository's entire range. `AGENTS.md` cites pull requests by bare number, so every citation acquired a second, equally real referent:
+
+| Cited | In `anythingsupplies` | In `Sals3-Official` | Meant |
+| --- | --- | --- | --- |
+| `#204` | protect a route in the proxy | a single-variant product can save its variant matrix | retired |
+| `#290` | revert an item-loading detail | pagination and real storefront links | retired |
+| `#308` | a promotion to UAT | move the automation's decision functions server-side | retired |
+| `#309` | a promotion to production | a chart missing a sold size warns instead of refusing | retired |
+
+`#308` is cited seven times. **Nothing errors.** The reader opens a merged pull request, reads a coherent change and is in the wrong place — no 404, no warning, no reason to doubt it.
+
+**Lesson:** A cross-repository reference is an address, and an address can stop resolving without ever breaking. A migration that restarts numbering silently re-points every bare number in every document that survives it.
+
+1. **Qualify a reference with its repository the moment a second repository can answer it.** `portal#N` and `legacy-portal#N` cost four characters and remove the ambiguity permanently.
+2. **Resolve a disputed citation against BOTH candidates before labelling it.** Each of the four above returns something plausible from the wrong repository; only comparing the two against what the citing text describes decides it.
+3. **Treat "the number is low, so it must be the new repo" as a heuristic with an expiry date.** It held until the new repository's numbering passed the old one's, which took six weeks.
+4. **Audit the citations at migration time, not when someone follows one.** The migration is the event that breaks them, and it is the only moment the whole set is obviously in scope.
+
+**Where applied:** all 27 citations in `AGENTS.md` and the two playbooks, via [anythingsupplies/sals3-portal-automation#8](https://github.com/anythingsupplies/sals3-portal-automation/pull/8); evidence in [[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed|part 172]] §1.
+
+### 141. A file is not current because it is called canonical — precedence by label selects the stale copy
+
+**Confirmed:** 2026-09-18, reconciling the two Sals3 automation playbooks.
+
+**Incident:** Each playbook existed as a repository copy declared canonical and a Claude-side `SKILL.md` mirror. `skills/README.md` stated the rule: *"when the two drift, THIS folder wins."*
+
+They had drifted, and **the mirror was the newer copy in both pairs**. It carried the 2026-09-05 category position — every leaf the census found decided, 379 mappings and 50 mixed buckets — plus two warnings the canonical copy lacked: that a merge does not apply the mapping table, and that the disabled buckets must not be driven to zero.
+
+Applying the rule as written would have restored a superseded coverage figure and deleted both warnings, in the name of following the documented process.
+
+The reconcile was also not a one-way copy. The canonical quick-publish copy held one line that was better — bulk drafting in chunks of five, one rate-limit token per **request** rather than per draft, and a measured eleven seconds an item against the mirror's ten — and that line was folded in before the overwrite.
+
+**Lesson:** A precedence rule that names a winner by position encodes an assumption about which copy gets edited, and that assumption fails the first time someone edits the other one. Precedence belongs on evidence, not on a label.
+
+1. **Write precedence as "the demonstrably newer copy wins", and say how to demonstrate it** — a date in the content, or the repository history.
+2. **Make identity checkable.** Byte-identical is a testable property; "canonical" is not.
+3. **Ship the check with the rule.** A `diff` in the README that a person runs before committing catches the drift on the day it happens.
+4. **When merging two drifted copies, read both for what each says better.** The newer file is not automatically the superset, and a mechanical copy loses whatever the older one got right.
+
+**Where applied:** `skills/README.md` and both playbooks in `sals3-portal-automation`; evidence in [[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed|part 172]] §2.
+
+### 142. Count the copies before reconciling any of them — the one that ships is the one nobody diffs
+
+**Confirmed:** 2026-09-18, immediately after reconciling what were believed to be the only two copies.
+
+**Incident:** Two copies of each playbook were known and reconciled. A third existed at `~/.claude/skills/<name>/SKILL.md`, and **that is the copy Claude actually loads at run time.** It had been excluded from the reconcile because nothing named it, and it still carried the bare pull-request citations and a notice asserting the superseded precedence rule.
+
+A stale copy there is worse than a stale copy in either repository location, because it does not need anyone to read it to do damage — it ships into the next run by default.
+
+The repository's own README had described the arrangement as two copies for weeks. The third was found only by comparing the installed file against the reconciled one on a hunch, after the work was believed finished.
+
+**Lesson:** The inventory of copies is itself a thing to verify, and the copy that executes is rarely the copy that gets reviewed.
+
+1. **Enumerate by searching the filesystem, not by reading the documentation that describes the arrangement.** The documentation is one of the copies.
+2. **Rank the copies by blast radius, not by repository status.** The installed copy outranks the one called canonical, because it is the one that runs.
+3. **Extend the equality check to every location**, including paths outside the repository. A check that covers two of three locations reports success for the drift that matters.
+4. **Re-run the discovery after the fix.** This one surfaced after the work was reported finished, which is the most expensive moment to find it.
+
+**Where applied:** all three copies of both playbooks are now byte-identical and the README's check covers the installed path; evidence in [[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed|part 172]] §2.
+
+### 143. Structure is not identity — a folder carrying every convention of the vault was not the vault
+
+**Confirmed:** 2026-09-18, after eleven notes had been written into the wrong one.
+
+**Incident:** `E:\Bogs 2nd brain` contains `Wiki/wiki`, an `index.md`, a `vault-catalog.md`, a `hot.md` and a `CLAUDE.md` with this vault's governance vocabulary, and it contains the `sals3-portal-automation` repository being worked on. It is the **BOGS Dashboard** vault — a different business — and its own git history marked it superseded on 2026-08-04.
+
+The vault of record is `E:\sals3-vault\docs`, Obsidian vault id `136d4d3e49a5a535`.
+
+Two consequences, and the second is the expensive one:
+
+- Eleven notes were written into a deprecated vault.
+- **An audit run against it produced a confident wrong finding**: that this programme held two decision records against 494 merged pull requests. The vault of record holds **255 notes**, with the slug retry, the mouthwash incident, the leaf census and the coverage tiers each already documented at length. One of the new notes also contradicted [[hot]], stating that a dispatch activates the mapping table when seeding has been a Vercel Cron job hourly since 2026-09-07.
+
+Every one of these would have answered in a single command before any writing began: the Obsidian vault id in `obsidian.json`, `git remote -v`, or a note count.
+
+**Lesson:** Recognising a structure is not identifying an instance. When several directories implement the same conventions, the conventions stop being evidence of which one you are in — and a coverage audit inherits its answer entirely from that choice.
+
+1. **Establish identity from something that cannot be copied by convention** — the vault id, the git remote, the note count — before the first write, not after the first doubt.
+2. **A deprecation notice lives in the repository, not in the working tree.** This one was two commits deep in a repository the local folder was no longer connected to.
+3. **Treat a coverage finding as a claim about a specific corpus, and name the corpus.** "Zero of 494" was arithmetic on the wrong denominator and read as a finding about the programme.
+4. **When the owner names a location, resolve it before reasoning about it.** The vault id given in one line closed a question that four indirect checks had not.
+
+**Where applied:** this note and part 172 are written into the vault of record; the misplaced notes are recorded in [[pending-register]] for the owner to dispose of. Evidence in [[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed|part 172]] §4.

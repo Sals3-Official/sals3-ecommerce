@@ -139,6 +139,7 @@ related: ["[[index]]", "[[vault-governance-and-note-lifecycle]]", "[[sals3-repos
 ## Session notes
 
 - [[sals3-session-2026-09-11-part169-the-eleven-repositories-and-the-admin-portal-nobody-audited]] — the repository audit that took the union across both accounts and found eleven, not seven: the Admin Portal is a real application in a public `Sals3-Official` repository with no CI and no promotion gate, and `sals3-admin-portal` PR #4 (52,135 lines, closed unmerged in nine minutes) carries an unrecorded reversal of part of ADR-014.
+- [[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed]] — the 27 PR citations qualified across the `Sals3-Official` → `anythingsupplies` migration, the three copies of each automation playbook reconciled byte-identical (including `~/.claude/skills`, the copy that actually runs), and two self-contradicting `Known state` entries corrected. Records the session's own error: eleven notes written into the deprecated BOGS vault, and the coverage audit that inherited its answer from the wrong corpus.
 
 - [[../../journal/sals3-session-2026-08-05-part01-landing-page-api-carousel]] — verified 2026-08-05 landing-page API, pagination, carousel, test, and lesson session note.
 - [[../../journal/sals3-turnover-prompt-2026-08-05-landing-page-api-carousel]] — copy-paste turnover prompt for the next agent after the landing-page API and carousel work.

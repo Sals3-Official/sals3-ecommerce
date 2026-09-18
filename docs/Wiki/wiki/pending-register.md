@@ -7,7 +7,7 @@ aliases:
     "What Is Still Pending",
   ]
 created: 2026-09-09
-updated: 2026-09-14
+updated: 2026-09-18
 status: canonical
 authority: open-work-register
 owner_approved: true
@@ -78,6 +78,39 @@ being read.
 ---
 
 ## Open
+
+### [P2] Eleven notes were written into the deprecated BOGS vault and have no disposition
+**Raised:** 2026-09-18, part 172 · **Closes when:** the owner has either deleted them or had the additive parts folded into this vault
+**Owner:** owner (Bogs) — it is his other vault
+
+`E:\Bogs 2nd brain` is the BOGS Dashboard vault, marked superseded in its own
+repository on 2026-08-04 and no longer connected to one locally. Eleven Sals3
+notes were written into it on 2026-09-18 before the vault of record was
+identified: a programme map, a current-state note, two skill notes, a
+category-mapping note, a Gemini worker note, an audit note and five pull-request
+records.
+
+Most of it duplicates what this vault already holds at greater depth, and **at
+least one note contradicts [[hot]]** — see the entry below. Nothing was written
+to this vault during the mistake; it was read only. Detail and the identity
+checks that would have prevented it are in
+[[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed|part 172]] §4 and skill 143.
+
+### [P3] `AGENTS.md` still says the mapping table needs a dispatch, and it has been a cron job since 2026-09-07
+**Raised:** 2026-09-18, part 172 · **Closes when:** the automation contract and both playbooks say the seeder runs hourly, or the claim is re-verified and kept
+**Owner:** agent — one paragraph in `sals3-portal-automation`
+
+`AGENTS.md` and both playbooks tell a reader that merging the reviewed rows
+deploys them and that a separate `workflow_dispatch` is what activates them, so
+"live coverage does not move until the second one runs". [[hot]] records that
+`seed-category-mappings` has been a **Vercel Cron job hourly at :17 on `main`
+since 2026-09-07**, so no dispatch is owed and what is missing is evidence of
+the outcome.
+
+Low priority because the stale instruction is cautious rather than dangerous —
+it tells someone to run something that is already running. It is listed because
+it was quoted verbatim into a note written on 2026-09-18 and became a wrong
+statement in a second document, which is how a stale paragraph spreads.
 
 ### [P3] Ten stashes, the oldest from August, five of them holding vault notes
 **Raised:** 2026-09-14 · **Closes when:** each is applied, exported, or dropped deliberately
