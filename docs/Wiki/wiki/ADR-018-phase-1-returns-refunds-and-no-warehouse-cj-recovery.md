@@ -5,12 +5,14 @@ aliases:
   - Phase 1 Returns and Refunds
   - No-Warehouse Returns
   - CJ Recovery Policy
+  - Item Problem Return and Refund SOP
+  - Not as advertised
 created: 2026-08-28
-updated: 2026-08-28
-status: proposed
+updated: 2026-09-23
+status: approved
 authority: architecture-decision
-owner_approved: false
-implementation_status: research-final-legal-review-blocker
+owner_approved: true
+implementation_status: approved-building
 related:
   - "[[ADR-003-international-availability-shipping-and-pricing]]"
   - "[[ADR-004-cj-ordering-tracking-and-fulfillment]]"
@@ -18,6 +20,7 @@ related:
   - "[[ADR-007-supplier-change-attention-and-immutable-order-snapshots]]"
   - "[[ADR-008-installable-supplier-apps-commission-and-seller-funded-orders]]"
   - "[[ADR-017-no-local-cj-api-calls-and-vercel-sourced-development-data]]"
+  - "[[ADR-021-order-cancellation-24-hour-hold-review-gate-and-no-refund-ahead-of-cj]]"
   - "[[agent-operating-contract]]"
   - "[[vault-governance-and-note-lifecycle]]"
 ---
@@ -26,10 +29,10 @@ related:
 
 ## Status
 
-`proposed`
+`approved` — owner decision 2026-09-23.
 
-> [!WARNING] Legal status
-> This is the corrected final research/ADR-input version from the Gemini -> Codex -> Fable review loop. It is not legal advice and not launch copy. AU and PH legal/accounting review remains a launch blocker before real buyer-facing policy text goes live.
+> [!IMPORTANT] Approved
+> The owner approved this ADR and the Item Problem Return & Refund SOP on 2026-09-23, and stated that the legal and accounting review has been obtained (*"may approval na nila"*). The build covers the markets that are live: **Global, Australia and Fiji**. The Philippines is not live; its rules below are kept for the day it is. The approved operating text and the build decisions are in [Amendment 2026-09-23](#amendment-2026-09-23--approved-sop-and-build-decisions); where it and the outline below differ, the amendment governs.
 
 ## Problem
 
@@ -41,7 +44,7 @@ The problem is not whether CJ's dispute policy is useful. It is useful internall
 
 - CJ's refund/resend policy says it is a resource for dropshippers, requires CJ disputes to be opened on CJ, and contains supplier-side recovery limits for delivered tracking, non-delivery proof, destination limits, shipping-method limits, returns to China warehouses, and unacceptable disputes.
 - CJ states products can be returned only to CJ China warehouses, but says return shipping is expensive, slow, often lost, and often damaged.
-- CJ lists "the product description is not real" as an unacceptable supplier dispute. That cannot become Sals3 buyer-facing policy, because a wrong or misleading Sals3 listing is a not-as-described buyer issue.
+- CJ lists "the product description is not real" as an unacceptable supplier dispute. That cannot become Sals3 buyer-facing policy, because a wrong or misleading Sals3 listing is a not-as-advertised buyer issue.
 - ACCC guidance says businesses that sell products are responsible for remedies, consumers choose refund or replacement for a major product problem, and businesses must at least fix minor problems.
 - RA 11967 applies where one party is in the Philippines or a platform/merchant avails of the Philippine market, gives online consumers remedies for defect, malfunction, loss, or failure to conform, requires effective redress mechanisms, and treats internal redress as exhausted if unresolved after seven calendar days from filing.
 - ADR-003 already treats refund/return allowance, market enablement, destination freight, tax, duty, and consumer-law review as launch-gate inputs.
@@ -93,7 +96,7 @@ Risks:
 
 - Slows Phase 1 materially.
 - Adds logistics, lease/3PL, inventory handling, inspection, tax, and shrinkage complexity before real claim data exists.
-- Does not remove the need for statutory defect, non-delivery, and misdescription remedies.
+- Does not remove the need for statutory defect, non-delivery, and not-as-advertised remedies.
 
 ## Strongest objection
 
@@ -110,7 +113,7 @@ Buyer remedy and supplier recovery are separate:
 1. Buyer reports the issue to Sals3.
 2. Sals3 asks for reasonable evidence.
 3. Sals3 assesses the claim and applies the legally required remedy structure under Sals3 policy and applicable consumer rules.
-4. For valid low-value damaged, wrong, missing, defective, unsafe, or not-as-described claims, Sals3 usually refunds, partially refunds, or resends without requiring physical return.
+4. For valid low-value damaged, wrong, missing, defective, unsafe, or not-as-advertised claims, Sals3 usually refunds, partially refunds, or resends without requiring physical return.
 5. Sals3 opens the CJ dispute internally at claim intake, in parallel, to preserve CJ's recovery window.
 6. If CJ refuses recovery but Sals3 still owes a buyer remedy, Sals3 or the responsible seller absorbs and records the loss.
 
@@ -162,9 +165,9 @@ This can apply to:
 - buyer selected the wrong size, color, or option;
 - buyer found the item cheaper elsewhere.
 
-This rule must be disclosed before payment on the PDP and checkout, not only on a policy page. It must not remove remedies for faulty, unsafe, wrong, missing, delayed beyond the legal/policy threshold, or not-as-described products.
+This rule must be disclosed before payment on the PDP and checkout, not only on a policy page. It must not remove remedies for faulty, unsafe, wrong, missing, delayed beyond the legal/policy threshold, or not-as-advertised products.
 
-If Sals3 showed incorrect size, color, material, compatibility, product, price, shipping, or delivery information, treat the claim as a not-as-described or misleading-information issue, not change of mind.
+If Sals3 showed incorrect size, color, material, compatibility, product, price, shipping, or delivery information, treat the claim as a not-as-advertised or misleading-information issue, not change of mind.
 
 ### Physical returns
 
@@ -194,7 +197,7 @@ This policy does not remove any rights you have under applicable consumer law.
 
 Internal: avoid "approved sellers" unless Sals3 is ready to defend that due-diligence representation. Lawyer must confirm whether AU wording becomes a "warranty against defects" requiring mandatory ACL text. Lawyer must also confirm PH seller-identity display required under RA 11967.
 
-### Faulty, damaged, wrong, missing, unsafe, or not as described
+### Faulty, damaged, wrong, missing, unsafe, or not as advertised
 
 If your item arrives faulty, damaged, unsafe, wrong, missing parts, or different from the listing, contact Sals3 Support as soon as possible. Fast reports are easier to verify. This does not remove any rights you may have under applicable consumer law.
 
@@ -252,7 +255,7 @@ This includes:
 
 This does not affect your rights if the item is faulty, unsafe, wrong, missing, delayed beyond the applicable threshold, or different from what Sals3 showed before purchase.
 
-If Sals3 showed incorrect size, color, material, compatibility, or product information, the issue is treated as not as described.
+If Sals3 showed incorrect size, color, material, compatibility, or product information, the issue is treated as not as advertised.
 
 ### Cancellations
 
@@ -285,7 +288,7 @@ Internal: store credit only if the buyer opts in. Never CJ wallet credit. Never 
 | Wrong item | Refund or replacement | Received item photo, label, order number | Open incorrect-product dispute at intake | Usually no for low value | Sals3/seller absorbs |
 | Missing part | Resend part, partial refund, replacement, or refund depending on severity | Contents photo/video, package/label, explanation | Open missing-product dispute at intake | No unless high value | Sals3/seller absorbs |
 | Unsafe item | Refund/replacement and product-safety escalation | Photos/video, defect description, injury/incident facts if any | CJ dispute plus safety review | Manual | Sals3/seller absorbs; listing may be blocked |
-| Not as described | Remedy if Sals3 listing/snapshot was wrong or misleading | Order snapshot, buyer evidence, listing version | CJ dispute only if supplier evidence supports it | Rare | Sals3/seller often absorbs |
+| Not as advertised | Remedy if Sals3 listing/snapshot was wrong or misleading | Order snapshot, buyer evidence, listing version | CJ dispute only if supplier evidence supports it | Rare | Sals3/seller often absorbs |
 | Delayed in transit | Investigate; remedy after delivery window or reasonable/legal threshold | Tracking, order date, carrier status | Watch CJ delay threshold; dispute when available | No | Cash-flow and possible loss |
 | Lost in transit | Refund or replacement when confirmed lost | Tracking/logistics evidence | Open lost/delay dispute | No | Sals3/seller absorbs |
 | Delivered not received | Investigate; remedy depends on evidence and risk | Buyer statement, delivery photo/note, recipient-only info where needed | Open CJ not-received dispute; high rejection risk | No | High Sals3/seller loss and chargeback risk |
@@ -333,7 +336,7 @@ Phase 1 should block or manually review categories where returnless refunds are 
 - products whose box is part of the value, such as collectibles;
 - regulated, unsafe, recalled, prohibited, or destination-restricted goods.
 
-"Non-returnable" can apply only to change-of-mind returns. It must not remove remedies for faulty, unsafe, wrong, missing, delayed, or not-as-described products.
+"Non-returnable" can apply only to change-of-mind returns. It must not remove remedies for faulty, unsafe, wrong, missing, delayed, or not-as-advertised products.
 
 ## Required pre-checkout disclosures
 
@@ -431,7 +434,7 @@ Do not ship these phrases or equivalents:
 2. Draft final buyer-facing Returns and Refunds page from the outline above, with internal notes stripped.
 3. Add PDP and checkout pre-payment disclosures for overseas shipping, delivery window, no change-of-mind, returns link, support contact, cancellation cutoff, and duties/customs.
 4. Add checkout guards for AU/PH only, tracked methods only, and blocked/manual categories.
-5. Add buyer Orders issue flows: damaged, wrong item, missing part, unsafe, not as described, delayed/lost, delivered not received, cancellation.
+5. Add buyer Orders issue flows: damaged, wrong item, missing part, unsafe, not as advertised, delayed/lost, delivered not received, cancellation.
 6. Store return/refund policy version, listing version, delivery estimate, product media, price/tax/shipping allocation, and seller identity in immutable order snapshots.
 7. Build support-case records with evidence attachments, redress timers, order-line allocation, and retention/access controls.
 8. Build audited refund/resend actions with idempotency and original-payment-method preference.
@@ -461,3 +464,112 @@ Checked on 2026-08-28:
 - Codex corrected the first report into a no-warehouse, Sals3-owned policy model.
 - Fable 5 corrected the major/minor ACL remedy structure, delivered-but-not-received burden shift, and missing CJ/buyer clock separation.
 - Codex final correction in this note changes Fable v3's "N business days of complete evidence" wording into a filing-based PH redress rule, softens courier-access promises, and makes Sals3's role "assess and apply the legally required remedy" rather than "choose every remedy."
+
+## Amendment 2026-09-23 — approved SOP and build decisions
+
+Owner decisions of 2026-09-23. Where this section and the outline above
+differ, this section governs.
+
+### Operating text
+
+The **Item Problem Return & Refund SOP v2**,
+`docs/Raw/sals3_item_problem_return_refund_sop_2026-09-23_v2.pptx`. It is the
+deck the owner approved on 2026-09-23
+(`docs/Raw/sals3_item_problem_return_refund_sop_2026-08-31.pptx`) with one
+change he asked for the same day: **"not as described" is called "not as
+advertised"**, and it is back in scope as the fifth item problem.
+
+### Scope: five item problems
+
+| Reason | Meaning |
+| --- | --- |
+| Damaged item | Arrived broken, torn, cracked, stained, unusable, or visibly damaged |
+| Wrong item received | A different product, variant, colour, size, or SKU |
+| Missing parts/accessories | Arrived, but required parts or accessories are missing |
+| Defective / not working | Does not work as expected, including any safety, injury, electrical, battery, chemical, or hazard concern |
+| Not as advertised | What was ordered, but not what the listing said: material, dimensions, features, compatibility, or what is in the box — judged against the listing as bought (ADR-007 snapshot); taste or expectation alone is not covered |
+
+Not handled by the item-problem form: delay, lost parcel, delivered but not
+received, cancellation, duplicate or wrong charge, refund not received, and
+change of mind. Each of these sends the buyer to Support, **never to a dead
+end**.
+
+Customer entry point: My Orders → order → item → **Report item problem**.
+
+### Remedy
+
+**Refund only**, full or partial, decided **per order line**, to the original
+payment method. Resend, replacement and repair are not offered; that
+supersedes those words in the outline above. Every refund needs a review and an
+explicit decision that records full or partial, the amount, the reason, the
+approver level, and the evidence used. A decline carries a reason the buyer
+reads and never cites CJ.
+
+### Approver levels (SOP slides 6–10)
+
+| SOP level | Portal role | Per item (USD equivalent) |
+| --- | --- | --- |
+| Agent | `seller_staff` | up to $25, only where the profile and category rules allow it |
+| Supervisor / Manager | `seller_manager` | over $25 to $250, and every manual or escalated case below that |
+| C-level | `admin` | over $250 |
+| Disputed decline | `seller_manager` | any amount |
+
+The profile rules (slide 8) and the category risk (slide 9) can only raise the
+required level, never lower it. Not-as-advertised claims are manager review at
+any amount.
+
+### Money
+
+- Tiers are in **USD equivalent per order line at the order's payment FX
+  rate**. Orders do not store that rate today: new orders snapshot it at
+  payment; older orders take the rate table's rate for the order date and are
+  marked *derived*.
+- Refunds go through Stripe as partial refunds on the order's payment intent,
+  one per decided line, idempotent on the line decision.
+
+### Evidence
+
+The buyer uploads up to **six photos (JPEG or PNG, 5 MB each) and one video
+(MP4 or MOV, 30 MB)**. The 500 KB ceiling of cancellation evidence does not
+apply here; that one was sized for screenshots of messages, these are pictures
+of the item.
+
+### Filing window
+
+14 calendar days from delivery: `carrier_delivered_at`, else CJ's delivery
+event. A later claim is accepted, marked late, and goes to escalated review — it
+is never declined automatically (SOP slide 4).
+
+### Category risk
+
+The nine product types of SOP slide 9 are a mapping from the CJ category to a
+risk class, reviewed by the owner; an unmapped category is *standard*.
+
+### CJ recovery
+
+Opened at intake, in parallel, per order line, with the buyer's evidence
+attached. The outcome is recorded as recovered, partially recovered, denied, or
+pending; the refund minus what was recovered is ledgered as absorbed loss. The
+buyer's decision never waits for CJ and never cites it (SOP slide 12).
+
+### Testing on SIT
+
+CJ's sandbox never ships an order, so no SIT parcel ever reaches *delivered*.
+SIT gets a control, SIT-only by the same stage detection as the 7-minute
+cancellation hold, that marks a parcel delivered, so intake, review and refunds
+can be tested end to end. CJ's post-delivery dispute reasons can only be
+confirmed against a real delivered order.
+
+### Build order
+
+1. The case record (slide 12): case, lines, evidence, decisions with approver
+   level, CJ recovery, absorbed loss, policy version, filing time, FX snapshot.
+2. The storefront's Report item problem flow and the claim's status on the
+   order page, on all three storefronts.
+3. The portal's Item problems lane and case page: customer profile (slide 5),
+   evidence, the approver level the rules require, and the decision form.
+4. CJ recovery and the loss ledger.
+5. Claims on the Customers module, which also makes `% refunded` tell a full
+   refund from a partial one.
+6. The SIT test set, then promotion of the four repositories together under
+   ADR-019.
