@@ -7,7 +7,7 @@ aliases:
     "What Is Still Pending",
   ]
 created: 2026-09-09
-updated: 2026-09-18
+updated: 2026-09-23
 status: canonical
 authority: open-work-register
 owner_approved: true
@@ -78,6 +78,32 @@ being read.
 ---
 
 ## Open
+
+### [P1] Buyers are told they can return an order, and no return path exists
+**Raised:** 2026-09-23, the ADR-018 approval PR · **Closes when:** a buyer can report an item problem from the order page on all three storefronts, and it reaches the portal's Item problems lane ([[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery#Amendment 2026-09-23 — approved SOP and build decisions|ADR-018, amendment 2026-09-23]], build steps 1–3)
+**Owner:** agent
+
+The cancellation copy tells a buyer whose order is already being packed that
+they can return it once it arrives, and `/help/returns` and `/legal/returns`
+describe a remedy — but neither the storefront nor the portal has any
+item-problem intake. Until it ships, Support is the only route, and nothing
+records the claim. P1 because a live surface promises something the product
+cannot do yet.
+
+### [P2] The rest of the item-problem build has not started
+**Raised:** 2026-09-23, the ADR-018 approval PR · **Closes when:** build steps 4–6 of [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery#Amendment 2026-09-23 — approved SOP and build decisions|ADR-018, amendment 2026-09-23]] are merged to `develop` and the SIT test set has passed
+**Owner:** agent
+
+CJ recovery with the absorbed-loss ledger, claims on the Customers module
+(which is also what lets `% refunded` tell a full refund from a partial one),
+and the SIT test set. None of it blocks the buyer intake in the P1 above.
+
+### [P3] The Philippines redress clock is written down but not built
+**Raised:** 2026-09-23, the ADR-018 approval PR · **Closes when:** the Philippines is enabled for checkout, at which point the filing-based seven-day clock is built with it
+**Owner:** owner — the decision to open the market
+
+ADR-018 keeps the RA 11967 rule as reference. The owner put it aside on
+2026-09-23: the live markets are Global, Australia and Fiji.
 
 ### [P2] Eleven notes were written into the deprecated BOGS vault and have no disposition
 **Raised:** 2026-09-18, part 172 · **Closes when:** the owner has either deleted them or had the additive parts folded into this vault
