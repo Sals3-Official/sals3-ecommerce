@@ -90,6 +90,11 @@ item-problem intake. Until it ships, Support is the only route, and nothing
 records the claim. P1 because a live surface promises something the product
 cannot do yet.
 
+**2026-09-23, built on SIT.** The intake is merged to `develop` on all four
+repositories (sals3-portal #581, sals3-ecommerce #171, sals3.com.fj #115,
+sals3.com.au #103) and the 0055 tables exist on SIT. Still open: production
+buyers have no path until the four promote together under ADR-019.
+
 ### [P2] The rest of the item-problem build has not started
 **Raised:** 2026-09-23, the ADR-018 approval PR · **Closes when:** build steps 4–6 of [[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery#Amendment 2026-09-23 — approved SOP and build decisions|ADR-018, amendment 2026-09-23]] are merged to `develop` and the SIT test set has passed
 **Owner:** agent
@@ -97,6 +102,52 @@ cannot do yet.
 CJ recovery with the absorbed-loss ledger, claims on the Customers module
 (which is also what lets `% refunded` tell a full refund from a partial one),
 and the SIT test set. None of it blocks the buyer intake in the P1 above.
+
+**2026-09-23:** steps 4 and 5 are merged with the intake (sals3-portal #581):
+CJ recovery in the settle cron, the loss ledger on the Item problems page, and
+an Item problems tab on the customer profile. What remains is the SIT test set.
+
+**2026-09-23, SIT test.** Passed on global and AU. Tested:
+- mark delivered, now and 15 days back
+- a report with 2 photos and a 5 MB video in two chunks
+- agent-level partial refund A$2.00 (Stripe `re_3UH8HgRoCZXgle3r0SG6dLP3`)
+- late + safety + 33% claim rate escalated to manager
+- decline, reopen after dispute, full refund A$10.60
+- loss ledger and customer tab
+
+CJ answered the dispute with only "Unfulfilled Order Cancellation" (the sandbox order is not delivered at CJ), so the recovery correctly marked it unavailable. Two bugs found and fixed the same day (sals3-ecommerce #173, sals3.com.au #111, sals3.com.fj #124, sals3-portal #582). Still open: the same run on the FJ storefront, which needs the owner signed in on `sit.sals3.com.fj`.
+
+### [P2] CJ's post-delivery dispute reasons are unverified
+**Raised:** 2026-09-23, sals3-portal #581 · **Closes when:** the first production item problem has opened a CJ dispute and `recovery-match.ts` is checked against the reasons CJ offered
+**Owner:** agent
+
+CJ's sandbox never delivers, so no SIT order can show which dispute reasons CJ
+offers after delivery. The recovery matches reason names by pattern and, when
+nothing fits, marks the case `UNAVAILABLE` with CJ's offered names in
+`recovery_error`. That is the evidence to correct the mapping from.
+
+### [P2] Item-problem evidence sits at public R2 URLs
+**Raised:** 2026-09-23, sals3-portal #581 · **Closes when:** evidence is served through signed URLs that CJ's dispute can still fetch
+**Owner:** agent
+
+Buyer photos (a shipping label shows a name and address) are stored under an
+unguessable key but on the bucket's public base URL, the same way review
+photos are. CJ's dispute API takes a URL it must be able to fetch, which is why
+it was not signed on day one.
+
+### [P3] No email to the buyer when an item problem is decided
+**Raised:** 2026-09-23, sals3-portal #581 · **Closes when:** an order email exists and carries the decision
+**Owner:** agent
+
+The order page is the notification, as with cancellations. Neither repository
+sends an order email yet.
+
+### [P3] Item-problem category risk is a keyword list
+**Raised:** 2026-09-23, sals3-portal #581 · **Closes when:** the owner has reviewed `src/modules/item-claims/category-risk.ts`
+**Owner:** owner (Bogs)
+
+SOP slide 9's nine product types are matched from the Sals3 category path the
+buyer bought under. An unmapped category is standard, as ADR-018 says.
 
 ### [P3] The Philippines redress clock is written down but not built
 **Raised:** 2026-09-23, the ADR-018 approval PR · **Closes when:** the Philippines is enabled for checkout, at which point the filing-based seven-day clock is built with it
