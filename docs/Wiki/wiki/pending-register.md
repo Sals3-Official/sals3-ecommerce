@@ -79,6 +79,23 @@ being read.
 
 ## Open
 
+### [P2] The 100-product AU Merchant Center expansion is not approved
+**Raised:** 2026-10-11, sals3-portal #1121 · **Closes when:** the owner approves an exact list of product and variant IDs, Merchant Center shipping rules match the live checkout charge for every weight band in it, and a rollout PR adds those IDs to `au-rollout.ts`
+**Owner:** owner (Bogs/AJ), then agent
+
+On 2026-10-11, 56 B1 checkout quotes were taken (no orders): 14 products, Sydney 2000 and Dubbo 2830, single and topped-up baskets. They found three problems:
+- The 3-Tier Clothing Rack cannot ship to AU.
+- The US$25 subsidy is capped at A$22.93, so buyers above the threshold still pay A$1.68–16.16 in the 1000g–5000g bands.
+- Three items quote 15–25 days on Standard.
+
+A blanket "free over US$25" rule would therefore be untrue on Google. P2 because nothing live is wrong yet, but the expansion cannot go ahead without this.
+
+### [P2] The AU feed's exact-variant allowlist is not verified on SIT
+**Raised:** 2026-10-11, sals3-portal #1121 · **Closes when:** the regenerated AU feed holds exactly the 22 approved variant IDs on SIT, UAT and Main, with any other variant reported as `NOT_APPROVED_VARIANT`
+**Owner:** agent
+
+The allowlist copies the 22 IDs from the live feed, so no change is expected. If one ID was copied wrong, a live item would silently drop out of Google.
+
 ### [P1] Buyers are told they can return an order, and no return path exists
 **Raised:** 2026-09-23, the ADR-018 approval PR · **Closes when:** a buyer can report an item problem from the order page on all three storefronts, and it reaches the portal's Item problems lane ([[ADR-018-phase-1-returns-refunds-and-no-warehouse-cj-recovery#Amendment 2026-09-23 — approved SOP and build decisions|ADR-018, amendment 2026-09-23]], build steps 1–3)
 **Owner:** agent
