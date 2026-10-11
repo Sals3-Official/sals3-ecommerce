@@ -79,16 +79,16 @@ being read.
 
 ## Open
 
-### [P2] The 100-product AU Merchant Center expansion is not approved
-**Raised:** 2026-10-11, sals3-portal #1121 · **Closes when:** the owner approves an exact list of product and variant IDs, Merchant Center shipping rules match the live checkout charge for every weight band in it, and a rollout PR adds those IDs to `au-rollout.ts`
-**Owner:** owner (Bogs/AJ), then agent
+### [P2] AU batch 2 is approved but not live, and its 1000g/2000g shipping policies do not exist yet
+**Raised:** 2026-10-11, sals3-portal #1121 · **Updated:** 2026-10-11, sals3-portal #1122 · **Closes when:** #1122 is promoted SIT → UAT → Main, the production feed carries the 146 approved variants, and the Merchant Center policies for `au-upto-1000g` (A$25 below A$37, A$5 above) and `au-upto-2000g` (A$32 / A$10) exist
+**Owner:** agent (promotion on owner go)
 
-On 2026-10-11, 56 B1 checkout quotes were taken (no orders): 14 products, Sydney 2000 and Dubbo 2830, single and topped-up baskets. They found three problems:
-- The 3-Tier Clothing Rack cannot ship to AU.
-- The US$25 subsidy is capped at A$22.93, so buyers above the threshold still pay A$1.68–16.16 in the 1000g–5000g bands.
-- Three items quote 15–25 days on Standard.
-
-A blanket "free over US$25" rule would therefore be untrue on Google. P2 because nothing live is wrong yet, but the expansion cannot go ahead without this.
+On 2026-10-11 the owner approved 133 variants of 51 products. After a production dry run, 124 variants of 49 products went into `au-rollout.ts` (#1122).
+- Each has its own Dubbo checkout quote within the GMC rate, on a 5–14-day courier.
+- Production now stores `identifier_exists=false` on 131 variants, and brand plus MPN on 2. The undo SQL is in `GMC-remediation-2026-10-11/README.md`.
+- The "All products" AU policy was limited to `au-upto-250g`, so heavier items cannot borrow its rate.
+- Merchant Center offers only labels that a fetched product already carries, so the two heavier policies can be created only after the first fetch.
+- Until they exist, Google holds those 16 items for missing shipping. That is the safe direction: nothing shows a wrong price.
 
 ### [P2] The AU feed's exact-variant allowlist is not verified on SIT
 **Raised:** 2026-10-11, sals3-portal #1121 · **Closes when:** the regenerated AU feed holds exactly the 22 approved variant IDs on SIT, UAT and Main, with any other variant reported as `NOT_APPROVED_VARIANT`
