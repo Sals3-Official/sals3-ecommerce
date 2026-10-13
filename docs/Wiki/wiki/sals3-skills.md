@@ -7,7 +7,7 @@ tags:
 aliases:
   - Engineering and Domain Lessons
 created: 2026-07-31
-updated: 2026-09-18
+updated: 2026-10-13
 status: canonical
 authority: consolidated-lessons
 owner_approved: true
@@ -1950,3 +1950,67 @@ Every one of these would have answered in a single command before any writing be
 4. **When the owner names a location, resolve it before reasoning about it.** The vault id given in one line closed a question that four indirect checks had not.
 
 **Where applied:** this note and part 172 are written into the vault of record; the misplaced notes are recorded in [[pending-register]] for the owner to dispose of. Evidence in [[sals3-session-2026-09-18-part172-the-citations-that-named-two-changes-and-the-skill-copy-nobody-diffed|part 172]] §4.
+
+> [!NOTE] Numbering
+> Lessons 144-151 were written in the local vault (2026-10-04/05, parts 173-174) and are not on `develop` yet; 152 onward keep that numbering so the two copies do not collide.
+
+
+### 152. A GoHighLevel workflow email is its own copy — edit it where it is sent
+
+**Confirmed:** 2026-10-13, the order-confirmed payment breakdown ([[sals3-session-2026-10-13-part175-the-order-email-shows-the-payment-breakdown]] section 3; [[sals3-decision-a-ghl-workflow-email-is-its-own-copy]]).
+
+**Incident:** The brief said "edit the email template". The template `SALS3 v2 - Order Confirmation` exists, but customers get the copy stored inside the workflow action **Send Order Confirmation** of `SALS3 Notify - 1 Order Confirmation`, whose **Sync Edits to Template** box is off.
+
+**Lesson:** Find the workflow by **searching** the workflow list (the default view hid all `SALS3 Notify - …` workflows), open the action, read *Linked template* and the sync box. Edit via ⋮ → **Edit design** → Save → **Save action**, then mirror the same edit into the master template. Review on a **cloned DRAFT** template first.
+
+**Where applied:** the skill `sals3-ghl`.
+
+### 153. GHL Monetary merge fields print their own `$`
+
+**Confirmed:** 2026-10-13 (part 175 section 4; first real send S3-20261013-6CF2DA4072).
+
+**Incident:** The brief asked for `{{contact.last_order_currency}} ${{contact.last_order_subtotal}}`. The existing Total had no `$` in its code and still rendered `AUD $91.76`.
+
+**Lesson:** Write `{{contact.last_order_currency}} {{contact.<monetary_field>}}` with no literal `$`; the send shows `AUD $24.00`. Copy the pattern of an existing row before trusting a brief's literal text.
+
+**Where applied:** the five breakdown rows; the skill `sals3-ghl`.
+
+### 154. GHL's HighRise dropdowns stay empty in a hidden tab
+
+**Confirmed:** 2026-10-13 (part 175 section 6, row 1).
+
+**Incident:** In the Create-field drawer the **Add to object** menu opened with no options, screenshots timed out, and `document.visibilityState` was `hidden`: the owner's Chrome window was behind another window.
+
+**Lesson:** Check `document.visibilityState` first when a GHL control behaves oddly under automation; if `hidden`, ask the owner to bring the tab to the front instead of scripting around it. Same root as the hidden-tab streaming lesson: background tabs throttle animation frames, and these menus render on them.
+
+**Where applied:** the skill `sals3-ghl`.
+
+### 155. Edit GHL's code-editor email through the clipboard, by whole lines, and re-copy before every paste
+
+**Confirmed:** 2026-10-13 (part 175 section 7 T1, and section 6 row 4).
+
+**Incident:** The code editor sits in a cross-origin iframe (`email-builder-prod.leadconnectorhq.com`), so page scripts cannot reach it and typed HTML is auto-indented. The first paste into the live workflow email inserted `https://sals3-portal-sit.vercel.app/`: the owner had copied a URL in between.
+
+**Lesson:** Put the replacement on the clipboard from a temporary top-frame `<textarea>` (real click, Ctrl+A, Ctrl+C, then remove it); select whole lines by clicking the first line number and Shift+clicking the last; paste; search the editor for anything that should not be there **before** Save. The clipboard is shared with the human: re-copy immediately before each paste, and `Ctrl+Z` at once if the preview shows a surprise.
+
+**Where applied:** the skill `sals3-ghl`.
+
+### 156. Verify an email from its full preview after a reload, not from a thumbnail
+
+**Confirmed:** 2026-10-13 (part 175 section 6 row 6).
+
+**Incident:** A report listed only three of five new rows because the workflow action's thumbnail is cropped below the subsidy row; a sibling session asked where the voucher row was.
+
+**Lesson:** After saving, reload, open **Edit design** read-only, scroll the right-hand preview, close without saving. For a template, reload its builder URL `/location/<loc>/emails/create/<templateId>/builder`.
+
+**Where applied:** the skill `sals3-ghl`.
+
+### 157. "No email came" — find the order's kick log and the contact it touched before suspecting code
+
+**Confirmed:** 2026-10-13 (part 175 section 6 row 7).
+
+**Incident:** The owner reported no notification for a SIT test order and asked to fix it "asap". GHL showed nothing new on `louienellgonzales@gmail.com`; the sibling session theorised a re-send backlog. The Vercel log of `POST /api/storefront/checkout/orders/accept` (`[ghl-sync] kick`, `ordersSynced: 1, eventTags: 1`) named contact `234BtY2415mG7LnyiqY2` in its External APIs list: `bogs@anythingsupplies.com`, the Google account signed in on SIT. The email had gone out at 10:55 with the breakdown.
+
+**Lesson:** In the `sals3-portal` Vercel logs, search `failures` (timeline "Last 3 days"); open the order's **kick** entry; read the contact id in External APIs; open that contact in GHL and read its conversation. A run that finishes in ~2.6 s with `ordersUnchanged` stable is not a backlog.
+
+**Where applied:** the skill `sals3-ghl`.
