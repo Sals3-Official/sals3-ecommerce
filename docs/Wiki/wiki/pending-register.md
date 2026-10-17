@@ -79,7 +79,7 @@ being read.
 
 ## Open
 
-### [P2] AU batch 2 is approved but not live, and its 1000g/2000g shipping policies do not exist yet
+### ~~[P2] AU batch 2 is approved but not live, and its 1000g/2000g shipping policies do not exist yet~~ — closed 2026-10-11 by sals3-portal #1124
 **Raised:** 2026-10-11, sals3-portal #1121 · **Updated:** 2026-10-11, sals3-portal #1122 · **Closes when:** #1122 is promoted SIT → UAT → Main, the production feed carries the 146 approved variants, and the Merchant Center policies for `au-upto-1000g` (A$25 below A$37, A$5 above) and `au-upto-2000g` (A$32 / A$10) exist
 **Owner:** agent (promotion on owner go)
 
@@ -90,6 +90,12 @@ On 2026-10-11 the owner approved 133 variants of 51 products. After a production
 - Merchant Center offers only labels that a fetched product already carries, so the two heavier policies can be created only after the first fetch.
 - Until they exist, Google holds those 16 items for missing shipping. That is the safe direction: nothing shows a wrong price.
 
+
+**Closed 2026-10-11.** The changes were promoted SIT → UAT → Main (#1123, #1124).
+- The production cron published 146 items, exactly the approved IDs.
+- Merchant Center fetched them: 146 products, 124 new.
+- The `au-upto-1000g` and `au-upto-2000g` policies now exist.
+- Google's review of the new items is ordinary monitoring, not owed work.
 ### [P2] The AU feed's exact-variant allowlist is not verified on SIT
 **Raised:** 2026-10-11, sals3-portal #1121 · **Closes when:** the regenerated AU feed holds exactly the 22 approved variant IDs on SIT, UAT and Main, with any other variant reported as `NOT_APPROVED_VARIANT`
 **Owner:** agent
